@@ -2,21 +2,19 @@ import os
 import time
 import sys
 import math
-from math import floor
-from datetime import datetime
-import yaml
-from perlin import PerlinNoise, Interp
 import cv2
 from effects import Effects, HSV
-import vars
+import params as p
 from gui import Interface
 import dearpygui.dearpygui as dpg 
+from generators import PerlinNoise, Interp, Oscillator
+import threading
 
 CURRENT = 0
 PREV = 1
 
-def main():
 
+def main():
     # Initialize the video capture object (0 for default camera)
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
@@ -27,15 +25,24 @@ def main():
     if not ret:
         raise IOError("Cannot read frame")
     feedback_frame = frame.copy()
-    vars.image_height, vars.image_width = frame.shape[:2]
+    p.image_height, p.image_width = frame.shape[:2]
+
+    p.params["x_shift"].set_min_max(-p.image_width//2, p.image_width//2)
+    p.params["y_shift"].set_min_max(-p.image_height//2, p.image_height//2)
+    p.params["polar_x"].set_min_max(-p.image_width//2, p.image_width//2)
+    p.params["polar_y"].set_min_max(-p.image_height//2, p.image_height//2)
 
     cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
     
+    for i in range(4):
+        # Create a new oscillator with frequency 0.5 Hz and amplitude 1.0
+        osc = Oscillator(frequency=1, amplitude=1.0, phase=0, shape=i)
+        p.osc_bank.append(osc)
+
     gui = Interface()
     gui.create_control_window()
 
     e = Effects()
-    perlin_noise = PerlinNoise(vars.noise)
 
     while True:
         # Capture a frame from the camera
@@ -43,36 +50,33 @@ def main():
         if not ret:
             break
 
-        # move to call back functions
-        # perlin_noise.amplitude = perlin_amplitude
-        # perlin_noise.frequency = perlin_frequency
-        # perlin_noise.octaves = perlin_octaves
-        # perlin_noise.interp = get_interp_btn_idx
+        # update osc values
+        p.osc_vals = [osc.get_next_value() for osc in p.osc_bank]
+        osc_val_str = [str(val) for val in p.osc_vals]
+        print(osc_val_str)
 
-        # noise = perlin_noise.get(noise)
+        # Update noise value
+        # noise = p.perlin_noise.get(noise)
         # print(noise)
-        # x_shift = int(noise)
 
         # Apply transformations to the frame for feedback effect
-        feedback_frame = cv2.addWeighted(frame, 1 - vars.alpha, feedback_frame, vars.alpha, 0)
-        feedback_frame = e.glitch_image(feedback_frame, vars.num_glitches, vars.glitch_size) 
-
-        if vars.blur_kernel_size >= 1:
-            vars.blur_kernel_size = max(1, vars.blur_kernel_size | 1)
-            feedback_frame = cv2.GaussianBlur(feedback_frame, (vars.blur_kernel_size, vars.blur_kernel_size), 0) 
-
-        feedback_frame = e.shift_frame(feedback_frame, vars.x_shift, vars.y_shift, vars.r_shift)
-        feedback_frame = e.polar_transform(feedback_frame)
+        feedback_frame = cv2.addWeighted(frame, 1 - p.params["alpha"].value, feedback_frame, p.params["alpha"].value, 0)
+        feedback_frame = e.glitch_image(feedback_frame, p.params["num_glitches"].value, p.params["glitch_size"].value) 
+        feedback_frame = e.gaussian_blur(feedback_frame, p.params["blur_kernel_size"].value)
+        feedback_frame = e.shift_frame(feedback_frame, p.params["x_shift"].value, p.params["y_shift"].value, p.params["r_shift"].value)
+        feedback_frame = e.adjust_brightness_contrast(feedback_frame, p.params["contrast"].value, p.params["brightness"].value)
+        if p.enable_polar_transform == True:
+            feedback_frame = e.polar_transform(feedback_frame, p.params["polar_x"].value, p.params["polar_y"].value, p.params["polar_radius"].value)
         # feedback_frame = noisy("gauss", feedback_frame)        
 
         # Split image HSV channels for modifications (hsv shifts, shifts hue by x where val > y)
         # then merge the modified channels and convert back to BGR color space.   
-        hsv_image = e.modify_hsv(feedback_frame, vars.hue_shift, vars.sat_shift, 
-                                vars.val_shift, vars.val_threshold, vars.val_hue_shift)
+        hsv_image = e.modify_hsv(feedback_frame, p.params["hue_shift"].value, p.params["sat_shift"].value, 
+                                p.params["val_shift"].value, p.val_threshold, p.val_hue_shift)
         feedback_frame = cv2.cvtColor(hsv_image, cv2.COLOR_HSV2BGR)
 
         # Display the resulting frame next to the original frame
-        cv2.imshow('Original Frame', frame)
+        # cv2.imshow('Original Frame', frame)
         cv2.imshow('Modified Frame', feedback_frame)
 
         # Display the control panel

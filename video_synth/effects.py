@@ -1,7 +1,7 @@
 import numpy as np
 from enum import Enum
 import cv2
-import vars
+import params as p
 import random
 
 class HSV(Enum):
@@ -177,7 +177,7 @@ class Effects:
         """
 
         # Create a mask for pixels with saturation above the threshold.
-        mask = hsv[HSV.V.value] > val_threshold
+        mask = hsv[HSV.S.value] > val_threshold
 
         # Shift the hue values for the masked pixels.  We use modulo 180
         # to ensure the hue values stay within the valid range of 0-179.
@@ -221,14 +221,14 @@ class Effects:
 
         return rotated_frame
 
-    def polar_transform(self, frame):
+    def polar_transform(self, frame, x_shift, y_shift, radius=2):
         """
         Transforms an image with horizontal bars into an image with concentric circles
         using a polar coordinate transform.
         """
         height, width = frame.shape[:2]
-        center = (width // 2+100, height // 2)
-        max_radius = np.sqrt((width // 2)**2 + (height // 2)**2)
+        center = (width // 2+x_shift, height // 2+y_shift)
+        max_radius = np.sqrt((width // radius)**2 + (height // radius)**2)
 
         #    The flags parameter is important:
         #    cv2.INTER_LINEAR:  Bilinear interpolation (good quality)
@@ -275,52 +275,35 @@ class Effects:
         img[bar2_start:bar2_end, :, :] = bar_color
         return img
 
+    def gaussian_blur(self, frame, blur_kernel_size, mode=1):
+        if blur_kernel_size == 0:
+            pass
+        elif mode == 1:
+            frame = cv2.GaussianBlur(frame, (blur_kernel_size, blur_kernel_size), 0) 
+        elif mode == 2:
+            frame = cv2.medianBlur(frame, blur_kernel_size)
+        elif mode == 3:
+            frame = cv2.blur(frame,(p.params["blur_kernel_size"].value, p.params["blur_kernel_size"].value))
+        elif mode == 4:
+            frame = cv2.bilateralFilter(frame,9,75,75)
+        
+        return frame
 
-def polarize_frame(frame, angle=0, strength=1.0):
-    """
-    Polarizes a frame by rotating its color vectors.
 
-    Args:
-        frame (numpy.ndarray): The input frame as a NumPy array (H, W, 3) in BGR format.
-        angle (float): The polarization angle in degrees.
-        strength (float): The strength of the polarization effect (0 to 1).
+    def adjust_brightness_contrast(self, image, alpha=1.0, beta=0):
+        """
+        Adjusts the brightness and contrast of an image.
 
-    Returns:
-        numpy.ndarray: The polarized frame as a NumPy array (H, W, 3) in BGR format.
-    """
-    # Convert angle to radians
-    angle_rad = np.radians(angle)
+        Args:
+            image: The input image (NumPy array).
+            alpha: Contrast control (1.0-3.0, default=1.0).
+            beta: Brightness control (0-100, default=0).
 
-    # Create a rotation matrix
-    cos_val = np.cos(angle_rad)
-    sin_val = np.sin(angle_rad)
-    rotation_matrix = np.array([
-        [cos_val, -sin_val, 0],
-        [sin_val, cos_val, 0],
-        [0, 0, 1]
-    ])
-
-    # Ensure the frame is float32 for calculations
-    frame = frame.astype(np.float32) / 255.0
-
-    # Reshape the frame to be (H * W, 3) for easier matrix multiplication
-    reshaped_frame = frame.reshape(-1, 3)
-
-    # Apply the rotation to each color vector
-    rotated_frame = np.dot(reshaped_frame, rotation_matrix.T)
-
-    # Apply the strength
-    polarized_frame = (1 - strength) * reshaped_frame + strength * rotated_frame
-
-    # Clip values to the valid range [0, 1]
-    polarized_frame = np.clip(polarized_frame, 0, 1)
-
-    # Reshape back to the original frame shape
-    polarized_frame = polarized_frame.reshape(frame.shape)
-
-    # Convert back to uint8 and BGR format
-    polarized_frame = (polarized_frame * 255).astype(np.uint8)
-    return polarized_frame
+        Returns:
+            The adjusted image (NumPy array).
+        """
+        adjusted_image = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
+        return adjusted_image
 
 def polarize_frame_hsv(frame, angle=0, strength=1.0):
     """
@@ -335,18 +318,15 @@ def polarize_frame_hsv(frame, angle=0, strength=1.0):
     Returns:
         numpy.ndarray: The polarized frame as a NumPy array (H, W, 3) in BGR format.
     """
-    # Convert to HSV color space
+    # Convert to HSV color space and extract hsv channel
     hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV).astype(np.float32)
-
-    # Extract the hue channel
     hue_channel = hsv_frame[:, :, 0]
 
     # Convert angle to OpenCV hue units (0-180)
     hue_shift = (angle / 360.0) * 180
 
     # Apply the hue shift with strength
-    shifted_hue = (hue_channel + hue_shift * strength) % 180  # Wrap around
-
+    shifted_hue = (hue_channel + hue_shift * strength) % 180  # Wrap aroundS
     hsv_frame[:, :, 0] = shifted_hue
 
     # Convert back to BGR

@@ -1,18 +1,15 @@
-import vars
+import params as p
 from gui_elements import SliderRow, Button
 import dearpygui.dearpygui as dpg
+from generators import PerlinNoise, Interp, Oscillator
+import random
 
 class Interface:
     def __init__(self, width=550, height=420):
-
         self.sliders = []
         self.buttons = []
-
         self.slider_dict = None
-        print("test4")
-        # self.create_trackbars()
-        print("test5")
-        # self.create_buttons()
+
 
     def get_button_by_tag(tag):
         for b in self.buttons:
@@ -21,135 +18,162 @@ class Interface:
 
     def reset_slider_callback(self, sender, app_data, user_data):
         print(f"Got reset callback for {user_data}")
-        s = self.slider_dict[user_data]
+        s = self.slider_dict[str(user_data)]
         s.value = s.min_value
         dpg.set_value(user_data, s.min_value)
 
     def x_shift_cb(self, sender, app_data):
         self.slider_dict["x_shift"].value = app_data
-        vars.x_shift = app_data
+        p.params["x_shift"].set_value(app_data)
         dpg.set_value(sender, app_data)
 
     def y_shift_cb(self, sender, app_data):
         self.slider_dict["y_shift"].value = app_data
-        vars.y_shift = app_data
+        p.params["y_shift"].set_value(app_data)
         dpg.set_value(sender, app_data)
 
     def r_shift_cb(self, sender, app_data):
         self.slider_dict["r_shift"].value = app_data
-        vars.r_shift = app_data
+        p.params["r_shift"].set_value(app_data)
         dpg.set_value(sender, app_data)
-
 
     def hue_shift_cb(self, sender, app_data):
         self.slider_dict["hue_shift"].value = app_data
-        vars.hue_shift = app_data
+        p.params["hue_shift"].set_value(app_data)
         dpg.set_value(sender, app_data)
 
     def sat_shift_cb(self, sender, app_data):
         self.slider_dict["sat_shift"].value = app_data
-        vars.sat_shift = app_data
+        p.params["sat_shift"].set_value(app_data)
         dpg.set_value(sender, app_data)
 
     def val_shift_cb(self, sender, app_data):
         self.slider_dict["val_shift"].value = app_data
-        vars.val_shift = app_data
+        p.params["val_shift"].set_value(app_data)
         dpg.set_value(sender, app_data)
 
     def alpha_cb(self, sender, app_data):
         self.slider_dict["alpha"].value = app_data
-        vars.alpha = app_data
+        p.alpha = app_data
+        p.params["alpha"].set_value(app_data)
         dpg.set_value(sender, app_data)
 
     def num_glitches_cb(self, sender, app_data):
         self.slider_dict["num_glitches"].value = app_data
-        vars.num_glitches = app_data
+        p.params["num_glitches"].set_value(app_data)
         dpg.set_value(sender, app_data)
 
     def glitch_size_cb(self, sender, app_data):
         self.slider_dict["glitch_size"].value = app_data
-        vars.glitch_size = app_data
+        p.params["glitch_size"].set_value(app_data)
         dpg.set_value(sender, app_data)
 
     def blur_kernel_size_cb(self, sender, app_data):
         self.slider_dict["blur_kernel_size"].value = app_data
-        vars.blur_kernel_size = app_data
+        p.params["blur_kernel_size"].set_value(app_data)
+        p.params["blur_kernel_size"].value = max(1, p.params["blur_kernel_size"].value | 1)
         dpg.set_value(sender, app_data)    
 
     def val_threshold_cb(self, sender, app_data):
         self.slider_dict["val_threshold"].value = app_data
-        vars.val_threshold = app_data
+        p.val_threshold = app_data
         dpg.set_value(sender, app_data)
 
     def val_hue_shift_cb(self, sender, app_data):
         self.slider_dict["val_hue_shift"].value = app_data
-        vars.val_threshold = app_data
+        p.val_threshold = app_data
         dpg.set_value(sender, app_data)
 
     def perlin_frequency_cb(self, sender, app_data):
         self.slider_dict["perlin_frequency"].value = app_data
-        vars.perlin_frequency = app_data
+        p.params["perlin_frequency"].set_value(app_data)
+        p.perlin_noise.frequency = app_data
         dpg.set_value(sender, app_data)
 
     def perlin_amplitude_cb(self, sender, app_data):
         self.slider_dict["perlin_amplitude"].value = app_data
-        vars.perlin_amplitude = app_data
+        p.params["perlin_amplitude"].set_value(app_data)
+        p.perlin_noise.amplitude = app_data
         dpg.set_value(sender, app_data)
 
     def perlin_octaves_cb(self, sender, app_data):
         self.slider_dict["perlin_octaves"].value = app_data
-        vars.perlin_octaves = app_data
+        p.params["perlin_octaves"].set_value(app_data)
+        p.perlin_noise.ovtaves = app_data
         dpg.set_value(sender, app_data)
-
-    # def interp_mode_cb(self, sender, app_data):
-    #     self.slider_dict[""].value = app_data
-    #     vars.interp_mode = app_data
-    #     dpg.set_value(sender, app_data)
-
-    # def osc_mode_cb(self, sender, app_data):
-    #     self.slider_dict[""].value = app_data
-    #     vars.osc_mode = app_data
-    #     dpg.set_value(sender, app_data)
 
     def amplitude_cb(self, sender, app_data):
-        self.slider_dict["amplitude"].value = app_data
-        vars.amplitude = app_data
-        dpg.set_value(sender, app_data)
+        for i in range(4):
+            if f"osc{i}" in sender:
+                self.slider_dict[f"osc{i}_amplitude"].value = app_data
+                p.osc_bank[i].amplitude = app_data                                 
+                dpg.set_value(sender, app_data)
 
     def frequency_cb(self, sender, app_data):
-        self.slider_dict["frequency"].value = app_data
-        vars.frequency = app_data                                    
-        dpg.set_value(sender, app_data)
+        for i in range(4):
+            if f"osc{i}" in sender:
+                self.slider_dict[f"osc{i}_frequency"].value = app_data
+                p.osc_bank[i].frequency = app_data                                   
+                dpg.set_value(sender, app_data)
+    
+    def phase_cb(self, sender, app_data):
+        for i in range(4):
+            if f"osc{i}" in sender:
+                self.slider_dict[f"osc{i}_phase"].value = app_data
+                p.osc_bank[i].phase = app_data                                   
+                dpg.set_value(sender, app_data)
+    
+    def seed_cb(self, sender, app_data):
+        for i in range(4):
+            if f"osc{i}" in sender:
+                self.slider_dict[f"osc{i}_seed"].value = app_data
+                p.osc_bank[i].seed = app_data  
+                dpg.set_value(sender, app_data)
+    
+    def shape_cb(self, sender, app_data):
+        for i in range(4):
+            if f"osc{i}" in sender:
+                self.slider_dict[f"osc{i}_shape"].value = app_data
+                p.osc_bank[i].shape = app_data                                
+                dpg.set_value(sender, app_data)
 
     def polar_x_cb(self, sender, app_data):
         self.slider_dict["polar_x"].value = app_data
-        vars.polar_x = app_data                                    
+        p.params["polar_x"].set_value(app_data)                                   
         dpg.set_value(sender, app_data)
 
     def polar_y_cb(self, sender, app_data):
         self.slider_dict["polar_y"].value = app_data
-        vars.polar_y = app_data                                    
+        p.params["polar_y"].set_value(app_data)                                
         dpg.set_value(sender, app_data)
+
+    def polar_radius_cb(self, sender, app_data):
+        self.slider_dict["polar_radius"].value = app_data
+        p.params["polar_radius"].set_value(app_data)                                    
+        dpg.set_value(sender, app_data)
+
+    def contrast_cb(self, sender, app_data):
+        self.slider_dict["contrast"].value = app_data
+        p.params["contrast"].set_value(app_data)                                    
+        dpg.set_value(sender, app_data)
+
+    def brightness_cb(self, sender, app_data):
+        self.slider_dict["brightness"].value = app_data
+        p.params["brightness"].set_value(app_data)                                    
+        dpg.set_value(sender, app_data)
+
+    ##############################################################33
+    ##############################################################33
+    ##############################################################33
 
     def on_save_button_click(self):
         date_time_str = datetime.now().strftime("%m-%d-%Y %H-%M")
         print(f"Saving values at {date_time_str}")
         
-        # Prepare the data to save
-        data = {
-            "timestamp": date_time_str,
-            "hue_shift": vars.hue_shift,
-            "sat_shift": vars.sat_shift,
-            "val_shift": vars.val_shift,
-            "alpha": vars.alpha,
-            "num_glitches": vars.num_glitches,
-            "glitch_size": vars.glitch_size,
-            "val_threshold": vars.val_threshold,
-            "val_hue_shift": vars.val_hue_shift,
-            "blur_kernel_size": vars.blur_kernel_size,
-            "x_shift": vars.x_shift,
-            "y_shift": vars.y_shift,
-        }
+        data = {}
+        for k, v in p.params.items():
+            print(f"{k}: {v.value}")
+            data[k] = v.value
         
         # Append the data to the YAML file
         with open("saved_values.yaml", "a") as f:
@@ -174,7 +198,7 @@ class Interface:
             d = saved_values[0][fwd.index]
             print(f"loaded values at index {fwd.index}: {d}\n\n")
             
-            for s in sliders:
+            for s in self.sliders:
                 for tag in d.keys():
                     if tag == s.tag:
                         s.value = d[tag]
@@ -199,7 +223,7 @@ class Interface:
             d = saved_values[0][b.index]
             print(f"loaded values at index {b.index}: {d}\n\n")
             
-            for s in sliders:
+            for s in self.sliders:
                 for tag in d.keys():
                     if tag == s.tag:
                         s.value = d[tag]
@@ -226,7 +250,7 @@ class Interface:
             d = saved_values[0][rand.index]
             print(f"loaded values at index {rand.index}: {d}\n\n")
             
-            for s in sliders:
+            for s in self.sliders:
                 for tag in d.keys():
                     if tag == s.tag:
                         s.value = d[tag]
@@ -236,8 +260,7 @@ class Interface:
             print(f"Error loading values: {e}")
 
     def reset_values(self):
-        global sliders
-        for s in sliders:
+        for s in self.sliders:
             s.value = s.min_value
             if s.tag == "x_shift" or s.tag == "y_shift":
                 s.value = 0
@@ -259,30 +282,86 @@ class Interface:
                 s.value = random.randint(s.min_value, s.max_value)
             dpg.set_value(s.tag, s.value)
 
-    def create_trackbars(self):
+    def listbox_cb(self, sender, app_data):
+        """
+        Callback function for the listbox.  Prints the selected items.
 
-        hue_slider = SliderRow("Hue Shift", "hue_shift", vars.hue_shift, 0, 180, self.hue_shift_cb, 'int', self.reset_slider_callback)
-        sat_slider = SliderRow("Sat Shift", "sat_shift", vars.sat_shift, 0, 255, self.sat_shift_cb, 'int', self.reset_slider_callback)
-        val_slider = SliderRow("Val Shift", "val_shift", vars.val_shift, 0, 255, self.val_shift_cb, 'int', self.reset_slider_callback)
-        alpha_slider = SliderRow("Feedback", "feedback", vars.alpha, 0.0, 1.0, self.alpha_cb, 'float', self.reset_slider_callback)
-        num_glitches_slider = SliderRow("Glitch Qty", "glitch_qty", vars.num_glitches, 0, 100, self.num_glitches_cb, 'int', self.reset_slider_callback)
-        glitch_size_slider = SliderRow("Glitch Size", "glitch_size", vars.glitch_size, 1, 100, self.glitch_size_cb, 'int', self.reset_slider_callback)
-        val_threshold_slider = SliderRow("Val Threshold", "val_threshold", vars.val_threshold, 0, 255, self.val_threshold_cb, 'int', self.reset_slider_callback)
-        val_hue_shift_slider = SliderRow("Hue Shift for Val", "hue_val_shift", vars.val_hue_shift, 0, 180, self.val_hue_shift_cb, 'int', self.reset_slider_callback)
-        blur_kernel_slider = SliderRow("Blur Kernel", "blur_kernel", vars.blur_kernel_size, 0, 100, self.blur_kernel_size_cb, 'int', self.reset_slider_callback)
-        x_shift_slider = SliderRow("X Shift", "x_shift", vars.x_shift, -vars.image_width//2, vars.image_width//2, self.y_shift_cb, 'int', self.reset_slider_callback)
-        y_shift_slider = SliderRow("Y Shift", "y_shift", vars.y_shift, -vars.image_height//2, vars.image_height//2, self.x_shift_cb, 'int', self.reset_slider_callback)
-        r_shift_slider = SliderRow("R Shift", "r_shift", vars.r_shift, -369, 360, self.r_shift_cb, 'int', self.reset_slider_callback)
+        Args:
+            sender: The sender of the event (the listbox).
+            app_data: A dictionary containing the selected items.  For a listbox,
+                    it's  { 'items': [index1, index2, ...] }
+        """
+        print("Sender:", sender)
+        print("App Data:", app_data)
+        selected_indices = app_data['items']
+        items = dpg.get_item_configuration(sender)['items'] #get the items
+        selected_items = [items[i] for i in selected_indices]
 
-        perlin_amplitude_slider = SliderRow("Perlin Amplitude", "perlin_amplitude", vars.perlin_amplitude, 0, 100, self.perlin_frequency_cb, 'int', self.reset_slider_callback)
-        perlin_frequency_slider = SliderRow("Perlin Frequency", "perlin_frequency", vars.perlin_frequency, 0, 100, self.perlin_amplitude_cb, 'int', self.reset_slider_callback)
-        perlin_octaves_slider = SliderRow("Perlin Octaves", "perlin_octaves", vars.perlin_octaves, 0, 100, self.perlin_octaves_cb, 'int', self.reset_slider_callback)
+        print("Selected Items:", selected_items) # print the selected items
+
+
+    def create_trackbars(self, width, height):
         
-        polar_x_slider = SliderRow("Polar Center X", "polar_x", vars.polar_x, -vars.image_width//2, vars.image_width//2, self.polar_x_cb, 'int', self.reset_slider_callback)
-        polar_y_slider = SliderRow("Polar Center Y", "polar_y", vars.polar_y, -vars.image_height//2, vars.image_height//2, self.polar_y_cb, 'int', self.reset_slider_callback)
+        with dpg.collapsing_header(label=f"HSV"):
+            hue_slider = TrackbarRow("Hue Shift", p.params["hue_shift"], self.hue_shift_cb, self.reset_slider_callback)
+            sat_slider = TrackbarRow("Sat Shift", p.params["sat_shift"], self.sat_shift_cb, self.reset_slider_callback)
+            val_slider = TrackbarRow("Val Shift", p.params["val_shift"], self.val_shift_cb, self.reset_slider_callback)
+            contrast_slider = TrackbarRow("Contrast", p.params["contrast"], self.contrast_cb,  self.reset_slider_callback)
+            brightness_slider = TrackbarRow("Brighness", p.params["brightness"], self.brightness_cb, self.reset_slider_callback)
+
+        with dpg.collapsing_header(label=f"Feedback, Blur, Glitch"):
+            alpha_slider = TrackbarRow("Feedback", p.alpha, 0.0, 1.0, self.alpha_cb, self.reset_slider_callback)
+            blur_kernel_slider = TrackbarRow("Blur Kernel", p.params["blur_kernel_size"], self.blur_kernel_size_cb, self.reset_slider_callback)
+            num_glitches_slider = TrackbarRow("Glitch Qty", p.params["num_glitches"], self.num_glitches_cb, self.reset_slider_callback)
+            glitch_size_slider = TrackbarRow("Glitch Size", p.params["glitch_size"], self.glitch_size_cb, self.reset_slider_callback)
+        
+        with dpg.collapsing_header(label=f"Val Threshold"):
+            val_threshold_slider = TrackbarRow("Val Threshold", p.val_threshold, self.val_threshold_cb, self.reset_slider_callback)
+            val_hue_shift_slider = TrackbarRow("Hue Shift for Val", p.val_hue_shift, self.val_hue_shift_cb, self.reset_slider_callback)
+        
+        with dpg.collapsing_header(label=f"Pan"):
+            x_shift_slider = TrackbarRow("X Shift", p.params["x_shift"], -p.image_width//2, p.image_width//2, self.y_shift_cb, self.reset_slider_callback)
+            y_shift_slider = TrackbarRow("Y Shift", p.params["y_shift"], -p.image_height//2, p.image_height//2, self.x_shift_cb, self.reset_slider_callback)
+            r_shift_slider = TrackbarRow("R Shift", p.params["r_shift"], self.r_shift_cb, self.reset_slider_callback)
+
+        with dpg.collapsing_header(label=f"Polar Transform"):
+            perlin_amplitude_slider = TrackbarRow("Perlin Amplitude", p.params["perlin_amplitude"], self.perlin_frequency_cb, self.reset_slider_callback)
+            perlin_frequency_slider = TrackbarRow("Perlin Frequency", p.params["perlin_frequency"], self.perlin_amplitude_cb, self.reset_slider_callback)
+            perlin_octaves_slider = TrackbarRow("Perlin Octaves", p.params["perlin_octaves"], self.perlin_octaves_cb, self.reset_slider_callback)
+        
+        with dpg.collapsing_header(label=f"Polar Transform"):
+            enable_polar_transform_button = Button("Enable Polar Transform", "enable_polar_transform")
+            # polar_coord_mode_slider = TrackbarRow("Polar Coord Mode", p.polar_coord_mode, self.polar_x_cb, self.reset_slider_callback)
+            dpg.add_button(label=enable_polar_transform_button.label, callback=self.on_button_click, user_data=enable_polar_transform_button.tag, width=width)
+            polar_x_slider = TrackbarRow("Polar Center X", p.params["polar_x"], self.polar_x_cb, self.reset_slider_callback)
+            polar_y_slider = TrackbarRow("Polar Center Y", p.params["polar_y"], self.polar_y_cb, self.reset_slider_callback)
+            polar_radius_slider = TrackbarRow("Polar radius", p.params["polar_radius"], self.polar_radius_cb, self.reset_slider_callback)
+
+        osc_freq_sliders = []
+        osc_amp_sliders = []
+        osc_phase_sliders = []
+        osc_seed_sliders = []
+        osc_shape_sliders = []
+        for i in range(4):
+            with dpg.collapsing_header(label=f"Osc{i}"):
+                osc_shape_sliders.append(SliderRow(f"Osc {i} Shape", f"osc{i}_shape", self.shape_cb, self.reset_slider_callback))
+                osc_freq_sliders.append(SliderRow(f"Osc {i} Freq", f"osc{i}_frequency", p.osc_bank[i].get_frequency(), self.frequency_cb, self.reset_slider_callback))
+                osc_amp_sliders.append(SliderRow(f"Osc {i} Amp", f"osc{i}_amplitude", p.osc_bank[i].get_amplitude(), self.amplitude_cb, self.reset_slider_callback))
+                osc_phase_sliders.append(SliderRow(f"Osc {i} Phase", f"osc{i}_phase", p.osc_bank[i].get_phase(), self.phase_cb, self.reset_slider_callback))
+                osc_seed_sliders.append(SliderRow(f"Osc {i} Seed", f"osc{i}_seed", p.osc_bank[i].get_seed(), self.seed_cb, self.reset_slider_callback))
+                                # Create a list of items for the listbox
+                items = ["None", "Hue", "Sat", "Val", "Feedback", "Glitch Size", "Glitch Qty", "Pan X", "Pan Y", "R Shift", "Blur Kernel", "Val Threshold", "Val Hue Shift", "Perlin Amplitude", "Perlin Frequency", "Perlin Octaves", "Polar X", "Polar Y", "Polar Radius"]
+
+                # Create the listbox
+                dpg.add_combo(items=items,
+                                label="Select Parameter",
+                                tag=f"osc{i}_combobox",
+                                default_value="None"
+                                callback=self.listbox_cb)
 
         self.sliders = [hue_slider, sat_slider, val_slider, alpha_slider, num_glitches_slider, glitch_size_slider, 
-                val_threshold_slider, val_hue_shift_slider, blur_kernel_slider, x_shift_slider, y_shift_slider,r_shift_slider , perlin_amplitude_slider, perlin_frequency_slider, perlin_octaves_slider]
+                val_threshold_slider, val_hue_shift_slider, blur_kernel_slider, x_shift_slider, y_shift_slider, r_shift_slider , 
+                perlin_amplitude_slider, perlin_frequency_slider, perlin_octaves_slider, polar_radius_slider, brightness_slider, contrast_slider]
 
         self.slider_dict = {
             "hue_shift": hue_slider,
@@ -297,32 +376,52 @@ class Interface:
             "x_shift": x_shift_slider, 
             "y_shift": y_shift_slider, 
             "r_shift": r_shift_slider,
-            "perlin_amplitud": perlin_amplitude_slider, 
+            "perlin_amplitude": perlin_amplitude_slider, 
             "perlin_frequency": perlin_frequency_slider, 
             "perlin_octaves": perlin_octaves_slider,
             "polar_x": polar_x_slider,
-            "polar_y": polar_y_slider
+            "polar_y": polar_y_slider,
+            "polar_radius": polar_radius_slider,
+            "brightness": brightness_slider,
+            "contrast": contrast_slider
         }
+
+        for i in range(4):
+            self.slider_dict[f"osc{i}_frequency"] = osc_freq_sliders[i]
+            self.slider_dict[f"osc{i}_amplitude"] = osc_amp_sliders[i]
+            self.slider_dict[f"osc{i}_phase"] = osc_phase_sliders[i]
+            self.slider_dict[f"osc{i}_seed"] = osc_seed_sliders[i]
+            self.slider_dict[f"osc{i}_shape"] = osc_shape_sliders[i]
+            self.sliders.append(osc_freq_sliders[i])
+            self.sliders.append(osc_amp_sliders[i])
+            self.sliders.append(osc_phase_sliders[i])
+            self.sliders.append(osc_seed_sliders[i])
+            self.sliders.append(osc_shape_sliders[i])
 
     def on_button_click(self, sender, app_data, user_data):
         print(f"Button clicked: {user_data}, {app_data}, {sender}")
         # Perform action based on button click
         if user_data == "save":
-            on_save_button_click()
+            self.on_save_button_click()
         elif user_data == "reset_all":
-            reset_values()
+            self.reset_values()
         elif user_data == "random":
-            randomize_values()
+            self.randomize_values()
         elif user_data == "load_next":
-            on_fwd_button_click()
+           self.on_fwd_button_click()
         elif user_data == "load_prev":
-            on_prev_button_click()
+            self.on_prev_button_click()
         elif user_data == "load_rand":
-            on_rand_button_click()
+            self.on_rand_button_click()
         elif user_data == "interp":
             pass
         elif user_data == "fade":
             pass
+        elif user_data == "enable_polar_transform":
+            if p.enable_polar_transform == True:
+                p.enable_polar_transform = False
+            else:
+                p.enable_polar_transform = True
 
     def create_buttons(self, width, height):
 
@@ -336,6 +435,9 @@ class Interface:
         self.buttons = [save_button, reset_button, random_button, load_next_button, load_rand_button, load_prev_button]
 
         width -= 20
+
+        # with dpg.group(horizontal=True):
+            
         with dpg.group(horizontal=True):
             dpg.add_button(label=save_button.label, callback=self.on_button_click, user_data=save_button.tag, width=width//3)
             dpg.add_button(label=reset_button.label, callback=self.on_button_click, user_data=reset_button.tag, width=width//3)
@@ -357,11 +459,11 @@ class Interface:
         dpg.set_item_width(sender, half_width)
         # dpg.set_item_width("button2", half_width)
 
-    def create_control_window(self, width=550, height=420):
+    def create_control_window(self, width=550, height=600):
         dpg.create_context()
 
         with dpg.window(tag="Controls", label="Controls", width=width, height=height):
-            self.create_trackbars()
+            self.create_trackbars(width, height)
             self.create_buttons(width, height)
             # dpg.set_viewport_resize_callback(resize_buttons)
 

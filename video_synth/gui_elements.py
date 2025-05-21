@@ -47,3 +47,28 @@ class SliderRow:
                 self.slider = dpg.add_slider_float(label=self.label, tag=self.tag, default_value=self.default_value, min_value=self.min_value, max_value=self.max_value, callback=self.callback, width=-100)
             else:
                 self.slider = dpg.add_slider_int(label=self.label, tag=self.tag, default_value=self.default_value, min_value=self.min_value, max_value=self.max_value, callback=self.callback, width=-100)
+
+class TrackbarRow:
+    def __init__(self, label, param, callback, button_callback):
+        self.label = label
+        self.tag = param.name
+        self.default_value = param.default_val
+        self.min_value = param.min_val
+        self.max_value = param.max_val
+        self.callback = callback
+        self.button_callback = button_callback
+        self.slider = None
+        self.button = None
+        self.value = param.default_value
+        self.type = type(param.default_value)
+        self.param = param
+        self.create()
+
+    def create(self):
+        with dpg.group(horizontal=True):
+            # self.button = dpg.add_button(label="Reset", callback=lambda x: self.reset, width=50)
+            self.button = dpg.add_button(label="Reset", callback=self.button_callback, width=50, tag=self.tag + "_reset", user_data=self.tag)
+            if self.type == 'float':
+                self.slider = dpg.add_slider_float(label=self.label, tag=self.tag, default_value=self.default_value, min_value=self.min_value, max_value=self.max_value, callback=self.callback, width=-100)
+            else:
+                self.slider = dpg.add_slider_int(label=self.label, tag=self.tag, default_value=self.default_value, min_value=self.min_value, max_value=self.max_value, callback=self.callback, width=-100)
