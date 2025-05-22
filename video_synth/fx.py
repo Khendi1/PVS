@@ -1,7 +1,7 @@
 import numpy as np
 from enum import Enum
 import cv2
-import params as p
+import config as p
 import random
 
 class HSV(Enum):

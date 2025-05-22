@@ -1,7 +1,8 @@
 import dearpygui.dearpygui as dpg
+import config as p
 
 class Button:
-    def __init__(self, label, tag, max=None):
+    def __init__(self, label, tag, max=None, font=None):
         self.label = label
         self.tag = tag
         self.user_data = tag
@@ -49,7 +50,7 @@ class SliderRow:
                 self.slider = dpg.add_slider_int(label=self.label, tag=self.tag, default_value=self.default_value, min_value=self.min_value, max_value=self.max_value, callback=self.callback, width=-100)
 
 class TrackbarRow:
-    def __init__(self, label, param, callback, button_callback):
+    def __init__(self, label, param, callback, button_callback, font):
         self.label = label
         self.tag = param.name
         self.default_value = param.default_val
@@ -59,9 +60,10 @@ class TrackbarRow:
         self.button_callback = button_callback
         self.slider = None
         self.button = None
-        self.value = param.default_value
-        self.type = type(param.default_value)
+        self.value = param.default_val
+        self.type = type(param.default_val).__name__
         self.param = param
+        self.font = font
         self.create()
 
     def create(self):
@@ -72,3 +74,5 @@ class TrackbarRow:
                 self.slider = dpg.add_slider_float(label=self.label, tag=self.tag, default_value=self.default_value, min_value=self.min_value, max_value=self.max_value, callback=self.callback, width=-100)
             else:
                 self.slider = dpg.add_slider_int(label=self.label, tag=self.tag, default_value=self.default_value, min_value=self.min_value, max_value=self.max_value, callback=self.callback, width=-100)
+            dpg.bind_item_font(self.tag, self.font)
+            dpg.bind_item_font(self.tag + "_reset", self.font)

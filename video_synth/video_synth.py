@@ -3,8 +3,8 @@ import time
 import sys
 import math
 import cv2
-from effects import Effects, HSV
-import params as p
+from fx import Effects, HSV
+import config as p
 from gui import Interface
 import dearpygui.dearpygui as dpg 
 from generators import PerlinNoise, Interp, Oscillator
@@ -13,12 +13,15 @@ import threading
 CURRENT = 0
 PREV = 1
 
+fps = 15 # Desired frame rate
 
 def main():
     # Initialize the video capture object (0 for default camera)
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
         raise IOError("Cannot open webcam")
+
+    cap.set(cv2.CAP_PROP_FPS, fps)
 
     # Create an initial empty frame
     ret, frame = cap.read()
@@ -36,8 +39,10 @@ def main():
     
     for i in range(4):
         # Create a new oscillator with frequency 0.5 Hz and amplitude 1.0
-        osc = Oscillator(frequency=1, amplitude=1.0, phase=0, shape=i)
+        osc = Oscillator(name=f"osc{i}", frequency=1, amplitude=1.0, phase=0, shape=i)
         p.osc_bank.append(osc)
+
+    # osc_bank[i].frequency # access frequency param of oscillator i
 
     gui = Interface()
     gui.create_control_window()

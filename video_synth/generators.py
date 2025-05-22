@@ -3,7 +3,8 @@ import random
 import math
 from enum import Enum
 import numpy as np
-import params as p
+import config as p
+from param import Param
 
 class Interp(Enum):
     LINEAR = 1
@@ -97,7 +98,6 @@ class PerlinNoise():
         # useful only for linear interpolation
         return (6 * x**5) - (15 * x**4) + (10 * x**3)
 
-
 class Oscillator:
     def __init__(self, name, frequency, amplitude, phase, shape, seed=0):
         self.frequency = Param(f"{name}_frequency", 0, 100, frequency)
@@ -137,20 +137,22 @@ class Oscillator:
         phase = 0
         while True:
             # Calculate the next sample of the sine wave
-            if self.shape == 0: # Sine wave
-                sample = self.amplitude * np.sin(2 * np.pi * self.frequency * self.phase) + self.seed
-            elif self.shape == 1: # Square wave
-                sample = self.amplitude * np.sign(np.sin(2 * np.pi * self.frequency * self.phase)) + self.seed
-            elif self.shape == 2: # Triangle wave
-                sample = self.amplitude * 2 * np.abs(2 * (self.phase * self.frequency - np.floor(self.phase * self.frequency + 0.5))) - self.amplitude  + self.seed
-            elif self.shape == 3: # Sawtooth wave 
-                sample = self.amplitude * 2 * (self.phase * self.frequency - np.floor(self.phase * self.frequency)) - self.amplitude  + self.seed
+            if int(self.shape) == 0: # Sine wave
+                sample = float(self.amplitude) * np.sin(2 * np.pi * float(self.frequency) * float(self.phase)) + int(self.seed)
+            elif int(self.shape) == 1: # Square wave
+                sample = float(self.amplitude) * np.sign(np.sin(2 * np.pi * float(self.frequency) * float(self.phase))) + int(self.seed)
+            elif int(self.shape) == 2: # Triangle wave
+                sample = float(self.amplitude) * 2 * np.abs(2 * (float(self.phase) * float(self.frequency) - np.floor(float(self.phase) * float(self.frequency) + 0.5))) - float(self.amplitude)  + int(self.seed)
+            elif int(self.shape) == 3: # Sawtooth wave 
+                sample = float(self.amplitude) * 2 * (float(self.phase) * float(self.frequency) - np.floor(float(self.phase) * float(self.frequency))) - float(self.amplitude)  + int(self.seed)
                 sample *= self.direction
+            else:
+                raise ValueError(f"Invalid shape value. Must be 0 (sine), 1 (square), 2 (triangle), or 3 (sawtooth). got shape={self.shape}")
 
             yield sample
             self.phase += 1 / self.sample_rate  # Increment phase.  Not directly time-based here.
         
-    def update_params(self, freq=None, amp=None, phase=None, shape=None, direction=None):
+    def update_params(self, freq=None, amp=None, phase=None, shape=None, direction=None, seed=None):
         if freq is not None:
             self.frequency.set_value(freq)
         if amp is not None:
