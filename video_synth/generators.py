@@ -100,7 +100,10 @@ class PerlinNoise():
 
 class Oscillator:
     def __init__(self, name, frequency, amplitude, phase, shape, seed=0):
-        self.frequency = Param(f"{name}_frequency", 0, 100, frequency)
+        self.name = name
+        self.param_max = 100
+        self.param_min = 0
+        self.frequency = Param(f"{name}_frequency", 0, 15, frequency)
         self.amplitude = Param(f"{name}_amplitude", 0, 100, amplitude)
         self.phase = Param(f"{name}_phase", 0, 100, phase)
         self.seed = Param(f"{name}_seed", 0, 100, seed)
@@ -138,19 +141,24 @@ class Oscillator:
         while True:
             # Calculate the next sample of the sine wave
             if int(self.shape) == 0: # Sine wave
-                sample = float(self.amplitude) * np.sin(2 * np.pi * float(self.frequency) * float(self.phase)) + int(self.seed)
+                sample = self.get_amplitude() * np.sin(2 * np.pi * self.get_frequency() * self.get_phase()) + self.get_seed()
             elif int(self.shape) == 1: # Square wave
-                sample = float(self.amplitude) * np.sign(np.sin(2 * np.pi * float(self.frequency) * float(self.phase))) + int(self.seed)
+                sample = self.get_amplitude() * np.sign(np.sin(2 * np.pi * self.get_frequency() * self.get_phase())) + self.get_seed()
             elif int(self.shape) == 2: # Triangle wave
-                sample = float(self.amplitude) * 2 * np.abs(2 * (float(self.phase) * float(self.frequency) - np.floor(float(self.phase) * float(self.frequency) + 0.5))) - float(self.amplitude)  + int(self.seed)
+                sample = self.get_amplitude() * 2 * np.abs(2 * (self.get_phase() * self.get_frequency() - np.floor(self.get_phase() * self.get_frequency() + 0.5))) - self.get_amplitude()  + self.get_seed()
             elif int(self.shape) == 3: # Sawtooth wave 
-                sample = float(self.amplitude) * 2 * (float(self.phase) * float(self.frequency) - np.floor(float(self.phase) * float(self.frequency))) - float(self.amplitude)  + int(self.seed)
+                sample = self.get_amplitude() * 2 * (self.get_phase() * self.get_frequency() - np.floor(self.get_phase() * self.get_frequency())) - self.get_amplitude()  + self.get_seed()
                 sample *= self.direction
             else:
                 raise ValueError(f"Invalid shape value. Must be 0 (sine), 1 (square), 2 (triangle), or 3 (sawtooth). got shape={self.shape}")
 
+            if self.linked_param is not None:
+                # sample += self.get_amplitude()/2
+                # print(f"mappings from {self.param_min}-{self.param_max} to {self.linked_param.min_val}-{self.linked_param.max_val}")
+                mapped_sample = p.map_value(sample, -self.param_max, self.param_max, self.linked_param.min_val, self.linked_param.max_val)
+                self.linked_param.set_value(mapped_sample)
             yield sample
-            self.phase += 1 / self.sample_rate  # Increment phase.  Not directly time-based here.
+            self.phase.value += 1 / self.sample_rate  # Increment phase.  Not directly time-based here.
         
     def update_params(self, freq=None, amp=None, phase=None, shape=None, direction=None, seed=None):
         if freq is not None:
@@ -191,14 +199,19 @@ class Oscillator:
         Args:
             param (Param): The parameter object to link to.
         """
-        self.amplitude = param
-        self.phase = param
-        self.seed = param
+        print(f"Linking {self.name} to {param.name}")
+        self.linked_param = param
+        self.amplitude.max_val =  param.max_val
+        self.amplitude.min_val =  param.min_val
+        self.phase.max_val = param.max_val
+        self.phase.min_val = param.min_val
+        self.seed.max_val = param.max_val
+        self.seed.min_val = param.min_val
     
     def unlink_param(self):
         """
         Unlinks the oscillator parameters from the parameter object.
         """
-        self.amplitude = None
-        self.phase = None
-        self.seed = None
+        # self.amplitude =
+        # self.phase = None
+        # self.seed = N

@@ -1,19 +1,14 @@
-import os
-import time
-import sys
-import math
 import cv2
 from fx import Effects, HSV
 import config as p
 from gui import Interface
 import dearpygui.dearpygui as dpg 
 from generators import PerlinNoise, Interp, Oscillator
-import threading
 
 CURRENT = 0
 PREV = 1
 
-fps = 15 # Desired frame rate
+fps = 20 # Desired frame rate
 
 def main():
     # Initialize the video capture object (0 for default camera)
@@ -30,19 +25,17 @@ def main():
     feedback_frame = frame.copy()
     p.image_height, p.image_width = frame.shape[:2]
 
-    p.params["x_shift"].set_min_max(-p.image_width//2, p.image_width//2)
-    p.params["y_shift"].set_min_max(-p.image_height//2, p.image_height//2)
-    p.params["polar_x"].set_min_max(-p.image_width//2, p.image_width//2)
-    p.params["polar_y"].set_min_max(-p.image_height//2, p.image_height//2)
+    p.params["x_shift"].set_min_max(-p.image_width, p.image_width)
+    p.params["y_shift"].set_min_max(-p.image_height, p.image_height)
+    p.params["polar_x"].set_min_max(-p.image_width, p.image_width)
+    p.params["polar_y"].set_min_max(-p.image_height, p.image_height)
 
     cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
     
     for i in range(4):
         # Create a new oscillator with frequency 0.5 Hz and amplitude 1.0
-        osc = Oscillator(name=f"osc{i}", frequency=1, amplitude=1.0, phase=0, shape=i)
+        osc = Oscillator(name=f"osc{i}", frequency=1.0, amplitude=1.0, phase=0.0, shape=i)
         p.osc_bank.append(osc)
-
-    # osc_bank[i].frequency # access frequency param of oscillator i
 
     gui = Interface()
     gui.create_control_window()
@@ -56,9 +49,8 @@ def main():
             break
 
         # update osc values
-        p.osc_vals = [osc.get_next_value() for osc in p.osc_bank]
-        osc_val_str = [str(val) for val in p.osc_vals]
-        print(osc_val_str)
+        p.osc_vals = [osc.get_next_value() for osc in p.osc_bank if osc.linked_param is not None]
+        # print(p.osc_vals)
 
         # Update noise value
         # noise = p.perlin_noise.get(noise)
@@ -74,17 +66,13 @@ def main():
             feedback_frame = e.polar_transform(feedback_frame, p.params["polar_x"].value, p.params["polar_y"].value, p.params["polar_radius"].value)
         # feedback_frame = noisy("gauss", feedback_frame)        
 
-        # Split image HSV channels for modifications (hsv shifts, shifts hue by x where val > y)
-        # then merge the modified channels and convert back to BGR color space.   
+        # Split image HSV channels for modifications and convert back to BGR color space.   
         hsv_image = e.modify_hsv(feedback_frame, p.params["hue_shift"].value, p.params["sat_shift"].value, 
                                 p.params["val_shift"].value, p.val_threshold, p.val_hue_shift)
         feedback_frame = cv2.cvtColor(hsv_image, cv2.COLOR_HSV2BGR)
 
-        # Display the resulting frame next to the original frame
-        # cv2.imshow('Original Frame', frame)
+        # Display the resulting frame and control panel
         cv2.imshow('Modified Frame', feedback_frame)
-
-        # Display the control panel
         dpg.render_dearpygui_frame()
 
         # Break the loop if 'q' is pressed

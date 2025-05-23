@@ -5,17 +5,6 @@
 #     s.value = s.min_value
 #     dpg.set_value(user_data, s.min_value)
 
-# def map_value(value, from_min, from_max, to_min, to_max):
-#   """
-#   Maps a value from one range to another.
-
-#   Args:
-#     value: The value to map.
-#     from_min: The minimum value of the original range.
-#     from_max: The maximum value of the original range.
-#     to_min: The minimum value of the target range.
-#     to_max: The maximum value of the target range.
-
 #   Returns:
 #     The mapped value.
 #   """

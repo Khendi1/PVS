@@ -81,5 +81,11 @@ class Param:
             self.value = self.max_val
         else:
             self.value = value
+        
+        if isinstance(self.default_val, float):
+            self.value = float(self.value)
+        elif isinstance(self.default_val, int):
+            self.value = int(self.value)
+        
         return self.value
 

@@ -1,5 +1,6 @@
 from generators import PerlinNoise, Interp, Oscillator
 from param import Param
+from math import floor
 
 save_index = 0
 
@@ -43,3 +44,22 @@ params = {
 
 indices = {
 }
+
+def map_value(value, from_min, from_max, to_min, to_max):
+  """
+  Maps a value from one range to another.
+
+  Args:
+    value: The value to map.
+    from_min: The minimum value of the original range.
+    from_max: The maximum value of the original range.
+    to_min: The minimum value of the target range.
+    to_max: The maximum value of the target range.
+"""
+  # Calculate the proportion of the value within the original range
+  proportion = (value - from_min) / (from_max - from_min)
+
+  # Map the proportion to the target range
+  mapped_value = to_min + proportion * (to_max - to_min)
+
+  return floor(mapped_value)

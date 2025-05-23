@@ -293,12 +293,50 @@ class Interface:
         """
         print("Sender:", sender)
         print("App Data:", app_data)
-        selected_indices = app_data['items']
-        items = dpg.get_item_configuration(sender)['items'] #get the items
-        selected_items = [items[i] for i in selected_indices]
-
-        print("Selected Items:", selected_items) # print the selected items
-
+        for i in range(4):
+            if f"osc{i}" in sender:
+                param = None
+                if app_data == "None":
+                    p.osc_bank[i].link_param()
+                elif app_data == "Hue":
+                    p.osc_bank[i].link_param(p.params["hue_shift"])
+                elif app_data == "Sat":
+                    p.osc_bank[i].link_param(p.params["sat_shift"])
+                elif app_data == "Val":
+                    p.osc_bank[i].link_param(p.params["val_shift"])
+                elif app_data == "Feedback":
+                    p.osc_bank[i].link_param(p.params["alpha"])
+                elif app_data == "Glitch Size":
+                    p.osc_bank[i].link_param(p.params["glitch_size"])
+                elif app_data == "Glitch Qty":
+                    p.osc_bank[i].link_param(p.params["num_glitches"])
+                elif app_data == "Pan X":
+                    p.osc_bank[i].link_param(p.params["x_shift"])
+                elif app_data == "Pan Y":
+                    p.osc_bank[i].link_param(p.params["y_shift"])
+                elif app_data == "R Shift":
+                    p.osc_bank[i].link_param(p.params["r_shift"])
+                elif app_data == "Blur Kernel":
+                    p.osc_bank[i].link_param(p.params["blur_kernel_size"])
+                elif app_data == "Val Threshold":
+                    p.osc_bank[i].link_param(p.params["val_threshold"])
+                elif app_data == "Val Hue Shift":
+                    p.osc_bank[i].link_param(p.params["val_hue_shift"])
+                elif app_data == "Perlin Amplitude":
+                    p.osc_bank[i].link_param(p.params["perlin_amplitude"])
+                elif app_data == "Perlin Frequency":
+                    p.osc_bank[i].link_param(p.params["perlin_frequency"])
+                elif app_data == "Perlin Octaves":
+                    p.osc_bank[i].link_param(p.params["perlin_octaves"])
+                elif app_data == "Polar X":
+                    p.osc_bank[i].link_param(p.params["polar_x"])
+                elif app_data == "Polar Y":
+                    p.osc_bank[i].link_param(p.params["polar_y"])
+                elif app_data == "Polar Radius":
+                    p.osc_bank[i].link_param(p.params["polar_radius"])
+                elif app_data == "None":
+                    p.osc_bank[i].unlink_param()
+                break
 
     def create_trackbars(self, width, height):
 
@@ -317,34 +355,26 @@ class Interface:
         # Bind the default font to the whole window (optional, but good practice)
         dpg.bind_font(default_font_id)
 
-        with dpg.collapsing_header(label=f"HSV", tag="hsv"):
+        with dpg.collapsing_header(label=f"\tHSV", tag="hsv"):
             hue_slider = TrackbarRow("Hue Shift", p.params["hue_shift"], self.hue_shift_cb, self.reset_slider_callback, default_font_id)
             sat_slider = TrackbarRow("Sat Shift", p.params["sat_shift"], self.sat_shift_cb, self.reset_slider_callback, default_font_id)
             val_slider = TrackbarRow("Val Shift", p.params["val_shift"], self.val_shift_cb, self.reset_slider_callback, default_font_id)
             contrast_slider = TrackbarRow("Contrast", p.params["contrast"], self.contrast_cb, self.reset_slider_callback, default_font_id)
             brightness_slider = TrackbarRow("Brighness", p.params["brightness"], self.brightness_cb, self.reset_slider_callback, default_font_id)
 
-        with dpg.collapsing_header(label=f"Feedback, Blur, Glitch", tag="feedback_blur_glitch"):
             alpha_slider = TrackbarRow("Feedback", p.params["alpha"], self.alpha_cb, self.reset_slider_callback, default_font_id)
             blur_kernel_slider = TrackbarRow("Blur Kernel", p.params["blur_kernel_size"], self.blur_kernel_size_cb, self.reset_slider_callback, default_font_id)
             num_glitches_slider = TrackbarRow("Glitch Qty", p.params["num_glitches"], self.num_glitches_cb, self.reset_slider_callback, default_font_id)
             glitch_size_slider = TrackbarRow("Glitch Size", p.params["glitch_size"], self.glitch_size_cb, self.reset_slider_callback, default_font_id)
         
-        with dpg.collapsing_header(label=f"Val Threshold", tag="val_threshold_header"):
             val_threshold_slider = TrackbarRow("Val Threshold", p.params["val_threshold"], self.val_threshold_cb, self.reset_slider_callback, default_font_id)
             val_hue_shift_slider = TrackbarRow("Hue Shift for Val", p.params["val_hue_shift"], self.val_hue_shift_cb, self.reset_slider_callback, default_font_id)
         
-        with dpg.collapsing_header(label=f"Pan", tag="pan"):
-            x_shift_slider = TrackbarRow("X Shift", p.params["x_shift"], self.y_shift_cb, self.reset_slider_callback, default_font_id)
-            y_shift_slider = TrackbarRow("Y Shift", p.params["y_shift"], self.x_shift_cb, self.reset_slider_callback, default_font_id)
+        with dpg.collapsing_header(label=f"\tPan", tag="pan"):
+            x_shift_slider = TrackbarRow("X Shift", p.params["x_shift"], self.x_shift_cb, self.reset_slider_callback, default_font_id)
+            y_shift_slider = TrackbarRow("Y Shift", p.params["y_shift"], self.y_shift_cb, self.reset_slider_callback, default_font_id)
             r_shift_slider = TrackbarRow("R Shift", p.params["r_shift"], self.r_shift_cb, self.reset_slider_callback, default_font_id)
-
-        with dpg.collapsing_header(label=f"Noise Generator", tag="noise_generator"):
-            perlin_amplitude_slider = TrackbarRow("Perlin Amplitude", p.params["perlin_amplitude"], self.perlin_frequency_cb, self.reset_slider_callback, default_font_id)
-            perlin_frequency_slider = TrackbarRow("Perlin Frequency", p.params["perlin_frequency"], self.perlin_amplitude_cb, self.reset_slider_callback, default_font_id)
-            perlin_octaves_slider = TrackbarRow("Perlin Octaves", p.params["perlin_octaves"], self.perlin_octaves_cb, self.reset_slider_callback, default_font_id)
-        
-        with dpg.collapsing_header(label=f"Polar Transform", tag="polar_transform"):
+            
             enable_polar_transform_button = Button("Enable Polar Transform", "enable_polar_transform")
             # polar_coord_mode_slider = TrackbarRow("Polar Coord Mode", p.polar_coord_mode, self.polar_x_cb, self.reset_slider_callback, default_font_id)
             dpg.add_button(label=enable_polar_transform_button.label, tag="enable_polar_transform", callback=self.on_button_click, user_data=enable_polar_transform_button.tag, width=width)
@@ -353,12 +383,15 @@ class Interface:
             polar_y_slider = TrackbarRow("Polar Center Y", p.params["polar_y"], self.polar_y_cb, self.reset_slider_callback, default_font_id)
             polar_radius_slider = TrackbarRow("Polar radius", p.params["polar_radius"], self.polar_radius_cb, self.reset_slider_callback, default_font_id)
 
+        with dpg.collapsing_header(label=f"\tNoise Generator", tag="noise_generator"):
+            perlin_amplitude_slider = TrackbarRow("Perlin Amplitude", p.params["perlin_amplitude"], self.perlin_frequency_cb, self.reset_slider_callback, default_font_id)
+            perlin_frequency_slider = TrackbarRow("Perlin Frequency", p.params["perlin_frequency"], self.perlin_amplitude_cb, self.reset_slider_callback, default_font_id)
+            perlin_octaves_slider = TrackbarRow("Perlin Octaves", p.params["perlin_octaves"], self.perlin_octaves_cb, self.reset_slider_callback, default_font_id)
+        
+
         dpg.bind_item_font("hsv", global_font_id)
-        dpg.bind_item_font("feedback_blur_glitch", global_font_id)
-        dpg.bind_item_font("val_threshold_header", global_font_id)
         dpg.bind_item_font("noise_generator", global_font_id)
         dpg.bind_item_font("pan", global_font_id)
-        dpg.bind_item_font("polar_transform", global_font_id)
 
         osc_freq_sliders = []
         osc_amp_sliders = []
@@ -366,7 +399,7 @@ class Interface:
         osc_seed_sliders = []
         osc_shape_sliders = []
         for i in range(4):
-            with dpg.collapsing_header(label=f"Osc{i}", tag=f"osc{i}"):
+            with dpg.collapsing_header(label=f"\tOscillator {i}", tag=f"osc{i}"):
                 osc_shape_sliders.append(TrackbarRow(f"Osc {i} Shape", p.osc_bank[i].shape, self.shape_cb, self.reset_slider_callback, default_font_id))
                 osc_freq_sliders.append(TrackbarRow(f"Osc {i} Freq", p.osc_bank[i].frequency, self.frequency_cb, self.reset_slider_callback, default_font_id))
                 osc_amp_sliders.append(TrackbarRow(f"Osc {i} Amp", p.osc_bank[i].amplitude, self.amplitude_cb, self.reset_slider_callback, default_font_id))
@@ -488,7 +521,6 @@ class Interface:
         dpg.create_context()
 
         with dpg.window(tag="Controls", label="Controls", width=width, height=height):
-
             self.create_trackbars(width, height)
             self.create_buttons(width, height)
             # dpg.set_viewport_resize_callback(resize_buttons)
