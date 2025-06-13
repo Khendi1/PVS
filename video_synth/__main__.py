@@ -3,6 +3,7 @@ from fx import Effects, HSV
 import config as p
 from gui import Interface
 import dearpygui.dearpygui as dpg 
+from shapes import ShapeGenerator
 from generators import PerlinNoise, Interp, Oscillator
 
 CURRENT = 0
@@ -37,6 +38,7 @@ def main():
         osc = Oscillator(name=f"osc{i}", frequency=1.0, amplitude=1.0, phase=0.0, shape=i)
         p.osc_bank.append(osc)
 
+    s = ShapeGenerator(p.image_width, p.image_height)
     gui = Interface()
     gui.create_control_window()
 
@@ -49,7 +51,7 @@ def main():
             break
 
         # update osc values
-        p.osc_vals = [osc.get_next_value() for osc in p.osc_bank if osc.linked_param is not None]
+        osc_vals = [osc.get_next_value() for osc in p.osc_bank if osc.linked_param is not None]
         # print(p.osc_vals)
 
         # Update noise value
@@ -57,10 +59,11 @@ def main():
         # print(noise)
 
         # Apply transformations to the frame for feedback effect
+        frame = s.draw_shapes_on_frame(frame, p.image_width, p.image_height)
         feedback_frame = cv2.addWeighted(frame, 1 - p.params["alpha"].value, feedback_frame, p.params["alpha"].value, 0)
         feedback_frame = e.glitch_image(feedback_frame, p.params["num_glitches"].value, p.params["glitch_size"].value) 
         feedback_frame = e.gaussian_blur(feedback_frame, p.params["blur_kernel_size"].value)
-        feedback_frame = e.shift_frame(feedback_frame, p.params["x_shift"].value, p.params["y_shift"].value, p.params["r_shift"].value)
+        feedback_frame = e.shift_frame(feedback_frame, p.params["x_shift"].value, p.params["y_shift"].value, p.params["r_shift"].value, p.params["zoom"].value)
         feedback_frame = e.adjust_brightness_contrast(feedback_frame, p.params["contrast"].value, p.params["brightness"].value)
         if p.enable_polar_transform == True:
             feedback_frame = e.polar_transform(feedback_frame, p.params["polar_x"].value, p.params["polar_y"].value, p.params["polar_radius"].value)
@@ -76,8 +79,12 @@ def main():
         dpg.render_dearpygui_frame()
 
         # Break the loop if 'q' is pressed
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q'):
+            print(f"Key pressed: {key}")
             break
+        else:
+            s.keyboard_controls(key)
 
     # Release the capture and destroy all windows
     dpg.destroy_context()

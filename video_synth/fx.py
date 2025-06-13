@@ -185,7 +185,7 @@ class Effects:
 
         return hsv
 
-    def shift_frame(self, frame, shift_x, shift_y, shift_r=None):
+    def shift_frame(self, frame, shift_x, shift_y, shift_r=None, zoom=1.0):
         """
         Shifts all pixels in an OpenCV frame by the specified x and y amounts,
         wrapping pixels that go beyond the frame boundaries.
@@ -214,7 +214,7 @@ class Effects:
         shifted_frame = frame[y_map[:, np.newaxis], x_map]
 
         # Use cv2.getRotationMatrix2D to get the rotation matrix
-        M = cv2.getRotationMatrix2D(center, shift_r, 1.0)  # 1.0 is the scale
+        M = cv2.getRotationMatrix2D(center, shift_r, zoom)  # 1.0 is the scale
 
         # Perform the rotation using cv2.warpAffine
         rotated_frame = cv2.warpAffine(shifted_frame, M, (width, height))
@@ -288,7 +288,6 @@ class Effects:
             frame = cv2.bilateralFilter(frame,9,75,75)
         
         return frame
-
 
     def adjust_brightness_contrast(self, image, alpha=1.0, beta=0):
         """

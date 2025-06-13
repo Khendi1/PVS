@@ -108,6 +108,11 @@ class Oscillator:
         self.phase = Param(f"{name}_phase", 0, 100, phase)
         self.seed = Param(f"{name}_seed", 0, 100, seed)
         self.shape = Param(f"{name}_shape", 0, 3, shape)
+        p.params[f"{name}_frequency"] = self.frequency
+        p.params[f"{name}_amplitude"] = self.amplitude
+        p.params[f"{name}_phase"] = self.phase
+        p.params[f"{name}_seed"] = self.seed
+        p.params[f"{name}_shape"] = self.shape
         self.sample_rate = 30
         self.direction = 1
         self.oscillator = self.create_oscillator()

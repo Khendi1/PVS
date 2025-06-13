@@ -16,7 +16,6 @@ noise = 1
 perlin_noise = PerlinNoise(noise)
 
 osc_bank = []
-osc_vals = []
 
 params = {
     "hue_shift": Param("hue_shift", 0, 180, 100),
@@ -38,12 +37,11 @@ params = {
     "perlin_frequency": Param("perlin_frequency", 0.1, 500, 1.0),
     "perlin_octaves": Param("perlin_octaves", 0.1, 500, 1.0),
     "contrast": Param("contrast", 1.0, 3.0, 1.0),
-    "brightness": Param("brightness", 0, 100, 0)
+    "brightness": Param("brightness", 0, 100, 0),
+    "zoom": Param("zoom", 0.5, 3, 1.0)
     # Param("enable_polar_transform", False, True, enable_polar_transform),
 }
 
-indices = {
-}
 
 def map_value(value, from_min, from_max, to_min, to_max):
   """
