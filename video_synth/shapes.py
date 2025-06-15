@@ -4,9 +4,9 @@ from param import Param
 import config as p
 
 class ShapeGenerator:
-    def __init__(self, width, height, start_shift_x=0, start_shift_y=0):
-        self.start_shift_x = p.add_param("start_shift_x", -width, width, start_shift_x)  # Allow negative shifts
-        self.start_shift_y = p.add_param("start_shift_y", -height, height, start_shift_y)
+    def __init__(self, width, height, shape_x_shift=0, shape_y_shift=0):
+        self.shape_x_shift = p.add_param("shape_x_shift", -width, width, shape_x_shift)  # Allow negative shifts
+        self.shape_y_shift = p.add_param("shape_y_shift", -height, height, shape_y_shift)
         self.center_x = width // 2
         self.center_y = height // 2
         self.fill_enabled = True  # Toggle fill on/off
@@ -195,7 +195,7 @@ class ShapeGenerator:
         return (int(bgr[0]), int(bgr[1]), int(bgr[2]))
     
     def draw_shapes_on_frame(self, frame, width, height):
-        base_center_x, base_center_y = width // 2 + self.start_shift_x.value, height // 2 + self.start_shift_y.value
+        base_center_x, base_center_y = width // 2 + self.shape_x_shift.value, height // 2 + self.shape_y_shift.value
 
         # # Create a completely transparent overlay to draw all shapes onto
         # # This is crucial for accumulated drawing before final blending
@@ -286,17 +286,17 @@ class ShapeGenerator:
             # print(f"Rotation angle set to {self.rotation_angle} degrees")
         # Position Shift
         elif key == ord('w'):
-            self.start_shift_y.value -= 10
-            # print(f"Shift Y position increased to {self.start_shift_y}")
+            self.shape_y_shift.value -= 10
+            # print(f"Shift Y position increased to {self.shape_y_shift}")
         elif key == ord('s'):
-           self.start_shift_y.value += 10
-           # print(f"Shift Y position decreased to {self.start_shift_y}")
+           self.shape_y_shift.value += 10
+           # print(f"Shift Y position decreased to {self.shape_y_shift}")
         elif key == ord('a'):
-            self.start_shift_x.value -= 10
-            # print(f"Shift X position increased to {self.start_shift_x}")
+            self.shape_x_shift.value -= 10
+            # print(f"Shift X position increased to {self.shape_x_shift}")
         elif key == ord('d'):
-            self.start_shift_x.value += 10
-            # print(f"Shift X position decreased to {self.start_shift_x}")
+            self.shape_x_shift.value += 10
+            # print(f"Shift X position decreased to {self.shape_x_shift}")
         # Line Properties
         elif key == ord('['):
             self.line_weight.value = max(1, self.line_weight - 1)

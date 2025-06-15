@@ -15,6 +15,8 @@ enable_polar_transform = False
 noise = 1
 perlin_noise = PerlinNoise(noise)
 
+NUM_OSCILLATORS = 6
+
 osc_bank = []
 
 params = {
@@ -45,8 +47,10 @@ params = {
     "perlin_octaves": Param("perlin_octaves", 0.1, 500, 1.0),
 
     "contrast": Param("contrast", 1.0, 3.0, 1.0),
-    "brightness": Param("brightness", 0, 100, 0)
+    "brightness": Param("brightness", 0, 100, 0),
+    "temporal_filter": Param("temporal_filter", 0, 1.0, 0.95)
     # Param("enable_polar_transform", False, True, enable_polar_transform),
+
 }
 
 def map_value(value, from_min, from_max, to_min, to_max):

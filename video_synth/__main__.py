@@ -1,6 +1,7 @@
 import cv2
 from fx import Effects, HSV
 import config as p
+from config import NUM_OSCILLATORS, params
 from gui import Interface
 import dearpygui.dearpygui as dpg 
 from shapes import ShapeGenerator
@@ -26,14 +27,14 @@ def main():
     feedback_frame = frame.copy()
     p.image_height, p.image_width = frame.shape[:2]
 
-    p.params["x_shift"].set_min_max(-p.image_width, p.image_width)
-    p.params["y_shift"].set_min_max(-p.image_height, p.image_height)
-    p.params["polar_x"].set_min_max(-p.image_width, p.image_width)
-    p.params["polar_y"].set_min_max(-p.image_height, p.image_height)
+    params["x_shift"].set_min_max(-p.image_width, p.image_width)
+    params["y_shift"].set_min_max(-p.image_height, p.image_height)
+    params["polar_x"].set_min_max(-p.image_width, p.image_width)
+    params["polar_y"].set_min_max(-p.image_height, p.image_height)
 
     cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
     
-    for i in range(4):
+    for i in range(NUM_OSCILLATORS):
         # Create a new oscillator with frequency 0.5 Hz and amplitude 1.0
         osc = Oscillator(name=f"osc{i}", frequency=1.0, amplitude=1.0, phase=0.0, shape=i)
         p.osc_bank.append(osc)
@@ -43,6 +44,8 @@ def main():
     gui.create_control_window()
 
     e = Effects()
+
+    prev_frame = feedback_frame.copy()
 
     while True:
         # Capture a frame from the camera
@@ -60,19 +63,22 @@ def main():
 
         # Apply transformations to the frame for feedback effect
         frame = s.draw_shapes_on_frame(frame, p.image_width, p.image_height)
-        feedback_frame = cv2.addWeighted(frame, 1 - p.params["alpha"].value, feedback_frame, p.params["alpha"].value, 0)
-        feedback_frame = e.glitch_image(feedback_frame, p.params["num_glitches"].value, p.params["glitch_size"].value) 
-        feedback_frame = e.gaussian_blur(feedback_frame, p.params["blur_kernel_size"].value)
-        feedback_frame = e.shift_frame(feedback_frame, p.params["x_shift"].value, p.params["y_shift"].value, p.params["r_shift"].value, p.params["zoom"].value)
-        feedback_frame = e.adjust_brightness_contrast(feedback_frame, p.params["contrast"].value, p.params["brightness"].value)
+        feedback_frame = cv2.addWeighted(frame, 1 - params["alpha"].value, feedback_frame, params["alpha"].value, 0)
+        feedback_frame = e.glitch_image(feedback_frame, params["num_glitches"].value, params["glitch_size"].value) 
+        feedback_frame = e.gaussian_blur(feedback_frame, params["blur_kernel_size"].value)
+        feedback_frame = e.shift_frame(feedback_frame, params["x_shift"].value, params["y_shift"].value, params["r_shift"].value, params["zoom"].value)
+        feedback_frame = e.adjust_brightness_contrast(feedback_frame, params["contrast"].value, params["brightness"].value)
         if p.enable_polar_transform == True:
-            feedback_frame = e.polar_transform(feedback_frame, p.params["polar_x"].value, p.params["polar_y"].value, p.params["polar_radius"].value)
+            feedback_frame = e.polar_transform(feedback_frame, params["polar_x"].value, params["polar_y"].value, params["polar_radius"].value)
         # feedback_frame = noisy("gauss", feedback_frame)        
 
         # Split image HSV channels for modifications and convert back to BGR color space.   
-        hsv_image = e.modify_hsv(feedback_frame, p.params["hue_shift"].value, p.params["sat_shift"].value, 
-                                p.params["val_shift"].value, p.val_threshold, p.val_hue_shift)
+        hsv_image = e.modify_hsv(feedback_frame, params["hue_shift"].value, params["sat_shift"].value, 
+                                params["val_shift"].value, p.val_threshold, p.val_hue_shift)
         feedback_frame = cv2.cvtColor(hsv_image, cv2.COLOR_HSV2BGR)
+
+        feedback_frame = e.apply_temporal_filter(prev_frame, feedback_frame, params["temporal_filter"].value)
+        prev_frame = feedback_frame.copy()
 
         # Display the resulting frame and control panel
         cv2.imshow('Modified Frame', feedback_frame)

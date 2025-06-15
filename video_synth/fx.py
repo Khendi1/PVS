@@ -304,59 +304,59 @@ class Effects:
         adjusted_image = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
         return adjusted_image
 
-def polarize_frame_hsv(frame, angle=0, strength=1.0):
-    """
-    Polarizes a frame by rotating hue in HSV color space.  This often gives
-    a more visually interesting effect than rotating in BGR.
+    def polarize_frame_hsv(frame, angle=0, strength=1.0):
+        """
+        Polarizes a frame by rotating hue in HSV color space.  This often gives
+        a more visually interesting effect than rotating in BGR.
 
-    Args:
-        frame (numpy.ndarray): The input frame as a NumPy array (H, W, 3) in BGR format.
-        angle (float): The polarization angle in degrees.
-        strength (float): The strength of the polarization effect (0 to 1).
+        Args:
+            frame (numpy.ndarray): The input frame as a NumPy array (H, W, 3) in BGR format.
+            angle (float): The polarization angle in degrees.
+            strength (float): The strength of the polarization effect (0 to 1).
 
-    Returns:
-        numpy.ndarray: The polarized frame as a NumPy array (H, W, 3) in BGR format.
-    """
-    # Convert to HSV color space and extract hsv channel
-    hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV).astype(np.float32)
-    hue_channel = hsv_frame[:, :, 0]
+        Returns:
+            numpy.ndarray: The polarized frame as a NumPy array (H, W, 3) in BGR format.
+        """
+        # Convert to HSV color space and extract hsv channel
+        hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV).astype(np.float32)
+        hue_channel = hsv_frame[:, :, 0]
 
-    # Convert angle to OpenCV hue units (0-180)
-    hue_shift = (angle / 360.0) * 180
+        # Convert angle to OpenCV hue units (0-180)
+        hue_shift = (angle / 360.0) * 180
 
-    # Apply the hue shift with strength
-    shifted_hue = (hue_channel + hue_shift * strength) % 180  # Wrap aroundS
-    hsv_frame[:, :, 0] = shifted_hue
+        # Apply the hue shift with strength
+        shifted_hue = (hue_channel + hue_shift * strength) % 180  # Wrap aroundS
+        hsv_frame[:, :, 0] = shifted_hue
 
-    # Convert back to BGR
-    polarized_frame = cv2.cvtColor(hsv_frame.astype(np.uint8), cv2.COLOR_HSV2BGR)
-    return polarized_frame
+        # Convert back to BGR
+        polarized_frame = cv2.cvtColor(hsv_frame.astype(np.uint8), cv2.COLOR_HSV2BGR)
+        return polarized_frame
 
-def apply_temporal_filter(prev_frame, cur_frame, alpha=0.95):
-    """
-    Applies a temporal filter (exponential moving average) to reduce noise and flicker in a video stream.
+    def apply_temporal_filter(self, prev_frame, cur_frame, alpha=0.95):
+        """
+        Applies a temporal filter (exponential moving average) to reduce noise and flicker in a video stream.
 
-    Args:
-        video_path (str, optional): Path to the video file. If None, uses the default webcam.
-        alpha (float): The weighting factor for the current frame (0.0 to 1.0).
-                       Higher alpha means less smoothing, more responsiveness to changes.
-                       Lower alpha means more smoothing, less responsiveness.
-    """
+        Args:
+            video_path (str, optional): Path to the video file. If None, uses the default webcam.
+            alpha (float): The weighting factor for the current frame (0.0 to 1.0).
+                        Higher alpha means less smoothing, more responsiveness to changes.
+                        Lower alpha means more smoothing, less responsiveness.
+        """
 
-    # Convert the first frame to float for accurate averaging
-    filtered_frame = prev_frame.astype(np.float32)
+        # Convert the first frame to float for accurate averaging
+        filtered_frame = prev_frame.astype(np.float32)
 
-    # Convert current frame to float for calculations
-    current_frame_float = cur_frame.astype(np.float32)
+        # Convert current frame to float for calculations
+        current_frame_float = cur_frame.astype(np.float32)
 
-    # Apply the temporal filter (Exponential Moving Average)
-    # filtered_frame = alpha * current_frame_float + (1 - alpha) * filtered_frame
-    # This formula directly updates the filtered_frame based on the new current_frame.
-    # It's a low-pass filter in the time domain.
-    filtered_frame = cv2.addWeighted(current_frame_float, alpha, filtered_frame, 1 - alpha, 0)
+        # Apply the temporal filter (Exponential Moving Average)
+        # filtered_frame = alpha * current_frame_float + (1 - alpha) * filtered_frame
+        # This formula directly updates the filtered_frame based on the new current_frame.
+        # It's a low-pass filter in the time domain.
+        filtered_frame = cv2.addWeighted(current_frame_float, alpha, filtered_frame, 1 - alpha, 0)
 
-    # Convert back to uint8 for display
-    return cv2.convertScaleAbs(filtered_frame)
+        # Convert back to uint8 for display
+        return cv2.convertScaleAbs(filtered_frame)
 
 def apply_perlin_noise(frame, perlin_noise, amplitude=1.0, frequency=1.0, octaves=1):
     """ 

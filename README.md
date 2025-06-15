@@ -1,6 +1,6 @@
 # video_synth
 
-This is an interactive video synthesis tool with many tunable parameters. Most parameters can be modulated by oscillators.
+This is an interactive video synthesis tool with many tunable parameters. Most parameters can be modulated by oscillators, including the oscillator parameters themselves.
 
 ## Requirements
 - python3
@@ -15,10 +15,13 @@ This is an interactive video synthesis tool with many tunable parameters. Most p
 - Frame pan, tilt, zoom
 - Perlin noise generator
 - Polar Coordinate transform center and intensity
-- fix glitch
+- glitch generator
+    - glitch size
+    - glitch quantity
 - Oscillator bank
     - tunable freq, amp, phase
     - supports 4 basic wave forms
+    - can be linked to any parameter that is created with the general add_param() method
 - shape generator
     - line & fill weight, hsv, opacity
     - size, position control
@@ -26,6 +29,11 @@ This is an interactive video synthesis tool with many tunable parameters. Most p
     - multiplication pitch across x and y axis
     - rotation
 
+## Known issues
+- buttons are generally broken. 
+    - Saving/loading patches is broken
+    - Randomizing param values are broken
+     
 ## Roadmap:
 - fully integrate every parameter for oscillators. CUrrently broken:
     - after linking variables anf then selecting oscillator linked variable None, behavior continues

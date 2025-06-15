@@ -1,4 +1,5 @@
 import config as p
+from config import NUM_OSCILLATORS
 from gui_elements import TrackbarRow, Button, TrackbarRow
 import dearpygui.dearpygui as dpg
 from generators import PerlinNoise, Interp, Oscillator
@@ -239,7 +240,7 @@ class Interface:
         """
         print("Sender:", sender)
         print("App Data:", app_data)
-        for i in range(4):
+        for i in range(NUM_OSCILLATORS):
             if f"osc{i}" in sender:
                 param = None
                 for tag, param in p.params.items():
@@ -345,6 +346,13 @@ class Interface:
                 "Hue Shift for Val", 
                 p.params["val_hue_shift"], 
                 TrackbarCallback(p.params["val_hue_shift"], "val_hue_shift").__call__, 
+                self.reset_slider_callback, 
+                default_font_id)
+            
+            temporal_filter_slider = TrackbarRow(
+                "Temporal Filter", 
+                p.params["temporal_filter"], 
+                TrackbarCallback(p.params["temporal_filter"], "temporal_filter").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
         
@@ -535,13 +543,28 @@ class Interface:
                 self.reset_slider_callback, 
                 default_font_id)
             
+            shape_y_shift_slider = TrackbarRow(
+                "Shape Y Shift", 
+                p.params["shape_y_shift"], 
+                TrackbarCallback(p.params["shape_y_shift"], "shape_y_shift").__call__, 
+                self.reset_slider_callback, 
+                default_font_id)
+            
+            shape_x_shift_slider = TrackbarRow(
+                "Shape X Shift", 
+                p.params["shape_x_shift"], 
+                TrackbarCallback(p.params["shape_x_shift"], "shape_x_shift").__call__, 
+                self.reset_slider_callback, 
+                default_font_id)
+            
+            dpg.bind_item_font("shape_generator", global_font_id)
 
         osc_freq_sliders = []
         osc_amp_sliders = []
         osc_phase_sliders = []
         osc_seed_sliders = []
         osc_shape_sliders = []
-        for i in range(4):
+        for i in range(NUM_OSCILLATORS):
             with dpg.collapsing_header(label=f"\tOscillator {i}", tag=f"osc{i}"):
                 osc_shape_sliders.append(TrackbarRow(
                     f"Osc {i} Shape", 
