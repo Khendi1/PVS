@@ -88,4 +88,19 @@ class Param:
             self.value = int(self.value)
         
         return self.value
+    
+    def randomize(self):
+        import random
+        if isinstance(self.default_val, float):
+            self.value = random.uniform(self.min_val, self.max_val) 
+        else:
+            random.randint(self.min_val, self.max_val)
+                # for s in self.slider_dict.values():
+        #     if s.tag == "blur_kernel": s.value = max(1, random.randint(1, s.max_value) | 1)
+        #     elif s.tag == "x_shift": s.value = random.randint(-image_width, image_width)
+        #     elif s.tag == "y_shift": s.value = random.randint(-image_height, image_height)
+        #     elif s.tag == "glitch_size": s.value = random.randint(1, s.max_value)
+        #     elif s.tag == 'feedback': s.value = random.uniform(0.0, 1.0)
+        #     else: s.value = random.randint(s.min_value, s.max_value)
+        return self.value
 

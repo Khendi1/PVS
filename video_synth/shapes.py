@@ -5,48 +5,32 @@ import config as p
 
 class ShapeGenerator:
     def __init__(self, width, height, start_shift_x=0, start_shift_y=0):
-        self.start_shift_x = start_shift_x
-        self.start_shift_y = start_shift_y
+        self.start_shift_x = p.add_param("start_shift_x", -width, width, start_shift_x)  # Allow negative shifts
+        self.start_shift_y = p.add_param("start_shift_y", -height, height, start_shift_y)
         self.center_x = width // 2
         self.center_y = height // 2
         self.fill_enabled = True  # Toggle fill on/off
         self.shape_type = 'rectangle'  # 'rectangle', 'circle', 'triangle', 'line'
-        self.line_h = Param("line_hue", 0, 179, 0)  # Hue range for OpenCV is 0-
-        self.line_s = Param("line_saturation", 0, 255, 255)  # Saturation range
-        self.line_v = Param("line_value", 0, 255, 255)  # Value range
+        self.line_h = p.add_param("line_hue", 0, 179, 0)  # Hue range for OpenCV is 0-
+        self.line_s = p.add_param("line_saturation", 0, 255, 255)  # Saturation range
+        self.line_v = p.add_param("line_value", 0, 255, 255)  # Value range
         self.line_hsv = [self.line_h.value, self.line_v.value, self.line_s.value]  # H, S, V (Red) - will be converted to BGR
-        self.size_multiplier = Param("size_multiplier", 0.1, 10.0, 1.0)  # Scale factor for shape size
-        self.aspect_ratio = Param("aspect_ratio", 0.1, 10.0, 1.0)  # Scale factor for shape size
-        self.rotation_angle = Param("rotation_angle", 0, 360, 0)  # Rotation angle in degrees
-        self.multiply_grid_x = Param("multiply_grid_x", 1, 10, 2)  # Number of shapes in X direction
-        self.multiply_grid_y = Param("multiply_grid_y", 1, 10, 2)  # Number of shapes in Y direction
-        self.grid_pitch_x = Param("grid_pitch_x", min_val=10, max_val=200, default_val=50)  # Distance between shapes in X direction
-        self.grid_pitch_y = Param("grid_pitch_y", min_val=10, max_val=200, default_val=50)  # Distance between shapes in Y direction
-        self.line_weight = Param("line_weight", 1, 20, 5)  # Thickness of the shape outline, must be integer
-        self.line_opacity = Param("line_opacity", 0.0, 1.0, 1.0)  # Opacity of the shape outline
-        self.fill_h = Param("fill_hue", 0, 179, 120)  # Hue for fill color
-        self.fill_s = Param("fill_saturation", 0, 255, 255)  # Saturation for fill color
-        self.fill_v = Param("fill_value", 0, 255, 255)  # Value for fill color
+        self.size_multiplier = p.add_param("size_multiplier", 0.1, 10.0, 1.0)  # Scale factor for shape size
+        self.aspect_ratio = p.add_param("aspect_ratio", 0.1, 10.0, 1.0)  # Scale factor for shape size
+        self.rotation_angle = p.add_param("rotation_angle", 0, 360, 0)  # Rotation angle in degrees
+        self.multiply_grid_x = p.add_param("multiply_grid_x", 1, 10, 2)  # Number of shapes in X direction
+        self.multiply_grid_y = p.add_param("multiply_grid_y", 1, 10, 2)  # Number of shapes in Y direction
+        self.grid_pitch_x = p.add_param("grid_pitch_x", min_val=10, max_val=200, default_val=50)  # Distance between shapes in X direction
+        self.grid_pitch_y = p.add_param("grid_pitch_y", min_val=10, max_val=200, default_val=50)  # Distance between shapes in Y direction
+        self.line_weight = p.add_param("line_weight", 1, 20, 5)  # Thickness of the shape outline, must be integer
+        self.line_opacity = p.add_param("line_opacity", 0.0, 1.0, 1.0)  # Opacity of the shape outline
+        self.fill_h = p.add_param("fill_hue", 0, 179, 120)  # Hue for fill color
+        self.fill_s = p.add_param("fill_saturation", 0, 255, 255)  # Saturation for fill color
+        self.fill_v = p.add_param("fill_value", 0, 255, 255)  # Value for fill color
         self.fill_hsv = [self.fill_h.value, self.fill_s.value, self.fill_v.value]  # H, S, V (Blue) - will be converted to BGR
-        self.fill_opacity = Param("fill_opacity", 0.0, 1.0, 0.5)
+        self.fill_opacity = p.add_param("fill_opacity", 0.0, 1.0, 0.5)
         self.fill_color = self.hsv_to_bgr(self.fill_hsv)
         self.line_color = self.hsv_to_bgr(self.line_hsv)
-        p.params["line_hue"] = self.line_h
-        p.params["line_saturation"] = self.line_s
-        p.params["line_value"] = self.line_v
-        p.params["size_multiplier"] = self.size_multiplier
-        p.params["aspect_ratio"] = self.aspect_ratio
-        p.params["rotation_angle"] = self.rotation_angle
-        p.params["multiply_grid_x"] = self.multiply_grid_x
-        p.params["multiply_grid_y"] = self.multiply_grid_y
-        p.params["grid_pitch_x"] = self.grid_pitch_x
-        p.params["grid_pitch_y"] = self.grid_pitch_y
-        p.params["line_weight"] = self.line_weight
-        p.params["line_opacity"] = self.line_opacity
-        p.params["fill_hue"] = self.fill_h
-        p.params["fill_saturation"] = self.fill_s
-        p.params["fill_value"] = self.fill_v
-        p.params["fill_opacity"] = self.fill_opacity
 
         print("\n\n\nPress 'q' to quit.")
         print("\n--- General Controls ---")
@@ -121,7 +105,7 @@ class ShapeGenerator:
         return canvas
 
     def draw_circle(self, canvas, center_x, center_y):
-        radius = int(30 * self.size_multiplier)
+        radius = int(30 * self.size_multiplier.value)
         if self.fill_enabled:
             cv2.circle(canvas, (center_x, center_y), radius, self.fill_color, -1) # -1 for fill
         cv2.circle(canvas, (center_x, center_y), radius, self.line_color, self.line_weight.value)
@@ -129,7 +113,7 @@ class ShapeGenerator:
         return canvas
     
     def draw_triangle(self, canvas, center_x, center_y):
-        side_length = int(60 * self.size_multiplier)
+        side_length = int(60 * self.size_multiplier.value)
 
         # Vertices for an equilateral triangle centered at (0,0)
         p1_x = 0
@@ -146,13 +130,13 @@ class ShapeGenerator:
         pts[:, 1] += center_y
 
         # Apply rotation
-        M = cv2.getRotationMatrix2D((center_x, center_y), self.rotation_angle, 1)
+        M = cv2.getRotationMatrix2D((center_x, center_y), self.rotation_angle.value, 1)
         rotated_pts = cv2.transform(pts.reshape(-1, 1, 2), M)
         rotated_pts_int = np.int32(rotated_pts)
 
         if self.fill_enabled:
             cv2.fillPoly(canvas, [rotated_pts_int], self.fill_color)
-        cv2.polylines(canvas, [rotated_pts_int], True, self.line_color, self.line_weight)
+        cv2.polylines(canvas, [rotated_pts_int], True, self.line_color, self.line_weight.value)
 
         return canvas
     
@@ -211,7 +195,7 @@ class ShapeGenerator:
         return (int(bgr[0]), int(bgr[1]), int(bgr[2]))
     
     def draw_shapes_on_frame(self, frame, width, height):
-        base_center_x, base_center_y = width // 2 + self.start_shift_x, height // 2 + self.start_shift_y
+        base_center_x, base_center_y = width // 2 + self.start_shift_x.value, height // 2 + self.start_shift_y.value
 
         # # Create a completely transparent overlay to draw all shapes onto
         # # This is crucial for accumulated drawing before final blending
@@ -292,7 +276,7 @@ class ShapeGenerator:
             self.size_multiplier.value += 0.1
             # print(f"Size multiplier increased to {self.size_multiplier}")
         elif key == ord('-'):
-            self.size_multiplier = max(0.1, self.size_multiplier.value - 0.1)
+            self.size_multiplier.value = max(0.1, self.size_multiplier.value - 0.1)
             # print(f"Size multiplier decreased to {self.size_multiplier}")
         elif key == ord('r'):
             self.rotation_angle.value = (self.rotation_angle.value + 10) % 360

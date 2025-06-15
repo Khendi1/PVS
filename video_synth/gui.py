@@ -186,20 +186,10 @@ class Interface:
             dpg.set_value(s.tag, s.value)
 
     def randomize_values(self):
-        for s in self.slider_dict.values():
-            if s.tag == "blur_kernel":
-                s.value = max(1, random.randint(1, s.max_value) | 1)
-            elif s.tag == "x_shift":
-                s.value = random.randint(-image_width, image_width)
-            elif s.tag == "y_shift":
-                s.value = random.randint(-image_height, image_height)
-            elif s.tag == "glitch_size":
-                s.value = random.randint(1, s.max_value)
-            elif s.tag == 'feedback':
-                s.value = random.uniform(0.0, 1.0)
-            else:
-                s.value = random.randint(s.min_value, s.max_value)
-            dpg.set_value(s.tag, s.value)
+        # TODO: use param.randomize() method
+        for p in p.params:
+            p.params[p].randomize()
+            # dpg.set_value(s.tag, s.value)
 
     def create_buttons(self, width, height):
 
@@ -252,79 +242,10 @@ class Interface:
         for i in range(4):
             if f"osc{i}" in sender:
                 param = None
-                if app_data == "None":
-                    p.osc_bank[i].link_param()
-                elif app_data == "Hue":
-                    p.osc_bank[i].link_param(p.params["hue_shift"])
-                elif app_data == "Sat":
-                    p.osc_bank[i].link_param(p.params["sat_shift"])
-                elif app_data == "Val":
-                    p.osc_bank[i].link_param(p.params["val_shift"])
-                elif app_data == "Feedback":
-                    p.osc_bank[i].link_param(p.params["alpha"])
-                elif app_data == "Glitch Size":
-                    p.osc_bank[i].link_param(p.params["glitch_size"])
-                elif app_data == "Glitch Qty":
-                    p.osc_bank[i].link_param(p.params["num_glitches"])
-                elif app_data == "Pan X":
-                    p.osc_bank[i].link_param(p.params["x_shift"])
-                elif app_data == "Pan Y":
-                    p.osc_bank[i].link_param(p.params["y_shift"])
-                elif app_data == "R Shift":
-                    p.osc_bank[i].link_param(p.params["r_shift"])
-                elif app_data == "Blur Kernel":
-                    p.osc_bank[i].link_param(p.params["blur_kernel_size"])
-                elif app_data == "Val Threshold":
-                    p.osc_bank[i].link_param(p.params["val_threshold"])
-                elif app_data == "Val Hue Shift":
-                    p.osc_bank[i].link_param(p.params["val_hue_shift"])
-                elif app_data == "Perlin Amplitude":
-                    p.osc_bank[i].link_param(p.params["perlin_amplitude"])
-                elif app_data == "Perlin Frequency":
-                    p.osc_bank[i].link_param(p.params["perlin_frequency"])
-                elif app_data == "Perlin Octaves":
-                    p.osc_bank[i].link_param(p.params["perlin_octaves"])
-                elif app_data == "Polar X":
-                    p.osc_bank[i].link_param(p.params["polar_x"])
-                elif app_data == "Polar Y":
-                    p.osc_bank[i].link_param(p.params["polar_y"])
-                elif app_data == "Polar Radius":
-                    p.osc_bank[i].link_param(p.params["polar_radius"])
-                elif app_data == "None":
-                    p.osc_bank[i].unlink_param()
-                elif app_data == "Line Hue":
-                    p.osc_bank[i].link_param(p.params["line_hue"])
-                elif app_data == "Line Sat":
-                    p.osc_bank[i].link_param(p.params["line_saturation"])
-                elif app_data == "Line Val":
-                    p.osc_bank[i].link_param(p.params["line_value"])
-                elif app_data == "Line Width":
-                    p.osc_bank[i].link_param(p.params["line_weight"])
-                elif app_data == "Line Opacity":
-                    p.osc_bank[i].link_param(p.params["line_opacity"])
-                elif app_data == "Fill Hue":
-                    p.osc_bank[i].link_param(p.params["fill_hue"])
-                elif app_data == "Fill Sat":
-                    p.osc_bank[i].link_param(p.params["fill_saturation"])
-                elif app_data == "Fill Val":
-                    p.osc_bank[i].link_param(p.params["fill_value"])
-                elif app_data == "Fill Opacity":    
-                    p.osc_bank[i].link_param(p.params["fill_opacity"])  
-                elif app_data == "Size Multiplier": 
-                    p.osc_bank[i].link_param(p.params["size_multiplier"])
-                elif app_data == "Aspect Ratio":
-                    p.osc_bank[i].link_param(p.params["aspect_ratio"])    
-                elif app_data == "Rotation":
-                    p.osc_bank[i].link_param(p.params["rotation_angle"])
-                elif app_data == "Multiply Grid X":
-                    p.osc_bank[i].link_param(p.params["multiply_grid_x"])
-                elif app_data == "Multiply Grid Y":
-                    p.osc_bank[i].link_param(p.params["multiply_grid_y"])
-                elif app_data == "Grid Pitch X":
-                    p.osc_bank[i].link_param(p.params["grid_pitch_x"])
-                elif app_data == "Grid Pitch Y":
-                    p.osc_bank[i].link_param(p.params["grid_pitch_y"])
-                break
+                for tag, param in p.params.items():
+                    if tag == app_data:
+                        p.osc_bank[i].linked_param = param
+                        break
 
     # Create the control window and features #######################################
     def create_control_window(self, width=550, height=600):
@@ -377,6 +298,7 @@ class Interface:
                 TrackbarCallback(p.params["contrast"], "contrast").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
+            
             brightness_slider = TrackbarRow(
                 "Brighness", 
                 p.params["brightness"], 
@@ -390,18 +312,21 @@ class Interface:
                 TrackbarCallback(p.params["alpha"], "alpha").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
+            
             blur_kernel_slider = TrackbarRow(
                 "Blur Kernel", 
                 p.params["blur_kernel_size"], 
                 TrackbarCallback(p.params["blur_kernel_size"], "blur_kernel_size").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
+            
             num_glitches_slider = TrackbarRow(
                 "Glitch Qty", 
                 p.params["num_glitches"], 
                 TrackbarCallback(p.params["num_glitches"], "num_glitches").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
+            
             glitch_size_slider = TrackbarRow(
                 "Glitch Size", 
                 p.params["glitch_size"], 
@@ -415,6 +340,7 @@ class Interface:
                 TrackbarCallback(p.params["val_threshold"], "val_threshold").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
+            
             val_hue_shift_slider = TrackbarRow(
                 "Hue Shift for Val", 
                 p.params["val_hue_shift"], 
@@ -462,12 +388,14 @@ class Interface:
                 TrackbarCallback(p.params["polar_x"], "polar_x").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
+            
             polar_y_slider = TrackbarRow(
                 "Polar Center Y", 
                 p.params["polar_y"], 
                 TrackbarCallback(p.params["polar_y"], "polar_y").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
+            
             polar_radius_slider = TrackbarRow(
                 "Polar radius", 
                 p.params["polar_radius"], 
@@ -482,12 +410,14 @@ class Interface:
                 TrackbarCallback(p.params["perlin_amplitude"], "perlin_amplitude").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
+            
             perlin_frequency_slider = TrackbarRow(
                 "Perlin Frequency", 
                 p.params["perlin_frequency"], 
                 TrackbarCallback(p.params["perlin_frequency"], "perlin_frequency").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
+            
             perlin_octaves_slider = TrackbarRow(
                 "Perlin Octaves", 
                 p.params["perlin_octaves"], 
@@ -506,36 +436,42 @@ class Interface:
                 TrackbarCallback(p.params["line_hue"], "line_hue").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
+            
             line_saturation_slider = TrackbarRow(
                 "Line Sat", 
                 p.params["line_saturation"], 
                 TrackbarCallback(p.params["line_saturation"], "line_saturation").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
+            
             line_value_slider = TrackbarRow(
                 "Line Val", 
                 p.params["line_value"], 
                 TrackbarCallback(p.params["line_value"], "line_value").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
+            
             line_weight_slider = TrackbarRow(
                 "Line Width", 
                 p.params["line_weight"], 
                 TrackbarCallback(p.params["line_weight"], "line_weight").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
+            
             line_opacity_slider = TrackbarRow(
                 "Line Opacity", 
                 p.params["line_opacity"], 
                 TrackbarCallback(p.params["line_opacity"], "line_opacity").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
+            
             fill_hue_slider = TrackbarRow(
                 "Fill Hue", 
                 p.params["fill_hue"], 
                 TrackbarCallback(p.params["fill_hue"], "fill_hue").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
+            
             fill_saturation_slider = TrackbarRow(
                 "Fill Sat", 
                 p.params["fill_saturation"], 
@@ -584,12 +520,14 @@ class Interface:
                 TrackbarCallback(p.params["multiply_grid_y"], "multiply_grid_y").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
+            
             grid_pitch_x_slider = TrackbarRow(
                 "Grid Pitch X", 
                 p.params["grid_pitch_x"], 
                 TrackbarCallback(p.params["grid_pitch_x"], "grid_pitch_x").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
+            
             grid_pitch_y_slider = TrackbarRow(
                 "Grid Pitch Y", 
                 p.params["grid_pitch_y"], 
@@ -617,27 +555,30 @@ class Interface:
                     TrackbarCallback(p.osc_bank[i].frequency, f"osc{i}_frequency").__call__, 
                     self.reset_slider_callback, 
                     default_font_id))
+                
                 osc_amp_sliders.append(TrackbarRow(
                     f"Osc {i} Amp", 
                     p.osc_bank[i].amplitude, 
                     TrackbarCallback(p.osc_bank[i].amplitude, f"osc{i}_amplitude").__call__, 
                     self.reset_slider_callback, 
                     default_font_id))
+                
                 osc_phase_sliders.append(TrackbarRow(
                     f"Osc {i} Phase", 
                     p.osc_bank[i].phase, 
                     TrackbarCallback(p.osc_bank[i].phase, f"osc{i}_phase").__call__, 
                     self.reset_slider_callback, 
                     default_font_id))
+                
                 osc_seed_sliders.append(TrackbarRow(
                     f"Osc {i} Seed", 
                     p.osc_bank[i].seed, 
                     TrackbarCallback(p.osc_bank[i].seed, f"osc{i}_seed").__call__, 
                     self.reset_slider_callback, 
                     default_font_id))
-                                # Create a list of items for the listbox
-                items = ["None", "Hue", "Sat", "Val", "Feedback", "Glitch Size", "Glitch Qty", "Pan X", "Pan Y", "R Shift", "Blur Kernel", "Val Threshold", "Val Hue Shift", "Perlin Amplitude", "Perlin Frequency", "Perlin Octaves", "Polar X", "Polar Y", "Polar Radius",
-                         "Line Hue", "Line Sat", "Line Val", "Line Width", "Line Opacity", "Fill Hue", "Fill Sat", "Fill Val", "Fill Opacity", "Size Multiplier", "Aspect Ratio", "Rotation Angle", "Multiply Grid X", "Multiply Grid Y", "Grid Pitch X", "Grid Pitch Y"]
+                
+                # Create a list of items for the listbox
+                items = list(p.params.keys())
 
                 # Create the listbox
                 dpg.add_combo(items=items,
@@ -647,56 +588,3 @@ class Interface:
                                 callback=self.listbox_cb)
 
             dpg.bind_item_font(f"osc{i}", global_font_id)
-
-        self.sliders = [hue_slider, sat_slider, val_slider, alpha_slider, num_glitches_slider, glitch_size_slider, 
-                val_threshold_slider, val_hue_shift_slider, blur_kernel_slider, x_shift_slider, y_shift_slider, r_shift_slider , 
-                perlin_amplitude_slider, perlin_frequency_slider, perlin_octaves_slider, polar_radius_slider, brightness_slider, contrast_slider,
-                line_hue_slider, line_saturation_slider, line_value_slider, line_weight_slider, line_opacity_slider,
-                fill_hue_slider, fill_saturation_slider, fill_value_slider, fill_opacity_slider, size_multiplier_slider, aspect_ratio_slider,
-                rotation_slider, multiply_grid_x_slider, multiply_grid_y_slider, grid_pitch_x_slider, grid_pitch_y_slider]
-
-        self.slider_dict = {
-            "hue_shift": hue_slider,
-            "sat_shift": hue_slider,
-            "val_shift": hue_slider,
-            "alpha": alpha_slider,
-            "num_glitches": num_glitches_slider,
-            "glitch_size": glitch_size_slider,
-            "val_threshold": val_threshold_slider,
-            "val_hue_shift": val_hue_shift_slider, 
-            "blur_kernel_size": blur_kernel_slider, 
-            "x_shift": x_shift_slider, 
-            "y_shift": y_shift_slider, 
-            "r_shift": r_shift_slider,
-            "perlin_amplitude": perlin_amplitude_slider, 
-            "perlin_frequency": perlin_frequency_slider, 
-            "perlin_octaves": perlin_octaves_slider,
-            "polar_x": polar_x_slider,
-            "polar_y": polar_y_slider,
-            "polar_radius": polar_radius_slider,
-            "brightness": brightness_slider,
-            "contrast": contrast_slider,
-            "line_hue": line_hue_slider,
-            "line_saturation": line_saturation_slider,
-            "line_value": line_value_slider,
-            "line_weight": line_weight_slider,
-            "line_opacity": line_opacity_slider,
-            "fill_hue": fill_hue_slider,
-            "fill_saturation": fill_saturation_slider,
-            "fill_value": fill_value_slider,
-            "fill_opacity": fill_opacity_slider,
-            "size_multiplier": size_multiplier_slider,
-            "aspect_ratio": aspect_ratio_slider,
-            "rotation_angle": rotation_slider,
-            "multiply_grid_x": multiply_grid_x_slider,
-            "multiply_grid_y": multiply_grid_y_slider,
-            "grid_pitch_x": grid_pitch_x_slider,
-            "grid_pitch_y": grid_pitch_y_slider
-        }
-
-        for i in range(4):
-            self.slider_dict[f"osc{i}_frequency"] = osc_freq_sliders[i]
-            self.slider_dict[f"osc{i}_amplitude"] = osc_amp_sliders[i]
-            self.slider_dict[f"osc{i}_phase"] = osc_phase_sliders[i]
-            self.slider_dict[f"osc{i}_seed"] = osc_seed_sliders[i]
-            self.slider_dict[f"osc{i}_shape"] = osc_shape_sliders[i]

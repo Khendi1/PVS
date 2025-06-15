@@ -331,3 +331,59 @@ def polarize_frame_hsv(frame, angle=0, strength=1.0):
     # Convert back to BGR
     polarized_frame = cv2.cvtColor(hsv_frame.astype(np.uint8), cv2.COLOR_HSV2BGR)
     return polarized_frame
+
+def apply_temporal_filter(prev_frame, cur_frame, alpha=0.95):
+    """
+    Applies a temporal filter (exponential moving average) to reduce noise and flicker in a video stream.
+
+    Args:
+        video_path (str, optional): Path to the video file. If None, uses the default webcam.
+        alpha (float): The weighting factor for the current frame (0.0 to 1.0).
+                       Higher alpha means less smoothing, more responsiveness to changes.
+                       Lower alpha means more smoothing, less responsiveness.
+    """
+
+    # Convert the first frame to float for accurate averaging
+    filtered_frame = prev_frame.astype(np.float32)
+
+    # Convert current frame to float for calculations
+    current_frame_float = cur_frame.astype(np.float32)
+
+    # Apply the temporal filter (Exponential Moving Average)
+    # filtered_frame = alpha * current_frame_float + (1 - alpha) * filtered_frame
+    # This formula directly updates the filtered_frame based on the new current_frame.
+    # It's a low-pass filter in the time domain.
+    filtered_frame = cv2.addWeighted(current_frame_float, alpha, filtered_frame, 1 - alpha, 0)
+
+    # Convert back to uint8 for display
+    return cv2.convertScaleAbs(filtered_frame)
+
+def apply_perlin_noise(frame, perlin_noise, amplitude=1.0, frequency=1.0, octaves=1):
+    """ 
+    Applies Perlin noise to a frame to create a textured effect.
+    Args:
+        frame (numpy.ndarray): The input frame as a NumPy array (H, W, 3) in BGR format.
+        perlin_noise (PerlinNoise): An instance of PerlinNoise to generate noise.
+        amplitude (float): The amplitude of the noise.
+        frequency (float): The frequency of the noise.
+        octaves (int): The number of octaves for the noise.
+    Returns:
+        numpy.ndarray: The frame with Perlin noise applied.
+    """
+    height, width = frame.shape[:2]
+    noise = np.zeros((height, width), dtype=np.float32)
+
+    for y in range(height):
+        for x in range(width):
+            noise[y, x] = perlin_noise([x / frequency, y / frequency], octaves=octaves) * amplitude
+
+    # Normalize the noise to [0, 255]
+    noise = cv2.normalize(noise, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+
+    # Convert the noise to a 3-channel image
+    noise_colored = cv2.cvtColor(noise, cv2.COLOR_GRAY2BGR)
+
+    # Blend the original frame with the noise
+    noisy_frame = cv2.addWeighted(frame, 1.0, noise_colored, 0.5, 0)
+    
+    return noisy_frame
