@@ -1,82 +1,53 @@
 import cv2
 import numpy as np
-from param import Param
-import config as p
+# import config as p
+from config import params
+from enum import IntEnum
+
+class Shape(IntEnum):
+
+    RECTANGLE = 0
+    CIRCLE = 1
+    TRIANGLE = 2
+    LINE = 3
+    DIAMOND = 4
+    NONE = 5
 
 class ShapeGenerator:
+
     def __init__(self, width, height, shape_x_shift=0, shape_y_shift=0):
-        self.shape_x_shift = p.add_param("shape_x_shift", -width, width, shape_x_shift)  # Allow negative shifts
-        self.shape_y_shift = p.add_param("shape_y_shift", -height, height, shape_y_shift)
+        
+        self.shape_x_shift = params.add("shape_x_shift", -width, width, shape_x_shift)  # Allow negative shifts
+        self.shape_y_shift = params.add("shape_y_shift", -height, height, shape_y_shift)
         self.center_x = width // 2
         self.center_y = height // 2
+        
+        self.shape_type = params.add("shape_type", 0, len(Shape)-1, Shape.RECTANGLE)
+        
+        self.line_h = params.add("line_hue", 0, 179, 0)  # Hue range for OpenCV is 0-
+        self.line_s = params.add("line_saturation", 0, 255, 255)  # Saturation range
+        self.line_v = params.add("line_value", 0, 255, 255)  # Value range
+        self.line_hsv = [params.val("line_hue"), params.val("line_value"), params.val("line_saturation")]  # H, S, V (Red) - will be converted to BGR
+        self.line_weight = params.add("line_weight", 1, 20, 2)  # Thickness of the shape outline, must be integer
+        self.line_opacity = params.add("line_opacity", 0.0, 1.0, 0.66)  # Opacity of the shape outline
+        
+        self.size_multiplier = params.add("size_multiplier", 0.1, 10.0, 0.9)  # Scale factor for shape size
+        self.aspect_ratio = params.add("aspect_ratio", 0.1, 10.0, 1.0)  # Scale factor for shape size
+        self.rotation_angle = params.add("rotation_angle", 0, 360, 0)  # Rotation angle in degrees
+        
+        self.multiply_grid_x = params.add("multiply_grid_x", 1, 10, 2)  # Number of shapes in X direction
+        self.multiply_grid_y = params.add("multiply_grid_y", 1, 10, 2)  # Number of shapes in Y direction
+        self.grid_pitch_x = params.add("grid_pitch_x", min_val=10, max_val=200, default_val=100)  # Distance between shapes in X direction
+        self.grid_pitch_y = params.add("grid_pitch_y", min_val=10, max_val=200, default_val=50)  # Distance between shapes in Y direction
+        
         self.fill_enabled = True  # Toggle fill on/off
-        self.shape_type = 'rectangle'  # 'rectangle', 'circle', 'triangle', 'line'
-        self.line_h = p.add_param("line_hue", 0, 179, 0)  # Hue range for OpenCV is 0-
-        self.line_s = p.add_param("line_saturation", 0, 255, 255)  # Saturation range
-        self.line_v = p.add_param("line_value", 0, 255, 255)  # Value range
-        self.line_hsv = [self.line_h.value, self.line_v.value, self.line_s.value]  # H, S, V (Red) - will be converted to BGR
-        self.size_multiplier = p.add_param("size_multiplier", 0.1, 10.0, 1.0)  # Scale factor for shape size
-        self.aspect_ratio = p.add_param("aspect_ratio", 0.1, 10.0, 1.0)  # Scale factor for shape size
-        self.rotation_angle = p.add_param("rotation_angle", 0, 360, 0)  # Rotation angle in degrees
-        self.multiply_grid_x = p.add_param("multiply_grid_x", 1, 10, 2)  # Number of shapes in X direction
-        self.multiply_grid_y = p.add_param("multiply_grid_y", 1, 10, 2)  # Number of shapes in Y direction
-        self.grid_pitch_x = p.add_param("grid_pitch_x", min_val=10, max_val=200, default_val=50)  # Distance between shapes in X direction
-        self.grid_pitch_y = p.add_param("grid_pitch_y", min_val=10, max_val=200, default_val=50)  # Distance between shapes in Y direction
-        self.line_weight = p.add_param("line_weight", 1, 20, 5)  # Thickness of the shape outline, must be integer
-        self.line_opacity = p.add_param("line_opacity", 0.0, 1.0, 1.0)  # Opacity of the shape outline
-        self.fill_h = p.add_param("fill_hue", 0, 179, 120)  # Hue for fill color
-        self.fill_s = p.add_param("fill_saturation", 0, 255, 255)  # Saturation for fill color
-        self.fill_v = p.add_param("fill_value", 0, 255, 255)  # Value for fill color
-        self.fill_hsv = [self.fill_h.value, self.fill_s.value, self.fill_v.value]  # H, S, V (Blue) - will be converted to BGR
-        self.fill_opacity = p.add_param("fill_opacity", 0.0, 1.0, 0.5)
+        self.fill_h = params.add("fill_hue", 0, 179, 120)  # Hue for fill color
+        self.fill_s = params.add("fill_saturation", 0, 255, 100)  # Saturation for fill color
+        self.fill_v = params.add("fill_value", 0, 255, 255)  # Value for fill color
+        self.fill_hsv = [self.fill_h.val(), self.fill_s.val(), self.fill_v.val()]  # H, S, V (Blue) - will be converted to BGR
+        self.fill_opacity = params.add("fill_opacity", 0.0, 1.0, 0.25)
         self.fill_color = self.hsv_to_bgr(self.fill_hsv)
         self.line_color = self.hsv_to_bgr(self.line_hsv)
-
-        print("\n\n\nPress 'q' to quit.")
-        print("\n--- General Controls ---")
-        print(" '1': Rectangle")
-        print(" '2': Circle")
-        print(" '3': Triangle")
-        print(" '4': Line")
-        print(" '+': Increase size")
-        print(" '-': Decrease size")
-        print(" 'r': Rotate clockwise")
-        print(" 'R': Rotate counter-clockwise")
-        print("\n--- Position Shift ---")
-        print(" 'w': Shift Up")
-        print(" 's': Shift Down")
-        print(" 'a': Shift Left")
-        print(" 'd': Shift Right")
-        print("\n--- Line Properties ---")
-        print(" '[': Decrease line weight")
-        print(" ']': Increase line weight")
-        print(" 'h': Line Hue +")
-        print(" 'H': Line Hue -")
-        print(" 'j': Line Saturation +")
-        print(" 'J': Line Saturation -")
-        print(" 'k': Line Value +")
-        print(" 'K': Line Value -")
-        print(" 'o': Line Opacity +")
-        print(" 'O': Line Opacity -")
-        print("\n--- Fill Properties ---")
-        print(" 'f': Toggle Fill (On/Off)")
-        print(" 'g': Fill Hue +")
-        print(" 'G': Fill Hue -")
-        print(" 'i': Fill Saturation +")
-        print(" 'I': Fill Saturation -")
-        print(" 'l': Fill Value +")
-        print(" 'L': Fill Value -")
-        print(" 'p': Fill Opacity +")
-        print(" 'P': Fill Opacity -")
-        print("\n--- Grid Multiplication ---")
-        print(" 'u': Increase Grid X count")
-        print(" 'U': Decrease Grid X count")
-        print(" 'v': Increase Grid Y count")
-        print(" 'V': Decrease Grid Y count")
-        print(" 'c': Increase Grid X pitch")
-        print(" 'C': Decrease Grid X pitch")
-        print(" 'z': Increase Grid Y pitch")
-        print(" 'Z': Decrease Grid Y pitch")
 
     def draw_rectangle(self, canvas, center_x, center_y,):
 
@@ -152,22 +123,25 @@ class ShapeGenerator:
         return canvas
 
     def draw_shape_on_canvas(self, canvas, center_x, center_y):
-
         # Ensure coordinates are within bounds to prevent errors
         # Note: These checks are for safety but may clip shapes if they go way off screen
         center_x = max(0, min(canvas.shape[1], center_x))
         center_y = max(0, min(canvas.shape[0], center_y))
 
-        if self.shape_type == 'rectangle':
+        if self.shape_type.value == Shape.NONE:
+            pass
+        elif self.shape_type.value == Shape.RECTANGLE:
             canvas = self.draw_rectangle(canvas, center_x, center_y)
-        elif self.shape_type == 'circle':
+        elif self.shape_type.value == Shape.CIRCLE:
             canvas = self.draw_circle(canvas, center_x, center_y)
-        elif self.shape_type == 'triangle':
+        elif self.shape_type.value == Shape.TRIANGLE:
             canvas = self.draw_triangle(canvas, center_x, center_y)
-        elif self.shape_type == 'line':
+        elif self.shape_type.value == Shape.LINE:
             canvas = self.draw_line(canvas, center_x, center_y)
+        elif self.shape_type.value == Shape.DIAMOND:
+            pass
         else:
-            raise ValueError(f"Invalid shape type: {self.shape_type}. Must be 'rectangle', 'circle', 'triangle', or 'line'.")
+            raise ValueError(f"Invalid shape type: {self.shape_type.value}. Must be 'rectangle', 'circle', 'triangle', or 'line'.")
         
         return canvas
 
@@ -197,10 +171,6 @@ class ShapeGenerator:
     def draw_shapes_on_frame(self, frame, width, height):
         base_center_x, base_center_y = width // 2 + self.shape_x_shift.value, height // 2 + self.shape_y_shift.value
 
-        # # Create a completely transparent overlay to draw all shapes onto
-        # # This is crucial for accumulated drawing before final blending
-        # overlay = np.zeros((height, width, 3), dtype=np.uint8)
-
         # Create separate 3-channel (BGR) canvases for lines and fills
         # These will temporarily hold the shapes on a black background
         temp_line_canvas = np.zeros((height, width, 3), dtype=np.uint8)
@@ -219,12 +189,7 @@ class ShapeGenerator:
 
                 self.draw_shape_on_canvas(temp_line_canvas, current_center_x, current_center_y)
 
-        # # Apply the overlay onto the original frame with the specified opacity  
-        # # The line and fill opacities are blended on the overlay itself in draw_shape_on_canvas
-        # # Now, blend the entire overlay (with all shapes drawn) onto the frame
-        # cv2.addWeighted(overlay, self.line_opacity, frame, 1.0 - self.line_opacity, 0, frame)
         # If fill is enabled, apply its opacity in a separate blend
-        # This will make filled areas appear with their opacity
             if self.fill_enabled:
                     # line_weight=0 and line_color=(0,0,0) ensures only fills are drawn
                     self.draw_shape_on_canvas(temp_fill_canvas, current_center_x, current_center_y)
@@ -245,138 +210,12 @@ class ShapeGenerator:
             fill_alpha_mask = (temp_fill_canvas.sum(axis=2) > 0).astype(np.uint8) * int(self.fill_opacity * 255)
             fill_overlay_rgba[:,:,3] = fill_alpha_mask
 
-        # 3. Blend the layers onto the display_frame using our custom self.blend_rgba_overlay function.
-        #    Order matters if shapes overlap: typically fills then lines for outlining.
+        # Blend the layers onto the display_frame using our custom self.blend_rgba_overlay function.
+        # Order matters if shapes overlap: typically fills then lines for outlining.
         if self.fill_enabled:
             frame = self.blend_rgba_overlay(frame, fill_overlay_rgba)
 
         frame = self.blend_rgba_overlay(frame, line_overlay_rgba)
-
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         return frame
-
-    def keyboard_controls(self, key):
-        """
-        Handle keyboard controls for shape manipulation.
-        """
-        if key == ord('1'):
-            self.shape_type = 'rectangle'
-            # print("Shape set to rectangle")
-        elif key == ord('2'):
-            self.shape_type = 'circle'
-            # print("Shape set to circle")
-        elif key == ord('3'):
-            self.shape_type = 'triangle'
-            # print("Shape set to triangle")
-        elif key == ord('4'):
-            self.shape_type = 'line'
-            # print("Shape set to line")
-        elif key == ord('+'):
-            self.size_multiplier.value += 0.1
-            # print(f"Size multiplier increased to {self.size_multiplier}")
-        elif key == ord('-'):
-            self.size_multiplier.value = max(0.1, self.size_multiplier.value - 0.1)
-            # print(f"Size multiplier decreased to {self.size_multiplier}")
-        elif key == ord('r'):
-            self.rotation_angle.value = (self.rotation_angle.value + 10) % 360
-            # print(f"Rotation angle set to {self.rotation_angle} degrees")
-        elif key == ord('R'):
-            self.rotation_angle.value = (self.rotation_angle.value - 10) % 360
-            # print(f"Rotation angle set to {self.rotation_angle} degrees")
-        # Position Shift
-        elif key == ord('w'):
-            self.shape_y_shift.value -= 10
-            # print(f"Shift Y position increased to {self.shape_y_shift}")
-        elif key == ord('s'):
-           self.shape_y_shift.value += 10
-           # print(f"Shift Y position decreased to {self.shape_y_shift}")
-        elif key == ord('a'):
-            self.shape_x_shift.value -= 10
-            # print(f"Shift X position increased to {self.shape_x_shift}")
-        elif key == ord('d'):
-            self.shape_x_shift.value += 10
-            # print(f"Shift X position decreased to {self.shape_x_shift}")
-        # Line Properties
-        elif key == ord('['):
-            self.line_weight.value = max(1, self.line_weight - 1)
-            # print(f"Line weight decreased to {self.line_weight}")
-        elif key == ord(']'):
-            self.line_weight.value += 1
-            # print(f"Line weight increased to {self.line_weight}")
-        elif key == ord('h'):
-            self.line_hsv[0] = (self.line_hsv[0] + 5) % 180 # Hue is 0-179
-            # print(f"Line hue increased to {self.line_hsv[0]}")
-        elif key == ord('H'):
-            self.line_hsv[0] = (self.line_hsv[0] - 5) % 180
-            # print(f"Line hue decreased to {self.line_hsv[0]}")
-        elif key == ord('j'):
-            self.line_hsv[1] = min(255, self.line_hsv[1] + 5)
-            # print(f"Line saturation increased to {self.line_hsv[1]}")
-        elif key == ord('J'):
-            self.line_hsv[1] = max(0, self.line_hsv[1] - 5)
-            # print(f"Line saturation decreased to {self.line_hsv[1]}")
-        elif key == ord('k'):
-            self.line_hsv[2] = min(255, self.line_hsv[2] + 5)
-            # print(f"Line value increased to {self.line_hsv[2]}")
-        elif key == ord('K'):
-            self.line_hsv[2] = max(0, self.line_hsv[2] - 5)
-            # print(f"Line value decreased to {self.line_hsv[2]}")
-        elif key == ord('o'):
-            self.line_opacity.value = min(1.0, self.line_opacity.value + 0.05)
-            # print(f"Line opacity increased to {self.line_opacity}")
-        elif key == ord('O'):
-            self.line_opacity.value = max(0.0, self.line_opacity.value - 0.05)
-            # print(f"Line opacity decreased to {self.line_opacity}")
-        # Fill Properties
-        elif key == ord('f'):
-            self.fill_enabled = not self.fill_enabled
-        elif key == ord('g'):
-            self.fill_hsv[0] = (self.fill_hsv[0] + 5) % 180
-            # print(f"Fill hue increased to {self.fill_hsv[0]}")
-        elif key == ord('G'):
-            self.fill_hsv[0] = (self.fill_hsv[0] - 5) % 180
-            # print(f"Fill hue decreased to {self.fill_hsv[0]}")
-        elif key == ord('i'):
-            self.fill_hsv[1] = min(255, self.fill_hsv[1] + 5)
-            # print(f"Fill hue increased to {self.fill_hsv[1]}")
-        elif key == ord('I'):
-            self.fill_hsv[1] = max(0, self.fill_hsv[1] - 5)
-            # print(f"Fill hue decreased to {self.fill_hsv[1]}")
-        elif key == ord('l'):
-            self.fill_hsv[2] = min(255, self.fill_hsv[2] + 5)
-            # print(f"Fill hue increased to {self.fill_hsv[2]}")
-        elif key == ord('L'):
-            self.fill_hsv[2] = max(0, self.fill_hsv[2] - 5)
-            # print(f"Fill hue decreased to {self.fill_hsv[2]}")
-        elif key == ord('p'):
-            self.fill_opacity = min(1.0, self.fill_opacity + 0.05)
-            # print(f"Fill opacity increased to {self.fill_opacity}")
-        elif key == ord('P'):
-            self.fill_opacity = max(0.0, self.fill_opacity - 0.05)
-            # print(f"Fill opacity decreased to {self.fill_opacity}")
-        # Grid Mode Controls
-        elif key == ord('u'):
-            self.multiply_grid_x.value += 1
-            # print(f"Grid X multiplier increased to {self.multiply_grid_x}")
-        elif key == ord('U'):
-            self.multiply_grid_x.value = max(1, self.multiply_grid_x.value - 1)
-            # print(f"Grid X multiplier decreased to {self.multiply_grid_x}")
-        elif key == ord('v'):
-            self.multiply_grid_y.value += 1
-            # print(f"Grid Y multiplier increased to {self.multiply_grid_y}")
-        elif key == ord('V'):
-            self.multiply_grid_y.value = max(1, self.multiply_grid_y.value - 1)
-            # print(f"Grid Y multiplier decreased to {self.multiply_grid_y}")
-        elif key == ord('c'):
-            self.grid_pitch_x.value += 10
-            # print(f"Grid X pitch increased to {self.grid_pitch_x}")
-        elif key == ord('C'):
-            self.grid_pitch_x.value -= 10
-            # print(f"Grid X pitch decreased to {self.grid_pitch_x}")
-        elif key == ord('z'):
-            self.grid_pitch_y.value += 10
-            # print(f"Grid Y pitch increased to {self.grid_pitch_y}")
-        elif key == ord('Z'):
-            self.grid_pitch_y.value -= 10
-            # print(f"Grid Y pitch decreased to {self.grid_pitch_y}")

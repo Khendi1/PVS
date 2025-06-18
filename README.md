@@ -21,7 +21,7 @@ This is an interactive video synthesis tool with many tunable parameters. Most p
 - Oscillator bank
     - tunable freq, amp, phase
     - supports 4 basic wave forms
-    - can be linked to any parameter that is created with the general add_param() method
+    - can be linked to any parameter that is created with the general add() method
 - shape generator
     - line & fill weight, hsv, opacity
     - size, position control

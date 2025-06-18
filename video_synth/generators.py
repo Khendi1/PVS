@@ -3,8 +3,8 @@ import random
 import math
 from enum import Enum
 import numpy as np
+from config import params
 import config as p
-from param import Param
 
 class Interp(Enum):
     LINEAR = 1
@@ -103,11 +103,11 @@ class Oscillator:
         self.name = name
         self.param_max = 100
         self.param_min = 0
-        self.frequency = p.add_param(f"{name}_frequency", 0, 15, frequency)
-        self.amplitude = p.add_param(f"{name}_amplitude", 0, 100, amplitude)
-        self.phase = p.add_param(f"{name}_phase", 0, 100, phase)
-        self.seed = p.add_param(f"{name}_seed", 0, 100, seed)
-        self.shape = p.add_param(f"{name}_shape", 0, 3, shape)
+        self.frequency = params.add(f"{name}_frequency", 0, 15, frequency)
+        self.amplitude = params.add(f"{name}_amplitude", 0, 100, amplitude)
+        self.phase = params.add(f"{name}_phase", 0, 100, phase)
+        self.seed = params.add(f"{name}_seed", 0, 100, seed)
+        self.shape = params.add(f"{name}_shape", 0, 3, shape)
         self.sample_rate = 30
         self.direction = 1
         self.oscillator = self.create_oscillator()
@@ -145,7 +145,7 @@ class Oscillator:
             elif int(self.shape) == 1: # Square wave
                 sample = self.get_amplitude() * np.sign(np.sin(2 * np.pi * self.get_frequency() * self.get_phase())) + self.get_seed()
             elif int(self.shape) == 2: # Triangle wave
-                sample = self.get_amplitude() * 2 * np.abs(2 * (self.get_phase() * self.get_frequency() - np.floor(self.get_phase() * self.get_frequency() + 0.5))) - self.get_amplitude()  + self.get_seed()
+                sample = self.get_amplitude() * 2 * nparams.abs(2 * (self.get_phase() * self.get_frequency() - np.floor(self.get_phase() * self.get_frequency() + 0.5))) - self.get_amplitude()  + self.get_seed()
             elif int(self.shape) == 3: # Sawtooth wave 
                 sample = self.get_amplitude() * 2 * (self.get_phase() * self.get_frequency() - np.floor(self.get_phase() * self.get_frequency())) - self.get_amplitude()  + self.get_seed()
                 sample *= self.direction
@@ -212,6 +212,4 @@ class Oscillator:
         """
         Unlinks the oscillator parameters from the parameter object.
         """
-        # self.amplitude =
-        # self.phase = None
-        # self.seed = N
+        self.linked_param = None

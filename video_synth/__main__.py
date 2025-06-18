@@ -1,16 +1,19 @@
 import cv2
-from fx import Effects, HSV
-import config as p
-from config import NUM_OSCILLATORS, params
+from fx import Effects
+import config as c
+from config import NUM_OSCILLATORS, params, FPS
 from gui import Interface
 import dearpygui.dearpygui as dpg 
 from shapes import ShapeGenerator
 from generators import PerlinNoise, Interp, Oscillator
 
-CURRENT = 0
-PREV = 1
-
-fps = 20 # Desired frame rate
+def update_runtime_params():
+    params.get("x_shift").set_min_max(-c.image_width, c.image_width)
+    params.get("y_shift").set_min_max(-c.image_height, c.image_height)
+    params.get("polar_x").set_min_max(-c.image_width, c.image_width)
+    params.get("polar_y").set_min_max(-c.image_height, c.image_height)
+    params.get("grid_pitch_x").set_min_max(-c.image_width, c.image_width)
+    params.get("grid_pitch_y").set_min_max(-c.image_height, c.image_height)
 
 def main():
     # Initialize the video capture object (0 for default camera)
@@ -18,32 +21,32 @@ def main():
     if not cap.isOpened():
         raise IOError("Cannot open webcam")
 
-    cap.set(cv2.CAP_PROP_FPS, fps)
+    cap.set(cv2.CAP_PROP_FPS, FPS)
 
     # Create an initial empty frame
     ret, frame = cap.read()
     if not ret:
         raise IOError("Cannot read frame")
     feedback_frame = frame.copy()
-    p.image_height, p.image_width = frame.shape[:2]
-
-    params["x_shift"].set_min_max(-p.image_width, p.image_width)
-    params["y_shift"].set_min_max(-p.image_height, p.image_height)
-    params["polar_x"].set_min_max(-p.image_width, p.image_width)
-    params["polar_y"].set_min_max(-p.image_height, p.image_height)
+    c.image_height, c.image_width = frame.shape[:2]
 
     cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
     
+    # Initialize oscillators
     for i in range(NUM_OSCILLATORS):
-        # Create a new oscillator with frequency 0.5 Hz and amplitude 1.0
-        osc = Oscillator(name=f"osc{i}", frequency=1.0, amplitude=1.0, phase=0.0, shape=i)
-        p.osc_bank.append(osc)
+        osc = Oscillator(name=f"osc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=i%4)
+        c.osc_bank.append(osc)
 
-    s = ShapeGenerator(p.image_width, p.image_height)
+    s = ShapeGenerator(c.image_width, c.image_height)
+
+    # effects must be initialized after the control window is created
+    e = Effects()
+    print("test")
     gui = Interface()
     gui.create_control_window()
 
-    e = Effects()
+    # initialize parameters that are unknown at the start
+    update_runtime_params()
 
     prev_frame = feedback_frame.copy()
 
@@ -51,33 +54,32 @@ def main():
         # Capture a frame from the camera
         ret, frame = cap.read()
         if not ret:
+            print("Error")
             break
 
         # update osc values
-        osc_vals = [osc.get_next_value() for osc in p.osc_bank if osc.linked_param is not None]
-        # print(p.osc_vals)
+        osc_vals = [osc.get_next_value() for osc in c.osc_bank if osc.linked_param is not None]
 
         # Update noise value
-        # noise = p.perlin_noise.get(noise)
-        # print(noise)
+        # noise = c.perlin_noise.get(noise)
 
         # Apply transformations to the frame for feedback effect
-        frame = s.draw_shapes_on_frame(frame, p.image_width, p.image_height)
-        feedback_frame = cv2.addWeighted(frame, 1 - params["alpha"].value, feedback_frame, params["alpha"].value, 0)
-        feedback_frame = e.glitch_image(feedback_frame, params["num_glitches"].value, params["glitch_size"].value) 
-        feedback_frame = e.gaussian_blur(feedback_frame, params["blur_kernel_size"].value)
-        feedback_frame = e.shift_frame(feedback_frame, params["x_shift"].value, params["y_shift"].value, params["r_shift"].value, params["zoom"].value)
-        feedback_frame = e.adjust_brightness_contrast(feedback_frame, params["contrast"].value, params["brightness"].value)
-        if p.enable_polar_transform == True:
-            feedback_frame = e.polar_transform(feedback_frame, params["polar_x"].value, params["polar_y"].value, params["polar_radius"].value)
+        frame = s.draw_shapes_on_frame(frame, c.image_width, c.image_height)
+        feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
+        feedback_frame = e.glitch_image(feedback_frame) 
+        feedback_frame = e.gaussian_blur(feedback_frame)
+        feedback_frame = e.shift_frame(feedback_frame)
+        feedback_frame = e.adjust_brightness_contrast(feedback_frame)
+        if c.enable_polar_transform == True:
+            feedback_frame = e.polar_transform(feedback_frame, params.get("polar_x"), params.get("polar_y"), params.get("polar_radius"))
         # feedback_frame = noisy("gauss", feedback_frame)        
 
         # Split image HSV channels for modifications and convert back to BGR color space.   
-        hsv_image = e.modify_hsv(feedback_frame, params["hue_shift"].value, params["sat_shift"].value, 
-                                params["val_shift"].value, p.val_threshold, p.val_hue_shift)
+        hsv_image = e.modify_hsv(feedback_frame)
         feedback_frame = cv2.cvtColor(hsv_image, cv2.COLOR_HSV2BGR)
 
-        feedback_frame = e.apply_temporal_filter(prev_frame, feedback_frame, params["temporal_filter"].value)
+        # Apply temporal filtering to the resulting feedback frame
+        feedback_frame = e.apply_temporal_filter(prev_frame, feedback_frame)
         prev_frame = feedback_frame.copy()
 
         # Display the resulting frame and control panel
@@ -89,8 +91,6 @@ def main():
         if key == ord('q'):
             print(f"Key pressed: {key}")
             break
-        else:
-            s.keyboard_controls(key)
 
     # Release the capture and destroy all windows
     dpg.destroy_context()

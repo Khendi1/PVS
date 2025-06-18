@@ -1,10 +1,43 @@
+class ParamTable:
+    def __init__(self):
+        self.params = {}
+    
+    def val(self, param_name):
+        if param_name in self.params.keys():
+            return self.params[param_name].value
+        else:
+            raise ValueError(f"Parameter '{param_name}' does not exist.")
+    
+    def get(self, param_name):
+        if param_name in self.params.keys():
+            return self.params[param_name]
+        else:
+            raise ValueError(f"Parameter '{param_name}' does not exist.")
 
+    def set(self, param_name, value):
+        if param_name in self.params.keys():
+            return self.params[param_name].set_value(value)
+        else:
+            raise ValueError(f"Parameter '{param_name}' does not exist.")
+        
+    def all(self):
+        return self.params
+    
+    def add(self, name, min_val, max_val, default_val, family=None):
+        if name not in self.params.keys():
+            self.params[name] = Param(name, min_val, max_val, default_val, family=family)
+            return self.params[name]
+        else:
+            print(self.params)
+            raise ValueError(f"Parameter '{name}' already exists.")
+        
 class Param:
-    def __init__(self, name, min_val, max_val, default_val):
+    def __init__(self, name, min_val, max_val, default_val, family=None):
         self.name = name
         self.min_val = min_val
         self.max_val = max_val
         self.default_val = default_val
+        self.family = "None" if family == None else family
         print(f"Creating param {self.name} with min: {self.min_val}, max: {self.max_val}, default: {self.default_val}, type: '{str(type(self.default_val))}'")
         self.value = default_val
 
@@ -102,5 +135,8 @@ class Param:
         #     elif s.tag == "glitch_size": s.value = random.randint(1, s.max_value)
         #     elif s.tag == 'feedback': s.value = random.uniform(0.0, 1.0)
         #     else: s.value = random.randint(s.min_value, s.max_value)
+        return self.value
+    
+    def val(self):
         return self.value
 
