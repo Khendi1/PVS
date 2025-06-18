@@ -2,7 +2,6 @@ import numpy as np
 from enum import IntEnum
 import cv2
 from config import params
-# from config import params.add
 import random
 
 class HSV(IntEnum):
@@ -11,7 +10,7 @@ class HSV(IntEnum):
     V = 2
 
 class Effects:
-    def __init__(self):
+    def __init__(self, image_width, image_height):
         self.hue_shift = params.add("hue_shift", 0, 180, 100)
         self.sat_shift = params.add("sat_shift", 0, 255, 100)
         self.val_shift = params.add("val_shift", 0, 255, 50)
@@ -20,35 +19,37 @@ class Effects:
         self.num_glitches = params.add("num_glitches", 0, 100, 0)
         self.glitch_size = params.add("glitch_size", 1, 100, 0)
         self.val_threshold = params.add("val_threshold", 0, 255, 0)
-        self.val_hue_shift = params.add("val_hue_shift", -255, 255, 0)
-        self.x_shift = params.add("x_shift", -1000, 1000, 0, family="Pan") # min/max depends on image size
-        self.y_shift = params.add("y_shift", -1000, 1000, 0, family="Pan") # min/max depends on image size
+        self.val_hue_shift = params.add("val_hue_shift", 0, 255, 0)
+        self.x_shift = params.add("x_shift", -image_width, image_width, 0, family="Pan") # min/max depends on image size
+        self.y_shift = params.add("y_shift", -image_height, image_height, 0, family="Pan") # min/max depends on image size
         self.zoom = params.add("zoom", 0.75, 3, 1.0, family="Pan")
         self.r_shift = params.add("r_shift", -360, 360, 0, family="Pan")
-        self.polar_x = params.add("polar_x", -1000, 1000, 0)
-        self.polar_y = params.add("polar_y", -1000, 1000, 0)
+        self.polar_x = params.add("polar_x", -image_width, image_width, 0)
+        self.polar_y = params.add("polar_y", -image_height, image_height, 0)
         self.polar_radius = params.add("polar_radius", 0.1, 100, 1.0)
         self.contrast = params.add("contrast", 1.0, 3.0, 1.0)
         self.brightness = params.add("brightness", 0, 100, 0)
         self.temporal_filter = params.add("temporal_filter", 0, 1.0, 0.95)
+        self.cc_upper = params.add("cc_upper", 0, 255, 255)
+        self.cc_lower = params.add("cc_lower", 0, 255, 0)
 
     def shift_hue(self, hue):
         """
         Shifts the hue of an image by a specified amount, wrapping aroung in necessary.
         """
-        return (hue + self.hue_shift.value) % 180
+        return (hue + self.hue_shift.val()) % 180
 
     def shift_sat(self, sat):
         """
         Shifts the saturation of an image by a specified amount, clamping to [0, 255].
         """
-        return np.clip(sat + self.sat_shift.value, 0, 255)
+        return np.clip(sat + self.sat_shift.val(), 0, 255)
 
     def shift_val(self, val):
         """
         Shifts the value of an image by a specified amount, clamping to [0, 255].
         """
-        return np.clip(val + self.val_shift.value, 0, 255)
+        return np.clip(val + self.val_shift.val(), 0, 255)
 
     def shift_hsv(self, hsv):
         """
@@ -71,10 +72,10 @@ class Effects:
         """
 
         # Create a mask for pixels with saturation above the threshold.
-        mask = hsv[HSV.V.value] > self.val_threshold.value
+        mask = hsv[HSV.V.value] > self.val_threshold.val()
 
         # Shift and wrap around the hue values for the masked pixels
-        hsv[HSV.H.value][mask] = (hsv[HSV.H.value][mask] + self.val_hue_shift.value) % 180
+        hsv[HSV.H.value][mask] = (hsv[HSV.H.value][mask] + self.val_hue_shift.val()) % 180
 
         return hsv
     
@@ -93,12 +94,12 @@ class Effects:
     def glitch_image(self, image):
         height, width, _ = image.shape
 
-        for _ in range(self.num_glitches.value):
+        for _ in range(self.num_glitches.val()):
             x = random.randint(0, width - 1)
             y = random.randint(0, height - 1)
 
-            x_glitch_size = random.randint(1, self.glitch_size.value)
-            y_glitch_size = random.randint(1, self.glitch_size.value)
+            x_glitch_size = random.randint(1, self.glitch_size.val())
+            y_glitch_size = random.randint(1, self.glitch_size.val())
 
             # Ensure the glitch area does not exceed image boundaries
             x_end = min(x + x_glitch_size, width)
@@ -198,14 +199,14 @@ class Effects:
         shifted_frame = np.zeros_like(frame)
 
         # Create the mapping arrays for the indices.
-        x_map = (np.arange(width) - self.x_shift.value) % width
-        y_map = (np.arange(height) - self.y_shift.value) % height
+        x_map = (np.arange(width) - self.x_shift.val()) % width
+        y_map = (np.arange(height) - self.y_shift.val()) % height
 
         # Use advanced indexing to shift the entire image at once
         shifted_frame = frame[y_map[:, np.newaxis], x_map]
 
         # Use cv2.getRotationMatrix2D to get the rotation matrix
-        M = cv2.getRotationMatrix2D(center, self.r_shift.value, self.zoom.value)  # 1.0 is the scale
+        M = cv2.getRotationMatrix2D(center, self.r_shift.val(), self.zoom.val())  # 1.0 is the scale
 
         # Perform the rotation using cv2.warpAffine
         rotated_frame = cv2.warpAffine(shifted_frame, M, (width, height))
@@ -218,8 +219,8 @@ class Effects:
         using a polar coordinate transform.
         """
         height, width = frame.shape[:2]
-        center = (width // 2 + self.polar_x, height // 2 + self.polar_y.value)
-        max_radius = np.sqrt((width // self.polar_radius)**2 + (height // self.polar_radius.value)**2)
+        center = (width // 2 + self.polar_x, height // 2 + self.polar_y.val())
+        max_radius = np.sqrt((width // self.polar_radius)**2 + (height // self.polar_radius.val())**2)
 
         #    The flags parameter is important:
         #    cv2.INTER_LINEAR:  Bilinear interpolation (good quality)
@@ -234,14 +235,14 @@ class Effects:
         )
 
     def gaussian_blur(self, frame, mode=1):
-        if self.blur_kernel_size.value == 0:
+        if self.blur_kernel_size.val() == 0:
             pass
         elif mode == 1:
-            frame = cv2.GaussianBlur(frame, (self.blur_kernel_size.value, self.blur_kernel_size.value), 0) 
+            frame = cv2.GaussianBlur(frame, (self.blur_kernel_size.val(), self.blur_kernel_size.val()), 0) 
         elif mode == 2:
-            frame = cv2.medianBlur(frame, self.blur_kernel_size.value)
+            frame = cv2.medianBlur(frame, self.blur_kernel_size.val())
         elif mode == 3:
-            frame = cv2.blur(frame,(self.blur_kernel_size.value, self.blur_kernel_size.value))
+            frame = cv2.blur(frame,(self.blur_kernel_size.val(), self.blur_kernel_size.val()))
         elif mode == 4:
             frame = cv2.bilateralFilter(frame,9,75,75)
         
@@ -259,7 +260,7 @@ class Effects:
         Returns:
             The adjusted image (NumPy array).
         """
-        adjusted_image = cv2.convertScaleAbs(image, alpha=self.contrast.value, beta=self.brightness.value)
+        adjusted_image = cv2.convertScaleAbs(image, alpha=self.contrast.val(), beta=self.brightness.val())
         return adjusted_image
 
     def polarize_frame_hsv(self, frame, angle=0, strength=1.0):
@@ -311,7 +312,7 @@ class Effects:
         # filtered_frame = alpha * current_frame_float + (1 - alpha) * filtered_frame
         # This formula directly updates the filtered_frame based on the new current_frame.
         # It's a low-pass filter in the time domain.
-        filtered_frame = cv2.addWeighted(current_frame_float, self.temporal_filter.value, filtered_frame, 1 - self.temporal_filter.value, 0)
+        filtered_frame = cv2.addWeighted(current_frame_float, self.temporal_filter.val(), filtered_frame, 1 - self.temporal_filter.val(), 0)
 
         # Convert back to uint8 for display
         return cv2.convertScaleAbs(filtered_frame)

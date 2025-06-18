@@ -3,27 +3,35 @@ class ParamTable:
         self.params = {}
     
     def val(self, param_name):
+        """Returns the value of the Param object with the given name."""
+
         if param_name in self.params.keys():
             return self.params[param_name].value
         else:
             raise ValueError(f"Parameter '{param_name}' does not exist.")
     
     def get(self, param_name):
+        """Returns the Param object with the given name."""
+
         if param_name in self.params.keys():
             return self.params[param_name]
         else:
             raise ValueError(f"Parameter '{param_name}' does not exist.")
 
     def set(self, param_name, value):
+        """Sets the value of the parameter with the given name."""
+
         if param_name in self.params.keys():
             return self.params[param_name].set_value(value)
         else:
             raise ValueError(f"Parameter '{param_name}' does not exist.")
         
     def all(self):
+        """Returns a dictionary of all parameters."""
         return self.params
     
     def add(self, name, min_val, max_val, default_val, family=None):
+        """Adds a new parameter to the table."""
         if name not in self.params.keys():
             self.params[name] = Param(name, min_val, max_val, default_val, family=family)
             return self.params[name]

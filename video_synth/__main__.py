@@ -7,14 +7,6 @@ import dearpygui.dearpygui as dpg
 from shapes import ShapeGenerator
 from generators import PerlinNoise, Interp, Oscillator
 
-def update_runtime_params():
-    params.get("x_shift").set_min_max(-c.image_width, c.image_width)
-    params.get("y_shift").set_min_max(-c.image_height, c.image_height)
-    params.get("polar_x").set_min_max(-c.image_width, c.image_width)
-    params.get("polar_y").set_min_max(-c.image_height, c.image_height)
-    params.get("grid_pitch_x").set_min_max(-c.image_width, c.image_width)
-    params.get("grid_pitch_y").set_min_max(-c.image_height, c.image_height)
-
 def main():
     # Initialize the video capture object (0 for default camera)
     cap = cv2.VideoCapture(0)
@@ -38,15 +30,15 @@ def main():
         c.osc_bank.append(osc)
 
     s = ShapeGenerator(c.image_width, c.image_height)
+    c.perlin_noise = PerlinNoise(c.noise, frequency=1.0, amplitude=1.0, octaves=1, interp=Interp.COSINE)
+    # c.noise = c.perlin_noise.get(c.noise)
 
-    # effects must be initialized after the control window is created
-    e = Effects()
-    print("test")
     gui = Interface()
-    gui.create_control_window()
+    e = Effects(c.image_width, c.image_height)
 
-    # initialize parameters that are unknown at the start
-    update_runtime_params()
+    print(f'Enjoy {len(params.all().keys())} tunable parameters!')
+
+    gui.create_control_window()
 
     prev_frame = feedback_frame.copy()
 

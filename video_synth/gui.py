@@ -1,5 +1,5 @@
-import config as p
-from config import NUM_OSCILLATORS, params, panels
+import config as c
+from config import NUM_OSCILLATORS, params, toggles
 from gui_elements import TrackbarRow, Button, TrackbarRow
 import dearpygui.dearpygui as dpg
 from generators import PerlinNoise, Interp, Oscillator
@@ -180,10 +180,10 @@ class Interface:
         elif user_data == "fade":
             pass
         elif user_data == "enable_polar_transform":
-            if p.enable_polar_transform == True:
-                p.enable_polar_transform = False
+            if c.enable_polar_transform == True:
+                c.enable_polar_transform = False
             else:
-                p.enable_polar_transform = True
+                c.enable_polar_transform = True
 
     # Button methods #############################################################
 
@@ -197,7 +197,7 @@ class Interface:
     def randomize_values(self):
         # TODO: use param.randomize() method
         for p in params.all():
-            p.randomize()
+            c.randomize()
             # dpg.set_value(s.tag, s.value)
 
     def create_buttons(self, width, height):
@@ -253,7 +253,7 @@ class Interface:
                 param = None
                 for tag, param in params.all().items():
                     if tag == app_data:
-                        p.osc_bank[i].linked_param = param
+                        c.osc_bank[i].linked_param = param
                         break
 
     # Create the control window and features #######################################
@@ -397,7 +397,7 @@ class Interface:
                 default_font_id)
 
             enable_polar_transform_button = Button("Enable Polar Transform", "enable_polar_transform")
-            # polar_coord_mode_slider = TrackbarRow("Polar Coord Mode", p.polar_coord_mode, self.polar_x_cb, self.reset_slider_callback, default_font_id)
+            # polar_coord_mode_slider = TrackbarRow("Polar Coord Mode", c.polar_coord_mode, self.polar_x_cb, self.reset_slider_callback, default_font_id)
             dpg.add_button(label=enable_polar_transform_button.label, tag="enable_polar_transform", callback=self.on_button_click, user_data=enable_polar_transform_button.tag, width=width)
             dpg.bind_item_font(enable_polar_transform_button.tag, default_font_id)
             polar_x_slider = TrackbarRow(
@@ -421,28 +421,28 @@ class Interface:
                 self.reset_slider_callback, 
                 default_font_id)
 
-        # with dpg.collapsing_header(label=f"\tNoise Generator", tag="noise_generator"):
-        #     perlin_amplitude_slider = TrackbarRow(
-        #         "Perlin Amplitude", 
-        #         params.get("perlin_amplitude"), 
-        #         TrackbarCallback(params.get("perlin_amplitude"), "perlin_amplitude").__call__, 
-        #         self.reset_slider_callback, 
-        #         default_font_id)
+        with dpg.collapsing_header(label=f"\tNoise Generator", tag="noise_generator"):
+            perlin_amplitude_slider = TrackbarRow(
+                "Perlin Amplitude", 
+                params.get("perlin_amplitude"), 
+                TrackbarCallback(params.get("perlin_amplitude"), "perlin_amplitude").__call__, 
+                self.reset_slider_callback, 
+                default_font_id)
             
-        #     perlin_frequency_slider = TrackbarRow(
-        #         "Perlin Frequency", 
-        #         params.get("perlin_frequency"), 
-        #         TrackbarCallback(params.get("perlin_frequency"), "perlin_frequency").__call__, 
-        #         self.reset_slider_callback, 
-        #         default_font_id)
+            perlin_frequency_slider = TrackbarRow(
+                "Perlin Frequency", 
+                params.get("perlin_frequency"), 
+                TrackbarCallback(params.get("perlin_frequency"), "perlin_frequency").__call__, 
+                self.reset_slider_callback, 
+                default_font_id)
             
-        #     perlin_octaves_slider = TrackbarRow(
-        #         "Perlin Octaves", 
-        #         params.get("perlin_octaves"), 
-        #         TrackbarCallback(params.get("perlin_octaves"), "perlin_octaves").__call__, 
-        #         self.reset_slider_callback, 
-        #         default_font_id)
-        # dpg.bind_item_font("noise_generator", global_font_id)
+            perlin_octaves_slider = TrackbarRow(
+                "Perlin Octaves", 
+                params.get("perlin_octaves"), 
+                TrackbarCallback(params.get("perlin_octaves"), "perlin_octaves").__call__, 
+                self.reset_slider_callback, 
+                default_font_id)
+        dpg.bind_item_font("noise_generator", global_font_id)
 
         dpg.bind_item_font("pan", global_font_id)
 
@@ -591,35 +591,35 @@ class Interface:
             with dpg.collapsing_header(label=f"\tOscillator {i}", tag=f"osc{i}"):
                 osc_shape_sliders.append(TrackbarRow(
                     f"Osc {i} Shape", 
-                    p.osc_bank[i].shape, 
-                    TrackbarCallback(p.osc_bank[i].shape, f"osc{i}_shape").__call__, 
+                    c.osc_bank[i].shape, 
+                    TrackbarCallback(c.osc_bank[i].shape, f"osc{i}_shape").__call__, 
                     self.reset_slider_callback, 
                     default_font_id))
                 osc_freq_sliders.append(TrackbarRow(
                     f"Osc {i} Freq", 
-                    p.osc_bank[i].frequency, 
-                    TrackbarCallback(p.osc_bank[i].frequency, f"osc{i}_frequency").__call__, 
+                    c.osc_bank[i].frequency, 
+                    TrackbarCallback(c.osc_bank[i].frequency, f"osc{i}_frequency").__call__, 
                     self.reset_slider_callback, 
                     default_font_id))
                 
                 osc_amp_sliders.append(TrackbarRow(
                     f"Osc {i} Amp", 
-                    p.osc_bank[i].amplitude, 
-                    TrackbarCallback(p.osc_bank[i].amplitude, f"osc{i}_amplitude").__call__, 
+                    c.osc_bank[i].amplitude, 
+                    TrackbarCallback(c.osc_bank[i].amplitude, f"osc{i}_amplitude").__call__, 
                     self.reset_slider_callback, 
                     default_font_id))
                 
                 osc_phase_sliders.append(TrackbarRow(
                     f"Osc {i} Phase", 
-                    p.osc_bank[i].phase, 
-                    TrackbarCallback(p.osc_bank[i].phase, f"osc{i}_phase").__call__, 
+                    c.osc_bank[i].phase, 
+                    TrackbarCallback(c.osc_bank[i].phase, f"osc{i}_phase").__call__, 
                     self.reset_slider_callback, 
                     default_font_id))
                 
                 osc_seed_sliders.append(TrackbarRow(
                     f"Osc {i} Seed", 
-                    p.osc_bank[i].seed, 
-                    TrackbarCallback(p.osc_bank[i].seed, f"osc{i}_seed").__call__, 
+                    c.osc_bank[i].seed, 
+                    TrackbarCallback(c.osc_bank[i].seed, f"osc{i}_seed").__call__, 
                     self.reset_slider_callback, 
                     default_font_id))
                 

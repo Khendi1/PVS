@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
-# import config as p
-from config import params
+from config import params, image_width, image_height
 from enum import IntEnum
 
 class Shape(IntEnum):
@@ -37,8 +36,8 @@ class ShapeGenerator:
         
         self.multiply_grid_x = params.add("multiply_grid_x", 1, 10, 2)  # Number of shapes in X direction
         self.multiply_grid_y = params.add("multiply_grid_y", 1, 10, 2)  # Number of shapes in Y direction
-        self.grid_pitch_x = params.add("grid_pitch_x", min_val=10, max_val=200, default_val=100)  # Distance between shapes in X direction
-        self.grid_pitch_y = params.add("grid_pitch_y", min_val=10, max_val=200, default_val=50)  # Distance between shapes in Y direction
+        self.grid_pitch_x = params.add("grid_pitch_x", min_val=0, max_val=width, default_val=100)  # Distance between shapes in X direction
+        self.grid_pitch_y = params.add("grid_pitch_y", min_val=0, max_val=height, default_val=100)  # Distance between shapes in Y direction
         
         self.fill_enabled = True  # Toggle fill on/off
         self.fill_h = params.add("fill_hue", 0, 179, 120)  # Hue for fill color
@@ -50,12 +49,13 @@ class ShapeGenerator:
         self.line_color = self.hsv_to_bgr(self.line_hsv)
 
     def draw_rectangle(self, canvas, center_x, center_y,):
+        """ Draw a rotated rectangle on the canvas """
 
-        rect_width = int(50 * self.size_multiplier.value * self.aspect_ratio.value)
-        rect_height = int(50 * self.size_multiplier.value)
+        rect_width = int(50 * self.size_multiplier.val() * self.aspect_ratio.val())
+        rect_height = int(50 * self.size_multiplier.val())
 
         # Create a rotation matrix
-        M = cv2.getRotationMatrix2D((center_x, center_y), self.rotation_angle.value, 1)
+        M = cv2.getRotationMatrix2D((center_x, center_y), self.rotation_angle.val(), 1)
 
         # Define the rectangle's corners before rotation
         pts = np.array([
@@ -71,20 +71,24 @@ class ShapeGenerator:
 
         if self.fill_enabled:
             cv2.fillPoly(canvas, [rotated_pts_int], self.fill_color)
-        cv2.polylines(canvas, [rotated_pts_int], True, self.line_color, self.line_weight.value)
+        cv2.polylines(canvas, [rotated_pts_int], True, self.line_color, self.line_weight.val())
         
         return canvas
 
     def draw_circle(self, canvas, center_x, center_y):
-        radius = int(30 * self.size_multiplier.value)
+        """ Draw a circle on the canvas """
+
+        radius = int(30 * self.size_multiplier.val())
         if self.fill_enabled:
             cv2.circle(canvas, (center_x, center_y), radius, self.fill_color, -1) # -1 for fill
-        cv2.circle(canvas, (center_x, center_y), radius, self.line_color, self.line_weight.value)
+        cv2.circle(canvas, (center_x, center_y), radius, self.line_color, self.line_weight.val())
 
         return canvas
     
     def draw_triangle(self, canvas, center_x, center_y):
-        side_length = int(60 * self.size_multiplier.value)
+        """ Draw a rotated triangle on the canvas """
+
+        side_length = int(60 * self.size_multiplier.val())
 
         # Vertices for an equilateral triangle centered at (0,0)
         p1_x = 0
@@ -101,52 +105,61 @@ class ShapeGenerator:
         pts[:, 1] += center_y
 
         # Apply rotation
-        M = cv2.getRotationMatrix2D((center_x, center_y), self.rotation_angle.value, 1)
+        M = cv2.getRotationMatrix2D((center_x, center_y), self.rotation_angle.val(), 1)
         rotated_pts = cv2.transform(pts.reshape(-1, 1, 2), M)
         rotated_pts_int = np.int32(rotated_pts)
 
         if self.fill_enabled:
             cv2.fillPoly(canvas, [rotated_pts_int], self.fill_color)
-        cv2.polylines(canvas, [rotated_pts_int], True, self.line_color, self.line_weight.value)
+        cv2.polylines(canvas, [rotated_pts_int], True, self.line_color, self.line_weight.val())
 
         return canvas
     
     def draw_line(self, canvas, center_x, center_y):
-        length = int(50 * self.size_multiplier.value)
+        length = int(50 * self.size_multiplier.val())
         start_point = (center_x - length // 2, center_y)
         end_point = (center_x + length // 2, center_y)
 
         if self.fill_enabled:
-            cv2.line(canvas, start_point, end_point, self.fill_color, self.line_weight.value)
-        cv2.line(canvas, start_point, end_point, self.line_color, self.line_weight.value)
+            cv2.line(canvas, start_point, end_point, self.fill_color, self.line_weight.val())
+        cv2.line(canvas, start_point, end_point, self.line_color, self.line_weight.val())
 
         return canvas
 
     def draw_shape_on_canvas(self, canvas, center_x, center_y):
+        """ Draw the selected shape on the canvas at the specified center coordinates """
+
         # Ensure coordinates are within bounds to prevent errors
         # Note: These checks are for safety but may clip shapes if they go way off screen
         center_x = max(0, min(canvas.shape[1], center_x))
         center_y = max(0, min(canvas.shape[0], center_y))
 
-        if self.shape_type.value == Shape.NONE:
+        if self.shape_type.val() == Shape.NONE:
             pass
-        elif self.shape_type.value == Shape.RECTANGLE:
+        elif self.shape_type.val() == Shape.RECTANGLE:
             canvas = self.draw_rectangle(canvas, center_x, center_y)
-        elif self.shape_type.value == Shape.CIRCLE:
+        elif self.shape_type.val() == Shape.CIRCLE:
             canvas = self.draw_circle(canvas, center_x, center_y)
-        elif self.shape_type.value == Shape.TRIANGLE:
+        elif self.shape_type.val() == Shape.TRIANGLE:
             canvas = self.draw_triangle(canvas, center_x, center_y)
-        elif self.shape_type.value == Shape.LINE:
+        elif self.shape_type.val() == Shape.LINE:
             canvas = self.draw_line(canvas, center_x, center_y)
-        elif self.shape_type.value == Shape.DIAMOND:
+        elif self.shape_type.val() == Shape.DIAMOND:
             pass
         else:
-            raise ValueError(f"Invalid shape type: {self.shape_type.value}. Must be 'rectangle', 'circle', 'triangle', or 'line'.")
+            raise ValueError(f"Invalid shape type: {self.shape_type.val()}. Must be 'rectangle', 'circle', 'triangle', or 'line'.")
         
         return canvas
 
-    # Helper function to blend a 4-channel BGRA overlay onto a 3-channel BGR background
     def blend_rgba_overlay(self, background, overlay_rgba):
+        """
+        Blend a 4-channel BGRA overlay onto a 3-channel BGR background using the alpha channel.
+        Args:
+            background (np.ndarray): 3-channel BGR background image.
+            overlay_rgba (np.ndarray): 4-channel BGRA overlay image.
+        Returns:
+            np.ndarray: Blended 3-channel BGR image.
+        """
         # Ensure background is float for calculation, then convert back to uint8
         background_float = background.astype(np.float32)
 
@@ -163,29 +176,32 @@ class ShapeGenerator:
         return np.clip(blended_image, 0, 255).astype(np.uint8)
 
     def hsv_to_bgr(self, hsv):
-        # Convert H, S, V to BGR
+        """ Convert HSV color to BGR color for OpenCV drawing functions """
+
         hsv_np = np.uint8([[hsv]])
         bgr = cv2.cvtColor(hsv_np, cv2.COLOR_HSV2BGR)[0][0]
         return (int(bgr[0]), int(bgr[1]), int(bgr[2]))
     
     def draw_shapes_on_frame(self, frame, width, height):
-        base_center_x, base_center_y = width // 2 + self.shape_x_shift.value, height // 2 + self.shape_y_shift.value
+        """ Draw shapes on the given frame based on current parameters """
+
+        base_center_x, base_center_y = width // 2 + self.shape_x_shift.val(), height // 2 + self.shape_y_shift.val()
 
         # Create separate 3-channel (BGR) canvases for lines and fills
         # These will temporarily hold the shapes on a black background
         temp_line_canvas = np.zeros((height, width, 3), dtype=np.uint8)
         temp_fill_canvas = np.zeros((height, width, 3), dtype=np.uint8)
 
-        self.line_color = self.hsv_to_bgr([self.line_h.value, self.line_s.value, self.line_v.value])
-        self.fill_color = self.hsv_to_bgr([self.fill_h.value, self.fill_s.value, self.fill_v.value])
+        self.line_color = self.hsv_to_bgr([self.line_h.val(), self.line_s.val(), self.line_v.val()])
+        self.fill_color = self.hsv_to_bgr([self.fill_h.val(), self.fill_s.val(), self.fill_v.val()])
 
         # Grid Multiplication Mode
-        for row in range(self.multiply_grid_y.value):
-            for col in range(self.multiply_grid_x.value):
+        for row in range(self.multiply_grid_y.val()):
+            for col in range(self.multiply_grid_x.val()):
                 # Calculate center for each shape in the grid
                 # The subtraction ensures the grid is centered relative to base_center_x/y
-                current_center_x = base_center_x + col * self.grid_pitch_x.value - (self.multiply_grid_x.value - 1) * self.grid_pitch_x.value // 2
-                current_center_y = base_center_y + row * self.grid_pitch_y.value - (self.multiply_grid_y.value - 1) * self.grid_pitch_y.value // 2
+                current_center_x = base_center_x + col * self.grid_pitch_x.val() - (self.multiply_grid_x.val() - 1) * self.grid_pitch_x.val() // 2
+                current_center_y = base_center_y + row * self.grid_pitch_y.val() - (self.multiply_grid_y.val() - 1) * self.grid_pitch_y.val() // 2
 
                 self.draw_shape_on_canvas(temp_line_canvas, current_center_x, current_center_y)
 

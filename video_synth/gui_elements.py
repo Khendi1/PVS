@@ -1,5 +1,4 @@
 import dearpygui.dearpygui as dpg
-import config as p
 
 class Button:
     def __init__(self, label, tag, max=None, font=None):

@@ -4,7 +4,27 @@ import math
 from enum import Enum
 import numpy as np
 from config import params
-import config as p
+
+def map_value(value, from_min, from_max, to_min, to_max):
+  """
+  Maps a value from one range to another.
+
+  Args:
+    value: The value to map.
+    from_min: The minimum value of the original range.
+    from_max: The maximum value of the original range.
+    to_min: The minimum value of the target range.
+    to_max: The maximum value of the target range.
+  Returns:
+    The mapped value in the target range, rounded down to the nearest integer.
+  """
+  # Calculate the proportion of the value within the original range
+  proportion = (value - from_min) / (from_max - from_min)
+
+  # Map the proportion to the target range
+  mapped_value = to_min + proportion * (to_max - to_min)
+
+  return math.floor(mapped_value)
 
 class Interp(Enum):
     LINEAR = 1
@@ -16,24 +36,19 @@ class PerlinNoise():
             seed, amplitude=1, frequency=1, 
             octaves=1, interp=Interp.COSINE, use_fade=False):
         self.seed = random.Random(seed).random()
-        self.amplitude = amplitude
-        self.frequency = frequency
-        self.octaves = octaves
+        self.amplitude = params.add("perlin_amplitude", 0.1, 1000, amplitude) # min/max depends on linked param
+        self.frequency = params.add("perlin_frequency", 0.1, 500, frequency)
+        self.octaves = params.add("perlin_octaves", 1, 10, octaves)
         self.interp = interp
         self.use_fade = use_fade
 
         self.mem_x = dict()
-
-    # def update(self, frequency, amplitude, octaves, interp);
-
-
 
     def __noise(self, x):
         # made for improve performance
         if x not in self.mem_x:
             self.mem_x[x] = random.Random(self.seed + x).uniform(-1, 1)
         return self.mem_x[x]
-
 
     def __interpolated_noise(self, x):
         prev_x = int(x) # previous integer
@@ -63,7 +78,6 @@ class PerlinNoise():
                 frac_x)
 
         return res
-
 
     def get(self, x):
         frequency = self.frequency
@@ -105,7 +119,7 @@ class Oscillator:
         self.param_min = 0
         self.frequency = params.add(f"{name}_frequency", 0, 15, frequency)
         self.amplitude = params.add(f"{name}_amplitude", 0, 100, amplitude)
-        self.phase = params.add(f"{name}_phase", 0, 100, phase)
+        self.phase = params.add(f"{name}_phase", 0, 360, phase)
         self.seed = params.add(f"{name}_seed", 0, 100, seed)
         self.shape = params.add(f"{name}_shape", 0, 3, shape)
         self.sample_rate = 30
@@ -145,7 +159,7 @@ class Oscillator:
             elif int(self.shape) == 1: # Square wave
                 sample = self.get_amplitude() * np.sign(np.sin(2 * np.pi * self.get_frequency() * self.get_phase())) + self.get_seed()
             elif int(self.shape) == 2: # Triangle wave
-                sample = self.get_amplitude() * 2 * nparams.abs(2 * (self.get_phase() * self.get_frequency() - np.floor(self.get_phase() * self.get_frequency() + 0.5))) - self.get_amplitude()  + self.get_seed()
+                sample = self.get_amplitude() * 2 * np.abs(2 * (self.get_phase() * self.get_frequency() - np.floor(self.get_phase() * self.get_frequency() + 0.5))) - self.get_amplitude()  + self.get_seed()
             elif int(self.shape) == 3: # Sawtooth wave 
                 sample = self.get_amplitude() * 2 * (self.get_phase() * self.get_frequency() - np.floor(self.get_phase() * self.get_frequency())) - self.get_amplitude()  + self.get_seed()
                 sample *= self.direction
@@ -155,7 +169,7 @@ class Oscillator:
             if self.linked_param is not None:
                 # sample += self.get_amplitude()/2
                 # print(f"mappings from {self.param_min}-{self.param_max} to {self.linked_param.min_val}-{self.linked_param.max_val}")
-                mapped_sample = p.map_value(sample, -self.param_max, self.param_max, self.linked_param.min_val, self.linked_param.max_val)
+                mapped_sample = map_value(sample, -self.param_max, self.param_max, self.linked_param.min_val, self.linked_param.max_val)
                 self.linked_param.set_value(mapped_sample)
             yield sample
             self.phase.value += 1 / self.sample_rate  # Increment phase.  Not directly time-based here.
