@@ -12,9 +12,6 @@ image_width = None
 
 enable_polar_transform = False
 
-noise = 1
-perlin_noise = None
-
 panels = {}
 params = ParamTable()
 

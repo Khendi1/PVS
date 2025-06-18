@@ -46,7 +46,7 @@ class Param:
         self.max_val = max_val
         self.default_val = default_val
         self.family = "None" if family == None else family
-        print(f"Creating param {self.name} with min: {self.min_val}, max: {self.max_val}, default: {self.default_val}, type: '{str(type(self.default_val))}'")
+        # print(f"Creating param {self.name} with min: {self.min_val}, max: {self.max_val}, default: {self.default_val}, type: '{str(type(self.default_val))}'")
         self.value = default_val
 
     def __str__(self):

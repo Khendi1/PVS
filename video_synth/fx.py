@@ -30,8 +30,19 @@ class Effects:
         self.contrast = params.add("contrast", 1.0, 3.0, 1.0)
         self.brightness = params.add("brightness", 0, 100, 0)
         self.temporal_filter = params.add("temporal_filter", 0, 1.0, 0.95)
-        self.cc_upper = params.add("cc_upper", 0, 255, 255)
-        self.cc_lower = params.add("cc_lower", 0, 255, 0)
+        self.key_upper_hue = params.add("key_upper_hue", 0, 180, 0)
+        self.key_lower_hue = params.add("key_lower_hue", 0, 180, 0)
+        self.key_upper_sat = params.add("key_upper_sat", 0, 255, 255)
+        self.key_lower_sat = params.add("key_lower_sat", 0, 255, 0)
+        self.key_upper_val = params.add("key_upper_val", 0, 255, 255)
+        self.key_lower_val = params.add("key_lower_val", 0, 255, 0)
+        self.key_fuzz = params.add("key_fuzz", 0, 100, 0)
+        self.key_invert = params.add("key_invert", 0, 1, 0)
+        self.key_feather = params.add("key_feather", 0, 100, 0)
+        self.blur_type = params.add("blur_type", 1, 4, 1) # 1=Gaussian, 2=Median, 3=Box, 4=Bilateral
+        self.noise_type = params.add("noise_type", 0, 4, 0) # 0=None, 1=Gaussian, 2=Salt&Pepper, 3=Poisson, 4=Speckle
+        self.hue_invert_angle = params.add("hue_invert_angle", 0, 360, 0)
+        self.hue_invert_strength = params.add("hue_invert_strength", 0.0, 1.0, 0.0)
 
     def shift_hue(self, hue):
         """

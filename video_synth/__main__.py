@@ -29,14 +29,14 @@ def main():
         osc = Oscillator(name=f"osc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=i%4)
         c.osc_bank.append(osc)
 
-    s = ShapeGenerator(c.image_width, c.image_height)
-    c.perlin_noise = PerlinNoise(c.noise, frequency=1.0, amplitude=1.0, octaves=1, interp=Interp.COSINE)
-    # c.noise = c.perlin_noise.get(c.noise)
 
     gui = Interface()
+    s = ShapeGenerator(c.image_width, c.image_height)
+    pn = PerlinNoise(1, frequency=1.0, amplitude=1.0, octaves=1, interp=Interp.COSINE)
     e = Effects(c.image_width, c.image_height)
 
     print(f'Enjoy {len(params.all().keys())} tunable parameters!')
+    # noise = pn.get(noise)
 
     gui.create_control_window()
 

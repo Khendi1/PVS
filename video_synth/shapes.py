@@ -48,6 +48,10 @@ class ShapeGenerator:
         self.fill_color = self.hsv_to_bgr(self.fill_hsv)
         self.line_color = self.hsv_to_bgr(self.line_hsv)
 
+        self.convas_rotation = params.add("canvas_rotation", 0, 360, 0)  # Rotation angle in degrees
+        
+        
+
     def draw_rectangle(self, canvas, center_x, center_y,):
         """ Draw a rotated rectangle on the canvas """
 
