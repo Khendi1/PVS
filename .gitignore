@@ -1,5 +1,5 @@
 venv1/
 video_synth/__pycache__/
-img/
-imgs/
+save/*
+!save/.gitkeep
 /video_synth/test.py

@@ -11,9 +11,10 @@ def apply_effects(frame, e: Effects, n: ImageNoiser, s: ShapeGenerator):
  
     # frame = s.draw_shapes_on_frame(frame, c.image_width, c.image_height)
     frame = e.shift_frame(frame)
+    frame = e.modify_hsv(frame)
+    frame = e.adjust_brightness_contrast(frame)
     frame = e.glitch_image(frame) 
     frame = e.gaussian_blur(frame)
-    frame = e.adjust_brightness_contrast(frame)
 
     if n.noise_type != NoiseType.NONE:
         frame = e.polarize_frame_hsv(frame)
@@ -21,8 +22,6 @@ def apply_effects(frame, e: Effects, n: ImageNoiser, s: ShapeGenerator):
     if enable_polar_transform == True:
         frame = e.polar_transform(frame, params.get("polar_x"), params.get("polar_y"), params.get("polar_radius"))
 
-    # Split image HSV channels for modifications and convert back to BGR color space.   
-    frame = e.modify_hsv(frame)
 
     return frame
 
