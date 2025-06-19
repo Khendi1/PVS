@@ -24,9 +24,9 @@ class ShapeGenerator:
         self.shape_type = params.add("shape_type", 0, len(Shape)-1, Shape.RECTANGLE)
         
         self.line_h = params.add("line_hue", 0, 179, 0)  # Hue range for OpenCV is 0-
-        self.line_s = params.add("line_saturation", 0, 255, 255)  # Saturation range
-        self.line_v = params.add("line_value", 0, 255, 255)  # Value range
-        self.line_hsv = [params.val("line_hue"), params.val("line_value"), params.val("line_saturation")]  # H, S, V (Red) - will be converted to BGR
+        self.line_s = params.add("line_sat", 0, 255, 255)  # Saturation range
+        self.line_v = params.add("line_val", 0, 255, 255)  # Value range
+        self.line_hsv = [params.val("line_hue"), params.val("line_val"), params.val("line_sat")]  # H, S, V (Red) - will be converted to BGR
         self.line_weight = params.add("line_weight", 1, 20, 2)  # Thickness of the shape outline, must be integer
         self.line_opacity = params.add("line_opacity", 0.0, 1.0, 0.66)  # Opacity of the shape outline
         
@@ -41,8 +41,8 @@ class ShapeGenerator:
         
         self.fill_enabled = True  # Toggle fill on/off
         self.fill_h = params.add("fill_hue", 0, 179, 120)  # Hue for fill color
-        self.fill_s = params.add("fill_saturation", 0, 255, 100)  # Saturation for fill color
-        self.fill_v = params.add("fill_value", 0, 255, 255)  # Value for fill color
+        self.fill_s = params.add("fill_sat", 0, 255, 100)  # Saturation for fill color
+        self.fill_v = params.add("fill_val", 0, 255, 255)  # Value for fill color
         self.fill_hsv = [self.fill_h.val(), self.fill_s.val(), self.fill_v.val()]  # H, S, V (Blue) - will be converted to BGR
         self.fill_opacity = params.add("fill_opacity", 0.0, 1.0, 0.25)
         self.fill_color = self.hsv_to_bgr(self.fill_hsv)

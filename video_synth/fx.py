@@ -9,12 +9,19 @@ class HSV(IntEnum):
     S = 1
     V = 2
 
+class BlurType(IntEnum):
+    NONE = 0
+    GAUSSIAN = 1
+    MEDIAN = 2
+    BOX = 3
+    BILATERAL = 4
+
 class Effects:
     def __init__(self, image_width, image_height):
-        self.hue_shift = params.add("hue_shift", 0, 180, 100)
-        self.sat_shift = params.add("sat_shift", 0, 255, 100)
-        self.val_shift = params.add("val_shift", 0, 255, 50)
-        self.alpha = params.add("alpha", 0.0, 1.0, 0.9)
+        self.hue_shift = params.add("hue_shift", 0, 180, 0)
+        self.sat_shift = params.add("sat_shift", 0, 255, 0)
+        self.val_shift = params.add("val_shift", 0, 255, 0)
+        self.alpha = params.add("alpha", 0.0, 1.0, 0.0)
         self.blur_kernel_size = params.add("blur_kernel_size", 0, 100, 0)
         self.num_glitches = params.add("num_glitches", 0, 100, 0)
         self.glitch_size = params.add("glitch_size", 1, 100, 0)
@@ -29,18 +36,17 @@ class Effects:
         self.polar_radius = params.add("polar_radius", 0.1, 100, 1.0)
         self.contrast = params.add("contrast", 1.0, 3.0, 1.0)
         self.brightness = params.add("brightness", 0, 100, 0)
-        self.temporal_filter = params.add("temporal_filter", 0, 1.0, 0.95)
+        self.temporal_filter = params.add("temporal_filter", 0, 1.0, 1.0)
         self.key_upper_hue = params.add("key_upper_hue", 0, 180, 0)
         self.key_lower_hue = params.add("key_lower_hue", 0, 180, 0)
         self.key_upper_sat = params.add("key_upper_sat", 0, 255, 255)
         self.key_lower_sat = params.add("key_lower_sat", 0, 255, 0)
         self.key_upper_val = params.add("key_upper_val", 0, 255, 255)
         self.key_lower_val = params.add("key_lower_val", 0, 255, 0)
-        self.key_fuzz = params.add("key_fuzz", 0, 100, 0)
-        self.key_invert = params.add("key_invert", 0, 1, 0)
-        self.key_feather = params.add("key_feather", 0, 100, 0)
-        self.blur_type = params.add("blur_type", 1, 4, 1) # 1=Gaussian, 2=Median, 3=Box, 4=Bilateral
-        self.noise_type = params.add("noise_type", 0, 4, 0) # 0=None, 1=Gaussian, 2=Salt&Pepper, 3=Poisson, 4=Speckle
+        # self.key_fuzz = params.add("key_fuzz", 0, 100, 0)
+        # self.key_invert = params.add("key_invert", 0, 1, 0)
+        # self.key_feather = params.add("key_feather", 0, 100, 0)
+        self.blur_type = params.add("blur_type", 0, 4, 0) # 1=Gaussian, 2=Median, 3=Box, 4=Bilateral
         self.hue_invert_angle = params.add("hue_invert_angle", 0, 360, 0)
         self.hue_invert_strength = params.add("hue_invert_strength", 0.0, 1.0, 0.0)
 
@@ -100,7 +106,7 @@ class Effects:
         hsv = self.val_threshold_hue_shift(hsv)
 
         # Merge the modified channels and convert back to BGR color space.
-        return cv2.merge((hsv[HSV.H.value], hsv[HSV.S.value], hsv[HSV.V.value]))
+        return cv2.cvtColor(cv2.merge((hsv[HSV.H.value], hsv[HSV.S.value], hsv[HSV.V.value])), cv2.COLOR_HSV2BGR)
 
     def glitch_image(self, image):
         height, width, _ = image.shape
@@ -127,45 +133,6 @@ class Effects:
             # Apply the glitch
             image[y:y_end, x:x_end] = glitch_area
         return image
-
-    def noisy(noise_typ,image):
-        if noise_typ == "gauss":
-            row,col,ch= image.shape
-            mean = 0
-            var = 0.1
-            sigma = var**0.5
-            gauss = np.random.normal(mean,sigma,(row,col,ch))
-            gauss = gauss.reshape(row,col,ch)
-            noisy = image + gauss
-            return noisy
-        elif noise_typ == "s&p":
-            row,col,ch = image.shape
-            s_vs_p = 0.5
-            amount = 0.004
-            out = np.copy(image)
-            # Salt mode
-            num_salt = np.ceil(amount * image.size * s_vs_p)
-            coords = [np.random.randint(0, i - 1, int(num_salt))
-                    for i in image.shape]
-            out[coords] = 1
-
-            # Pepper mode
-            num_pepper = np.ceil(amount* image.size * (1. - s_vs_p))
-            coords = [np.random.randint(0, i - 1, int(num_pepper))
-                    for i in image.shape]
-            out[coords] = 0
-            return out
-        elif noise_typ == "poisson":
-            vals = len(np.unique(image))
-            vals = 2 ** np.ceil(np.log2(vals))
-            noisy = np.random.poisson(image * vals) / float(vals)
-            return noisy
-        elif noise_typ =="speckle":
-            row,col,ch = image.shape
-            gauss = np.random.randn(row,col,ch)
-            gauss = gauss.reshape(row,col,ch)        
-            noisy = image + image * gauss
-            return noisy
 
     def warp_frame(feedback_frame, x_speed, y_speed, x_size, y_size):
         frame_height, frame_width = feedback_frame.shape[:2]
@@ -274,7 +241,7 @@ class Effects:
         adjusted_image = cv2.convertScaleAbs(image, alpha=self.contrast.val(), beta=self.brightness.val())
         return adjusted_image
 
-    def polarize_frame_hsv(self, frame, angle=0, strength=1.0):
+    def polarize_frame_hsv(self, frame):
         """
         Polarizes a frame by rotating hue in HSV color space.  This often gives
         a more visually interesting effect than rotating in BGR.
@@ -292,10 +259,10 @@ class Effects:
         hue_channel = hsv_frame[:, :, 0]
 
         # Convert angle to OpenCV hue units (0-180)
-        hue_shift = (angle / 360.0) * 180
+        hue_shift = (self.hue_invert_angle.val() / 360.0) * 180
 
         # Apply the hue shift with strength
-        shifted_hue = (hue_channel + hue_shift * strength) % 180  # Wrap aroundS
+        shifted_hue = (hue_channel + hue_shift * self.hue_invert_strength.val()) % 180  # Wrap aroundS
         hsv_frame[:, :, 0] = shifted_hue
 
         # Convert back to BGR

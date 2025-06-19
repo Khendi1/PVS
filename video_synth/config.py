@@ -11,6 +11,7 @@ image_height = None
 image_width = None
 
 enable_polar_transform = False
+apply_effects_before_feedback = False
 
 panels = {}
 params = ParamTable()
