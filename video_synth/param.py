@@ -2,6 +2,22 @@ class ParamTable:
     def __init__(self):
         self.params = {}
     
+    def __getitem__(self, key):
+        """
+        This method is called when an item is accessed using obj[key].
+        """
+        if isinstance(key, str):
+            return self.params[key]
+        elif isinstance(key, int):
+            # Example: allow indexing by integer for specific keys
+            keys_list = list(self.params.keys())
+            if 0 <= key < len(keys_list):
+                return self.params[keys_list[key]]
+            else:
+                raise IndexError("Index out of range")
+        else:
+            raise TypeError("Key must be a string or an integer")
+
     def val(self, param_name):
         """Returns the value of the Param object with the given name."""
 
@@ -10,6 +26,7 @@ class ParamTable:
         else:
             raise ValueError(f"Parameter '{param_name}' does not exist.")
     
+    # TODO: remove this method
     def get(self, param_name):
         """Returns the Param object with the given name."""
 
@@ -29,6 +46,15 @@ class ParamTable:
     def all(self):
         """Returns a dictionary of all parameters."""
         return self.params
+    
+    def items(self):
+        return self.params.items()
+    
+    def keys(self):
+        return self.params.keys()
+    
+    def values(self):
+        return self.params.values()
     
     def add(self, name, min_val, max_val, default_val, family=None):
         """Adds a new parameter to the table."""

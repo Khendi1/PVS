@@ -13,7 +13,6 @@ This is an interactive video synthesis tool with many tunable parameters. Most p
 - HSV control
 - Contrast/brightness control
 - Frame pan, tilt, zoom
-- Perlin noise generator 
 - Polar Coordinate transform: center position and radius size
 - glitch generator (size, quantity, ...)
 - Oscillator bank
@@ -26,6 +25,7 @@ This is an interactive video synthesis tool with many tunable parameters. Most p
     - shape size, position, and rotation control
     - multiplication across x and y axis
     - multiplication pitch across x and y axis
+- Perlin noise generator (not currently used)
 - locally save and recall patches (untested in awhile, likely broken)
 
 ## Known issues

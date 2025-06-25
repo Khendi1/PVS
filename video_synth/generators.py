@@ -117,7 +117,7 @@ class Oscillator:
         self.name = name
         self.param_max = 100
         self.param_min = 0
-        self.frequency = params.add(f"{name}_frequency", 0, 15, frequency)
+        self.frequency = params.add(f"{name}_frequency", 0, 2, frequency)
         self.amplitude = params.add(f"{name}_amplitude", 0, 100, amplitude)
         self.phase = params.add(f"{name}_phase", 0, 360, phase)
         self.seed = params.add(f"{name}_seed", 0, 100, seed)

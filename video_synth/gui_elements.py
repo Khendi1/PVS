@@ -1,60 +1,12 @@
 import dearpygui.dearpygui as dpg
-
-class Button:
-    def __init__(self, label, tag, max=None, font=None):
-        self.label = label
-        self.tag = tag
-        self.user_data = tag
-        self.index = 0
-        self.max = max
-        self.callback = None
-
-    def __plus__(self, value):
-        if self.max is not None:
-            self.index = (self.index + value) % self.max
-        else:
-            self.index += value
-
-    def __minus__(self, value):
-        if self.max is not None:
-            self.index = (self.index + value) % self.max
-        else:
-            self.index += value
-
-    def __eq__(self, value):
-        self.index = value # be careful
-    
-class SliderRow:
-    def __init__(self, label, tag, default_value, min_value, max_value, callback, type, button_callback):
-        self.label = label
-        self.tag = tag
-        self.default_value = default_value
-        self.min_value = min_value
-        self.max_value = max_value
-        self.callback = callback
-        self.button_callback = button_callback
-        self.slider = None
-        self.button = None
-        self.value = default_value
-        self.type = type
-        self.create()
-
-    def create(self):
-        with dpg.group(horizontal=True):
-            # self.button = dpg.add_button(label="Reset", callback=lambda x: self.reset, width=50)
-            self.button = dpg.add_button(label="Reset", callback=self.button_callback, width=50, tag=self.tag + "_reset", user_data=self.tag)
-            if self.type == 'float':
-                self.slider = dpg.add_slider_float(label=self.label, tag=self.tag, default_value=self.default_value, min_value=self.min_value, max_value=self.max_value, callback=self.callback, width=-100)
-            else:
-                self.slider = dpg.add_slider_int(label=self.label, tag=self.tag, default_value=self.default_value, min_value=self.min_value, max_value=self.max_value, callback=self.callback, width=-100)
+from config import params
 
 class TrackbarRow:
+
     def __init__(self, label, param, callback, button_callback, font):
-        self.label = label
+
+        self.label = label #TODO: method to get label from param name
         self.tag = param.name
-        self.default_value = param.default_val
-        self.min_value = param.min_val
-        self.max_value = param.max_val
         self.callback = callback
         self.button_callback = button_callback
         self.slider = None
@@ -70,8 +22,41 @@ class TrackbarRow:
             # self.button = dpg.add_button(label="Reset", callback=lambda x: self.reset, width=50)
             self.button = dpg.add_button(label="Reset", callback=self.button_callback, width=50, tag=self.tag + "_reset", user_data=self.tag)
             if self.type == 'float':
-                self.slider = dpg.add_slider_float(label=self.label, tag=self.tag, default_value=self.default_value, min_value=self.min_value, max_value=self.max_value, callback=self.callback, width=-100)
+                self.slider = dpg.add_slider_float(label=self.label, tag=self.tag, 
+                                                   default_value=self.param.default_val, 
+                                                   min_value=self.param.min_val, 
+                                                   max_value=self.param.max_val, 
+                                                   callback=self.callback, 
+                                                   width=-100)
             else:
-                self.slider = dpg.add_slider_int(label=self.label, tag=self.tag, default_value=self.default_value, min_value=self.min_value, max_value=self.max_value, callback=self.callback, width=-100)
+                self.slider = dpg.add_slider_int(label=self.label, tag=self.tag, default_value=self.param.default_val, min_value=self.param.min_val, max_value=self.param.max_val, callback=self.callback, width=-100)
             dpg.bind_item_font(self.tag, self.font)
             dpg.bind_item_font(self.tag + "_reset", self.font)
+
+class TrackbarCallback:
+    """
+    A callable class instance used as a callback for Dear PyGui trackbars.
+    It updates a specified Param object's value and an associated text item.
+    """
+    def __init__(self, target_param_obj, display_text_tag=None):
+        """
+        Initializes the callback instance.
+        Args:
+            target_param_obj (Param): The Param object whose 'value' attribute
+                                      this trackbar will control.
+            display_text_tag (str, optional): The tag of a dpg.add_text item
+                                            to update with the current value.
+        """
+        self.target_param = target_param_obj
+        self.display_text_tag = display_text_tag
+
+    def __call__(self, sender, app_data):
+        """
+        This method is invoked when the trackbar's value changes.
+        Args: 
+            sender: The tag/ID of the trackbar that triggered the callback.
+            app_data: The new value of the trackbar.
+        """
+        # Update the Param object's value
+        params.set(self.target_param.name, app_data)
+        dpg.set_value(sender, app_data)

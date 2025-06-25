@@ -22,7 +22,6 @@ def apply_effects(frame, e: Effects, n: ImageNoiser, s: ShapeGenerator):
     if enable_polar_transform == True:
         frame = e.polar_transform(frame, params.get("polar_x"), params.get("polar_y"), params.get("polar_radius"))
 
-
     return frame
 
 def main():
@@ -57,7 +56,7 @@ def main():
     s = ShapeGenerator(image_width, image_height)
     e = Effects(image_width, image_height)
 
-    print(f'Enjoy {len(params.all().keys())} tunable parameters!')
+    print(f'Enjoy {len(params.keys())} tunable parameters!')
     
     # noise = pn.get(noise)
 
@@ -82,8 +81,8 @@ def main():
         # noise = c.perlin_noise.get(noise)
         
         # effect ordering leads to unique results
-        if apply_effects_before_feedback:
-            frame = apply_effects(frame, e, n, s)
+        if toggles.val("effects_first") == True:
+            feedback_frame = apply_effects(feedback_frame, e, n, s)
             feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
         else:
             feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)

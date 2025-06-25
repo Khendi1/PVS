@@ -1,60 +1,26 @@
-import config as c
-from config import NUM_OSCILLATORS, params, toggles
-from gui_elements import TrackbarRow, Button, TrackbarRow
+from config import *
+from gui_elements import TrackbarRow, TrackbarCallback
 import dearpygui.dearpygui as dpg
 from generators import PerlinNoise, Interp, Oscillator
+from save import SaveButtons
+from buttons import Button
 import random
 import datetime
 import yaml
 
-#  Trackbar Callback #############################################################
-class TrackbarCallback:
-    """
-    A callable class instance used as a callback for Dear PyGui trackbars.
-    It updates a specified Param object's value and an associated text item.
-    """
-    def __init__(self, target_param_obj, display_text_tag=None):
-        """
-        Initializes the callback instance.
-
-        Args:
-            target_param_obj (Param): The Param object whose 'value' attribute
-                                      this trackbar will control.
-            display_text_tag (str, optional): The tag of a dpg.add_text item
-                                            to update with the current value.
-        """
-        self.target_param = target_param_obj
-        self.display_text_tag = display_text_tag
-
-    def __call__(self, sender, app_data):
-        """
-        This method is invoked when the trackbar's value changes.
-        sender: The tag/ID of the trackbar that triggered the callback.
-        app_data: The new value of the trackbar.
-        """
-        # Update the Param object's value
-        if self.display_text_tag == "blur_kernel_size":
-            params.set("blur_kernel_size", max(1, app_data | 1))
-        else:
-            params.set(self.target_param.name, app_data)
-        dpg.set_value(sender, app_data)
-
-#  Interface ##################################################################### 
 class Interface:
+
     def __init__(self, panel_width=550, panel_height=420):
         self.sliders = []
         self.buttons = []
         self.panel_width = panel_width
         self.panel_height = panel_height
         self.slider_dict = None
-        # self.panels = self.build_panels_dict(params.all())
         self.default_font_id = None
-        # with dpg.font_registry():
-        #     global_font_id = dpg.add_font("C:/Windows/Fonts/arial.ttf", 18) # Larger font size for the header
-        #     self.default_font_id = dpg.add_font("C:/Windows/Fonts/arial.ttf", 14) # Default font size for other items
-        
-        # # Bind the default font to the whole window (optional, but good practice)
-        # dpg.bind_font(self.default_font_id)
+        self.global_font_id = None
+        # TODO: debug automatically building params sliders
+        # only creates last param in list
+        # self.panels = self.build_panels_dict(params.all())
 
     def reset_slider_callback(self, sender, app_data, user_data):
         param = params.get(str(user_data))
@@ -65,100 +31,12 @@ class Interface:
         param.reset()
         dpg.set_value(user_data, param.value)
 
-    # Button Callbacks ###########################################################
-
-    def on_save_button_click(self):
-        date_time_str = datetime.now().strftime("%m-%d-%Y %H-%M")
-        print(f"Saving values at {date_time_str}")
-        
-        data = {}
-        for k, v in params.all().items():
-            print(f"{k}: {v.value}")
-            data[k] = v.value
-        
-        # Append the data to the YAML file
-        with open("saved_values.yaml", "a") as f:
-            yaml.dump([data], f, default_flow_style=False)
-        
-        # Optionally, save the modified image
-        cv2.imwrite(f"{date_time_str}.jpg", feedback_frame)
-
-    def on_fwd_button_click(self):
-
-        fwd = self.get_button_by_tag("load_next")
-        prev = self.get_button_by_tag("load_prev")
-        print(f"Forward button clicked!")
-
-        # get values from saved_values.yaml
-        try:
-            with open("saved_values.yaml", "r") as f:
-                saved_values = list(yaml.safe_load_all(f))
-
-            fwd.index = (fwd.index + 1) % len(saved_values[0])
-            prev.index = fwd.index
-            d = saved_values[0][fwd.index]
-            print(f"loaded values at index {fwd.index}: {d}\n\n")
-            
-            for s in self.sliders:
-                for tag in d.keys():
-                    if tag == s.tag:
-                        s.value = d[tag]
-                        dpg.set_value(s.tag, s.value)
-            
-        except Exception as e:
-            print(f"Error loading values: {e}")
-
-    def on_prev_button_click(self):
-
-        # fwd = get_button_by_tag("load_next")
-        # b = get_button_by_tag("load_prev")
-        print(f"Prev button clicked!")
-
-        # get values from saved_values.yaml
-        try:
-            with open("saved_values.yaml", "r") as f:
-                saved_values = list(yaml.safe_load_all(f))
-
-            b.index = (b.index - 1) % len(saved_values[0])
-            fwd.index = b.index
-            d = saved_values[0][b.index]
-            print(f"loaded values at index {b.index}: {d}\n\n")
-            
-            for s in self.sliders:
-                for tag in d.keys():
-                    if tag == s.tag:
-                        s.value = d[tag]
-                        dpg.set_value(s.tag, s.value)
-            
-        except Exception as e:
-            print(f"Error loading values: {e}")
-
-    def on_rand_button_click(self):
-
-        # fwd = get_button_by_tag("load_next")
-        # prev = get_button_by_tag("load_prev")
-        # rand = get_button_by_tag("load_rand")
-        print(f"Random button clicked!")
-    
-        # get values from saved_values.yaml
-        try:
-            with open("saved_values.yaml", "r") as f:
-                saved_values = list(yaml.safe_load_all(f))
-
-            rand.index = random.randint(0, len(saved_values[0]) - 1)
-            fwd.index = rand.index
-            prev.index = rand.index
-            d = saved_values[0][rand.index]
-            print(f"loaded values at index {rand.index}: {d}\n\n")
-            
-            for s in self.sliders:
-                for tag in d.keys():
-                    if tag == s.tag:
-                        s.value = d[tag]
-                        dpg.set_value(s.tag, s.value)
-            
-        except Exception as e:
-            print(f"Error loading values: {e}")
+    def on_toggle_button_click(self, sender, app_data, user_data):
+        print(f"test: {user_data}")
+        for tag, button in toggles.items():
+            if user_data == tag:
+                print("test2")
+                toggles.toggle(tag)
 
     def on_button_click(self, sender, app_data, user_data):
         print(f"Button clicked: {user_data}, {app_data}, {sender}")
@@ -169,63 +47,34 @@ class Interface:
             self.reset_values()
         elif user_data == "random":
             self.randomize_values()
-        elif user_data == "load_next":
-           self.on_fwd_button_click()
-        elif user_data == "load_prev":
-            self.on_prev_button_click()
-        elif user_data == "load_rand":
-            self.on_rand_button_click()
-        elif user_data == "interp":
-            pass
-        elif user_data == "fade":
-            pass
         elif user_data == "enable_polar_transform":
-            if c.enable_polar_transform == True:
-                c.enable_polar_transform = False
+            if enable_polar_transform == True:
+                enable_polar_transform = False
             else:
-                c.enable_polar_transform = True
-
-    # Button methods #############################################################
+                enable_polar_transform = True
+        
 
     def reset_values(self):
-        for s in self.sliders:
-            s.value = s.min_value
-            if s.tag == "x_shift" or s.tag == "y_shift":
-                s.value = 0
-            dpg.set_value(s.tag, s.value)
+        for param in params.values:
+            param.set(param.default_val)
+            dpg.set_value(param.name, param.value)
+
 
     def randomize_values(self):
-        # TODO: use param.randomize() method
-        for p in params.all():
-            c.randomize()
-            # dpg.set_value(s.tag, s.value)
+        for param in params.all():
+            param.randomize()
+            dpg.set_value(param.name, param.value)
 
     def create_buttons(self, width, height):
-
-        save_button = Button("Save", "save")
         reset_button = Button("Reset all", 'reset_all')
         random_button = Button("Random", 'random')
-        load_next_button = Button("Load >>", 'load_next')
-        load_rand_button = Button("Load ??", "load_rand")
-        load_prev_button = Button("Load <<", "load_prev")
-
-        self.buttons = [save_button, reset_button, random_button, load_next_button, load_rand_button, load_prev_button]
 
         width -= 20
 
-        # with dpg.group(horizontal=True):
-            
         with dpg.group(horizontal=True):
-            dpg.add_button(label=save_button.label, callback=self.on_button_click, user_data=save_button.tag, width=width//3)
             dpg.add_button(label=reset_button.label, callback=self.on_button_click, user_data=reset_button.tag, width=width//3)
             dpg.add_button(label=random_button.label, tag=random_button.tag, callback=self.on_button_click, user_data=random_button.tag, width=width//3)
-
-        with dpg.group(horizontal=True):
-            dpg.add_button(label=load_prev_button.label, callback=self.on_button_click, user_data=load_prev_button.tag, width=width//3)
-            dpg.add_button(label=load_rand_button.label, callback=self.on_button_click, user_data=load_rand_button.tag, width=width//3)    
-            dpg.add_button(label=load_next_button.label, callback=self.on_button_click, user_data=load_next_button.tag, width=width//3)
-
-        # future buttons: load image, reload image, max feedback, undo, redo, save image
+            toggles["effects_first"].create()
 
     def resize_buttons(self, sender, app_data):
         # Get the current width of the window
@@ -234,8 +83,6 @@ class Interface:
         # Set each button to half the window width (minus a small padding if you want)
         half_width = window_width // 2
         dpg.set_item_width(sender, half_width)
-
-    # Listbox callback #############################################################
 
     def listbox_cb(self, sender, app_data):
         """
@@ -251,18 +98,19 @@ class Interface:
         for i in range(NUM_OSCILLATORS):
             if f"osc{i}" in sender:
                 param = None
-                for tag, param in params.all().items():
+                for tag, param in params.items():
                     if tag == app_data:
-                        c.osc_bank[i].linked_param = param
+                        osc_bank[i].linked_param = param
                         break
 
-    # Create the control window and features #######################################
     def create_control_window(self, width=550, height=600):
+
         dpg.create_context()
 
         with dpg.window(tag="Controls", label="Controls", width=width, height=height):
             self.create_trackbars(width, height)
             # self.create_trackbar_panels_for_param()
+            # self.save_buttons = SaveButtons(width, height).create_save_buttons()
             self.create_buttons(width, height)
             # dpg.set_viewport_resize_callback(resize_buttons)
 
@@ -284,7 +132,7 @@ class Interface:
             
             hue_slider = TrackbarRow(
                 "Hue Shift", 
-                params.get("hue_shift"), 
+                params["hue_shift"], 
                 TrackbarCallback(params.get("hue_shift"), "hue_shift").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
@@ -477,7 +325,6 @@ class Interface:
                 default_font_id)
 
             enable_polar_transform_button = Button("Enable Polar Transform", "enable_polar_transform")
-            # polar_coord_mode_slider = TrackbarRow("Polar Coord Mode", c.polar_coord_mode, self.polar_x_cb, self.reset_slider_callback, default_font_id)
             dpg.add_button(label=enable_polar_transform_button.label, tag="enable_polar_transform", callback=self.on_button_click, user_data=enable_polar_transform_button.tag, width=width)
             dpg.bind_item_font(enable_polar_transform_button.tag, default_font_id)
             polar_x_slider = TrackbarRow(
@@ -687,40 +534,40 @@ class Interface:
             with dpg.collapsing_header(label=f"\tOscillator {i}", tag=f"osc{i}"):
                 osc_shape_sliders.append(TrackbarRow(
                     f"Osc {i} Shape", 
-                    c.osc_bank[i].shape, 
-                    TrackbarCallback(c.osc_bank[i].shape, f"osc{i}_shape").__call__, 
+                    osc_bank[i].shape, 
+                    TrackbarCallback(osc_bank[i].shape, f"osc{i}_shape").__call__, 
                     self.reset_slider_callback, 
                     default_font_id))
                 osc_freq_sliders.append(TrackbarRow(
                     f"Osc {i} Freq", 
-                    c.osc_bank[i].frequency, 
-                    TrackbarCallback(c.osc_bank[i].frequency, f"osc{i}_frequency").__call__, 
+                    osc_bank[i].frequency, 
+                    TrackbarCallback(osc_bank[i].frequency, f"osc{i}_frequency").__call__, 
                     self.reset_slider_callback, 
                     default_font_id))
                 
                 osc_amp_sliders.append(TrackbarRow(
                     f"Osc {i} Amp", 
-                    c.osc_bank[i].amplitude, 
-                    TrackbarCallback(c.osc_bank[i].amplitude, f"osc{i}_amplitude").__call__, 
+                    osc_bank[i].amplitude, 
+                    TrackbarCallback(osc_bank[i].amplitude, f"osc{i}_amplitude").__call__, 
                     self.reset_slider_callback, 
                     default_font_id))
                 
                 osc_phase_sliders.append(TrackbarRow(
                     f"Osc {i} Phase", 
-                    c.osc_bank[i].phase, 
-                    TrackbarCallback(c.osc_bank[i].phase, f"osc{i}_phase").__call__, 
+                    osc_bank[i].phase, 
+                    TrackbarCallback(osc_bank[i].phase, f"osc{i}_phase").__call__, 
                     self.reset_slider_callback, 
                     default_font_id))
                 
                 osc_seed_sliders.append(TrackbarRow(
                     f"Osc {i} Seed", 
-                    c.osc_bank[i].seed, 
-                    TrackbarCallback(c.osc_bank[i].seed, f"osc{i}_seed").__call__, 
+                    osc_bank[i].seed, 
+                    TrackbarCallback(osc_bank[i].seed, f"osc{i}_seed").__call__, 
                     self.reset_slider_callback, 
                     default_font_id))
                 
                 # Create a list of items for the listbox
-                items = list(params.all().keys())
+                items = list(params.keys())
 
                 # Create the listbox
                 dpg.add_combo(items=items,
@@ -733,7 +580,7 @@ class Interface:
 
     def build_panels_dict(self, params):
         panels = {}
-        for p in params.all().values():
+        for p in params.values():
             if p.name not in panels.keys():
                 panels[str(p.family)] = []
             panels[str(p.family)].append(p.name)
