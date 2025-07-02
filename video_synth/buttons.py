@@ -1,9 +1,7 @@
 import dearpygui.dearpygui as dpg
 
 class Button:
-
     def __init__(self, label, tag, default_val=False, font=None):
-
         self.label = label
         self.tag = tag
         self.user_data = tag
@@ -15,7 +13,6 @@ class Button:
     
     def toggle(self):
         self.val = not self.val
-
 
     def on_toggle_button_click(self, sender, app_data, user_data):
         self.toggle()
@@ -81,5 +78,3 @@ class Buttons:
     
     def items(self):
         return self.buttons.items()
-    
-    # def create_button(self, tag):

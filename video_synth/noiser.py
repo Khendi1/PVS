@@ -11,6 +11,9 @@ class NoiseType(Enum):
     POISSON = 3
     SPECKLE = 4
 
+# TODO: implement in main
+
+# TODO: Add more noise types if needed, e.g., "SPARSE", "RANDOM", etc.
 class ImageNoiser:
     def __init__(self, noise_type: NoiseType = NoiseType.NONE):
         self.noise_intensity = params.add("noise_intensity", 0.0, 1.0, 0.5)
