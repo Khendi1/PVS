@@ -6,39 +6,11 @@ from noiser import ImageNoiser, NoiseType
 from gui import Interface
 from shapes import ShapeGenerator
 from generators import PerlinNoise, Interp, Oscillator
+from patterns import Patterns
+from keying import Keying
+import numpy as np
 
-def apply_effects(frame, e: Effects, n: ImageNoiser, s: ShapeGenerator, t: float):
- 
-    # TODO: create a slider to control frame skip
-    frame_skip = 1
-
-    # frame = s.draw_shapes_on_frame(frame, c.image_width, c.image_height)
-    
-    # apply effects to every Nth frame
-    if True: # if t % frame_skip == 0:
-        frame = e.shift_frame(frame)
-        frame = e.modify_hsv(frame)
-        frame = e.adjust_brightness_contrast(frame)
-        frame = e.glitch_image(frame) 
-        frame = e.gaussian_blur(frame)
-
-        # frame = np.zeros((height, width, 3), dtype=np.uint8)
-        # frame = e.lissajous_pattern(frame, t, params.get("width"), params.get("height"),
-        #                             params.get("lissajous_A"), params.get("lissajous_B"),
-        #                             params.get("lissajous_a"), params.get("lissajous_b"),
-        #                             params.get("lissajous_delta"))
-
-        # frame = e.warp_frame(frame, t, params.get("warp_mode"),)
-        # fromw = e.sync_wobble
-        # frame = e.generate_pattern
-
-        if n.noise_type != NoiseType.NONE:
-            frame = e.polarize_frame_hsv(frame)
-
-        if enable_polar_transform == True:
-            frame = e.polar_transform(frame, params.get("polar_x"), params.get("polar_y"), params.get("polar_radius"))
-
-    return frame
+image_height, image_width = None, None
 
 def main():
 
@@ -64,10 +36,17 @@ def main():
     # TODO: move this to generators class, set as a wave shape, equate phase with octaves
     pn = PerlinNoise(1, frequency=1.0, amplitude=1.0, octaves=1, interp=Interp.COSINE)
 
+    # osc_bank = [Oscillator(name=f"osc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=i%4) for i in range(NUM_OSCILLATORS)]
+    for i in range(NUM_OSCILLATORS):
+        osc_bank.append(Oscillator(name=f"osc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=i%4))
+    print(f"Oscillator bank initialized with {len(osc_bank)} oscillators.")
     # Initialize effects classes; these contain Params to be modified by the generators
     n = ImageNoiser(NoiseType.NONE)
     s = ShapeGenerator(image_width, image_height)
     e = Effects(image_width, image_height)
+    p = Patterns(image_width, image_height)
+    # TODO: test this
+    k = Keying(image_width, image_height)
 
     print(f'Enjoy {len(params.keys())} tunable parameters!')
     
@@ -97,11 +76,11 @@ def main():
         
         # effect ordering leads to unique results
         if toggles.val("effects_first") == True:
-            feedback_frame = apply_effects(feedback_frame, e, n, s, t)
+            feedback_frame = apply_effects(feedback_frame, image_height, image_width, e, n, s, t, p)
             feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
         else:
             feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
-            feedback_frame = apply_effects(feedback_frame, e, n, s, t) 
+            feedback_frame = apply_effects(feedback_frame, image_height, image_width, e, n, s, t, p) 
         
         # Apply temporal filtering to the resulting feedback frame
         feedback_frame = e.apply_temporal_filter(prev_frame, feedback_frame)
@@ -123,6 +102,45 @@ def main():
     dpg.destroy_context()
     cap.release()
     cv2.destroyAllWindows()
+
+def apply_effects(frame, height, width, e: Effects, n: ImageNoiser, s: ShapeGenerator, t: float, p: Patterns):
+
+    # TODO: fix bug where shape hue affects the entire frame
+    # frame = s.draw_shapes_on_frame(frame, c.image_width, c.image_height)
+    
+    # TODO: use frame skip slider to control frame skip
+    # apply effects to every Nth frame
+    if True: # if t % frame_skip == 0:
+        frame = e.shift_frame(frame)
+        frame = e.modify_hsv(frame)
+        frame = e.adjust_brightness_contrast(frame)
+        frame = e.glitch_image(frame) 
+        frame = e.gaussian_blur(frame)
+
+        # TODO: test this
+        # frame = e.apply_perlin_noise
+
+        # TODO: test this
+        # warp_frame = e.warp_frame(frame)
+
+        # TODO: test this
+        # fromw = e.sync_wobble
+
+        # TODO: test this
+        # frame = e.generate_pattern
+
+        if n.noise_type != NoiseType.NONE:
+            frame = e.polarize_frame_hsv(frame)
+
+        if enable_polar_transform == True:
+            frame = e.polar_transform(frame, params.get("polar_x"), params.get("polar_y"), params.get("polar_radius"))
+
+        # TODO: test this
+        # TODO: test ordering
+        frame = np.zeros((height, width, 3), dtype=np.uint8)
+        frame = e.lissajous_pattern(frame, t)
+
+    return frame
 
 if __name__ == "__main__":
     main()

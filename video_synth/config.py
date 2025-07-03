@@ -1,12 +1,11 @@
 from param import ParamTable
 from buttons import Buttons
-from generators import Oscillator
 
 FPS = 30 # Desired frame rate
 
 NUM_OSCILLATORS = 6 # TODO: make this a command line arg via argparse
-osc_bank = [Oscillator(name=f"osc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=i%4) \
-            for i in range(NUM_OSCILLATORS)]
+osc_bank = []
+# osc_vals = [osc.get_next_value() for osc in osc_bank]
 
 # Index for loading saved patches from a file
 save_index = 0

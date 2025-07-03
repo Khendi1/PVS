@@ -5,11 +5,13 @@ from config import *
 import random
 import math
 from noise import pnoise2
+import noise 
 import time
 
 PERLIN_SCALE = 0.01
 
 class OscillatorShape(IntEnum):
+    NONE = -1
     SINE = 0
     SQUARE = 1
     TRIANGLE = 2
@@ -21,15 +23,7 @@ class WarpType(IntEnum):
     RADIAL = 2
     FRACTAL = 3
     PERLIN = 4
-
-class PatternType(IntEnum):
-    NONE = 0
-    BARS = 1
-    WAVES = 2
-    RADIAL = 3
-    PERLIN = 4
-    FRACTAL_PERLIN = 5
-    PERLIN_BLOBS = 6
+    WARP0 = 5  # this is a placeholder for the old warp_frame method; yet to be tested
 
 class HSV(IntEnum):
     H = 0
@@ -79,26 +73,35 @@ class Effects:
         self.contrast = params.add("contrast", 1.0, 3.0, 1.0)
         self.brightness = params.add("brightness", 0, 100, 0)
 
-        self.key_upper_hue = params.add("key_upper_hue", 0, 180, 0)
-        self.key_lower_hue = params.add("key_lower_hue", 0, 180, 0)
-        self.key_upper_sat = params.add("key_upper_sat", 0, 255, 255)
-        self.key_lower_sat = params.add("key_lower_sat", 0, 255, 0)
-        self.key_upper_val = params.add("key_upper_val", 0, 255, 255)
-        self.key_lower_val = params.add("key_lower_val", 0, 255, 0)
-        # self.key_fuzz = params.add("key_fuzz", 0, 100, 0)
-        # self.key_invert = params.add("key_invert", 0, 1, 0)
-        # self.key_feather = params.add("key_feather", 0, 100, 0)
-
         self.hue_invert_angle = params.add("hue_invert_angle", 0, 360, 0)
         self.hue_invert_strength = params.add("hue_invert_strength", 0.0, 1.0, 0.0)
 
         self.frame_skip = params.add("frame_skip", 1, 10, 1)
 
-        self.pattern_mode = params.add("pattern_mode", PatternType.NONE, PatternType.PERLIN_BLOBS, PatternType.NONE)
+        self.warp_type = params.add("warp_type", WarpType.NONE.value, WarpType.WARP0.value, WarpType.NONE.value)
+        self.warp_angle_amt = params.add("warp_angle_amt", 0, 360, 30)
+        self.warp_radius_amt = params.add("warp_radius_amt", 0, 360, 30)
+        self.warp_speed = params.add("warp_speed", 0, 100, 10)
+        self.warp_use_fractal = params.add("warp_use_fractal", 0, 1, 0)
+        self.warp_octaves = params.add("warp_octaves", 1, 8, 4)
+        self.warp_gain = params.add("warp_gain", 0.0, 1.0, 0.5)
+        self.warp_lacunarity = params.add("warp_lacunarity", 1.0, 4.0, 2.0)
+        #warp0/first_warp parameters
+        self.x_speed = params.add("x_speed", 0.0, 10.0, 1.0)
+        self.y_speed = params.add("y_speed", 0.0, 10.0, 1.0)
+        self.x_size = params.add("x_size", 0.0, 100.0, 10.0)
+        self.y_size = params.add("y_size", 0.0, 100.0, 10.0)
 
-        self.warp_mode = params.add("warp_mode", 0, 1, 0) # 0=none, 1=polar
+        self.sync_wobble_x_speed = params.add("sync_wobble_x_speed", 0.0, 10.0, 1.0)
+        self.sync_wobble_y_speed = params.add("sync_wobble_y_speed", 0.0, 10.0, 1.0)
+        self.sync_wobble_x_size = params.add("sync_wobble_x_size", 0.0, 100.0, 10.0)
+        self.sync_wobble_y_size = params.add("sync_wobble_y_size", 0.0, 100.0, 10.0)
 
-
+        self.lissajous_A = params.add("lissajous_A", 0, 100, 50)
+        self.lissajous_B = params.add("lissajous_B", 0, 100, 50)
+        self.lissajous_a = params.add("lissajous_a", 0, 100, 50)
+        self.lissajous_b = params.add("lissajous_b", 0, 100, 50)
+        self.lissajous_delta = params.add("lissajous_delta", 0, 360, 0)
 
     def shift_hue(self, hue):
         """
@@ -184,28 +187,6 @@ class Effects:
             # Apply the glitch
             image[y:y_end, x:x_end] = glitch_area
         return image
-
-    # TODO: implement
-    def warp_frame(feedback_frame, x_speed, y_speed, x_size, y_size):
-        self.height, self.width = feedback_frame.shape[:2]
-        feedback_frame = cv2.resize(feedback_frame, (self.width, self.height))
-
-        # Create meshgrid for warping effect
-        x_indices, y_indices = np.meshgrid(np.arange(self.width), np.arange(self.height))
-
-        # Calculate warped indices using sine function
-        time = cv2.getTickCount() / cv2.getTickFrequency()
-        x_warp = x_indices + x_size * np.sin(y_indices / 20.0 + time * x_speed)
-        y_warp = y_indices + y_size * np.sin(x_indices / 20.0 + time * y_speed)
-
-        # Bound indices within valid range
-        x_warp = np.clip(x_warp, 0, self.width - 1).astype(np.float32)
-        y_warp = np.clip(y_warp, 0, self.height - 1).astype(np.float32)
-
-        # Remap frame using warped indices
-        feedback_frame = cv2.remap(feedback_frame, x_warp, y_warp, interpolation=cv2.INTER_LINEAR)  
-
-        return feedback_frame
     
     def shift_frame(self, frame):
         """
@@ -380,17 +361,17 @@ class Effects:
         return noisy_frame
 
     # TODO: implement   
-    def lissajous_pattern(self, frame, t, width, height, A=100, B=100, a=3, b=2, delta=0):
-        center_x, center_y = width // 2, height // 2
+    def lissajous_pattern(self, frame, t):
+        center_x, center_y = self.width // 2, self.height // 2
         for i in range(1000):
-            x = int(center_x + A * math.sin(a * t + i * 0.01 + delta))
-            y = int(center_y + B * math.sin(b * t + i * 0.01))
+            x = int(center_x + self.lissajous_A.val() * math.sin(self.lissajous_a.val() * t + i * 0.01 + self.lissajous_delta.val() * math.pi / 180))
+            y = int(center_y + self.lissajous_B.val() * math.sin(self.lissajous_b.val()* t + i * 0.01))
             cv2.circle(frame, (x, y), 1, (255, 255, 255), -1)
 
         return frame
     
     # TODO: implement    
-    def sync_wobble(self, frame, x_speed=20, y_speed=20):
+    def sync_wobble(self, frame):
         """
         Applies a raster wobble effect to the frame using sine waves.
         """
@@ -463,6 +444,27 @@ class Effects:
 
         return cv2.remap(img, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
 
+    def _first_warp(self, frame):
+        self.height, self.width = feedback_frame.shape[:2]
+        feedback_frame = cv2.resize(feedback_frame, (self.width, self.height))
+
+        # Create meshgrid for warping effect
+        x_indices, y_indices = np.meshgrid(np.arange(self.width), np.arange(self.height))
+
+        # Calculate warped indices using sine function
+        time = cv2.getTickCount() / cv2.getTickFrequency()
+        x_warp = x_indices + self.x_size * np.sin(y_indices / 20.0 + time * self.x_speed)
+        y_warp = y_indices + self.y_size * np.sin(x_indices / 20.0 + time * self.y_speed)
+
+        # Bound indices within valid range
+        x_warp = np.clip(x_warp, 0, self.width - 1).astype(np.float32)
+        y_warp = np.clip(y_warp, 0, self.height - 1).astype(np.float32)
+
+        # Remap frame using warped indices
+        feedback_frame = cv2.remap(feedback_frame, x_warp, y_warp, interpolation=cv2.INTER_LINEAR)  
+
+        return feedback_frame
+    
     # TODO: implement
     def warp(self, img, t, mode, amp_x, amp_y, freq_x, freq_y, angle_amt, radius_amt, speed, use_fractal, octaves, gain, lacunarity):
         
@@ -486,7 +488,7 @@ class Effects:
             map_y = (map_y + fy).astype(np.float32)
             return cv2.remap(img, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
 
-        elif mode == WarpType.POLAR:
+        elif mode == WarpType.RADIAL:
             return self.polar_warp(img, t, angle_amt, radius_amt, speed)
         
         elif mode == WarpType.PERLIN:  # Perlin warp
@@ -496,259 +498,7 @@ class Effects:
             map_x = (map_x + fx).astype(np.float32)
             map_y = (map_y + fy).astype(np.float32)
             return cv2.remap(img, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+        elif mode == WarpType.WARP0:
+            return self._first_warp(img)
 
 ##########################################################
-
-    def generate_bars(self, pattern, x, norm_osc_vals):
-        # Vertical bars that shift color based on osc values
-        # Modulate bar position/color with oscillators
-        # Using vectorized operations
-        bar_mod = (np.sin(x * 0.05 + norm_osc_vals[0] * 10) + 1) / 2 # 0-1
-        
-        # brightness_green_channel is a 2D array, so .astype is fine here
-        brightness_green_channel = (bar_mod * 255).astype(np.uint8)
-        
-        # osc2_norm * 255 and osc1_norm * 255 are single float values.
-        # Assign them directly. NumPy will cast them to uint8 for the entire channel slice.
-        pattern[:, :, 0] = int(norm_osc_vals[2] * 255) # Blue channel (B G R)
-        pattern[:, :, 1] = brightness_green_channel # Green channel (this is a 2D array)
-        pattern[:, :, 2] = int(norm_osc_vals[1] * 255) # Red channel
-
-        return pattern
-
-    def generate_waves(self, pattern, x, y, norm_osc_vals):
-        # Horizontal/Vertical waves that ripple based on oscillator values
-        # Combined spatial and temporal modulation
-        val_x = np.sin(x * 0.03 + norm_osc_vals[0] * 5) # Horizontal wave
-        val_y = np.sin(y * 0.03 + norm_osc_vals[1] * 5) # Vertical wave
-        
-        # Combine waves and modulate with osc2 for overall brightness/color
-        total_val = (val_x + val_y) / 2 # Range -1 to 1
-        brightness = ((total_val + norm_osc_vals[2]) / 2 + 1) / 2 * 255
-        
-        pattern = np.stack([brightness, brightness, brightness], axis=-1).astype(np.uint8) # Grayscale
-        return pattern
-
-    def generate_checkers(self, pattern, x, y, norm_osc_vals):
-        # Checkerboard pattern whose square size/color shifts
-        # TODO: parametrize grid size and colors
-        grid_size_x = 50 * (1 + norm_osc_vals[0] * 0.5) # Dynamic grid size
-        grid_size_y = 50 * (1 + norm_osc_vals[1] * 0.5)
-
-        # Create checkerboard mask
-        checker_mask = ((x // grid_size_x).astype(int) % 2 == (y // grid_size_y).astype(int) % 2)
-        
-        # These are single float values, cast to int for assignment
-        color1 = int(norm_osc_vals[2] * 255)
-        color2 = int((1 - norm_osc_vals[2]) * 255)
-        
-        # Apply colors based on the mask
-        # NumPy will broadcast the scalar int values to the array elements
-        pattern[checker_mask] = [color1, color1, color1]
-        pattern[~checker_mask] = [color2, color2, color2]
-        return pattern
-    
-    def generate_radial(self, pattern, x, y, norm_osc_vals):
-        # Radial pattern that pulsates/rotates
-        center_x, center_y = self.width / 2, self.height / 2
-        
-        DX = x - center_x
-        DY = y - center_y
-        distance = np.sqrt(DX**2 + DY**2)
-        angle = np.arctan2(DY, DX)
-
-        # Modulate radial distance and angle with oscillators
-        # TODO: parameterize wave distance
-        radial_mod = np.sin(distance * 0.05 + norm_osc_vals[0] * 10) # Radial wave based on distance
-        # TODO: parameterize wave angle
-        angle_mod = np.sin(angle * 5 + norm_osc_vals[1] * 5) # Angular wave based on angle
-
-        # Combine for brightness, modulate color with osc2
-        brightness_base = ((radial_mod + angle_mod) / 2 + 1) / 2 * 255
-        
-        # Color mapping with oscillators - ensure final values are arrays before stacking
-        red_channel = (brightness_base * (1 - norm_osc_vals[2])).astype(np.uint8)
-        green_channel = (brightness_base * norm_osc_vals[2]).astype(np.uint8)
-        blue_channel = (brightness_base * ((norm_osc_vals[0] + norm_osc_vals[1])/2)).astype(np.uint8)
-
-        pattern = np.stack([blue_channel, green_channel, red_channel], axis=-1)
-        # Ensure pattern is in uint8 format
-        return pattern
-    
-    def generate_fractal1(self, pattern, x, y, norm_osc_vals):
-        # --- FRACTAL EFFECT: Sum of layered, modulated sine waves ---
-        total_val_accumulator = np.zeros_like(x) # Accumulate values for each pixel
-
-        base_freq_x = 0.01  # #TODO: this is  extremely interesting (see change from 0.01 to 0,1)
-        base_freq_y = 0.01 
-        base_amplitude_for_fractal = 1.5 # Max amplitude for the first layer of the fractal
-        num_octaves = 4      # Number of layers/octaves # TODO: use param to control this
-
-        # Oscillator values to perturb coordinates or phase
-        # Use a scaling factor to make oscillator influence more noticeable
-        x_perturb = norm_osc_vals[0] * 50 # Amount of x perturbation
-        y_perturb = norm_osc_vals[1] * 50 # Amount of y perturbation
-        phase_shift = norm_osc_vals[2] * np.pi * 2 # Phase shift for layers
-
-        for i in range(num_octaves):
-            freq_x = base_freq_x * (2 ** i) # Frequency doubles each octave
-            freq_y = base_freq_y * (2 ** i)
-            amplitude = base_amplitude_for_fractal / (2 ** i) # Amplitude halves each octave
-
-            # Perturb coordinates using oscillators
-            current_x = x + x_perturb
-            current_y = y + y_perturb
-
-            # Calculate wave for current octave
-            # Adding phase_shift to make each layer move differently
-            # TODO: i * i * i PHASE; slider to exponentially increase phase shift
-            wave = (amplitude * np.sin(current_x * freq_x + phase_shift * i) +
-                    amplitude * np.sin(current_y * freq_y + phase_shift * i))
-            
-            total_val_accumulator += wave
-        
-        # Normalize and scale the accumulated value to 0-255
-        max_possible_val = base_amplitude_for_fractal * (2 - (1 / (2**(num_octaves-1)))) 
-        
-        if max_possible_val > 0.001:
-            brightness = ( (total_val_accumulator / max_possible_val / 2 + 0.5) * 255).astype(np.uint8)
-        else:
-            brightness = np.zeros_like(x, dtype=np.uint8) # Default to black if no meaningful range
-
-        # Apply a color based on some oscillator or fixed color for the fractal
-        pattern[:, :, 0] = brightness # Blue
-        pattern[:, :, 1] = brightness # Green
-        pattern[:, :, 2] = brightness # Red (Grayscale for now)
-        return pattern
-
-    def generate_fractal2(self, pattern, x, y, norm_osc_vals):
-        # --- ENHANCED FRACTAL EFFECT: Sum of layered, modulated sine waves ---
-        total_val_accumulator = np.zeros_like(x) # Accumulate values for each pixel
-
-        base_freq_x = 0.11  # Base spatial frequency
-        base_freq_y = 0.01
-        base_amplitude_for_fractal = 2.0 # Max amplitude for the first layer of the fractal
-        num_octaves = 4      # Increased octaves for more detail
-        
-        # Dynamic lacunarity and persistence based on oscillators
-        # Lacunarity controls how much frequency increases per octave (standard is 2.0)
-        lacunarity = 2.5 + norm_osc_vals[0] * 0.7 # Range from 1.8 to 2.5
-        # Persistence controls how much amplitude decreases per octave (standard is 0.5)
-        persistence = 0.7 + norm_osc_vals[1] * 0.3 # Range from 0.4 to 0.7
-
-        # Oscillator for overall time-based movement / phase shift
-        time_offset = osc2_val * 10 # Use raw osc value for direct offset, scaled
-
-        for i in range(num_octaves):
-            freq_x = base_freq_x * (lacunarity ** i) # Frequency multiplies by lacunarity each octave
-            freq_y = base_freq_y * (lacunarity ** i)
-            amplitude = base_amplitude_for_fractal * (persistence ** i) # Amplitude multiplies by persistence
-
-            # Complex coordinate perturbation (domain warping)
-            # Use a sine wave based on time_offset to perturb x and y differently
-            # This creates a flowing, evolving distortion
-            perturbed_x = x + np.sin(y * 0.01 + time_offset * 0.05*i) * norm_osc_vals[0] * 15 # x perturbed by y-wave
-            perturbed_y = y + np.sin(x * 0.01 + time_offset * 0.05) * norm_osc_vals[1] * 15 # y perturbed by x-wave
-
-            # Calculate wave for current octave
-            wave = (amplitude * np.sin(perturbed_x * freq_x + time_offset) +
-                    amplitude * np.sin(perturbed_y * freq_y + time_offset))
-            
-            total_val_accumulator += wave
-
-    # --- MODIFIED generate_pattern function ---
-    def generate_pattern(self, pattern_type='bars'):
-        pattern = np.zeros((self.height, self.width, 3), dtype=np.uint8)
-
-        # Scale oscillator values to a useful range for modulation
-        # Normalize to 0-1 from -1 to 1 range (assuming amplitude 1, offset 0 for initial calc)
-        # The get_value() method already incorporates amplitude, so we just normalize its output
-        osc0_norm = osc_bank[0].get_value() + np.abs(osc_bank[0].amplitude) / (2 * np.abs(osc_bank[0].amplitude)) if np.abs(osc_bank[0].amplitude) > 0 else 0.5
-        osc1_norm = osc_bank[1].get_value() + np.abs(osc_bank[1].amplitude) / (2 * np.abs(osc_bank[1].amplitude)) if np.abs(osc_bank[1].amplitude) > 0 else 0.5
-        osc2_norm = osc_bank[2].get_value() + np.abs(osc_bank[2].amplitude) / (2 * np.abs(osc_bank[2].amplitude)) if np.abs(osc_bank[2].amplitude) > 0 else 0.5
-
-        norm_osc_vals = (osc0_norm, osc1_norm, osc2_norm)
-
-        # Create coordinate grids for vectorized operations (much faster than loops)
-        x_coords = np.linspace(0, self.width - 1, self.width, dtype=np.float32)
-        y_coords = np.linspace(0, self.height - 1, self.height, dtype=np.float32)
-        X, Y = np.meshgrid(x_coords, y_coords)
-
-        if pattern_type == PatternType.NONE:
-            pass
-        elif pattern_type == PatternType.BARS:
-            pattern = self.generate_bars(pattern, X, norm_osc_vals)
-        elif pattern_type == PatternType.WAVES:
-            pattern = self.generate_waves(pattern, X, Y, norm_osc_vals)
-        elif pattern_type == PatternType.CHECKERS:
-            pattern = self.generate_checkers(pattern, X, Y, norm_osc_vals)
-        elif pattern_type == PatternType.RADIAL:
-            pattern = self.generate_radial(pattern, X, Y, norm_osc_vals)
-        elif pattern_type == PatternType.PERLIN:
-            pattern = self.generate_fractal1(pattern, X, Y, norm_osc_vals)
-        elif pattern_type == PatternType.FRACTAL_PERLIN:
-            pattern = self.generate_fractal2(pattern, X, Y, norm_osc_vals)
-        elif pattern_type == PatternType.PERLIN_BLOBS:
-            pattern = self.generate_perlin_blobs(norm_osc_vals) # TODO: implement
-
-        return pattern
-
-
-    # TODO: implement
-    def generate_perlin_blobs(self, norm_osc_vals):
-        pattern = np.zeros((self.height, self.width, 3), dtype=np.uint8)
-
-        # Perlin noise parameters, modulated by oscillators for evolution
-        scale_x = 0.005 + norm_osc_vals[0] * 0.01  # Modulate X spatial scale (roughness)
-        scale_y = 0.005 + norm_osc_vals[1] * 0.01  # Modulate Y spatial scale (roughness)
-        octaves = 6                         # Number of layers of noise
-        persistence = 0.5 + norm_osc_vals[2] * 0.2 # Modulate persistence (how much each octave contributes)
-        lacunarity = 2.0                    # How much frequency increases per octave (standard)
-
-        # Use time as a Z-axis for 3D Perlin noise to ensure continuous evolution
-        # The higher the frequency of osc2, the faster the blobs will "flow"
-        time_factor = time.time() * (0.1 + norm_osc_vals[2] * 0.5) # Modulate evolution speed
-
-        for y in range(self.height):
-            for x in range(self.width):
-                # Map x, y to a smaller range for noise function
-                nx = x * scale_x
-                ny = y * scale_y
-
-                # Get Perlin noise value for each pixel using 3D noise (x, y, time)
-                # This is the "shape" of the blob
-                noise_val_shape = noise.pnoise3(nx, ny, time_factor,
-                                                octaves=octaves,
-                                                persistence=persistence,
-                                                lacunarity=lacunarity,
-                                                repeatx=1024, repeaty=1024, repeatz=1024,
-                                                base=0) # Base is like a seed offset
-
-                # Map noise_val_shape from (-1, 1) range to (0, 1)
-                normalized_noise_val = (noise_val_shape + 1) / 2
-
-                # Use another noise sample for color, also evolving with time
-                # Slightly different scales/parameters to make color vary independently of shape
-                noise_val_color_r = noise.pnoise3(nx * 0.8, ny * 1.2, time_factor * 0.7,
-                                                octaves=4, persistence=0.6, lacunarity=2.2, base=1)
-                noise_val_color_g = noise.pnoise3(nx * 1.1, ny * 0.9, time_factor * 1.1,
-                                                octaves=4, persistence=0.7, lacunarity=1.8, base=2)
-                noise_val_color_b = noise.pnoise3(nx * 0.9, ny * 1.0, time_factor * 0.9,
-                                                octaves=4, persistence=0.5, lacunarity=2.0, base=3)
-                
-                # Normalize color noise values
-                r = int(((noise_val_color_r + 1) / 2) * 255)
-                g = int(((noise_val_color_g + 1) / 2) * 255)
-                b = int(((noise_val_color_b + 1) / 2) * 255)
-
-                # Apply shape to color: lower noise_val_shape means darker/more transparent area
-                # We'll use normalized_noise_val to control brightness or alpha
-                # For simplicity, let's blend with black based on normalized_noise_val
-                # Brighter areas of noise_val_shape will reveal more color
-                final_r = int(r * normalized_noise_val)
-                final_g = int(g * normalized_noise_val)
-                final_b = int(b * normalized_noise_val)
-
-                pattern[y, x] = [final_b, final_g, final_r] # OpenCV uses BGR
-
-        return pattern

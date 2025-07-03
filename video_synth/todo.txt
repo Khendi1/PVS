@@ -1,0 +1,36 @@
+       "frame_skip"
+
+        "warp_type"
+        "warp_angle_amt"
+        "warp_radius_amt"
+        "warp_speed"
+        "warp_use_fractal"
+        "warp_octaves"
+        "warp_gain"
+        "warp_lacunarity"
+        "x_speed"
+        "y_speed"
+        "x_size"
+        "y_size"
+
+        "sync_wobble_x_speed"
+        "sync_wobble_y_speed"
+        "sync_wobble_x_size"
+        "sync_wobble_y_size"
+
+        "lissajous_A"
+        "lissajous_B"
+        "lissajous_a"
+        "lissajous_b"
+        "lissajous_delta"
+
+
+patterns
+        "angle_amt"
+        "radius_amt"
+        "speed"
+        "use_fractal"
+        "octaves"
+        "gain"
+        "lacunarity"
+        "pattern_mode"

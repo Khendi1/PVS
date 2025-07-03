@@ -492,6 +492,193 @@ class Interface:
             
             dpg.bind_item_font("line_generator", global_font_id)
 
+            with dpg.collapsing_header(label=f"\tTest", tag="test"):
+                frame_skip_slider = TrackbarRow(
+                    "Frame Skip",
+                    params.get("frame_skip"),
+                    TrackbarCallback(params.get("frame_skip"), "frame_skip").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+
+                warp_type_slider = TrackbarRow(
+                    "Warp Type",
+                    params.get("warp_type"),
+                    TrackbarCallback(params.get("warp_type"), "warp_type").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                warp_angle_amt_slider = TrackbarRow(
+                    "Warp Angle Amt",
+                    params.get("warp_angle_amt"),
+                    TrackbarCallback(params.get("warp_angle_amt"), "warp_angle_amt").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                warp_radius_amt_slider = TrackbarRow(
+                    "Warp Radius Amt",
+                    params.get("warp_radius_amt"),
+                    TrackbarCallback(params.get("warp_radius_amt"), "warp_radius_amt").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                warp_speed_slider = TrackbarRow(
+                    "Warp Speed",
+                    params.get("warp_speed"),
+                    TrackbarCallback(params.get("warp_speed"), "warp_speed").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                warp_use_fractal_slider = TrackbarRow(
+                    "Warp Use Fractal",
+                    params.get("warp_use_fractal"),
+                    TrackbarCallback(params.get("warp_use_fractal"), "warp_use_fractal").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                warp_octaves_slider = TrackbarRow(
+                    "Warp Octaves",
+                    params.get("warp_octaves"),
+                    TrackbarCallback(params.get("warp_octaves"), "warp_octaves").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                warp_gain_slider = TrackbarRow(
+                    "Warp Gain",
+                    params.get("warp_gain"),
+                    TrackbarCallback(params.get("warp_gain"), "warp_gain").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                warp_lacunarity_slider = TrackbarRow(
+                    "Warp Lacunarity",
+                    params.get("warp_lacunarity"),
+                    TrackbarCallback(params.get("warp_lacunarity"), "warp_lacunarity").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                x_speed_slider = TrackbarRow(
+                    "X Speed",
+                    params.get("x_speed"),
+                    TrackbarCallback(params.get("x_speed"), "x_speed").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                y_speed_slider = TrackbarRow(
+                    "Y Speed",
+                    params.get("y_speed"),
+                    TrackbarCallback(params.get("y_speed"), "y_speed").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                x_size_slider = TrackbarRow(
+                    "X Size",
+                    params.get("x_size"),
+                    TrackbarCallback(params.get("x_size"), "x_size").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                y_size_slider = TrackbarRow(
+                    "Y Size",
+                    params.get("y_size"),
+                    TrackbarCallback(params.get("y_size"), "y_size").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+
+                sync_wobble_x_speed_slider = TrackbarRow(
+                    "Sync Wobble X Speed",
+                    params.get("sync_wobble_x_speed"),
+                    TrackbarCallback(params.get("sync_wobble_x_speed"), "sync_wobble_x_speed").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                sync_wobble_y_speed_slider = TrackbarRow(
+                    "Sync Wobble Y Speed",
+                    params.get("sync_wobble_y_speed"),
+                    TrackbarCallback(params.get("sync_wobble_y_speed"), "sync_wobble_y_speed").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                sync_wobble_x_size_slider = TrackbarRow(
+                    "Sync Wobble X Size",
+                    params.get("sync_wobble_x_size"),
+                    TrackbarCallback(params.get("sync_wobble_x_size"), "sync_wobble_x_size").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                sync_wobble_y_size_slider = TrackbarRow(
+                    "Sync Wobble Y Size",
+                    params.get("sync_wobble_y_size"),
+                    TrackbarCallback(params.get("sync_wobble_y_size"), "sync_wobble_y_size").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+
+                lissajous_A_slider = TrackbarRow(
+                    "Lissajous A",
+                    params.get("lissajous_A"),
+                    TrackbarCallback(params.get("lissajous_A"), "lissajous_A").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                lissajous_B_slider = TrackbarRow(
+                    "Lissajous B",
+                    params.get("lissajous_B"),
+                    TrackbarCallback(params.get("lissajous_B"), "lissajous_B").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                lissajous_a_slider = TrackbarRow(
+                    "Lissajous a",
+                    params.get("lissajous_a"),
+                    TrackbarCallback(params.get("lissajous_a"), "lissajous_a").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                lissajous_b_slider = TrackbarRow(
+                    "Lissajous b",
+                    params.get("lissajous_b"),
+                    TrackbarCallback(params.get("lissajous_b"), "lissajous_b").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                lissajous_delta_slider = TrackbarRow(
+                    "Lissajous Delta",
+                    params.get("lissajous_delta"),
+                    TrackbarCallback(params.get("lissajous_delta"), "lissajous_delta").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+
+                angle_amt_slider = TrackbarRow(
+                    "Angle Amt",
+                    params.get("angle_amt"),
+                    TrackbarCallback(params.get("angle_amt"), "angle_amt").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                radius_amt_slider = TrackbarRow(
+                    "Radius Amt",
+                    params.get("radius_amt"),
+                    TrackbarCallback(params.get("radius_amt"), "radius_amt").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                speed_slider = TrackbarRow(
+                    "Speed",
+                    params.get("speed"),
+                    TrackbarCallback(params.get("speed"), "speed").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                use_fractal_slider = TrackbarRow(
+                    "Use Fractal",
+                    params.get("use_fractal"),
+                    TrackbarCallback(params.get("use_fractal"), "use_fractal").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                octaves_slider = TrackbarRow(
+                    "Octaves",
+                    params.get("octaves"),
+                    TrackbarCallback(params.get("octaves"), "octaves").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                gain_slider = TrackbarRow(
+                    "Gain",
+                    params.get("gain"),
+                    TrackbarCallback(params.get("gain"), "gain").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                lacunarity_slider = TrackbarRow(
+                    "Lacunarity",
+                    params.get("lacunarity"),
+                    TrackbarCallback(params.get("lacunarity"), "lacunarity").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+                pattern_mode_slider = TrackbarRow(
+                    "Pattern Mode",
+                    params.get("pattern_mode"),
+                    TrackbarCallback(params.get("pattern_mode"), "pattern_mode").__call__,
+                    self.reset_slider_callback,
+                    default_font_id)
+
+
             with dpg.collapsing_header(label=f"\tFill Generator", tag="fill_generator"):
                 fill_hue_slider = TrackbarRow(
                     "Fill Hue", 
@@ -530,7 +717,10 @@ class Interface:
         osc_phase_sliders = []
         osc_seed_sliders = []
         osc_shape_sliders = []
+        print(NUM_OSCILLATORS)
+        print(osc_bank)
         for i in range(NUM_OSCILLATORS):
+            print(f"Creating sliders for oscillator {i}")
             with dpg.collapsing_header(label=f"\tOscillator {i}", tag=f"osc{i}"):
                 osc_shape_sliders.append(TrackbarRow(
                     f"Osc {i} Shape", 

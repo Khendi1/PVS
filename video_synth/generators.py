@@ -126,6 +126,7 @@ class Oscillator:
         self.direction = 1
         self.oscillator = self.create_oscillator()
         self.linked_param = None
+        self.value = 0
 
     def get_next_value(self):
         """
@@ -134,7 +135,8 @@ class Oscillator:
         Returns:
             The next sample value.
         """
-        return next(self.oscillator)
+        self.value = next(self.oscillator)
+        return self.value
         
     def create_oscillator(self):
         """
