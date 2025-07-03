@@ -380,7 +380,7 @@ class Effects:
         warped = np.zeros_like(frame)
 
         for y in range(frame.shape[0]):
-            shift = int(x_speed * np.sin(y / 20.0 + cv2.getTickCount() / 1e7))
+            shift = int(self.x_speed * np.sin(y / 20.0 + cv2.getTickCount() / 1e7))
             warped[y] = np.roll(frame[y], shift, axis=0)
         
         warped = cv2.cvtColor(warped, cv2.COLOR_RGB2BGR)

@@ -33,7 +33,7 @@ class Patterns:
         self.octaves = params.add("octaves", 1, 8, 4) # Number of octaves for fractal noise
         self.gain = params.add("gain", 0.0, 1.0, 1.0) # Gain for fractal noise
         self.lacunarity = params.add("lacunarity", 1.0, 4.0, 2.0) # Lacunarity for fractal noise
-        self.pattern_mode = params.add("pattern_mode", PatternType.NONE, PatternType.PERLIN_BLOBS, PatternType.NONE)
+        self.pattern_type = params.add("pattern_type", PatternType.NONE, PatternType.PERLIN_BLOBS, PatternType.NONE)
 
     def set_warp_params(self, warp_type, amp_x, amp_y, freq_x, freq_y, angle_amt, radius_amt, speed, use_fractal=False, octaves=4, gain=1.0, lacunarity=2.0):
         self.warp_type = warp_type
@@ -223,15 +223,15 @@ class Patterns:
             total_val_accumulator += wave
 
     # --- MODIFIED generate_pattern function ---
-    def generate_pattern(self):
+    def generate_pattern(self, frame):
         pattern = np.zeros((self.height, self.width, 3), dtype=np.uint8)
 
         # Scale oscillator values to a useful range for modulation
         # Normalize to 0-1 from -1 to 1 range (assuming amplitude 1, offset 0 for initial calc)
         # The get_value() method already incorporates amplitude, so we just normalize its output
-        osc0_norm = osc_bank[0].value + np.abs(osc_bank[0].amplitude) / (2 * np.abs(osc_bank[0].amplitude)) if np.abs(osc_bank[0].amplitude) > 0 else 0.5
-        osc1_norm = osc_bank[1].value + np.abs(osc_bank[1].amplitude) / (2 * np.abs(osc_bank[1].amplitude)) if np.abs(osc_bank[1].amplitude) > 0 else 0.5
-        osc2_norm = osc_bank[2].value + np.abs(osc_bank[2].amplitude) / (2 * np.abs(osc_bank[2].amplitude)) if np.abs(osc_bank[2].amplitude) > 0 else 0.5
+        osc0_norm = osc_bank[0].value + np.abs(osc_bank[0].amplitude.value) / (2 * np.abs(osc_bank[0].amplitude.value)) if np.abs(osc_bank[0].amplitude.value) > 0 else 0.5
+        osc1_norm = osc_bank[1].value + np.abs(osc_bank[1].amplitude.value) / (2 * np.abs(osc_bank[1].amplitude.value)) if np.abs(osc_bank[1].amplitude.value) > 0 else 0.5
+        osc2_norm = osc_bank[2].value + np.abs(osc_bank[2].amplitude.value) / (2 * np.abs(osc_bank[2].amplitude.value)) if np.abs(osc_bank[2].amplitude.value) > 0 else 0.5
 
         norm_osc_vals = (osc0_norm, osc1_norm, osc2_norm)
 

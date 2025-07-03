@@ -124,10 +124,10 @@ def apply_effects(frame, height, width, e: Effects, n: ImageNoiser, s: ShapeGene
         # warp_frame = e.warp_frame(frame)
 
         # TODO: test this
-        # fromw = e.sync_wobble
+        frame = e.sync_wobble(frame)
 
         # TODO: test this
-        # frame = e.generate_pattern
+        frame = p.generate_pattern(frame)
 
         if n.noise_type != NoiseType.NONE:
             frame = e.polarize_frame_hsv(frame)
@@ -137,8 +137,8 @@ def apply_effects(frame, height, width, e: Effects, n: ImageNoiser, s: ShapeGene
 
         # TODO: test this
         # TODO: test ordering
-        frame = np.zeros((height, width, 3), dtype=np.uint8)
-        frame = e.lissajous_pattern(frame, t)
+        # frame = np.zeros((height, width, 3), dtype=np.uint8)
+        # frame = e.lissajous_pattern(frame, t)
 
     return frame
 

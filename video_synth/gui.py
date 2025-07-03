@@ -671,10 +671,10 @@ class Interface:
                     TrackbarCallback(params.get("lacunarity"), "lacunarity").__call__,
                     self.reset_slider_callback,
                     default_font_id)
-                pattern_mode_slider = TrackbarRow(
-                    "Pattern Mode",
-                    params.get("pattern_mode"),
-                    TrackbarCallback(params.get("pattern_mode"), "pattern_mode").__call__,
+                pattern_type_slider = TrackbarRow(
+                    "Pattern Type",
+                    params.get("pattern_type"),
+                    TrackbarCallback(params.get("pattern_type"), "pattern_type").__call__,
                     self.reset_slider_callback,
                     default_font_id)
 
