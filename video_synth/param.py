@@ -237,15 +237,6 @@ class Param:
         self.value = self.value
         return self.value
 
-    # Retain set_value for backward compatibility. It now calls the property setter.
-    def set_value(self, value):
-        """
-        Sets the value of the parameter. This method is retained for backward compatibility.
-        It now internally calls the `value` property's setter.
-        """
-        self.value = value # This assignment calls the @value.setter
-        return self.value # Return the value after potential clamping/modification
-
     def randomize(self):
         """Sets the parameter's value to a random value within its min/max range."""
         if isinstance(self.default_val, float):

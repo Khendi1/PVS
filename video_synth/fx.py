@@ -116,13 +116,13 @@ class Effects:
         """
         Shifts the saturation of an image by a specified amount, clamping to [0, 255].
         """
-        return np.clip(sat + self.sat_shift.val(), 0, 255)
+        return np.clip(sat + self.sat_shift.value, 0, 255)
 
     def shift_val(self, val):
         """
         Shifts the value of an image by a specified amount, clamping to [0, 255].
         """
-        return np.clip(val + self.val_shift.val(), 0, 255)
+        return np.clip(val + self.val_shift.value, 0, 255)
 
     def shift_hsv(self, hsv):
         """
@@ -145,10 +145,10 @@ class Effects:
         """
 
         # Create a mask for pixels with saturation above the threshold.
-        mask = hsv[HSV.V.value] > self.val_threshold.val()
+        mask = hsv[HSV.V.value] > self.val_threshold.value
 
         # Shift and wrap around the hue values for the masked pixels
-        hsv[HSV.H.value][mask] = (hsv[HSV.H.value][mask] + self.val_hue_shift.val()) % 180
+        hsv[HSV.H.value][mask] = (hsv[HSV.H.value][mask] + self.val_hue_shift.value) % 180
 
         return hsv
     
@@ -168,12 +168,12 @@ class Effects:
     def glitch_image(self, image):
         height, width, _ = image.shape
 
-        for _ in range(self.num_glitches.val()):
+        for _ in range(self.num_glitches.value):
             x = random.randint(0, width - 1)
             y = random.randint(0, height - 1)
 
-            x_glitch_size = random.randint(1, self.glitch_size.val())
-            y_glitch_size = random.randint(1, self.glitch_size.val())
+            x_glitch_size = random.randint(1, self.glitch_size.value)
+            y_glitch_size = random.randint(1, self.glitch_size.value)
 
             # Ensure the glitch area does not exceed image boundaries
             x_end = min(x + x_glitch_size, width)
@@ -213,14 +213,14 @@ class Effects:
         shifted_frame = np.zeros_like(frame)
 
         # Create the mapping arrays for the indices.
-        x_map = (np.arange(width) - self.x_shift.val()) % width
-        y_map = (np.arange(height) - self.y_shift.val()) % height
+        x_map = (np.arange(width) - self.x_shift.value) % width
+        y_map = (np.arange(height) - self.y_shift.value) % height
 
         # Use advanced indexing to shift the entire image at once
         shifted_frame = frame[y_map[:, np.newaxis], x_map]
 
         # Use cv2.getRotationMatrix2D to get the rotation matrix
-        M = cv2.getRotationMatrix2D(center, self.r_shift.val(), self.zoom.val())  # 1.0 is the scale
+        M = cv2.getRotationMatrix2D(center, self.r_shift.value, self.zoom.value)  # 1.0 is the scale
 
         # Perform the rotation using cv2.warpAffine
         rotated_frame = cv2.warpAffine(shifted_frame, M, (width, height))
@@ -233,8 +233,8 @@ class Effects:
         using a polar coordinate transform.
         """
         height, width = frame.shape[:2]
-        center = (width // 2 + self.polar_x, height // 2 + self.polar_y.val())
-        max_radius = np.sqrt((width // self.polar_radius)**2 + (height // self.polar_radius.val())**2)
+        center = (width // 2 + self.polar_x, height // 2 + self.polar_y.value)
+        max_radius = np.sqrt((width // self.polar_radius)**2 + (height // self.polar_radius.value)**2)
 
         #    The flags parameter is important:
         #    cv2.INTER_LINEAR:  Bilinear interpolation (good quality)
@@ -250,15 +250,15 @@ class Effects:
 
     # TODO: implement
     def gaussian_blur(self, frame):
-        mode = self.blur_type.val()
+        mode = self.blur_type.value
         if mode == BlurType.NONE:
             pass
         elif mode == BlurType.GAUSSIAN:
-            frame = cv2.GaussianBlur(frame, (self.blur_kernel_size.val(), self.blur_kernel_size.val()), 0) 
+            frame = cv2.GaussianBlur(frame, (self.blur_kernel_size.value, self.blur_kernel_size.value), 0) 
         elif mode == BlurType.MEDIAN:
-            frame = cv2.medianBlur(frame, self.blur_kernel_size.val())
+            frame = cv2.medianBlur(frame, self.blur_kernel_size.value)
         elif mode == BlurType.BOX:
-            frame = cv2.blur(frame,(self.blur_kernel_size.val(), self.blur_kernel_size.val()))
+            frame = cv2.blur(frame,(self.blur_kernel_size.value, self.blur_kernel_size.value))
         elif mode == BlurType.BILATERAL:
             frame = cv2.bilateralFilter(frame,9,75,75)
         
@@ -276,7 +276,7 @@ class Effects:
         Returns:
             The adjusted image (NumPy array).
         """
-        adjusted_image = cv2.convertScaleAbs(image, alpha=self.contrast.val(), beta=self.brightness.val())
+        adjusted_image = cv2.convertScaleAbs(image, alpha=self.contrast.value, beta=self.brightness.value)
         return adjusted_image
 
     def polarize_frame_hsv(self, frame):

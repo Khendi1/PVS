@@ -134,7 +134,7 @@ def apply_effects(frame, height, width, e: Effects, n: ImageNoiser, s: ShapeGene
     
     # TODO: use frame skip slider to control frame skip
     # apply effects to every Nth frame
-    if True: # if t % frame_skip == 0:
+    if True: # if t % frame_skip == 0:  
         frame = e.shift_frame(frame)
         frame = e.modify_hsv(frame)
         frame = e.adjust_brightness_contrast(frame)
@@ -145,10 +145,8 @@ def apply_effects(frame, height, width, e: Effects, n: ImageNoiser, s: ShapeGene
 
         # TODO: test this
         # frame = e.apply_perlin_noise
-
         # TODO: test this
         # warp_frame = e.warp_frame(frame)
-
         # TODO: test this
         # frame = p.generate_pattern(frame)
 

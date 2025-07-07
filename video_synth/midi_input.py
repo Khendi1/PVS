@@ -226,23 +226,30 @@ mapping of encoders, faders, and buttons to pages of parameters.
 """
 class SMC_Mixer:
     """
-    encoders: cc 30-37
-    faders: cc 40-47
-    m buttons: 20-27
-    s buttons: 28-35
-    r buttons: 36-43
-    square buttons: 44-51 (44-47 are used by the faders as well 😔
-    play 52
-    pause 53
-    record 54
-    reverse 55
-    forward 56
-    previous 57
-    next 58
-    up 59
-    down 60
+    encoders:   30-37
+    faders:     40-47
+
+    m:          20-27   next mode (blur, noise, fractal, etc.)
+    s:          28-35   (DO NOT USE 30-35)
+    r:          36-43   (DO NOT USE 36-67, 40-43)
+    square:     44-51   (DO NOT USE 44-47)
+    
+    play        52      save
+    pause       53      load random from save
+    record      54      load random params
+
+    reverse     55      load previous encoder page
+    forward     56      load next encoder page
+
+    previous    57      load previous fader page
+    next        58      load next fader page
+
+    up          59      
+    down        60      
+
     left 61
     right 62
+
     """
     def __init__(self):
         """
@@ -259,11 +266,13 @@ class SMC_Mixer:
         # each dict entry is a page of parameters
         self.fader_params = {
             1: ['alpha', 'temporal_filter', 'x_sync_speed', 'x_sync_freq', 'x_sync_amp', 'y_sync_speed', 'y_sync_freq', 'y_sync_amp'],
+            2: ['hue_shift', 'sat_shift', 'val_shift', 'val_threshold', 'val_hue_shift', 'contrast', 'hue_invert', 'hue_invert_angle'],
         }
         self.fader_config = self.fader_params.get(1, [])
 
         self.encoder_params = {
-            1: ['hue_shift', 'sat_shift', 'val_shift', 'zoom', 'r_shift', 'x_shift', 'y_shift', 'blur_kernel_size'],
+            1: ['hue_shift', 'sat_shift', 'val_shift', 'zoom', 'r_shift', 'x_shift', 'y_shift', 'blur_kernel_size', ''],
+            2: ['alpha', 'temporal_filter', 'blur_kernel_size', 'zoom', 'r_shift', 'x_shift', 'y_shift', ''],
         }
         self.encoder_config = self.encoder_params.get(1, [])
 

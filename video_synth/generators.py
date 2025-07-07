@@ -172,23 +172,23 @@ class Oscillator:
                 # sample += self.get_amplitude()/2
                 # print(f"mappings from {self.param_min}-{self.param_max} to {self.linked_param.min_val}-{self.linked_param.max_val}")
                 mapped_sample = map_value(sample, -self.param_max, self.param_max, self.linked_param.min_val, self.linked_param.max_val)
-                self.linked_param.set_value(mapped_sample)
+                self.linked_param.value = mapped_sample
             yield sample
             self.phase.value += 1 / self.sample_rate  # Increment phase.  Not directly time-based here.
         
     def update_params(self, freq=None, amp=None, phase=None, shape=None, direction=None, seed=None):
         if freq is not None:
-            self.frequency.set_value(freq)
+            self.frequency.value = freq
         if amp is not None:
-            self.amplitude.set_value(amp)
+            self.amplitude.value = amp
         if phase is not None:
-            self.phase.set_value(phase)
+            self.phase.value = phase
         if shape is not None:
-            self.shape.set_value(shape)
+            self.shape.value = shape
         if self.direction is not None:
             self.direction = direction
         if self.seed is not None:
-            self.seed.set_value(seed)
+            self.seed.value = seed
     
     def get_frequency(self):
         return self.frequency.value

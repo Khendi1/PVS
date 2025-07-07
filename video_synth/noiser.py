@@ -49,7 +49,7 @@ class ImageNoiser:
         """Set the noise type."""
         if not isinstance(new_type, NoiseType):
             raise ValueError("noise_type must be an instance of NoiseType Enum.")
-        self._noise_type.set_value(new_type)
+        self._noise_type.value = new_type
         print(f"Noise type set to: {self._noise_type.val()}")
 
     @property
@@ -62,7 +62,7 @@ class ImageNoiser:
         """Set the noise intensity."""
         if not (0.0 <= new_intensity <= 1.0):
             print("Warning: noise_intensity should ideally be between 0.0 and 1.0.")
-        self._noise_intensity.set_value(new_intensity)
+        self._noise_intensity.value = new_intensity
         print(f"Noise intensity set to: {self._noise_intensity}")
 
     def apply_noise(self, image: np.ndarray) -> np.ndarray:
