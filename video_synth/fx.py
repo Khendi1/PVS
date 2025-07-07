@@ -51,8 +51,8 @@ class Effects:
         self.alpha = params.add("alpha", 0.0, 1.0, 0.0)
         self.temporal_filter = params.add("temporal_filter", 0, 1.0, 1.0)
 
-        self.blur_type = params.add("blur_type", 0, 4, 0) # 1=Gaussian, 2=Median, 3=Box, 4=Bilateral
-        self.blur_kernel_size = params.add("blur_kernel_size", 0, 100, 0)
+        self.blur_type = params.add("blur_type", 0, 4, 1) # 1=Gaussian, 2=Median, 3=Box, 4=Bilateral
+        self.blur_kernel_size = params.add("blur_kernel_size", 1, 100, 1)
         # TODO: implement additional required parameters for each blur type
 
         self.num_glitches = params.add("num_glitches", 0, 100, 0)
@@ -87,15 +87,18 @@ class Effects:
         self.warp_gain = params.add("warp_gain", 0.0, 1.0, 0.5)
         self.warp_lacunarity = params.add("warp_lacunarity", 1.0, 4.0, 2.0)
         #warp0/first_warp parameters
-        self.x_speed = params.add("x_speed", 0.0, 10.0, 1.0)
+        self.x_speed = params.add("x_speed", 0.0, 100.0, 1.0)
+        self.x_size = params.add("x_size", 0.25, 100.0, 20.0) 
         self.y_speed = params.add("y_speed", 0.0, 10.0, 1.0)
-        self.x_size = params.add("x_size", 0.0, 100.0, 10.0)
         self.y_size = params.add("y_size", 0.0, 100.0, 10.0)
 
-        self.sync_wobble_x_speed = params.add("sync_wobble_x_speed", 0.0, 10.0, 1.0)
-        self.sync_wobble_y_speed = params.add("sync_wobble_y_speed", 0.0, 10.0, 1.0)
-        self.sync_wobble_x_size = params.add("sync_wobble_x_size", 0.0, 100.0, 10.0)
-        self.sync_wobble_y_size = params.add("sync_wobble_y_size", 0.0, 100.0, 10.0)
+        self.x_sync_freq = params.add("x_sync_freq", 0.1, 100.0, 1.0)
+        self.x_sync_amp = params.add("x_sync_amp", -200, 200, 20.0)
+        self.x_sync_speed = params.add("x_sync_speed", 5.0, 10.0, 9.0)
+
+        self.y_sync_freq = params.add("y_sync_freq", 0.1, 100.0, 1.0)
+        self.y_sync_amp = params.add("y_sync_amp", -image_width, image_width, 20.0)
+        self.y_sync_speed = params.add("y_sync_speed", 5.0, 10.0, 9.0)
 
         self.lissajous_A = params.add("lissajous_A", 0, 100, 50)
         self.lissajous_B = params.add("lissajous_B", 0, 100, 50)
@@ -246,16 +249,17 @@ class Effects:
         )
 
     # TODO: implement
-    def gaussian_blur(self, frame, mode=1):
-        if self.blur_kernel_size.val() == 0:
+    def gaussian_blur(self, frame):
+        mode = self.blur_type.val()
+        if mode == BlurType.NONE:
             pass
-        elif mode == 1:
+        elif mode == BlurType.GAUSSIAN:
             frame = cv2.GaussianBlur(frame, (self.blur_kernel_size.val(), self.blur_kernel_size.val()), 0) 
-        elif mode == 2:
+        elif mode == BlurType.MEDIAN:
             frame = cv2.medianBlur(frame, self.blur_kernel_size.val())
-        elif mode == 3:
+        elif mode == BlurType.BOX:
             frame = cv2.blur(frame,(self.blur_kernel_size.val(), self.blur_kernel_size.val()))
-        elif mode == 4:
+        elif mode == BlurType.BILATERAL:
             frame = cv2.bilateralFilter(frame,9,75,75)
         
         return frame
@@ -360,7 +364,7 @@ class Effects:
         
         return noisy_frame
 
-    # TODO: implement   
+    # TODO: make this more engaging   
     def lissajous_pattern(self, frame, t):
         center_x, center_y = self.width // 2, self.height // 2
         for i in range(1000):
@@ -370,22 +374,29 @@ class Effects:
 
         return frame
     
-    # TODO: implement    
-    def sync_wobble(self, frame):
+    def sync(self, frame):
         """
-        Applies a raster wobble effect to the frame using sine waves.
+        Applies a raster wobble effect to the frame using sine waves on both X and Y axes.
         """
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         height, width = frame.shape[:2]
         warped = np.zeros_like(frame)
 
-        for y in range(frame.shape[0]):
-            shift = int(self.x_speed * np.sin(y / 20.0 + cv2.getTickCount() / 1e7))
-            warped[y] = np.roll(frame[y], shift, axis=0)
-        
-        warped = cv2.cvtColor(warped, cv2.COLOR_RGB2BGR)
+        # X-axis wobble (horizontal shift per row)
+        for y in range(height):
+            shift_x = int(self.x_sync_amp.val() * np.sin(
+                y / self.x_sync_freq.val() + cv2.getTickCount() / (10 ** self.x_sync_speed.val())))
+            warped[y] = np.roll(frame[y], shift_x, axis=0)
 
-        return warped
+        # Y-axis wobble (vertical shift per column)
+        warped_y = np.zeros_like(warped)
+        for x in range(width):
+            shift_y = int(self.y_sync_amp.val() * np.sin(
+                x / self.y_sync_freq.val() + cv2.getTickCount() / (10 ** self.y_sync_speed.val())))
+            warped_y[:, x] = np.roll(warped[:, x], shift_y, axis=0)
+
+        warped_y = cv2.cvtColor(warped_y, cv2.COLOR_RGB2BGR)
+        return warped_y
 
 #######################################################33 
     # TODO: implement        

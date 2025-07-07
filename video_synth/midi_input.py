@@ -1,0 +1,359 @@
+import mido
+import time
+from config import params
+import mido
+import threading
+import time
+
+"""
+A class to handle the processing of MIDI messages,
+including mapping, acceleration, and smoothing.
+"""
+class MidiProcessor:
+    def __init__(self, min_midi=0, max_midi=127,
+                 base_smoothing=0.05, acceleration_factor=0.05):
+        """
+        Initializes the MIDI processor with mapping and smoothing parameters.
+
+        Args:
+            min_midi (int): Minimum raw MIDI CC value (typically 0).
+            max_midi (int): Maximum raw MIDI CC value (typically 127).
+            min_output (int/float): Minimum value for the mapped output range.
+            max_output (int/float): Maximum value for the mapped output range.
+            base_smoothing (float): The base smoothing factor (alpha) for
+                                    exponential smoothing. A smaller value (e.g., 0.01)
+                                    means more smoothing (slower response) at low speeds.
+                                    Should be between 0 and 1.
+            acceleration_factor (float): Multiplier for how much input speed
+                                         increases the smoothing factor. Higher values
+                                         mean more "acceleration" or responsiveness
+                                         to rapid movements.
+        """
+        self.min_midi = min_midi
+        self.max_midi = max_midi
+
+        self.base_smoothing = base_smoothing
+        self.acceleration_factor = acceleration_factor
+        self.time_epsilon = 0.001 # Small value to prevent division by zero in time_delta calculations
+
+        # State variables for processing
+        self.current_mapped_value = 0.0
+        self.last_midi_value = None
+        self.last_message_abs_time = time.time()
+
+
+    def map_range(self, value, out_min, out_max):
+        """
+        Maps a value from one numerical range to another.
+
+        Args:
+            value (float): The input value to map.
+            in_min (float): The minimum of the input range.
+            in_max (float): The maximum of the input range.
+            out_min (float): The minimum of the output range.
+            out_max (float): The maximum of the output range.
+
+        Returns:
+            float: The mapped value in the output range.
+        """
+        return (value - self.min_midi) * (out_max - out_min) / (self.max_midi - self.min_midi) + out_min
+
+    def process_message(self, control, value, min_output=-150, max_output=150):
+        """
+        Processes an incoming MIDI message. If it's a control change message,
+        it applies mapping, acceleration, and smoothing to its value.
+
+        Args:
+            msg (mido.Message): The incoming MIDI message.
+
+        Returns:
+            float or None: The processed (smoothed and accelerated) value if
+                           it's a control change message, otherwise None.
+        """
+        midi_cc_value = value
+
+        # Calculate actual time delta between messages for speed calculation
+        current_abs_time = time.time()
+        time_delta = current_abs_time - self.last_message_abs_time
+        self.last_message_abs_time = current_abs_time
+
+        # Calculate change in MIDI value
+        midi_value_change = 0
+        if self.last_midi_value is not None:
+            midi_value_change = midi_cc_value - self.last_midi_value
+        self.last_midi_value = midi_cc_value
+
+        # Map raw MIDI CC value to the target output range (-150 to 150)
+        target_mapped_value = self.map_range(midi_cc_value, min_output, max_output)
+
+        # Calculate dynamic smoothing factor based on input speed
+        # Input speed is defined as the absolute change in MIDI value per unit of time.
+        # A higher speed (larger abs(midi_value_change) and smaller time_delta)
+        # should lead to a higher effective_smoothing_factor (less smoothing, faster response).
+        
+        effective_time_delta = max(time_delta, self.time_epsilon) # Prevent division by zero
+        input_speed = abs(midi_value_change) / effective_time_delta
+
+        # Adjust smoothing factor (alpha): faster input means less smoothing (higher alpha)
+        # The dynamic_alpha will range from base_smoothing to 1.0.
+        dynamic_alpha = min(1.0, self.base_smoothing + (input_speed * self.acceleration_factor))
+
+        # Apply exponential smoothing to the current mapped value
+        # current_mapped_value = alpha * new_value + (1 - alpha) * old_smoothed_value
+        self.current_mapped_value = (dynamic_alpha * target_mapped_value) + \
+            ((1 - dynamic_alpha) * self.current_mapped_value)
+
+        print(f"MIDI CC {control}: Raw={value}, Target={target_mapped_value:.2f}, "
+                f"Smoothed={self.current_mapped_value:.2f}, TimeDelta={time_delta:.4f}, "
+                f"InputSpeed={input_speed:.2f}, Alpha={dynamic_alpha:.2f}")
+        
+        return self.current_mapped_value
+
+"""
+A generic class to handle MIDI input, process messages, and modify params
+This class runs in a separate thread to continuously listen for MIDI messages
+from the provided controller. See the SMC_Mixer class for specific mappings.
+"""
+class MidiInputController:
+    def __init__(self, port_name=None, controller=None):
+        """
+        Initializes the MidiController instance.
+        
+        Args:
+            port_name (str): The name of the MIDI input port to open.
+        """
+
+        # Select the MIDI controller to use.
+        self.controller = controller if controller else SMC_Mixer()
+
+        # Use the controller's default port name if it exists,
+        # otherwise prompt the user to select a port.
+        self.port_name = self.controller.port_name if hasattr(self.controller, 'port_name') else self.select_port()
+
+        # create a thread to handle MIDI input
+        self.thread_stop = False
+        self.thread = threading.Thread(target=self.input_thread_handler)
+        self.thread.daemon = True
+        self.thread.start()
+
+    def select_port(self):
+        """
+        Selects a MIDI input port by name.
+
+        Args:
+            port_name (str): The name of the MIDI input port to select.
+        
+        Returns:
+            mido.Input: The opened MIDI input port.
+        """
+        
+        # Get a list of all available MIDI input port names on the system
+        input_ports = mido.get_input_names()
+
+        if not input_ports:
+            print("No MIDI input ports found. Please ensure your MIDI device is connected and drivers are installed.")
+            return
+
+        print("\nAvailable MIDI Input Ports:")
+        for i, port_name in enumerate(input_ports):
+            print(f"{i}: {port_name}")
+
+        # Prompt the user to select a MIDI port from the list
+        selected_port_index = -1
+        while selected_port_index < 0 or selected_port_index >= len(input_ports):
+            try:
+                choice = input(f"Enter the number of the MIDI input port to use (0-{len(input_ports)-1}): ")
+                selected_port_index = int(choice)
+            except ValueError:
+                print("Invalid input. Please enter a number.")
+            if selected_port_index < 0 or selected_port_index >= len(input_ports):
+                print("Invalid port number. Please try again.")
+
+        chosen_port_name = input_ports[selected_port_index]
+        print(f"\nSelected port: {chosen_port_name}")
+        return chosen_port_name
+
+    def set_values(self, control, value):
+        """
+        Sets the values for the specified MIDI control number.
+
+        Args:
+            control (int): The MIDI control number.
+            value (int): The value of the MIDI control message.
+        """
+        if self.controller is not None:
+            self.controller.set_values(control, value)
+        else:
+            print("No controller set to handle MIDI messages.")
+        
+    def input_thread_handler(self):
+        """
+        Handles MIDI input in a separate thread.
+        Opens the specified MIDI input port and uses the MidiProcessor instance
+        to process incoming messages.
+        """
+
+        try:
+            with mido.open_input(self.port_name) as inport:
+                print(f"MIDI input thread started for port: {inport.name}")
+                print("Listening for MIDI messages... (Press Ctrl+C in the main terminal to stop)")
+
+                # Continuously listen for messages until the thread_stop flag is set
+                for msg in inport:
+                    if self.thread_stop:
+                        print(f"Stopping MIDI input for port: {inport.name}")
+                        break
+
+                    # get the control number from the message
+                    control = msg.control if hasattr(msg, 'control') else None
+                    if control is None:
+                        print(f"Received non-control message: {msg}")
+                        continue
+
+                    self.set_values(control, msg.value)
+
+        except ValueError as e:
+            print(f"Error: Could not open MIDI port '{self.port_name}'. {e}")
+            print("Please ensure the port name is correct and the device is connected.")
+        except Exception as e:
+            print(f"An unexpected error occurred in the MIDI thread: {e}")
+        finally:
+            print(f"MIDI input thread for '{self.port_name}' has terminated.")
+
+"""
+A class to represent the SMC-Mixer and the 
+mapping of encoders, faders, and buttons to pages of parameters.
+"""
+class SMC_Mixer:
+    """
+    encoders: cc 30-37
+    faders: cc 40-47
+    m buttons: 20-27
+    s buttons: 28-35
+    r buttons: 36-43
+    square buttons: 44-51 (44-47 are used by the faders as well 😔
+    play 52
+    pause 53
+    record 54
+    reverse 55
+    forward 56
+    previous 57
+    next 58
+    up 59
+    down 60
+    left 61
+    right 62
+    """
+    def __init__(self):
+        """
+        Initializes the SMC_Mixer instance.
+        """
+                
+        self.MIN = 0
+        self.MAX = 127
+
+        self.port_name = "SMC-Mixer 0"
+        self.processor = MidiProcessor(min_midi=self.MIN, max_midi=self.MAX,
+                                       base_smoothing=0.05, acceleration_factor=0.05)
+
+        # each dict entry is a page of parameters
+        self.fader_params = {
+            1: ['alpha', 'temporal_filter', 'x_sync_speed', 'x_sync_freq', 'x_sync_amp', 'y_sync_speed', 'y_sync_freq', 'y_sync_amp'],
+        }
+        self.fader_config = self.fader_params.get(1, [])
+
+        self.encoder_params = {
+            1: ['hue_shift', 'sat_shift', 'val_shift', 'zoom', 'r_shift', 'x_shift', 'y_shift', 'blur_kernel_size'],
+        }
+        self.encoder_config = self.encoder_params.get(1, [])
+
+        # self.set_button_params = {}
+
+    def set_values(self, control, value):
+        """
+        Maps the MIDI control messages to the SMC-Mixer.
+        This function is a placeholder for actual mapping logic.
+        
+        Args:
+            control (int): The MIDI control number.
+            value (int): The value of the MIDI control message.
+        """
+        if control in range(30, 38):
+            self.set_encoder_param(control, value)
+        elif control in range(40, 48):
+            self.set_fader_param(control, value)
+        elif control in range(20, 36):
+            self.set_button_param(control, value)
+
+    def set_fader_param(self, control, value):
+        """
+        Maps the MIDI faders to the SMC-Mixer.
+        This function is a placeholder for actual mapping logic.
+        """
+        
+        index = control % 10 
+        param = params.get(self.fader_config[index])
+
+        if param is None:
+            print(f"Warning: No parameter found for control {control} in fader_config.")
+            return
+
+        min, max = param.min_max()
+        value = self.processor.process_message(control, value, min, max)
+
+        params.set(self.fader_config[index], value)
+
+        print(f"{self.fader_config[index]}: {value} (MIDI value: {value})")
+
+    def set_encoder_param(self, control, value):
+        """
+        Maps the MIDI encoders to the SMC-Mixer.
+        This function is a placeholder for actual mapping logic.
+        """
+        index = control % 10
+        param = params.get(self.encoder_config[index])
+
+        if param is None:
+            print(f"Warning: No parameter found for channel {control} in encoder_config.")
+            return
+        
+        min, max = param.min_max()
+        value = self.processor.process_message(control, value, min, max)
+        params.set(self.encoder_config[index], value)
+
+        print(f"{self.encoder_config[index]}: {value} (MIDI value: {value})")
+
+    def set_button_param(self, control, value):
+        """
+        Maps the MIDI buttons to the SMC-Mixer.
+        This function is a placeholder for actual mapping logic.
+        """
+        print("Mapping buttons... (this is a placeholder function)")
+
+if __name__ == "__main__":
+    """
+    Main function to list available MIDI input ports, prompt the user to select one,
+    start the MIDI input processing thread, and manage its lifecycle.
+    """
+    
+    controller = MidiInputController(controller=SMC_Mixer())
+
+    print("\nMain program is running. The MIDI thread is listening in the background.")
+    print("Press Ctrl+C to stop the MIDI thread and exit the program.")
+
+    try:
+        # Keep the main thread alive indefinitely so the MIDI input thread can run.
+        # It sleeps periodically to prevent busy-waiting.
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\nCtrl+C detected. Signaling MIDI thread to stop...")
+        controller.thread_stop = True
+        # Wait for the MIDI thread to finish, with a timeout
+        controller.thread.join(timeout=5)
+        if controller.thread.is_alive():
+            print("MIDI thread did not terminate gracefully. Forcing exit.")
+        else:
+            print("MIDI thread stopped successfully.")
+    finally:
+        print("Exiting main program.")

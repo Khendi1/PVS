@@ -132,15 +132,18 @@ class Param:
             self.value = min_val
         return self.value
 
-    def set_min_max(self, min_val, max_val):
-        self.min_val = min_val
-        self.max_val = max_val
-        if self.value < min_val:
-            self.value = min_val
-        elif self.value > max_val:
-            self.value = max_val
-        return self.value
-    
+    def map_value(self, value):
+        """
+        Maps the given value to the range defined by min_val and max_val.
+        If the value is outside this range, it will be clamped to the nearest boundary.
+        """
+        if value < self.min_val:
+            return self.min_val
+        elif value > self.max_val:
+            return self.max_val
+        else:
+            return value
+
     def set_value(self, value):
         if value < self.min_val:
             self.value = self.min_val
@@ -153,6 +156,12 @@ class Param:
             self.value = float(self.value)
         elif isinstance(self.default_val, int):
             self.value = int(self.value)
+
+        if self.name == "blur_kernel_size":
+            # Ensure blur kernel size is odd
+            # if self.value % 2 == 0:
+            #     self.value += 1
+            self.value = max(1, int(self.value) | 1)
         
         return self.value
     
@@ -173,4 +182,7 @@ class Param:
     
     def val(self):
         return self.value
+    
+    def min_max(self):
+        return (self.min_val, self.max_val)
 

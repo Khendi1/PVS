@@ -2,6 +2,10 @@ from config import osc_bank, params
 import numpy as np
 import time
 from enum import IntEnum
+from generators import Oscillator
+# from noise import pnoise1, pnoise2, pnoise3
+# from noise import snoise2, snoise3
+import noise 
 
 class PatternType(IntEnum):
     NONE = 0
@@ -26,13 +30,13 @@ class Patterns:
         self.amp_y = 10.0
         self.freq_x = 0.1
         self.freq_y = 0.1
-        self.angle_amt = params.add("angle_amt", 30, 180, 30) # Angle amount for polar warp
-        self.radius_amt = params.add("radius_amt", 30, 180, 30) # Radius amount for polar warp
-        self.speed = params.add("speed", 0.01, 100, 1.0) # Speed of warp effect
-        self.use_fractal = params.add("use_fractal", 0, 1, 0) # Toggle for fractal noise
-        self.octaves = params.add("octaves", 1, 8, 4) # Number of octaves for fractal noise
-        self.gain = params.add("gain", 0.0, 1.0, 1.0) # Gain for fractal noise
-        self.lacunarity = params.add("lacunarity", 1.0, 4.0, 2.0) # Lacunarity for fractal noise
+        self.angle_amt = params.add("pattern_angle_amt", 30, 180, 30) # Angle amount for polar warp
+        self.radius_amt = params.add("pattern_radius_amt", 30, 180, 30) # Radius amount for polar warp
+        self.speed = params.add("pattern_speed", 0.01, 100, 1.0) # Speed of warp effect
+        self.use_fractal = params.add("pattern_use_fractal", 0, 1, 0) # Toggle for fractal noise
+        self.octaves = params.add("pattern_octaves", 1, 8, 4) # Number of octaves for fractal noise
+        self.gain = params.add("pattern_gain", 0.0, 1.0, 1.0) # Gain for fractal noise
+        self.lacunarity = params.add("pattern_lacunarity", 1.0, 4.0, 2.0) # Lacunarity for fractal noise
         self.pattern_type = params.add("pattern_type", PatternType.NONE, PatternType.PERLIN_BLOBS, PatternType.NONE)
 
     def set_warp_params(self, warp_type, amp_x, amp_y, freq_x, freq_y, angle_amt, radius_amt, speed, use_fractal=False, octaves=4, gain=1.0, lacunarity=2.0):
@@ -317,3 +321,21 @@ class Patterns:
                 pattern[y, x] = [final_b, final_g, final_r] # OpenCV uses BGR
 
         return pattern
+    
+if __name__ == "__main__":
+    # Example usage
+    width, height = 640, 480
+    
+    for i in range(4):
+        osc_bank.append(Oscillator(name=f"osc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=i%4))
+    
+    patterns = Patterns(width, height)
+    
+    # Generate a pattern frame
+    frame = patterns.generate_pattern(np.zeros((height, width, 3), dtype=np.uint8))
+    
+    # Display the generated pattern (for testing purposes)
+    import cv2
+    cv2.imshow("Pattern", frame)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()

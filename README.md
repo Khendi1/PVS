@@ -7,7 +7,11 @@ This is an interactive video synthesis tool with many tunable parameters. Most p
 - packages from requirements.txt
 - webcam (for now; video looping planned)
 
-## Features and parameters:
+## Control
+
+The app can be controlled through a (crappy) GUI or midi controller. The program is currently configured to use a cheap MVAVE SMC Mixer, but there are provisions to configure a new controller with relative ease. To reimplement a new controller, see the required functions you must expose in the example SMC_Mixer() class in midi.py
+
+## Parameters:
 - Feedback: blends stream frame with previous frame
 - Temporal filter: blends current generated feedback frame with previous feedback frame to reduce strobing effects
 - HSV control
@@ -15,6 +19,12 @@ This is an interactive video synthesis tool with many tunable parameters. Most p
 - Frame pan, tilt, zoom
 - Polar Coordinate transform: center position and radius size
 - glitch generator (size, quantity, ...)
+- Various blur modes
+- Various noise modes
+- x/y sync modulation emulator
+    - sync freq
+    - sync amplitude
+    - sync speed (need better word)
 - Oscillator bank
     - tunable freq, amp, phase
     - supports 4 basic wave forms
@@ -46,3 +56,9 @@ This is an interactive video synthesis tool with many tunable parameters. Most p
 - rotate shape canvas
 - cleanup args for TrackbarCallback (second arg is redundant, can be gathered from first arg)
 - cleanup args Trackbar args (first arg is redundant, can be gathered from others)
+
+
+## unimplemented effects
+
+warp
+
