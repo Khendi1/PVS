@@ -93,11 +93,11 @@ class Effects:
         self.y_size = params.add("y_size", 0.0, 100.0, 10.0)
 
         self.x_sync_freq = params.add("x_sync_freq", 0.1, 100.0, 1.0)
-        self.x_sync_amp = params.add("x_sync_amp", -200, 200, 20.0)
+        self.x_sync_amp = params.add("x_sync_amp", -200, 200, 0.0)
         self.x_sync_speed = params.add("x_sync_speed", 5.0, 10.0, 9.0)
 
         self.y_sync_freq = params.add("y_sync_freq", 0.1, 100.0, 1.0)
-        self.y_sync_amp = params.add("y_sync_amp", -image_width, image_width, 20.0)
+        self.y_sync_amp = params.add("y_sync_amp", -200, 200, 00.0)
         self.y_sync_speed = params.add("y_sync_speed", 5.0, 10.0, 9.0)
 
         self.lissajous_A = params.add("lissajous_A", 0, 100, 50)

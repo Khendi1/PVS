@@ -141,6 +141,7 @@ def apply_effects(frame, height, width, e: Effects, n: ImageNoiser, s: ShapeGene
         frame = e.glitch_image(frame) 
         frame = e.gaussian_blur(frame)
         frame = e.sync(frame)
+        frame = e.polarize_frame_hsv(frame)
 
         # TODO: test this
         # frame = e.apply_perlin_noise
@@ -151,8 +152,7 @@ def apply_effects(frame, height, width, e: Effects, n: ImageNoiser, s: ShapeGene
         # TODO: test this
         # frame = p.generate_pattern(frame)
 
-        if n.noise_type != NoiseType.NONE:
-            frame = e.polarize_frame_hsv(frame)
+        frame = n.apply_noise(frame)
 
         if enable_polar_transform == True:
             frame = e.polar_transform(frame, params.get("polar_x"), params.get("polar_y"), params.get("polar_radius"))
