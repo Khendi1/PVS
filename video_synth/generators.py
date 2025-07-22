@@ -72,10 +72,11 @@ class Oscillator:
         self.noise_base = params.add(f"{name}_noise_base", 0, 1000, 456)
 
         self.sample_rate = 30
-        self.direction = 1
+        self.direction = 1 
         self.oscillator = self.create_oscillator()
         self.linked_param = None
         self.value = 0
+
         # Link to a parameter if provided
         if linked_param_name is not None:
             self.linked_param = params.get(linked_param_name)
