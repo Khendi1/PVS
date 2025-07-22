@@ -16,20 +16,21 @@ def apply_effects(frame, e: Effects_Library):
 
     # TODO: use frame skip slider to control frame skip
     if True: 
+
         frame = e.metaballs.do_metaballs(frame)
         frame = e.patterns.generate_pattern_frame(frame)
         frame = e.basic.shift_frame(frame)
         frame = e.reflector.apply_reflection(frame)
         frame = e.basic.sync(frame)
-        frame = e.basic.modify_hsv(frame)
-        frame = e.basic.adjust_brightness_contrast(frame)
-        frame = e.basic.sharpen_frame(frame)
-        frame = e.basic.glitch_image(frame)
+        frame = e.color.modify_hsv(frame)
+        frame = e.color.adjust_brightness_contrast(frame)
+        frame = e.pixels.sharpen_frame(frame)
+        frame = e.pixels.glitch_image(frame)
         frame = e.noise.apply_noise(frame)
-        frame = e.basic.polarize_frame_hsv(frame)
-        frame = e.basic.gaussian_blur(frame)
-        frame = e.basic.solarize_image(frame)
-        frame = e.basic.posterize(frame)
+        frame = e.color.polarize_frame_hsv(frame)
+        frame = e.color.solarize_image(frame)
+        frame = e.color.posterize(frame)
+        frame = e.pixels.gaussian_blur(frame)
 
         # TODO: test this,test ordering
         # image_height, image_width = frame.shape[:2]

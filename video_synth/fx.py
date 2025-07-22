@@ -6,6 +6,7 @@ import random
 import math
 from noise import pnoise2
 
+
 class WarpType(IntEnum):
     NONE = 0
     SINE = 1
@@ -14,10 +15,12 @@ class WarpType(IntEnum):
     PERLIN = 4
     WARP0 = 5  # this is a placeholder for the old warp_frame method; yet to be tested
 
+
 class HSV(IntEnum):
     H = 0
     S = 1
     V = 2
+
 
 class BlurType(IntEnum):
     NONE = 0
@@ -26,84 +29,33 @@ class BlurType(IntEnum):
     BOX = 3
     BILATERAL = 4
 
-# class Color:
-#     def __init__(self):
 
-class Effects:
+class SharpenType(IntEnum):
+    NONE = 0
+    SHARPEN = 1
+    UNSHARP_MASK = 2
 
-    def __init__(self, image_width: int, image_height: int):
 
-        self.height = image_height
-        self.width = image_width
+class Color:
+
+    def __init__(self):
 
         self.hue_shift = params.add("hue_shift", 0, 180, 0)
         self.sat_shift = params.add("sat_shift", 0, 255, 0)
         self.val_shift = params.add("val_shift", 0, 255, 0)
 
-        self.alpha = params.add("alpha", 0.0, 1.0, 0.0)
-        self.temporal_filter = params.add("temporal_filter", 0, 1.0, 1.0)
-
-        self.blur_type = params.add("blur_type", 0, 4, 1) # 1=Gaussian, 2=Median, 3=Box, 4=Bilateral
-        self.blur_kernel_size = params.add("blur_kernel_size", 1, 100, 1)
-        # TODO: implement additional requirefd parameters for each blur type
-
-        self.num_glitches = params.add("num_glitches", 0, 100, 0)
-        self.glitch_size = params.add("glitch_size", 1, 100, 0)
+        self.levels_per_channel = params.add("posterize_levels", 2, 128, 2.0)
+        self.solarize_threshold = params.add("solarize_threshold", 0, 128, 0.0)
+        self.num_hues = params.add("num_hues", 2, 10, 8)
 
         self.val_threshold = params.add("val_threshold", 0, 255, 0)
         self.val_hue_shift = params.add("val_hue_shift", 0, 255, 0)
 
-        self.x_shift = params.add("x_shift", -image_width, image_width, 0, family="Pan") # min/max depends on image size
-        self.y_shift = params.add("y_shift", -image_height, image_height, 0, family="Pan") # min/max depends on image size
-        self.zoom = params.add("zoom", 0.75, 3, 1.0, family="Pan")
-        self.r_shift = params.add("r_shift", -360, 360, 0.0, family="Pan")
-
-        self.polar_x = params.add("polar_x", -image_width, image_width, 0)
-        self.polar_y = params.add("polar_y", -image_height, image_height, 0)
-        self.polar_radius = params.add("polar_radius", 0.1, 100, 1.0)
-
-        self.contrast = params.add("contrast", 0.5, 3.0, 1.0)
-        self.brightness = params.add("brightness", 0, 100, 0)
-
         self.hue_invert_angle = params.add("hue_invert_angle", 0, 360, 0)
         self.hue_invert_strength = params.add("hue_invert_strength", 0.0, 1.0, 0.0)
 
-        self.frame_skip = params.add("frame_skip", 1, 10, 1)
-
-        self.warp_type = params.add("warp_type", WarpType.NONE.value, WarpType.WARP0.value, WarpType.NONE.value)
-        self.warp_angle_amt = params.add("warp_angle_amt", 0, 360, 30)
-        self.warp_radius_amt = params.add("warp_radius_amt", 0, 360, 30)
-        self.warp_speed = params.add("warp_speed", 0, 100, 10)
-        self.warp_use_fractal = params.add("warp_use_fractal", 0, 1, 0)
-        self.warp_octaves = params.add("warp_octaves", 1, 8, 4)
-        self.warp_gain = params.add("warp_gain", 0.0, 1.0, 0.5)
-        self.warp_lacunarity = params.add("warp_lacunarity", 1.0, 4.0, 2.0)
-        #warp0/first_warp parameters
-        self.x_speed = params.add("x_speed", 0.0, 100.0, 1.0)
-        self.x_size = params.add("x_size", 0.25, 100.0, 20.0) 
-        self.y_speed = params.add("y_speed", 0.0, 10.0, 1.0)
-        self.y_size = params.add("y_size", 0.0, 100.0, 10.0)
-
-        self.x_sync_freq = params.add("x_sync_freq", 0.1, 100.0, 1.0)
-        self.x_sync_amp = params.add("x_sync_amp", -200, 200, 0.0)
-        self.x_sync_speed = params.add("x_sync_speed", 5.0, 10.0, 9.0)
-
-        self.y_sync_freq = params.add("y_sync_freq", 0.1, 100.0, 1.0)
-        self.y_sync_amp = params.add("y_sync_amp", -200, 200, 00.0)
-        self.y_sync_speed = params.add("y_sync_speed", 5.0, 10.0, 9.0)
-
-        self.lissajous_A = params.add("lissajous_A", 0, 100, 50)
-        self.lissajous_B = params.add("lissajous_B", 0, 100, 50)
-        self.lissajous_a = params.add("lissajous_a", 0, 100, 50)
-        self.lissajous_b = params.add("lissajous_b", 0, 100, 50)
-        self.lissajous_delta = params.add("lissajous_delta", 0, 360, 0)
-
-        # TODO: implement
-        self.sequence = params.add("sequence", 0, 100, 0)
-        self.sharpen_intensity = params.add("sharpen_intensity", 4.0, 8.0, 4.0)
-        self.levels_per_channel = params.add("posterize_levels", 2, 128, 2.0)
-        self.solarize_threshold = params.add("solarize_threshold", 0, 128, 0.0)
-        self.num_hues = params.add("num_hues", 2, 10, 8)
+        self.contrast = params.add("contrast", 0.5, 3.0, 1.0)
+        self.brightness = params.add("brightness", 0, 100, 0)
 
     def shift_hue(self, hue: int):
         """
@@ -198,196 +150,6 @@ class Effects:
         output_image = cv2.cvtColor(quantized_image, cv2.COLOR_HSV2BGR)
         return output_image
 
-    # TODO: implement
-    def glitch_image(self, image: np.ndarray):
-        height, width, _ = image.shape
-
-        for _ in range(self.num_glitches.value):
-            x = random.randint(0, width - 1)
-            y = random.randint(0, height - 1)
-
-            x_glitch_size = random.randint(1, self.glitch_size.value)
-            y_glitch_size = random.randint(1, self.glitch_size.value)
-
-            # Ensure the glitch area does not exceed image boundaries
-            x_end = min(x + x_glitch_size, width)
-            y_end = min(y + y_glitch_size, height)
-
-            # Extract a random rectangle
-            glitch_area = image[y:y_end, x:x_end].copy()
-
-            # Shuffle the pixels
-            glitch_area = glitch_area.reshape((-1, 3))
-            np.random.shuffle(glitch_area)
-            glitch_area = glitch_area.reshape((y_end - y, x_end - x, 3))
-
-            # Apply the glitch
-            image[y:y_end, x:x_end] = glitch_area
-        return image
-    
-    def shift_frame(self, frame: np.ndarray):
-        """
-        Shifts all pixels in an OpenCV frame by the specified x and y amounts,
-        wrapping pixels that go beyond the frame boundaries.
-
-        Args:
-            frame: The input OpenCV frame (a numpy array).
-            shift_x: The number of pixels to shift in the x-direction.
-                    Positive values shift to the right, negative to the left.
-            shift_y: The number of pixels to shift in the y-direction.
-                    Positive values shift downwards, negative upwards.
-
-        Returns:
-            A new numpy array representing the shifted frame.
-        """
-        (height, width) = frame.shape[:2]
-        center = (width / 2, height / 2)
-
-        # Create a new array with the same shape and data type as the original frame
-        shifted_frame = np.zeros_like(frame)
-
-        # Create the mapping arrays for the indices.
-        x_map = (np.arange(width) - self.x_shift.value) % width
-        y_map = (np.arange(height) - self.y_shift.value) % height
-
-        # Use advanced indexing to shift the entire image at once
-        shifted_frame = frame[y_map[:, np.newaxis], x_map]
-
-        # Use cv2.getRotationMatrix2D to get the rotation matrix
-        M = cv2.getRotationMatrix2D(center, self.r_shift.value, self.zoom.value)  # 1.0 is the scale
-
-        # Perform the rotation using cv2.warpAffine
-        rotated_frame = cv2.warpAffine(shifted_frame, M, (width, height))
-
-        return rotated_frame
-
-    def polar_transform(self, frame: np.ndarray):
-        """
-        Transforms an image with horizontal bars into an image with concentric circles
-        using a polar coordinate transform.
-        """
-        height, width = frame.shape[:2]
-        center = (width // 2 + self.polar_x, height // 2 + self.polar_y.value)
-        max_radius = np.sqrt((width // self.polar_radius)**2 + (height // self.polar_radius.value)**2)
-
-        #    The flags parameter is important:
-        #    cv2.INTER_LINEAR:  Bilinear interpolation (good quality)
-        #    cv2.WARP_FILL_OUTLIERS:  Fills in any missing pixels
-        #
-        return cv2.warpPolar(
-            frame,
-            (width, height),  # Output size (can be different from input)
-            center,
-            max_radius,
-            flags=cv2.INTER_LINEAR + cv2.WARP_FILL_OUTLIERS # or +WARP_POLAR_LOG
-        )
-
-    # TODO: implement
-    def gaussian_blur(self, frame: np.ndarray):
-        mode = self.blur_type.value
-        if mode == BlurType.NONE:
-            pass
-        elif mode == BlurType.GAUSSIAN:
-            # TODO: apply snapping to odd kernel size here rather than in the GUI callback, as other blur type *MAY* permit other sizes
-            frame = cv2.GaussianBlur(frame, (self.blur_kernel_size.value, self.blur_kernel_size.value), 0) 
-        elif mode == BlurType.MEDIAN:
-            frame = cv2.medianBlur(frame, self.blur_kernel_size.value)
-        elif mode == BlurType.BOX:
-            frame = cv2.blur(frame,(self.blur_kernel_size.value, self.blur_kernel_size.value))
-        elif mode == BlurType.BILATERAL:
-            frame = cv2.bilateralFilter(frame,self.blur_kernel_size.value,75,75)
-        
-        return frame
-
-    def adjust_brightness_contrast(self, image):
-        """
-        Adjusts the brightness and contrast of an image.
-
-        Args:
-            image: The input image (NumPy array).
-            alpha: Contrast control (1.0-3.0, default=1.0).
-            beta: Brightness control (0-100, default=0).
-
-        Returns:
-            The adjusted image (NumPy array).
-        """
-        adjusted_image = cv2.convertScaleAbs(image, alpha=self.contrast.value, beta=self.brightness.value)
-        return adjusted_image
-
-    def polarize_frame_hsv(self, frame: np.ndarray):
-        """
-        Polarizes a frame by rotating hue in HSV color space.  This often gives
-        a more visually interesting effect than rotating in BGR.
-
-        Args:
-            frame (numpy.ndarray): The input frame as a NumPy array (H, W, 3) in BGR format.
-            angle (float): The polarization angle in degrees.
-            strength (float): The strength of the polarization effect (0 to 1).
-
-        Returns:
-            numpy.ndarray: The polarized frame as a NumPy array (H, W, 3) in BGR format.
-        """
-        if self.hue_invert_strength.value <= self.hue_invert_strength.min:
-            return frame
-        
-        # Convert to HSV color space and extract hsv channel
-        hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV).astype(np.float32)
-        hue_channel = hsv_frame[:, :, 0]
-
-        # Convert angle to OpenCV hue units (0-180)
-        hue_shift = (self.hue_invert_angle.value / 360.0) * 180
-
-        # Apply the hue shift with strength
-        shifted_hue = (hue_channel + hue_shift * self.hue_invert_strength.value) % 180  # Wrap aroundS
-        hsv_frame[:, :, 0] = shifted_hue
-
-        # Convert back to BGR
-        polarized_frame = cv2.cvtColor(hsv_frame.astype(np.uint8), cv2.COLOR_HSV2BGR)
-        return polarized_frame
-
-    def apply_temporal_filter(self, prev_frame, cur_frame):
-        """
-        Applies a temporal filter (exponential moving average) to reduce noise and flicker in a video stream.
-
-        Args:
-            video_path (str, optional): Path to the video file. If None, uses the default webcam.
-            alpha (float): The weighting factor for the current frame (0.0 to 1.0).
-                        Higher alpha means less smoothing, more responsiveness to changes.
-                        Lower alpha means more smoothing, less responsiveness.
-        """
-
-        # Convert the first frame to float for accurate averaging
-        filtered_frame = prev_frame.astype(np.float32)
-
-        # Convert current frame to float for calculations
-        current_frame_float = cur_frame.astype(np.float32)
-
-        # Apply the temporal filter (Exponential Moving Average)
-        # filtered_frame = alpha * current_frame_float + (1 - alpha) * filtered_frame
-        # This formula directly updates the filtered_frame based on the new current_frame.
-        # It's a low-pass filter in the time domain.
-        filtered_frame = cv2.addWeighted(current_frame_float, self.temporal_filter.value, filtered_frame, 1 - self.temporal_filter.value, 0)
-
-        # Convert back to uint8 for display
-        return cv2.convertScaleAbs(filtered_frame)
-
-    def sharpen_frame(self, frame: np.ndarray):
-
-        if self.sharpen_intensity.value <= self.sharpen_intensity.min + 0.01:
-            return frame
-        
-        sharpening_kernel = np.array([
-            [0, -1, 0],
-            [-1, self.sharpen_intensity.value, -1],
-            [0, -1, 0]
-        ])
-
-        # Apply the kernel to the frame using cv2.filter2D
-        # -1 indicates that the output image will have the same depth (data type) as the input image.
-        sharpened_frame = cv2.filter2D(frame, -1, sharpening_kernel)
-
-        return sharpened_frame
-
     def posterize(self, frame: np.ndarray):
         """
         Applies a posterization effect to an image.
@@ -450,33 +212,272 @@ class Effects:
             print("Warning: Image not in uint8 format. Converting...")
             frame = cv2.convertScaleAbs(frame) # Converts to uint8, scales if needed
 
-        # Create a copy to modify
-        solarized_frame = frame.copy()
+        frame = np.where(frame > self.solarize_threshold.value, 255 - frame, frame)
 
-        # Apply solarization logic.
-        # We can use boolean indexing for efficient processing.
-        # For each channel (B, G, R) and each pixel:
-        # If the pixel value is greater than the threshold, invert it.
+        return frame.astype(np.uint8)
 
-        # Option 1: Using NumPy's where function (very concise)
-        solarized_frame = np.where(frame > self.solarize_threshold.value, 255 - frame, frame)
+    def adjust_brightness_contrast(self, image):
+        """
+        Adjusts the brightness and contrast of an image.
 
-        # Option 2: Manual iteration (less efficient for large images, but illustrative)
-        # height, width, channels = frame.shape
-        # for y in range(height):
-        #     for x in range(width):
-        #         for c in range(channels):
-        #             pixel_val = frame[y, x, c]
-        #             if pixel_val > threshold:
-        #                 solarized_frame[y, x, c] = 255 - pixel_val
-        #             else:
-        #                 solarized_frame[y, x, c] = pixel_val
+        Args:
+            image: The input image (NumPy array).
+            alpha: Contrast control (1.0-3.0, default=1.0).
+            beta: Brightness control (0-100, default=0).
 
-        # Ensure the output is uint8
-        solarized_frame = solarized_frame.astype(np.uint8)
+        Returns:
+            The adjusted image (NumPy array).
+        """
+        adjusted_image = cv2.convertScaleAbs(image, alpha=self.contrast.value, beta=self.brightness.value)
+        return adjusted_image
 
-        return solarized_frame
+    def polarize_frame_hsv(self, frame: np.ndarray):
+        """
+        Polarizes a frame by rotating hue in HSV color space.  This often gives
+        a more visually interesting effect than rotating in BGR.
+
+        Args:
+            frame (numpy.ndarray): The input frame as a NumPy array (H, W, 3) in BGR format.
+            angle (float): The polarization angle in degrees.
+            strength (float): The strength of the polarization effect (0 to 1).
+
+        Returns:
+            numpy.ndarray: The polarized frame as a NumPy array (H, W, 3) in BGR format.
+        """
+        if self.hue_invert_strength.value <= self.hue_invert_strength.min:
+            return frame
+        
+        # Convert to HSV color space and extract hsv channel
+        hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV).astype(np.float32)
+        hue_channel = hsv_frame[:, :, 0]
+
+        # Convert angle to OpenCV hue units (0-180)
+        hue_shift = (self.hue_invert_angle.value / 360.0) * 180
+
+        # Apply the hue shift with strength
+        shifted_hue = (hue_channel + hue_shift * self.hue_invert_strength.value) % 180  # Wrap aroundS
+        hsv_frame[:, :, 0] = shifted_hue
+
+        # Convert back to BGR
+        polarized_frame = cv2.cvtColor(hsv_frame.astype(np.uint8), cv2.COLOR_HSV2BGR)
+        return polarized_frame    
+
+
+class Pixels:
     
+    def __init__(self, image_width: int, image_height: int):
+        self.image_width = image_width
+        self.image_height = image_height
+
+        self.sharpen_type = params.add("sharpen_type", SharpenType.NONE.value, len(SharpenType), SharpenType.NONE.value)
+        self.sharpen_intensity = params.add("sharpen_intensity", 4.0, 8.0, 4.0)
+
+        self.blur_type = params.add("blur_type", 0, 4, 1) # 1=Gaussian, 2=Median, 3=Box, 4=Bilateral
+        self.blur_kernel_size = params.add("blur_kernel_size", 1, 100, 1)
+
+        self.num_glitches = params.add("num_glitches", 0, 100, 0)
+        self.glitch_size = params.add("glitch_size", 1, 100, 0)
+
+# TODO: implement
+    def gaussian_blur(self, frame: np.ndarray):
+        mode = self.blur_type.value
+        if mode == BlurType.NONE:
+            pass
+        elif mode == BlurType.GAUSSIAN:
+            # TODO: apply snapping to odd kernel size here rather than in the GUI callback, as other blur type *MAY* permit other sizes
+            frame = cv2.GaussianBlur(frame, (self.blur_kernel_size.value, self.blur_kernel_size.value), 0) 
+        elif mode == BlurType.MEDIAN:
+            frame = cv2.medianBlur(frame, self.blur_kernel_size.value)
+        elif mode == BlurType.BOX:
+            frame = cv2.blur(frame,(self.blur_kernel_size.value, self.blur_kernel_size.value))
+        elif mode == BlurType.BILATERAL:
+            frame = cv2.bilateralFilter(frame,self.blur_kernel_size.value,75,75)
+        
+        return frame
+   
+    # TODO: implement
+    def glitch_image(self, image: np.ndarray):
+        height, width, _ = image.shape
+
+        for _ in range(self.num_glitches.value):
+            x = random.randint(0, width - 1)
+            y = random.randint(0, height - 1)
+
+            x_glitch_size = random.randint(1, self.glitch_size.value)
+            y_glitch_size = random.randint(1, self.glitch_size.value)
+
+            # Ensure the glitch area does not exceed image boundaries
+            x_end = min(x + x_glitch_size, width)
+            y_end = min(y + y_glitch_size, height)
+        
+            # Extract a random rectangle
+            glitch_area = image[y:y_end, x:x_end].copy()
+
+            # Shuffle the pixels
+            glitch_area = glitch_area.reshape((-1, 3))
+            np.random.shuffle(glitch_area)
+            glitch_area = glitch_area.reshape((y_end - y, x_end - x, 3))
+
+            # Apply the glitch
+            image[y:y_end, x:x_end] = glitch_area
+        return image
+
+
+    def sharpen_frame(self, frame: np.ndarray):
+
+        if self.sharpen_intensity.value <= self.sharpen_intensity.min + 0.01:
+            return frame
+        
+        sharpening_kernel = np.array([
+            [0, -1, 0],
+            [-1, self.sharpen_intensity.value, -1],
+            [0, -1, 0]
+        ])
+
+        # Apply the kernel to the frame using cv2.filter2D
+        # -1 indicates that the output image will have the same depth (data type) as the input image.
+        sharpened_frame = cv2.filter2D(frame, -1, sharpening_kernel)
+
+        return sharpened_frame
+
+
+class Effects:
+
+    def __init__(self, image_width: int, image_height: int):
+
+        self.height = image_height
+        self.width = image_width
+
+        self.alpha = params.add("alpha", 0.0, 1.0, 0.0)
+        self.temporal_filter = params.add("temporal_filter", 0, 1.0, 1.0)
+
+        self.x_shift = params.add("x_shift", -image_width, image_width, 0, family="Pan") # min/max depends on image size
+        self.y_shift = params.add("y_shift", -image_height, image_height, 0, family="Pan") # min/max depends on image size
+        self.zoom = params.add("zoom", 0.75, 3, 1.0, family="Pan")
+        self.r_shift = params.add("r_shift", -360, 360, 0.0, family="Pan")
+
+        self.polar_x = params.add("polar_x", -image_width, image_width, 0)
+        self.polar_y = params.add("polar_y", -image_height, image_height, 0)
+        self.polar_radius = params.add("polar_radius", 0.1, 100, 1.0)
+
+        self.frame_skip = params.add("frame_skip", 1, 10, 1)
+
+        self.warp_type = params.add("warp_type", WarpType.NONE.value, WarpType.WARP0.value, WarpType.NONE.value)
+        self.warp_angle_amt = params.add("warp_angle_amt", 0, 360, 30)
+        self.warp_radius_amt = params.add("warp_radius_amt", 0, 360, 30)
+        self.warp_speed = params.add("warp_speed", 0, 100, 10)
+        self.warp_use_fractal = params.add("warp_use_fractal", 0, 1, 0)
+        self.warp_octaves = params.add("warp_octaves", 1, 8, 4)
+        self.warp_gain = params.add("warp_gain", 0.0, 1.0, 0.5)
+        self.warp_lacunarity = params.add("warp_lacunarity", 1.0, 4.0, 2.0)
+        self.x_speed = params.add("x_speed", 0.0, 100.0, 1.0)
+        self.x_size = params.add("x_size", 0.25, 100.0, 20.0) 
+        self.y_speed = params.add("y_speed", 0.0, 10.0, 1.0)
+        self.y_size = params.add("y_size", 0.0, 100.0, 10.0)
+
+        self.x_sync_freq = params.add("x_sync_freq", 0.1, 100.0, 1.0)
+        self.x_sync_amp = params.add("x_sync_amp", -200, 200, 0.0)
+        self.x_sync_speed = params.add("x_sync_speed", 5.0, 10.0, 9.0)
+        self.y_sync_freq = params.add("y_sync_freq", 0.1, 100.0, 1.0)
+        self.y_sync_amp = params.add("y_sync_amp", -200, 200, 00.0)
+        self.y_sync_speed = params.add("y_sync_speed", 5.0, 10.0, 9.0)
+
+        self.lissajous_A = params.add("lissajous_A", 0, 100, 50)
+        self.lissajous_B = params.add("lissajous_B", 0, 100, 50)
+        self.lissajous_a = params.add("lissajous_a", 0, 100, 50)
+        self.lissajous_b = params.add("lissajous_b", 0, 100, 50)
+        self.lissajous_delta = params.add("lissajous_delta", 0, 360, 0)
+
+        # TODO: implement
+        self.sequence = params.add("sequence", 0, 100, 0)
+
+
+    def shift_frame(self, frame: np.ndarray):
+        """
+        Shifts all pixels in an OpenCV frame by the specified x and y amounts,
+        wrapping pixels that go beyond the frame boundaries.
+
+        Args:
+            frame: The input OpenCV frame (a numpy array).
+            shift_x: The number of pixels to shift in the x-direction.
+                    Positive values shift to the right, negative to the left.
+            shift_y: The number of pixels to shift in the y-direction.
+                    Positive values shift downwards, negative upwards.
+
+        Returns:
+            A new numpy array representing the shifted frame.
+        """
+        (height, width) = frame.shape[:2]
+        center = (width / 2, height / 2)
+
+        # Create a new array with the same shape and data type as the original frame
+        shifted_frame = np.zeros_like(frame)
+
+        # Create the mapping arrays for the indices.
+        x_map = (np.arange(width) - self.x_shift.value) % width
+        y_map = (np.arange(height) - self.y_shift.value) % height
+
+        # Use advanced indexing to shift the entire image at once
+        shifted_frame = frame[y_map[:, np.newaxis], x_map]
+
+        # Use cv2.getRotationMatrix2D to get the rotation matrix
+        M = cv2.getRotationMatrix2D(center, self.r_shift.value, self.zoom.value)  # 1.0 is the scale
+
+        # Perform the rotation using cv2.warpAffine
+        rotated_frame = cv2.warpAffine(shifted_frame, M, (width, height))
+
+        return rotated_frame
+
+
+    def polar_transform(self, frame: np.ndarray):
+        """
+        Transforms an image with horizontal bars into an image with concentric circles
+        using a polar coordinate transform.
+        """
+        height, width = frame.shape[:2]
+        center = (width // 2 + self.polar_x, height // 2 + self.polar_y.value)
+        max_radius = np.sqrt((width // self.polar_radius)**2 + (height // self.polar_radius.value)**2)
+
+        #    The flags parameter is important:
+        #    cv2.INTER_LINEAR:  Bilinear interpolation (good quality)
+        #    cv2.WARP_FILL_OUTLIERS:  Fills in any missing pixels
+        #
+        return cv2.warpPolar(
+            frame,
+            (width, height),  # Output size (can be different from input)
+            center,
+            max_radius,
+            flags=cv2.INTER_LINEAR + cv2.WARP_FILL_OUTLIERS # or +WARP_POLAR_LOG
+        )
+
+    
+    def apply_temporal_filter(self, prev_frame, cur_frame):
+        """
+        Applies a temporal filter (exponential moving average) to reduce noise and flicker in a video stream.
+
+        Args:
+            video_path (str, optional): Path to the video file. If None, uses the default webcam.
+            alpha (float): The weighting factor for the current frame (0.0 to 1.0).
+                        Higher alpha means less smoothing, more responsiveness to changes.
+                        Lower alpha means more smoothing, less responsiveness.
+        """
+
+        # Convert the first frame to float for accurate averaging
+        filtered_frame = prev_frame.astype(np.float32)
+
+        # Convert current frame to float for calculations
+        current_frame_float = cur_frame.astype(np.float32)
+
+        # Apply the temporal filter (Exponential Moving Average)
+        # filtered_frame = alpha * current_frame_float + (1 - alpha) * filtered_frame
+        # This formula directly updates the filtered_frame based on the new current_frame.
+        # It's a low-pass filter in the time domain.
+        filtered_frame = cv2.addWeighted(current_frame_float, self.temporal_filter.value, filtered_frame, 1 - self.temporal_filter.value, 0)
+
+        # Convert back to uint8 for display
+        return cv2.convertScaleAbs(filtered_frame)
+
+
     # TODO: implement
     def apply_perlin_noise(self, frame, perlin_noise, amplitude=1.0, frequency=1.0, octaves=1):
         """ 
