@@ -159,7 +159,7 @@ class LavaLampSynth:
 
         return image
 
-    def do_metaballs(self, frame):
+    def do_metaballs(self, frame: np.ndarray):
         """
         Updates metaball positions and generates the current frame, applying feedback.
         """

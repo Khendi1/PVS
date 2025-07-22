@@ -5,11 +5,11 @@ from config import *
 from noiser import ImageNoiser, NoiseType
 from gui import Interface
 from shapes import ShapeGenerator
-from generators import PerlinNoise, Interp, Oscillator
+from generators import Oscillator
 from patterns3 import Patterns
 from keying import Keying
-import numpy as np
-import time
+# import numpy as np
+# import time
 from midi_input import *
 from reflactor import Reflector
 from metaballs import LavaLampSynth
@@ -74,11 +74,9 @@ def main():
     for i in range(NUM_OSCILLATORS):
         osc_bank.append(Oscillator(name=f"osc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=i%4))
     print(f"Oscillator bank initialized with {len(osc_bank)} oscillators.")
-
-    # TODO: move this to generators class, set as a wave shape, equate phase with octaves
-    pn = PerlinNoise(1, frequency=1.0, amplitude=1.0, octaves=1, interp=Interp.COSINE)
     
     # Initialize effects classes; these contain Params to be modified by the generators
+    # TODO: move these into the effects class
     n = ImageNoiser(NoiseType.NONE)
     s = ShapeGenerator(image_width, image_height)
     e = Effects(image_width, image_height)
@@ -88,9 +86,8 @@ def main():
     l = LavaLampSynth(image_width, image_height)  # Initialize the Lava Lamp synth
 
     # Initialize the midi input controller before creating the GUI
-    # This will allow the controller to be used in the GUI and to respond to MIDI input
-    controller = MidiInputController(controller=MidiMix())
-    controller2 = MidiInputController(controller=SMC_Mixer())
+    mixer1 = MidiInputController(controller=MidiMix())
+    mixer2 = MidiInputController(controller=SMC_Mixer())
 
     # Create control panel after initializing objects that will be used in the GUI
     gui = Interface()
@@ -99,9 +96,6 @@ def main():
     # Create a copy of the feedback frame for temporal filtering
     prev_frame = feedback_frame.copy()
 
-    # TODO: [re]move this
-    # noise = pn.get(noise)
-
     t = 0
 
     print(f'Enjoy {len(params.keys())} tunable parameters!\n')
@@ -109,7 +103,6 @@ def main():
     try:
         # Keep the main thread alive indefinitely so the MIDI input thread can run.
         # It sleeps periodically to prevent busy-waiting.
-
         while True:
             # Capture a frame from the camera
             ret, frame = cap.read()
@@ -153,12 +146,12 @@ def main():
 
     except KeyboardInterrupt:
         print("\nCtrl+C detected. Signaling MIDI thread to stop...")
-        controller.thread_stop = True
-        controller2.thread_stop = True
+        mixer1.thread_stop = True
+        mixer2.thread_stop = True
         # Wait for the MIDI thread to finish, with a timeout
-        controller.thread.join(timeout=5)
-        controller2.thread.join(timeout=5)
-        if controller.thread.is_alive() or controller2.thread.is_alive():
+        mixer1.thread.join(timeout=5)
+        mixer2.thread.join(timeout=5)
+        if mixer1.thread.is_alive() or mixer2.thread.is_alive():
             print("MIDI thread did not terminate gracefully. Forcing exit.")
         else:
             print("MIDI thread stopped successfully.")

@@ -5,7 +5,6 @@ import random
 import time
 from config import params
 
-# Define an Enum for different noise types
 class NoiseType(IntEnum):
     NONE = 0
     GAUSSIAN = 1
@@ -16,9 +15,7 @@ class NoiseType(IntEnum):
     RANDOM = 6
 
 class ImageNoiser:
-    """
-    A class to apply various types of noise to an image.
-    """
+
     def __init__(self, noise_type: NoiseType = NoiseType.NONE, noise_intensity: float = 0.1):
         """
         Initializes the ImageNoiser with a default noise type and intensity.

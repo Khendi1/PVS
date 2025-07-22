@@ -5,6 +5,7 @@ from enum import Enum
 import numpy as np
 from config import params
 import noise
+from param import Param
 
 def map_value(value, from_min, from_max, to_min, to_max, round_down=True):
   """
@@ -94,7 +95,7 @@ class Oscillator:
         self.value = next(self.oscillator)
         return self.value
     
-    def _scale_value(self, param, value, in_min=-1.0, in_max=1.0):
+    def _scale_value(self, param: Param, value: int | float, in_min=-1.0, in_max=1.0):
         """Scales a value from the noise range to the oscillator's param_min/max."""
         return (value - in_min) * ((param.max - param.min) / (in_max - in_min)) + param.min
 

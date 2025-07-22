@@ -1,15 +1,11 @@
 from config import *
 from gui_elements import TrackbarRow, TrackbarCallback
 import dearpygui.dearpygui as dpg
-from generators import PerlinNoise, Interp, Oscillator
+from generators import Oscillator
 from save import SaveButtons
 from buttons import Button
-import random
-import datetime
-import yaml
 
 class Interface:
-
 
     def __init__(self, panel_width=550, panel_height=420):
         self.sliders = []

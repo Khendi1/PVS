@@ -8,15 +8,6 @@ from noise import pnoise2
 import noise 
 import time
 
-PERLIN_SCALE = 0.01
-
-class OscillatorShape(IntEnum):
-    NONE = -1
-    SINE = 0
-    SQUARE = 1
-    TRIANGLE = 2
-    SAWTOOTH = 3
-
 class WarpType(IntEnum):
     NONE = 0
     SINE = 1
@@ -39,7 +30,7 @@ class BlurType(IntEnum):
 
 class Effects:
 
-    def __init__(self, image_width, image_height):
+    def __init__(self, image_width: int, image_height: int):
 
         self.height = image_height
         self.width = image_width
@@ -113,31 +104,31 @@ class Effects:
         self.solarize_threshold = params.add("solarize_threshold", 0, 128, 0.0)
         self.num_hues = params.add("num_hues", 2, 10, 8)
 
-    def shift_hue(self, hue):
+    def shift_hue(self, hue: int):
         """
         Shifts the hue of an image by a specified amount, wrapping aroung in necessary.
         """
         return (hue + self.hue_shift.value) % 180
 
-    def shift_sat(self, sat):
+    def shift_sat(self, sat: int):
         """
         Shifts the saturation of an image by a specified amount, clamping to [0, 255].
         """
         return np.clip(sat + self.sat_shift.value, 0, 255)
 
-    def shift_val(self, val):
+    def shift_val(self, val: int):
         """
         Shifts the value of an image by a specified amount, clamping to [0, 255].
         """
         return np.clip(val + self.val_shift.value, 0, 255)
 
-    def shift_hsv(self, hsv):
+    def shift_hsv(self, hsv: list):
         """
         Shifts the hue, saturation, and value of an image by specified amounts.
         """
         return [self.shift_hue(hsv[HSV.H]), self.shift_sat(hsv[HSV.S]), self.shift_val(hsv[HSV.V])]
 
-    def val_threshold_hue_shift(self, hsv):
+    def val_threshold_hue_shift(self, hsv: list):
         """
         Shifts the hue of pixels in an image that have a saturation value
         greater than the given threshold.
@@ -159,7 +150,7 @@ class Effects:
 
         return hsv
     
-    def modify_hsv(self, image):
+    def modify_hsv(self, image: np.ndarray):
         hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)        
         h, s, v = cv2.split(hsv_image)
         hsv = [h, s, v]
@@ -171,7 +162,7 @@ class Effects:
         # Merge the modified channels and convert back to BGR color space.
         return cv2.cvtColor(cv2.merge((hsv[HSV.H.value], hsv[HSV.S.value], hsv[HSV.V.value])), cv2.COLOR_HSV2BGR)
 
-    def limit_hues_kmeans(self, frame):
+    def limit_hues_kmeans(self, frame: np.ndarray):
 
         if self.num_hues.value <= self.num_hues.max:
             return frame
@@ -207,7 +198,7 @@ class Effects:
         return output_image
 
     # TODO: implement
-    def glitch_image(self, image):
+    def glitch_image(self, image: np.ndarray):
         height, width, _ = image.shape
 
         for _ in range(self.num_glitches.value):
@@ -233,7 +224,7 @@ class Effects:
             image[y:y_end, x:x_end] = glitch_area
         return image
     
-    def shift_frame(self, frame):
+    def shift_frame(self, frame: np.ndarray):
         """
         Shifts all pixels in an OpenCV frame by the specified x and y amounts,
         wrapping pixels that go beyond the frame boundaries.
@@ -269,7 +260,7 @@ class Effects:
 
         return rotated_frame
 
-    def polar_transform(self, frame):
+    def polar_transform(self, frame: np.ndarray):
         """
         Transforms an image with horizontal bars into an image with concentric circles
         using a polar coordinate transform.
@@ -291,7 +282,7 @@ class Effects:
         )
 
     # TODO: implement
-    def gaussian_blur(self, frame):
+    def gaussian_blur(self, frame: np.ndarray):
         mode = self.blur_type.value
         if mode == BlurType.NONE:
             pass
@@ -322,7 +313,7 @@ class Effects:
         adjusted_image = cv2.convertScaleAbs(image, alpha=self.contrast.value, beta=self.brightness.value)
         return adjusted_image
 
-    def polarize_frame_hsv(self, frame):
+    def polarize_frame_hsv(self, frame: np.ndarray):
         """
         Polarizes a frame by rotating hue in HSV color space.  This often gives
         a more visually interesting effect than rotating in BGR.
@@ -379,7 +370,7 @@ class Effects:
         # Convert back to uint8 for display
         return cv2.convertScaleAbs(filtered_frame)
 
-    def sharpen_frame(self, frame):
+    def sharpen_frame(self, frame: np.ndarray):
 
         if self.sharpen_intensity.value <= self.sharpen_intensity.min + 0.01:
             return frame
@@ -396,7 +387,7 @@ class Effects:
 
         return sharpened_frame
 
-    def posterize(self, frame):
+    def posterize(self, frame: np.ndarray):
         """
         Applies a posterization effect to an image.
 
@@ -438,7 +429,7 @@ class Effects:
 
         return posterized_frame
 
-    def solarize_image(self, frame):
+    def solarize_image(self, frame: np.ndarray):
         """
         Applies a solarize effect to an image.
 
@@ -526,7 +517,7 @@ class Effects:
 
         return frame
     
-    def sync(self, frame):
+    def sync(self, frame: np.ndarray):
         """
         Applies a raster wobble effect to the frame using sine waves on both X and Y axes.
         """
@@ -607,7 +598,7 @@ class Effects:
 
         return cv2.remap(img, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
 
-    def _first_warp(self, frame):
+    def _first_warp(self, frame: np.ndarray):
         self.height, self.width = feedback_frame.shape[:2]
         feedback_frame = cv2.resize(feedback_frame, (self.width, self.height))
 

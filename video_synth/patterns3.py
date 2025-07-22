@@ -193,7 +193,7 @@ class Patterns:
                 self.posc_bank[1].link_param(self.bar_y_offset)
                 
 
-    def generate_pattern_frame(self, frame):
+    def generate_pattern_frame(self, frame: np.ndarray):
         """
         Generates a single frame of the current pattern.
         Args:

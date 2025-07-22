@@ -2,6 +2,7 @@ import dearpygui.dearpygui as dpg
 from config import params
 from datetime import datetime
 import yaml
+import numpy as np
 
 class SaveButtons:
     """
@@ -68,7 +69,7 @@ class SaveButtons:
                     params[param_name].set(d[tag])
                     dpg.set_value(param_name, d[tag])
 
-    def on_save_button_click(self, frame):
+    def on_save_button_click(self, frame: np.ndarray):
         date_time_str = datetime.now().strftime("%m-%d-%Y %H-%M")
         print(f"Saving values at {date_time_str}")
         

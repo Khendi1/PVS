@@ -29,7 +29,7 @@ class ParamTable:
         else:
             raise TypeError("Key must be a string or an integer")
 
-    def val(self, param_name):
+    def val(self, param_name: str):
         """
         Returns the current value of the Param object with the given name.
         This method is retained for backward compatibility.
@@ -40,7 +40,7 @@ class ParamTable:
         else:
             raise ValueError(f"Parameter '{param_name}' does not exist.")
     
-    def get(self, param_name, default=None):
+    def get(self, param_name: str, default=None):
         """
         Returns the Param object itself with the given name.
         This method is retained for backward compatibility.
@@ -81,7 +81,7 @@ class ParamTable:
         """Returns a view of the Param objects."""
         return self.params.values()
     
-    def add(self, name, min, max, default_val, family=None):
+    def add(self, name: str, min: int | float, max: int | float, default_val: int | float, family=None):
         """
         Adds a new parameter to the table.
         Args:
