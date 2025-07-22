@@ -5,8 +5,6 @@ from patterns3 import Patterns
 from keying import Keying
 from reflactor import Reflector
 from metaballs import LavaLampSynth
-from config import FPS
-from generators import Oscillator
 
 class Effects_Library:
     """
