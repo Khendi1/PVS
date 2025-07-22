@@ -30,91 +30,29 @@ def map_value(value, from_min, from_max, to_min, to_max, round_down=True):
   else:
     return mapped_value  # Return the mapped value without rounding
 
-class Interp(Enum):
-    LINEAR = 1
-    COSINE = 2
-    CUBIC = 3
+class OscillatorShape(Enum):
+    NONE = 0
+    SINE = 1
+    SQUARE = 2
+    TRIANGLE = 3
+    SAWTOOTH = 4
+    PERLIN = 5
 
-class PerlinNoise():
-    def __init__(self, 
-            seed, amplitude=1, frequency=1, 
-            octaves=1, interp=Interp.COSINE, use_fade=False):
-        self.seed = random.Random(seed).random()
-        self.amplitude = params.add("perlin_amplitude", 0.1, 1000, amplitude) # min/max depends on linked param
-        self.frequency = params.add("perlin_frequency", 0.1, 500, frequency)
-        self.octaves = params.add("perlin_octaves", 1, 10, octaves)
-        self.interp = interp
-        self.use_fade = use_fade
-
-        self.mem_x = dict()
-
-    def __noise(self, x):
-        # made for improve performance
-        if x not in self.mem_x:
-            self.mem_x[x] = random.Random(self.seed + x).uniform(-1, 1)
-        return self.mem_x[x]
-
-    def __interpolated_noise(self, x):
-        prev_x = int(x) # previous integer
-        next_x = prev_x + 1 # next integer
-        frac_x = x - prev_x # fractional of x
-
-        if self.use_fade:
-            frac_x = self.__fade(frac_x)
-
-        # intepolate x
-        if self.interp is Interp.LINEAR:
-            res = self.__linear_interp(
-                self.__noise(prev_x), 
-                self.__noise(next_x),
-                frac_x)
-        elif self.interp is Interp.COSINE:
-            res = self.__cosine_interp(
-                self.__noise(prev_x), 
-                self.__noise(next_x),
-                frac_x)
-        else:
-            res = self.__cubic_interp(
-                self.__noise(prev_x - 1), 
-                self.__noise(prev_x), 
-                self.__noise(next_x),
-                self.__noise(next_x + 1),
-                frac_x)
-
-        return res
-
-    def get(self, x):
-        frequency = self.frequency
-        amplitude = self.amplitude
-        result = 0
-        for _ in range(self.octaves):
-            result += self.__interpolated_noise(x * frequency) * amplitude
-            frequency *= 2
-            amplitude /= 2
-
-        return result
-
-
-    def __linear_interp(self, a, b, x):
-        return a + x * (b - a)
-
-
-    def __cosine_interp(self, a, b, x):
-        x2 = (1 - math.cos(x * math.pi)) / 2
-        return a * (1 - x2) + b * x2
-
-
-    def __cubic_interp(self, v0, v1, v2, v3, x):
-        p = (v3 - v2) - (v0 - v1)
-        q = (v0 - v1) - p
-        r = v2 - v0
-        s = v1
-        return p * x**3 + q * x**2 + r * x + s
-
-
-    def __fade(self, x):
-        # useful only for linear interpolation
-        return (6 * x**5) - (15 * x**4) + (10 * x**3)
+    @classmethod
+    def from_value(cls, value):
+        if isinstance(value, str):
+            value = value.lower()
+            if value == "sine":
+                return cls.SINE
+            elif value == "square":
+                return cls.SQUARE
+            elif value == "triangle":
+                return cls.TRIANGLE
+            elif value == "sawtooth":
+                return cls.SAWTOOTH
+            elif value == "perlin":
+                return cls.PERLIN
+        return cls(value)
 
 class Oscillator:
     def __init__(self, name, frequency, amplitude, phase, shape, seed=0, linked_param_name=None, max_amplitude=100, min_amplitude=-100):

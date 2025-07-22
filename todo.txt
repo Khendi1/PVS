@@ -1,4 +1,0 @@
-⭕ reconfigure all buttons
-⭕ reconfigure save/load function to work with new variables
-⭕ drift, oscilators with wrap around
-⭕ 
