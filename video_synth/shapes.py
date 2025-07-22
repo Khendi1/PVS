@@ -36,8 +36,8 @@ class ShapeGenerator:
         
         self.multiply_grid_x = params.add("multiply_grid_x", 1, 10, 2)  # Number of shapes in X direction
         self.multiply_grid_y = params.add("multiply_grid_y", 1, 10, 2)  # Number of shapes in Y direction
-        self.grid_pitch_x = params.add("grid_pitch_x", min_val=0, max_val=width, default_val=100)  # Distance between shapes in X direction
-        self.grid_pitch_y = params.add("grid_pitch_y", min_val=0, max_val=height, default_val=100)  # Distance between shapes in Y direction
+        self.grid_pitch_x = params.add("grid_pitch_x", min=0, max=width, default_val=100)  # Distance between shapes in X direction
+        self.grid_pitch_y = params.add("grid_pitch_y", min=0, max=height, default_val=100)  # Distance between shapes in Y direction
         
         self.fill_enabled = True  # Toggle fill on/off
         self.fill_h = params.add("fill_hue", 0, 179, 120)  # Hue for fill color

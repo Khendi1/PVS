@@ -24,12 +24,12 @@ class TrackbarRow:
             if self.type == 'float':
                 self.slider = dpg.add_slider_float(label=self.label, tag=self.tag, 
                                                    default_value=self.param.default_val, 
-                                                   min_value=self.param.min_val, 
-                                                   max_value=self.param.max_val, 
+                                                   min_value=self.param.min, 
+                                                   max_value=self.param.max, 
                                                    callback=self.callback, 
                                                    width=-100)
             else:
-                self.slider = dpg.add_slider_int(label=self.label, tag=self.tag, default_value=self.param.default_val, min_value=self.param.min_val, max_value=self.param.max_val, callback=self.callback, width=-100)
+                self.slider = dpg.add_slider_int(label=self.label, tag=self.tag, default_value=self.param.default_val, min_value=self.param.min, max_value=self.param.max, callback=self.callback, width=-100)
             dpg.bind_item_font(self.tag, self.font)
             dpg.bind_item_font(self.tag + "_reset", self.font)
 

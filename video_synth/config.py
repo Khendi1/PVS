@@ -3,8 +3,9 @@ from buttons import Buttons
 
 FPS = 30 # Desired frame rate
 
-NUM_OSCILLATORS = 6 # TODO: make this a command line arg via argparse
+NUM_OSCILLATORS = 4 # TODO: make this a command line arg via argparse
 osc_bank = []
+posc_bank = []  
 # osc_vals = [osc.get_next_value() for osc in osc_bank]
 
 # Index for loading saved patches from a file

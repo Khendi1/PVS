@@ -53,7 +53,7 @@ class Effects:
 
         self.blur_type = params.add("blur_type", 0, 4, 1) # 1=Gaussian, 2=Median, 3=Box, 4=Bilateral
         self.blur_kernel_size = params.add("blur_kernel_size", 1, 100, 1)
-        # TODO: implement additional required parameters for each blur type
+        # TODO: implement additional requirefd parameters for each blur type
 
         self.num_glitches = params.add("num_glitches", 0, 100, 0)
         self.glitch_size = params.add("glitch_size", 1, 100, 0)
@@ -64,13 +64,13 @@ class Effects:
         self.x_shift = params.add("x_shift", -image_width, image_width, 0, family="Pan") # min/max depends on image size
         self.y_shift = params.add("y_shift", -image_height, image_height, 0, family="Pan") # min/max depends on image size
         self.zoom = params.add("zoom", 0.75, 3, 1.0, family="Pan")
-        self.r_shift = params.add("r_shift", -360, 360, 0, family="Pan")
+        self.r_shift = params.add("r_shift", -360, 360, 0.0, family="Pan")
 
         self.polar_x = params.add("polar_x", -image_width, image_width, 0)
         self.polar_y = params.add("polar_y", -image_height, image_height, 0)
         self.polar_radius = params.add("polar_radius", 0.1, 100, 1.0)
 
-        self.contrast = params.add("contrast", 1.0, 3.0, 1.0)
+        self.contrast = params.add("contrast", 0.5, 3.0, 1.0)
         self.brightness = params.add("brightness", 0, 100, 0)
 
         self.hue_invert_angle = params.add("hue_invert_angle", 0, 360, 0)
@@ -106,11 +106,18 @@ class Effects:
         self.lissajous_b = params.add("lissajous_b", 0, 100, 50)
         self.lissajous_delta = params.add("lissajous_delta", 0, 360, 0)
 
+        # TODO: implement
+        self.sequence = params.add("sequence", 0, 100, 0)
+        self.sharpen_intensity = params.add("sharpen_intensity", 4.0, 8.0, 4.0)
+        self.levels_per_channel = params.add("posterize_levels", 2, 128, 2.0)
+        self.solarize_threshold = params.add("solarize_threshold", 0, 128, 0.0)
+        self.num_hues = params.add("num_hues", 2, 10, 8)
+
     def shift_hue(self, hue):
         """
         Shifts the hue of an image by a specified amount, wrapping aroung in necessary.
         """
-        return (hue + self.hue_shift.val()) % 180
+        return (hue + self.hue_shift.value) % 180
 
     def shift_sat(self, sat):
         """
@@ -163,6 +170,41 @@ class Effects:
 
         # Merge the modified channels and convert back to BGR color space.
         return cv2.cvtColor(cv2.merge((hsv[HSV.H.value], hsv[HSV.S.value], hsv[HSV.V.value])), cv2.COLOR_HSV2BGR)
+
+    def limit_hues_kmeans(self, frame):
+
+        if self.num_hues.value <= self.num_hues.max:
+            return frame
+
+        hsv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)        
+
+        # Reshape the image to a 2D array of pixels (N x 3) for K-Means
+        # We'll focus on the Hue channel, so we can reshape to (N x 1) if we only want to cluster hue
+        # For a more general color quantization (hue, saturation, value), keep it N x 3
+
+        # Option 2: Quantize all HSV channels (more common for general color reduction)
+        # This will result in a limited set of overall colors, which inherently limits hues.
+        data = frame.reshape((-1, 3)).astype(np.float32)
+
+        # Define criteria for K-Means
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+
+        # Apply K-Means clustering
+        # attempts: Number of times the algorithm is executed with different initial labellings.
+        #           The best result of all attempts is returned.
+        # flags: Specifies how initial centers are chosen. KMEANS_PP_CENTERS is a good choice.
+        compactness, labels, centers = cv2.kmeans(
+            data, self.num_hues.value, None, criteria, 10, cv2.KMEANS_PP_CENTERS
+        )
+
+        # Convert back to uint8 and reshape to original image dimensions
+        centers = np.uint8(centers)
+        quantized_data = centers[labels.flatten()]
+        quantized_image = quantized_data.reshape(hsv_image.shape)
+
+        # Convert back to BGR for display
+        output_image = cv2.cvtColor(quantized_image, cv2.COLOR_HSV2BGR)
+        return output_image
 
     # TODO: implement
     def glitch_image(self, image):
@@ -254,13 +296,14 @@ class Effects:
         if mode == BlurType.NONE:
             pass
         elif mode == BlurType.GAUSSIAN:
+            # TODO: apply snapping to odd kernel size here rather than in the GUI callback, as other blur type *MAY* permit other sizes
             frame = cv2.GaussianBlur(frame, (self.blur_kernel_size.value, self.blur_kernel_size.value), 0) 
         elif mode == BlurType.MEDIAN:
             frame = cv2.medianBlur(frame, self.blur_kernel_size.value)
         elif mode == BlurType.BOX:
             frame = cv2.blur(frame,(self.blur_kernel_size.value, self.blur_kernel_size.value))
         elif mode == BlurType.BILATERAL:
-            frame = cv2.bilateralFilter(frame,9,75,75)
+            frame = cv2.bilateralFilter(frame,self.blur_kernel_size.value,75,75)
         
         return frame
 
@@ -292,15 +335,18 @@ class Effects:
         Returns:
             numpy.ndarray: The polarized frame as a NumPy array (H, W, 3) in BGR format.
         """
+        if self.hue_invert_strength.value <= self.hue_invert_strength.min:
+            return frame
+        
         # Convert to HSV color space and extract hsv channel
         hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV).astype(np.float32)
         hue_channel = hsv_frame[:, :, 0]
 
         # Convert angle to OpenCV hue units (0-180)
-        hue_shift = (self.hue_invert_angle.val() / 360.0) * 180
+        hue_shift = (self.hue_invert_angle.value / 360.0) * 180
 
         # Apply the hue shift with strength
-        shifted_hue = (hue_channel + hue_shift * self.hue_invert_strength.val()) % 180  # Wrap aroundS
+        shifted_hue = (hue_channel + hue_shift * self.hue_invert_strength.value) % 180  # Wrap aroundS
         hsv_frame[:, :, 0] = shifted_hue
 
         # Convert back to BGR
@@ -328,11 +374,117 @@ class Effects:
         # filtered_frame = alpha * current_frame_float + (1 - alpha) * filtered_frame
         # This formula directly updates the filtered_frame based on the new current_frame.
         # It's a low-pass filter in the time domain.
-        filtered_frame = cv2.addWeighted(current_frame_float, self.temporal_filter.val(), filtered_frame, 1 - self.temporal_filter.val(), 0)
+        filtered_frame = cv2.addWeighted(current_frame_float, self.temporal_filter.value, filtered_frame, 1 - self.temporal_filter.value, 0)
 
         # Convert back to uint8 for display
         return cv2.convertScaleAbs(filtered_frame)
 
+    def sharpen_frame(self, frame):
+
+        if self.sharpen_intensity.value <= self.sharpen_intensity.min + 0.01:
+            return frame
+        
+        sharpening_kernel = np.array([
+            [0, -1, 0],
+            [-1, self.sharpen_intensity.value, -1],
+            [0, -1, 0]
+        ])
+
+        # Apply the kernel to the frame using cv2.filter2D
+        # -1 indicates that the output image will have the same depth (data type) as the input image.
+        sharpened_frame = cv2.filter2D(frame, -1, sharpening_kernel)
+
+        return sharpened_frame
+
+    def posterize(self, frame):
+        """
+        Applies a posterization effect to an image.
+
+        Args:
+            image_path (str): The path to the input image.
+            levels_per_channel (int): The number of distinct intensity levels
+                                    to use for each color channel (e.g., 8, 16, 32).
+                                    Must be between 2 and 255.
+        Returns:
+            numpy.ndarray: The posterized image.
+        """
+        if self.levels_per_channel.value <= self.levels_per_channel.min:
+            return frame
+
+        # Ensure the image is in 8-bit format (0-255)
+        if frame.dtype != np.uint8:
+            print("Warning: Image not in uint8 format. Converting...")
+            frame = cv2.convertScaleAbs(frame)
+
+        # Calculate the step size for quantization
+        # Each pixel value will be mapped to one of 'levels_per_channel' distinct values.
+        # For example, if levels_per_channel is 8, values 0-31 map to 0, 32-63 map to 32, etc.
+        step = 256 // self.levels_per_channel.value
+        
+        # Calculate the half-step to round to the nearest quantization level
+        half_step = step // 2
+
+        # Apply posterization to each color channel (B, G, R)
+        # This involves dividing by the step, multiplying by the step, and adding half_step for rounding.
+        # The `np.clip` ensures values stay within 0-255.
+        
+        # Method 1: Simple quantization (floor division)
+        # posterized_frame = (frame // step) * step
+
+        # Method 2: Quantization with rounding (often looks better)
+        posterized_frame = ((frame + half_step) // step) * step
+        posterized_frame = np.clip(posterized_frame, 0, 255).astype(np.uint8)
+
+
+        return posterized_frame
+
+    def solarize_image(self, frame):
+        """
+        Applies a solarize effect to an image.
+
+        Args:
+            image_path (str): The path to the input image.
+            threshold (int): The intensity threshold (0-255). Pixels above this
+                            value will be inverted. Default is 128 (mid-range).
+
+        Returns:
+            numpy.ndarray: The solarized image.
+        """
+        if self.solarize_threshold.value == 0:
+            return frame
+
+        # Ensure the image is in 8-bit format (0-255)
+        if frame.dtype != np.uint8:
+            print("Warning: Image not in uint8 format. Converting...")
+            frame = cv2.convertScaleAbs(frame) # Converts to uint8, scales if needed
+
+        # Create a copy to modify
+        solarized_frame = frame.copy()
+
+        # Apply solarization logic.
+        # We can use boolean indexing for efficient processing.
+        # For each channel (B, G, R) and each pixel:
+        # If the pixel value is greater than the threshold, invert it.
+
+        # Option 1: Using NumPy's where function (very concise)
+        solarized_frame = np.where(frame > self.solarize_threshold.value, 255 - frame, frame)
+
+        # Option 2: Manual iteration (less efficient for large images, but illustrative)
+        # height, width, channels = frame.shape
+        # for y in range(height):
+        #     for x in range(width):
+        #         for c in range(channels):
+        #             pixel_val = frame[y, x, c]
+        #             if pixel_val > threshold:
+        #                 solarized_frame[y, x, c] = 255 - pixel_val
+        #             else:
+        #                 solarized_frame[y, x, c] = pixel_val
+
+        # Ensure the output is uint8
+        solarized_frame = solarized_frame.astype(np.uint8)
+
+        return solarized_frame
+    
     # TODO: implement
     def apply_perlin_noise(self, frame, perlin_noise, amplitude=1.0, frequency=1.0, octaves=1):
         """ 
@@ -368,8 +520,8 @@ class Effects:
     def lissajous_pattern(self, frame, t):
         center_x, center_y = self.width // 2, self.height // 2
         for i in range(1000):
-            x = int(center_x + self.lissajous_A.val() * math.sin(self.lissajous_a.val() * t + i * 0.01 + self.lissajous_delta.val() * math.pi / 180))
-            y = int(center_y + self.lissajous_B.val() * math.sin(self.lissajous_b.val()* t + i * 0.01))
+            x = int(center_x + self.lissajous_A.value * math.sin(self.lissajous_a.value * t + i * 0.01 + self.lissajous_delta.value * math.pi / 180))
+            y = int(center_y + self.lissajous_B.value * math.sin(self.lissajous_b.value* t + i * 0.01))
             cv2.circle(frame, (x, y), 1, (255, 255, 255), -1)
 
         return frame
@@ -384,15 +536,15 @@ class Effects:
 
         # X-axis wobble (horizontal shift per row)
         for y in range(height):
-            shift_x = int(self.x_sync_amp.val() * np.sin(
-                y / self.x_sync_freq.val() + cv2.getTickCount() / (10 ** self.x_sync_speed.val())))
+            shift_x = int(self.x_sync_amp.value * np.sin(
+                y / self.x_sync_freq.value + cv2.getTickCount() / (10 ** self.x_sync_speed.value)))
             warped[y] = np.roll(frame[y], shift_x, axis=0)
 
         # Y-axis wobble (vertical shift per column)
         warped_y = np.zeros_like(warped)
         for x in range(width):
-            shift_y = int(self.y_sync_amp.val() * np.sin(
-                x / self.y_sync_freq.val() + cv2.getTickCount() / (10 ** self.y_sync_speed.val())))
+            shift_y = int(self.y_sync_amp.value * np.sin(
+                x / self.y_sync_freq.value + cv2.getTickCount() / (10 ** self.y_sync_speed.value)))
             warped_y[:, x] = np.roll(warped[:, x], shift_y, axis=0)
 
         warped_y = cv2.cvtColor(warped_y, cv2.COLOR_RGB2BGR)

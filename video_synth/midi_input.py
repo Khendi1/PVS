@@ -58,6 +58,7 @@ class MidiProcessor:
         """
         return (value - self.min_midi) * (out_max - out_min) / (self.max_midi - self.min_midi) + out_min
 
+
     def process_message(self, control, value, min_output=-150, max_output=150):
         """
         Processes an incoming MIDI message. If it's a control change message,
@@ -103,9 +104,9 @@ class MidiProcessor:
         self.current_mapped_value = (dynamic_alpha * target_mapped_value) + \
             ((1 - dynamic_alpha) * self.current_mapped_value)
 
-        print(f"MIDI CC {control}: Raw={value}, Target={target_mapped_value:.2f}, "
-                f"Smoothed={self.current_mapped_value:.2f}, TimeDelta={time_delta:.4f}, "
-                f"InputSpeed={input_speed:.2f}, Alpha={dynamic_alpha:.2f}")
+        # print(f"MIDI CC {control}: Raw={value}, Target={target_mapped_value:.2f}, "
+        #         f"Smoothed={self.current_mapped_value:.2f}, TimeDelta={time_delta:.4f}, "
+        #         f"InputSpeed={input_speed:.2f}, Alpha={dynamic_alpha:.2f}")
         
         return self.current_mapped_value
 
@@ -124,7 +125,7 @@ class MidiInputController:
         """
 
         # Select the MIDI controller to use.
-        self.controller = controller if controller else SMC_Mixer()
+        self.controller = controller 
 
         # Use the controller's default port name if it exists,
         # otherwise prompt the user to select a port.
@@ -201,7 +202,7 @@ class MidiInputController:
                 # Continuously listen for messages until the thread_stop flag is set
                 for msg in inport:
                     if self.thread_stop:
-                        print(f"Stopping MIDI input for port: {inport.name}")
+                        print(f"Stopping MIDI input for port: {inport.name}\n")
                         break
 
                     # get the control number from the message
@@ -214,11 +215,11 @@ class MidiInputController:
 
         except ValueError as e:
             print(f"Error: Could not open MIDI port '{self.port_name}'. {e}")
-            print("Please ensure the port name is correct and the device is connected.")
+            print("Please ensure the port name is correct and the device is connected.\n")
         except Exception as e:
-            print(f"An unexpected error occurred in the MIDI thread: {e}")
+            print(f"An unexpected error occurred in the MIDI thread: {e}\n")
         finally:
-            print(f"MIDI input thread for '{self.port_name}' has terminated.")
+            print(f"MIDI input thread for '{self.port_name}' has terminated.\n")
 
 """
 A class to represent the SMC-Mixer and the 
@@ -265,16 +266,18 @@ class SMC_Mixer:
 
         # each dict entry is a page of parameters
         self.fader_params = {
+            0: [ 'metaballs_frame_blend', 'metaballs_feedback', 'smooth_coloring_max_field', 'threshold', 'radius_multiplier', 'speed_multiplier', 'num_metaballs', 'metaball_zoom'],
             1: ['alpha', 'temporal_filter', 'x_sync_speed', 'x_sync_freq', 'x_sync_amp', 'y_sync_speed', 'y_sync_freq', 'y_sync_amp'],
             2: ['hue_shift', 'sat_shift', 'val_shift', 'val_threshold', 'val_hue_shift', 'contrast', 'hue_invert', 'hue_invert_angle'],
         }
-        self.fader_config = self.fader_params.get(1, [])
+        self.fader_config = self.fader_params.get(0, [])
 
         self.encoder_params = {
+            0: ['metaballs_frame_blend', 'metaball_skew_angle', 'metaball_skew_intensity', 'metaball_hue', 'metaballs_saturation', 'metaballs_value', 'metaballs_contrast', 'metaballs_brightness'],
             1: ['hue_shift', 'sat_shift', 'val_shift', 'zoom', 'r_shift', 'x_shift', 'y_shift', 'blur_kernel_size', ''],
             2: ['alpha', 'temporal_filter', 'blur_kernel_size', 'zoom', 'r_shift', 'x_shift', 'y_shift', ''],
         }
-        self.encoder_config = self.encoder_params.get(1, [])
+        self.encoder_config = self.encoder_params.get(0, [])
 
         # self.set_button_params = {}
 
@@ -339,13 +342,111 @@ class SMC_Mixer:
         """
         print("Mapping buttons... (this is a placeholder function)")
 
+
+class MidiMix:
+
+    def __init__(self):
+        """
+        Initializes the SMC_Mixer instance.
+        """
+                
+        self.MIN = 0
+        self.MAX = 127
+
+        self.port_name = "MIDI Mix 2"
+        self.processor = MidiProcessor(min_midi=self.MIN, max_midi=self.MAX,
+                                       base_smoothing=0.05, acceleration_factor=0.05)
+
+        self.fader_controls = [19, 23, 27, 31, 49, 53, 57, 61, 62] # Faders 1-8
+        self.pot_controls = [16, 17, 18, 20, 21, 22, 24, 25, 26, 28,29,30, 46, 47, 48, 50, 51, 52, 54, 55, 56, 58, 59, 60] # Encoders 1-9
+        self.button_controls = [1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16, 18, 19,21, 22, 24]
+
+        # each dict entry is a page of parameters
+        self.fader_params = {
+            1: ['alpha', 'temporal_filter', 'hue_shift', 'sat_shift', 'val_shift', 'contrast', 'brightness', 'blur_kernel_size', 'metaballs_frame_blend'], 
+            # 2: ['hue_shift', 'sat_shift', 'val_shift', 'val_threshold', 'val_hue_shift', 'contrast', 'hue_invert', 'hue_invert_angle'],
+        }
+        self.fader_config = self.fader_params.get(1, [])
+
+        self.encoder_params = {
+            0: ['sequence', 'pattern_type', 'pattern_mod', 'pattern_r', 'pattern_g', 'pattern_b', "x_sync_amp", 'x_sync_freq', 'x_sync_speed', 'y_sync_amp', 'y_sync_freq', 'y_sync_speed', 'x_shift', 'hue_invert_angle', 'hue_invert_strength', 'y_shift', 'val_threshold', 'val_hue_shift', 'r_shift', 'noise_type', 'noise_intensity', 'zoom', 'reflection_mode', 'blur_type'],
+            1: ['hue_shift', 'contrast', 'brightness', 'sat_shift', 'val_threshold', 'val_hue_shift', 'val_shift', 'hue_invert_angle', 'hue_invert_strength', 'x_shift', 'noise_type', 'noise_intensity', 'y_shift', 'blur_type', 'blur_kernel_size', 'zoom', 'x_sync_speed', 'y_sync_speed', 'r_shift', 'x_sync_freq', 'y_sync_freq', 'reflection_mode', 'x_sync_amp', 'y_sync_amp'],
+            2: ["x_sync_amp", 'x_sync_freq', 'x_sync_speed', 'y_sync_amp', 'y_sync_freq', 'y_sync_speed', 'x_shift', 'pattern_type', 'pattern_mod', 'y_shift', 'solarize_threshold', 'posterize_levels', 'r_shift', 'hue_invert_angle', 'hue_invert_strength', 'zoom', 'val_threshold', 'val_hue_shift', 'reflection_mode', 'noise_type', 'noise_intensity', 'sequence', 'sharpen_intensity', 'blur_type'] }
+        self.encoder_config = self.encoder_params.get(2, [])
+
+        # self.set_button_params = {}
+
+    def set_values(self, control, value):
+        """
+        Maps the MIDI control messages to the SMC-Mixer.
+        This function is a placeholder for actual mapping logic.
+        
+        Args:
+            control (int): The MIDI control number.
+            value (int): The value of the MIDI control message.
+        """
+        if control in self.fader_controls:
+            self.set_fader_param(control, value)
+        elif control in self.pot_controls:
+            self.set_encoder_param(control, value)
+        elif control in self.button_controls:
+            self.set_button_param(control, value)
+
+    def set_fader_param(self, control, value):
+        """
+        Maps the MIDI faders to the SMC-Mixer.
+        This function is a placeholder for actual mapping logic.
+        """
+        
+        index = self.fader_controls.index(control)
+
+        param = params.get(self.fader_config[index])
+
+        if param is None:
+            print(f"Warning: No parameter found for control {control} in fader_config.")
+            return
+
+        min, max = param.min_max()
+        value = self.processor.process_message(control, value, min, max)
+
+        params.set(self.fader_config[index], value)
+
+        print(f"{self.fader_config[index]}: {value} (MIDI value: {value})")
+
+    def set_encoder_param(self, control, value):
+        """
+        Maps the MIDI encoders to the SMC-Mixer.
+        This function is a placeholder for actual mapping logic.
+        """
+        index = self.pot_controls.index(control) # get the index of the control in the pot_controls list
+
+        param = params.get(self.encoder_config[index]) # get the parameter by name using the index
+
+        if param is None:
+            print(f"Warning: No parameter found for channel {control} in encoder_config.")
+            return
+        
+        min, max = param.min_max()
+        value = self.processor.process_message(control, value, min, max)
+        params.set(self.encoder_config[index], value)
+
+        print(f"{self.encoder_config[index]}: {value} (MIDI value: {value})")
+
+    def set_button_param(self, control, value):
+        """
+        Maps the MIDI buttons to the SMC-Mixer.
+        This function is a placeholder for actual mapping logic.
+        """
+        print("Mapping buttons... (this is a placeholder function)")
+
+
 if __name__ == "__main__":
     """
     Main function to list available MIDI input ports, prompt the user to select one,
     start the MIDI input processing thread, and manage its lifecycle.
     """
     
-    controller = MidiInputController(controller=SMC_Mixer())
+    controller = MidiInputController(controller=MidiMix)
 
     print("\nMain program is running. The MIDI thread is listening in the background.")
     print("Press Ctrl+C to stop the MIDI thread and exit the program.")

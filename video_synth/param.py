@@ -40,14 +40,15 @@ class ParamTable:
         else:
             raise ValueError(f"Parameter '{param_name}' does not exist.")
     
-    # TODO: remove this method (as per original comment)
-    def get(self, param_name):
+    def get(self, param_name, default=None):
         """
         Returns the Param object itself with the given name.
         This method is retained for backward compatibility.
         """
         if param_name in self.params:
             return self.params[param_name]
+        elif default is not None:
+            return default
         else:
             raise ValueError(f"Parameter '{param_name}' does not exist.")
 
@@ -80,13 +81,13 @@ class ParamTable:
         """Returns a view of the Param objects."""
         return self.params.values()
     
-    def add(self, name, min_val, max_val, default_val, family=None):
+    def add(self, name, min, max, default_val, family=None):
         """
         Adds a new parameter to the table.
         Args:
             name (str): The unique name of the parameter.
-            min_val (int/float): The minimum allowed value for the parameter.
-            max_val (int/float): The maximum allowed value for the parameter.
+            min (int/float): The minimum allowed value for the parameter.
+            max (int/float): The maximum allowed value for the parameter.
             default_val (int/float/bool): The default value for the parameter.
             family (str, optional): An optional family/group name for the parameter.
         Returns:
@@ -95,7 +96,7 @@ class ParamTable:
             ValueError: If a parameter with the given name already exists.
         """
         if name not in self.params:
-            self.params[name] = Param(name, min_val, max_val, default_val, family=family)
+            self.params[name] = Param(name, min, max, default_val, family=family)
             return self.params[name]
         else:
             print(self.params) # Debugging print, as in original
@@ -106,19 +107,19 @@ class Param:
     Represents a single parameter with a name, min/max bounds, default value,
     and its current value. Includes clamping and type conversion.
     """
-    def __init__(self, name, min_val, max_val, default_val, family=None):
+    def __init__(self, name, min, max, default_val, family=None):
         """
         Initializes a Param object.
         Args:
             name (str): The name of the parameter.
-            min_val (int/float): The minimum allowed value.
-            max_val (int/float): The maximum allowed value.
+            min (int/float): The minimum allowed value.
+            max (int/float): The maximum allowed value.
             default_val (int/float/bool): The default value.
             family (str, optional): The family/group the parameter belongs to.
         """
         self.name = name
-        self.min_val = min_val
-        self.max_val = max_val
+        self.min = min
+        self.max = max
         self.default_val = default_val
         self.family = "None" if family is None else family
         
@@ -142,11 +143,11 @@ class Param:
         Assigning to `param_instance.value = new_val` will call this method.
         It handles clamping, type casting, and specific logic for certain parameters.
         """
-        # 1. Clamp the new_value within min_val and max_val
-        if new_value < self.min_val:
-            clamped_value = self.min_val
-        elif new_value > self.max_val:
-            clamped_value = self.max_val
+        # 1. Clamp the new_value within min and max
+        if new_value < self.min:
+            clamped_value = self.min
+        elif new_value > self.max:
+            clamped_value = self.max
         else:
             clamped_value = new_value
         
@@ -221,28 +222,28 @@ class Param:
         self.value = self.default_val # Assignment calls the setter
         return self.value
     
-    def set_max(self, max_val):
+    def set_max(self, max):
         """Sets a new maximum value for the parameter and clamps the current value if necessary."""
-        self.max_val = max_val
+        self.max = max
         # Assigning current value to itself will trigger the setter,
-        # which will re-clamp it if it's now above the new max_val
+        # which will re-clamp it if it's now above the new max
         self.value = self.value
         return self.value
     
-    def set_min(self, min_val):
+    def set_min(self, min):
         """Sets a new minimum value for the parameter and clamps the current value if necessary."""
-        self.min_val = min_val
+        self.min = min
         # Assigning current value to itself will trigger the setter,
-        # which will re-clamp it if it's now below the new min_val
+        # which will re-clamp it if it's now below the new min
         self.value = self.value
         return self.value
 
     def randomize(self):
         """Sets the parameter's value to a random value within its min/max range."""
         if isinstance(self.default_val, float):
-            self.value = random.uniform(self.min_val, self.max_val) 
+            self.value = random.uniform(self.min, self.max) 
         elif isinstance(self.default_val, int):
-            self.value = random.randint(self.min_val, self.max_val)
+            self.value = random.randint(self.min, self.max)
         else:
             # For other types (e.g., bool), you might need specific randomization logic
             pass
@@ -258,7 +259,7 @@ class Param:
     
     def min_max(self):
         """Returns a tuple containing the minimum and maximum allowed values."""
-        return (self.min_val, self.max_val)
+        return (self.min, self.max)
 
 # Example Usage (as a module)
 if __name__ == "__main__":
