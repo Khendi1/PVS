@@ -28,6 +28,9 @@ class BlurType(IntEnum):
     BOX = 3
     BILATERAL = 4
 
+# class Color:
+#     def __init__(self):
+
 class Effects:
 
     def __init__(self, image_width: int, image_height: int):

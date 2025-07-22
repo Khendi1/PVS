@@ -14,27 +14,28 @@ from midi_input import *
 from reflactor import Reflector
 from metaballs import LavaLampSynth
 from plasma import *
+from fx_lib import Effects_Library
 
 image_height, image_width = None, None
 
-def apply_effects(frame, e: Effects, n: ImageNoiser, s: ShapeGenerator, t: float, p: Patterns, r: Reflector, l: LavaLampSynth):
+def apply_effects(frame, e: Effects_Library):
 
     # TODO: use frame skip slider to control frame skip
     if True: 
-        frame = l.do_metaballs(frame)
-        frame = p.generate_pattern_frame(frame)
-        frame = e.shift_frame(frame)
-        frame = r.apply_reflection(frame) 
-        frame = e.sync(frame)
-        frame = e.modify_hsv(frame)
-        frame = e.adjust_brightness_contrast(frame)
-        frame = e.sharpen_frame(frame)
-        frame = e.glitch_image(frame) 
-        frame = n.apply_noise(frame)
-        frame = e.polarize_frame_hsv(frame)
-        frame = e.gaussian_blur(frame)
-        frame = e.solarize_image(frame)
-        frame = e.posterize(frame)
+        frame = e.metaballs.do_metaballs(frame)
+        frame = e.patterns.generate_pattern_frame(frame)
+        frame = e.basic.shift_frame(frame)
+        frame = e.reflector.apply_reflection(frame)
+        frame = e.basic.sync(frame)
+        frame = e.basic.modify_hsv(frame)
+        frame = e.basic.adjust_brightness_contrast(frame)
+        frame = e.basic.sharpen_frame(frame)
+        frame = e.basic.glitch_image(frame)
+        frame = e.noise.apply_noise(frame)
+        frame = e.basic.polarize_frame_hsv(frame)
+        frame = e.basic.gaussian_blur(frame)
+        frame = e.basic.solarize_image(frame)
+        frame = e.basic.posterize(frame)
 
         # TODO: test this,test ordering
         # image_height, image_width = frame.shape[:2]
@@ -76,14 +77,7 @@ def main():
     print(f"Oscillator bank initialized with {len(osc_bank)} oscillators.")
     
     # Initialize effects classes; these contain Params to be modified by the generators
-    # TODO: move these into the effects class
-    n = ImageNoiser(NoiseType.NONE)
-    s = ShapeGenerator(image_width, image_height)
-    e = Effects(image_width, image_height)
-    p = Patterns(image_width, image_height)
-    k = Keying(image_width, image_height)     # TODO: test this
-    r = Reflector()  # Initialize the reflector
-    l = LavaLampSynth(image_width, image_height)  # Initialize the Lava Lamp synth
+    e = Effects_Library(image_width, image_height)
 
     # Initialize the midi input controller before creating the GUI
     mixer1 = MidiInputController(controller=MidiMix())
@@ -118,16 +112,17 @@ def main():
 
             # effect ordering leads to unique results
             if toggles.val("effects_first") == True:
-                feedback_frame = apply_effects(feedback_frame, e, n, s, t, p, r, l)
+                feedback_frame = apply_effects(feedback_frame, e)
                 feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
             else:
                 feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
-                feedback_frame = apply_effects(feedback_frame, e, n, s, t, p, r, l) 
+                feedback_frame = apply_effects(feedback_frame, e) 
 
-            frame = e.limit_hues_kmeans(frame)
+            # TODO: test this
+            # frame = e.limit_hues_kmeans(frame)
 
             # Apply temporal filtering to the resulting feedback frame
-            feedback_frame = e.apply_temporal_filter(prev_frame, feedback_frame)
+            feedback_frame = e.basic.apply_temporal_filter(prev_frame, feedback_frame)
             prev_frame = feedback_frame.copy()
 
             # Display the resulting frame and control panel
