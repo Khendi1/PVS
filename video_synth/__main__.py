@@ -20,9 +20,7 @@ image_height, image_width = None, None
 def apply_effects(frame, e: Effects, n: ImageNoiser, s: ShapeGenerator, t: float, p: Patterns, r: Reflector, l: LavaLampSynth):
 
     # TODO: use frame skip slider to control frame skip
-    # apply effects to every Nth frame
-    if True: # if t % frame_skip == 0:  
-        # frame = e.sharpen_frame(frame) // kinda get the desired effect here,
+    if True: 
         frame = l.do_metaballs(frame)
         frame = p.generate_pattern_frame(frame)
         frame = e.shift_frame(frame)
@@ -38,9 +36,8 @@ def apply_effects(frame, e: Effects, n: ImageNoiser, s: ShapeGenerator, t: float
         frame = e.solarize_image(frame)
         frame = e.posterize(frame)
 
-        # image_height, image_width = frame.shape[:2]
-        
         # TODO: test this,test ordering
+        # image_height, image_width = frame.shape[:2]
         # frame = generate_plasma_effect(image_width, image_height)
         # frame = e.polar_transform(frame, params.get("polar_x"), params.get("polar_y"), params.get("polar_radius"))
         # frame = e.apply_perlin_noise
