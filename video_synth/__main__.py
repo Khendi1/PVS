@@ -1,20 +1,14 @@
 import cv2
 import dearpygui.dearpygui as dpg 
-from fx import Effects
-from config import *
-from noiser import ImageNoiser, NoiseType
-from gui import Interface
-from shapes import ShapeGenerator
-from generators import Oscillator
-from patterns3 import Patterns
-from keying import Keying
 # import numpy as np
 # import time
-from midi_input import *
-from reflactor import Reflector
-from metaballs import LavaLampSynth
-from plasma import *
+
+from config import *
+from gui import Interface
+from generators import Oscillator
 from fx_lib import Effects_Library
+from midi_input import *
+from plasma import *
 
 image_height, image_width = None, None
 

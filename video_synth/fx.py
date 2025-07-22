@@ -5,8 +5,6 @@ from config import *
 import random
 import math
 from noise import pnoise2
-import noise 
-import time
 
 class WarpType(IntEnum):
     NONE = 0
