@@ -2,7 +2,11 @@ import dearpygui.dearpygui as dpg
 from config import params
 from datetime import datetime
 import yaml
+import os
 import numpy as np
+from param import Param, ParamTable
+from buttons import Button
+import random
 
 class SaveButtons:
     """
@@ -13,6 +17,8 @@ class SaveButtons:
     def __init__(self, width, height):
 
         self.index = 0
+        self.width = width
+        self.height = height
         self.save = Button("Save", "save")
         self.fwd = Button("Load Next", "load_next")
         self.prev = Button("Load Prev", "load_prev")
@@ -86,16 +92,16 @@ class SaveButtons:
         # TODO: determine best way to grap a frame for saving w/o having to pass
         # cv2.imwrite(f"{date_time_str}.jpg", frame)
 
-    def create_save_buttons(self, width, height):
+    def create_save_buttons(self):
         """
         Creates the save, load, and randomize buttons in the GUI.
         """
-        width -= 20
+        width = self.width - 20
 
         with dpg.group(horizontal=True):
-            dpg.add_button(label=self.save.label, callback=self.on_button_click, user_data=self.save.tag, width=width//3)
-            dpg.add_button(label=self.fwd.label, callback=self.on_button_click, user_data=self.fwd.tag, width=width//3)
-            dpg.add_button(label=self.prev.label, callback=self.on_button_click, user_data=self.prev.tag, width=width//3)
+            dpg.add_button(label=self.save.label, callback=self.on_save_button_click, user_data=self.save.tag, width=width//3)
+            dpg.add_button(label=self.fwd.label, callback=self.on_fwd_button_click, user_data=self.fwd.tag, width=width//3)
+            dpg.add_button(label=self.prev.label, callback=self.on_prev_button_click, user_data=self.prev.tag, width=width//3)
 
         with dpg.group(horizontal=True):
-            dpg.add_button(label=self.rand.label, callback=self.on_button_click, user_data=self.rand.tag, width=width//3)
+            dpg.add_button(label=self.rand.label, callback=self.on_rand_button_click, user_data=self.rand.tag, width=width//3)

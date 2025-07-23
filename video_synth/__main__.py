@@ -12,34 +12,34 @@ from plasma import *
 
 image_height, image_width = None, None
 
-def apply_effects(frame, e: Effects_Library):
+def apply_effects(frame, fx: Effects_Library):
 
     # TODO: use frame skip slider to control frame skip
     if True: 
 
-        frame = e.metaballs.do_metaballs(frame)
-        frame = e.patterns.generate_pattern_frame(frame)
-        frame = e.basic.shift_frame(frame)
-        frame = e.reflector.apply_reflection(frame)
-        frame = e.basic.sync(frame)
-        frame = e.color.modify_hsv(frame)
-        frame = e.color.adjust_brightness_contrast(frame)
-        frame = e.pixels.sharpen_frame(frame)
-        frame = e.pixels.glitch_image(frame)
-        frame = e.noise.apply_noise(frame)
-        frame = e.color.polarize_frame_hsv(frame)
-        frame = e.color.solarize_image(frame)
-        frame = e.color.posterize(frame)
-        frame = e.pixels.gaussian_blur(frame)
+        frame = fx.metaballs.do_metaballs(frame)
+        frame = fx.patterns.generate_pattern_frame(frame)
+        frame = fx.basic.shift_frame(frame)
+        frame = fx.reflector.apply_reflection(frame)
+        frame = fx.sync.sync(frame)
+        frame = fx.color.modify_hsv(frame)
+        frame = fx.color.adjust_brightness_contrast(frame)
+        frame = fx.pixels.sharpen_frame(frame)
+        frame = fx.pixels.glitch_image(frame)
+        frame = fx.noise.apply_noise(frame)
+        frame = fx.color.polarize_frame_hsv(frame)
+        frame = fx.color.solarize_image(frame)
+        frame = fx.color.posterize(frame)
+        frame = fx.pixels.gaussian_blur(frame)
 
         # TODO: test this,test ordering
         # image_height, image_width = frame.shape[:2]
         # frame = generate_plasma_effect(image_width, image_height)
-        # frame = e.polar_transform(frame, params.get("polar_x"), params.get("polar_y"), params.get("polar_radius"))
-        # frame = e.apply_perlin_noise
-        # warp_frame = e.warp_frame(frame)
+        # frame = fx.polar_transform(frame, params.get("polar_x"), params.get("polar_y"), params.get("polar_radius"))
+        # frame = fx.apply_perlin_noise
+        # warp_frame = fx.warp_frame(frame)
         # frame = np.zeros((height, width, 3), dtype=np.uint8)
-        # frame = e.lissajous_pattern(frame, t)
+        # frame = fx.lissajous_pattern(frame, t)
         # TODO: fix bug where shape hue affects the entire frame hue
         # frame = s.draw_shapes_on_frame(frame, c.image_width, c.image_height)
 
@@ -72,7 +72,7 @@ def main():
     print(f"Oscillator bank initialized with {len(osc_bank)} oscillators.")
     
     # Initialize effects classes; these contain Params to be modified by the generators
-    e = Effects_Library(image_width, image_height)
+    fx = Effects_Library(image_width, image_height)
 
     # Initialize the midi input controller before creating the GUI
     mixer1 = MidiInputController(controller=MidiMix())
@@ -107,17 +107,17 @@ def main():
 
             # effect ordering leads to unique results
             if toggles.val("effects_first") == True:
-                feedback_frame = apply_effects(feedback_frame, e)
+                feedback_frame = apply_effects(feedback_frame, fx)
                 feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
             else:
                 feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
-                feedback_frame = apply_effects(feedback_frame, e) 
+                feedback_frame = apply_effects(feedback_frame, fx) 
 
             # TODO: test this
             # frame = e.limit_hues_kmeans(frame)
 
             # Apply temporal filtering to the resulting feedback frame
-            feedback_frame = e.basic.apply_temporal_filter(prev_frame, feedback_frame)
+            feedback_frame = fx.basic.apply_temporal_filter(prev_frame, feedback_frame)
             prev_frame = feedback_frame.copy()
 
             # Display the resulting frame and control panel

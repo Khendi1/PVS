@@ -27,3 +27,5 @@ class Effects_Library:
         self.key = Keying(image_width, image_height)     # TODO: test this
         self.reflector = Reflector()                    
         self.metaballs = LavaLampSynth(image_width, image_height)
+        self.sync = Sync() 
+        self.warp = Warp(image_width, image_height)

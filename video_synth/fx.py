@@ -309,7 +309,7 @@ class Pixels:
             # Ensure the glitch area does not exceed image boundaries
             x_end = min(x + x_glitch_size, width)
             y_end = min(y + y_glitch_size, height)
-        
+
             # Extract a random rectangle
             glitch_area = image[y:y_end, x:x_end].copy()
 
@@ -341,26 +341,44 @@ class Pixels:
         return sharpened_frame
 
 
-class Effects:
+class Sync:
+
+    def __init__(self):
+        self.x_sync_freq = params.add("x_sync_freq", 0.1, 100.0, 1.0)
+        self.x_sync_amp = params.add("x_sync_amp", -200, 200, 0.0)
+        self.x_sync_speed = params.add("x_sync_speed", 5.0, 10.0, 9.0)
+        self.y_sync_freq = params.add("y_sync_freq", 0.1, 100.0, 1.0)
+        self.y_sync_amp = params.add("y_sync_amp", -200, 200, 00.0)
+        self.y_sync_speed = params.add("y_sync_speed", 5.0, 10.0, 9.0)
+
+    def sync(self, frame: np.ndarray):
+        """
+        Applies a raster wobble effect to the frame using sine waves on both X and Y axes.
+        """
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        height, width = frame.shape[:2]
+        warped = np.zeros_like(frame)
+
+        # X-axis wobble (horizontal shift per row)
+        for y in range(height):
+            shift_x = int(self.x_sync_amp.value * np.sin(
+                y / self.x_sync_freq.value + cv2.getTickCount() / (10 ** self.x_sync_speed.value)))
+            warped[y] = np.roll(frame[y], shift_x, axis=0)
+
+        # Y-axis wobble (vertical shift per column)
+        warped_y = np.zeros_like(warped)
+        for x in range(width):
+            shift_y = int(self.y_sync_amp.value * np.sin(
+                x / self.y_sync_freq.value + cv2.getTickCount() / (10 ** self.y_sync_speed.value)))
+            warped_y[:, x] = np.roll(warped[:, x], shift_y, axis=0)
+
+        warped_y = cv2.cvtColor(warped_y, cv2.COLOR_RGB2BGR)
+        return warped_y
+
+
+class Warp:
 
     def __init__(self, image_width: int, image_height: int):
-
-        self.height = image_height
-        self.width = image_width
-
-        self.alpha = params.add("alpha", 0.0, 1.0, 0.0)
-        self.temporal_filter = params.add("temporal_filter", 0, 1.0, 1.0)
-
-        self.x_shift = params.add("x_shift", -image_width, image_width, 0, family="Pan") # min/max depends on image size
-        self.y_shift = params.add("y_shift", -image_height, image_height, 0, family="Pan") # min/max depends on image size
-        self.zoom = params.add("zoom", 0.75, 3, 1.0, family="Pan")
-        self.r_shift = params.add("r_shift", -360, 360, 0.0, family="Pan")
-
-        self.polar_x = params.add("polar_x", -image_width, image_width, 0)
-        self.polar_y = params.add("polar_y", -image_height, image_height, 0)
-        self.polar_radius = params.add("polar_radius", 0.1, 100, 1.0)
-
-        self.frame_skip = params.add("frame_skip", 1, 10, 1)
 
         self.warp_type = params.add("warp_type", WarpType.NONE.value, WarpType.WARP0.value, WarpType.NONE.value)
         self.warp_angle_amt = params.add("warp_angle_amt", 0, 360, 30)
@@ -374,22 +392,152 @@ class Effects:
         self.x_size = params.add("x_size", 0.25, 100.0, 20.0) 
         self.y_speed = params.add("y_speed", 0.0, 10.0, 1.0)
         self.y_size = params.add("y_size", 0.0, 100.0, 10.0)
+    
+    
+#######################################################33 
+    # TODO: implement        
+    def _generate_perlin_flow(self, t, amp_x, amp_y, freq_x, freq_y):
+        fx = np.zeros((self.height, self.width), dtype=np.float32)
+        fy = np.zeros((self.height, self.width), dtype=np.float32)
+        for y in range(self.height):
+            for x in range(self.width):
+                nx = x * freq_x * PERLIN_SCALE
+                ny = y * freq_y * PERLIN_SCALE
+                fx[y, x] = amp_x * pnoise2(nx, ny, base=int(t))
+                fy[y, x] = amp_y * pnoise2(nx + 1000, ny + 1000, base=int(t))
+        return fx, fy
 
-        self.x_sync_freq = params.add("x_sync_freq", 0.1, 100.0, 1.0)
-        self.x_sync_amp = params.add("x_sync_amp", -200, 200, 0.0)
-        self.x_sync_speed = params.add("x_sync_speed", 5.0, 10.0, 9.0)
-        self.y_sync_freq = params.add("y_sync_freq", 0.1, 100.0, 1.0)
-        self.y_sync_amp = params.add("y_sync_amp", -200, 200, 00.0)
-        self.y_sync_speed = params.add("y_sync_speed", 5.0, 10.0, 9.0)
+    # TODO: implement
+    def _generate_fractal_flow(self, t, amp_x, amp_y, freq_x, freq_y, octaves, gain, lacunarity):
+        fx = np.zeros((self.height, self.width), dtype=np.float32)
+        fy = np.zeros((self.height, self.width), dtype=np.float32)
+
+        for y in range(self.height):
+            for x in range(self.width):
+                nx = x * freq_x * PERLIN_SCALE
+                ny = y * freq_y * PERLIN_SCALE
+
+                noise_x = 0.0
+                noise_y = 0.0
+                amplitude = 1.0
+                frequency = 1.0
+
+                for _ in range(octaves):
+                    noise_x += amplitude * pnoise2(nx * frequency, ny * frequency, base=int(t))
+                    noise_y += amplitude * pnoise2((nx + 1000) * frequency, (ny + 1000) * frequency, base=int(t))
+                    amplitude *= gain
+                    frequency *= lacunarity
+
+                fx[y, x] = amp_x * noise_x
+                fy[y, x] = amp_y * noise_y
+        return fx, fy
+
+    # TODO: implement
+    def _polar_warp(self, img, t, angle_amt, radius_amt, speed):
+        cx, cy = self.width / 2, self.height / 2
+        y, x = np.indices((self.height, self.width), dtype=np.float32)
+        dx = x - cx
+        dy = y - cy
+        r = np.sqrt(dx**2 + dy**2)
+        a = np.arctan2(dy, dx)
+
+        # Modify radius and angle
+        r_mod = r + np.sin(a * 5 + t * speed * 2) * radius_amt
+        a_mod = a + np.cos(r * 0.02 + t * speed * 2) * (angle_amt * np.pi / 180)
+
+        # Back to Cartesian
+        map_x = (r_mod * np.cos(a_mod) + cx).astype(np.float32)
+        map_y = (r_mod * np.sin(a_mod) + cy).astype(np.float32)
+
+        return cv2.remap(img, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+
+    def _first_warp(self, frame: np.ndarray):
+        self.height, self.width = feedback_frame.shape[:2]
+        feedback_frame = cv2.resize(feedback_frame, (self.width, self.height))
+
+        # Create meshgrid for warping effect
+        x_indices, y_indices = np.meshgrid(np.arange(self.width), np.arange(self.height))
+
+        # Calculate warped indices using sine function
+        time = cv2.getTickCount() / cv2.getTickFrequency()
+        x_warp = x_indices + self.x_size * np.sin(y_indices / 20.0 + time * self.x_speed)
+        y_warp = y_indices + self.y_size * np.sin(x_indices / 20.0 + time * self.y_speed)
+
+        # Bound indices within valid range
+        x_warp = np.clip(x_warp, 0, self.width - 1).astype(np.float32)
+        y_warp = np.clip(y_warp, 0, self.height - 1).astype(np.float32)
+
+        # Remap frame using warped indices
+        feedback_frame = cv2.remap(feedback_frame, x_warp, y_warp, interpolation=cv2.INTER_LINEAR)  
+
+        return feedback_frame
+    
+    # TODO: implement
+    def warp(self, img, t, mode, amp_x, amp_y, freq_x, freq_y, angle_amt, radius_amt, speed, use_fractal, octaves, gain, lacunarity):
+        
+        if mode == WarpType.NONE:  # No warp
+            return img
+        elif mode == WarpType.SINE: # Sine warp
+            fx = np.sin(np.linspace(0, np.pi * 2, self.width)[None, :] + t) * amp_x
+            fy = np.cos(np.linspace(0, np.pi * 2, self.height)[:, None] + t) * amp_y
+            map_x, map_y = np.meshgrid(np.arange(self.width), np.arange(self.height))
+            map_x = (map_x + fx).astype(np.float32)
+            map_y = (map_y + fy).astype(np.float32)
+            return cv2.remap(img, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+        
+        elif mode == WarpType.FRACTAL:
+            if use_fractal:
+                fx, fy = self._generate_fractal_flow(t, amp_x, amp_y, freq_x, freq_y, octaves, gain, lacunarity)
+            else:
+                fx, fy = self._generate_fractal_flow(t, amp_x, amp_y, freq_x, freq_y, 1, 1.0, 1.0)  # fallback: single octave
+            map_x, map_y = np.meshgrid(np.arange(self.width), np.arange(self.height))
+            map_x = (map_x + fx).astype(np.float32)
+            map_y = (map_y + fy).astype(np.float32)
+            return cv2.remap(img, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+
+        elif mode == WarpType.RADIAL:
+            return self.polar_warp(img, t, angle_amt, radius_amt, speed)
+        
+        elif mode == WarpType.PERLIN:  # Perlin warp
+            # Fractal Perlin warp
+            fx, fy = self._generate_perlin_flow(t, amp_x, amp_y, freq_x, freq_y)
+            map_x, map_y = np.meshgrid(np.arange(self.width), np.arange(self.height))
+            map_x = (map_x + fx).astype(np.float32)
+            map_y = (map_y + fy).astype(np.float32)
+            return cv2.remap(img, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+        elif mode == WarpType.WARP0:
+            return self._first_warp(img)
+
+
+class Effects:
+
+    def __init__(self, image_width: int, image_height: int):
+
+        self.height = image_height
+        self.width = image_width
+
+        self.frame_skip = params.add("frame_skip", 1, 10, 1)
+        self.alpha = params.add("alpha", 0.0, 1.0, 0.0)
+        self.temporal_filter = params.add("temporal_filter", 0, 1.0, 1.0)
+        
+        # TODO: implement
+        self.sequence = params.add("sequence", 0, 100, 0)
+
+        self.x_shift = params.add("x_shift", -image_width, image_width, 0, family="Pan") # min/max depends on image size
+        self.y_shift = params.add("y_shift", -image_height, image_height, 0, family="Pan") # min/max depends on image size
+        self.zoom = params.add("zoom", 0.75, 3, 1.0, family="Pan")
+        self.r_shift = params.add("r_shift", -360, 360, 0.0, family="Pan")
+
+        self.polar_x = params.add("polar_x", -image_width, image_width, 0)
+        self.polar_y = params.add("polar_y", -image_height, image_height, 0)
+        self.polar_radius = params.add("polar_radius", 0.1, 100, 1.0)
+
 
         self.lissajous_A = params.add("lissajous_A", 0, 100, 50)
         self.lissajous_B = params.add("lissajous_B", 0, 100, 50)
         self.lissajous_a = params.add("lissajous_a", 0, 100, 50)
         self.lissajous_b = params.add("lissajous_b", 0, 100, 50)
         self.lissajous_delta = params.add("lissajous_delta", 0, 360, 0)
-
-        # TODO: implement
-        self.sequence = params.add("sequence", 0, 100, 0)
 
 
     def shift_frame(self, frame: np.ndarray):
@@ -518,143 +666,4 @@ class Effects:
             cv2.circle(frame, (x, y), 1, (255, 255, 255), -1)
 
         return frame
-    
-    def sync(self, frame: np.ndarray):
-        """
-        Applies a raster wobble effect to the frame using sine waves on both X and Y axes.
-        """
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        height, width = frame.shape[:2]
-        warped = np.zeros_like(frame)
 
-        # X-axis wobble (horizontal shift per row)
-        for y in range(height):
-            shift_x = int(self.x_sync_amp.value * np.sin(
-                y / self.x_sync_freq.value + cv2.getTickCount() / (10 ** self.x_sync_speed.value)))
-            warped[y] = np.roll(frame[y], shift_x, axis=0)
-
-        # Y-axis wobble (vertical shift per column)
-        warped_y = np.zeros_like(warped)
-        for x in range(width):
-            shift_y = int(self.y_sync_amp.value * np.sin(
-                x / self.y_sync_freq.value + cv2.getTickCount() / (10 ** self.y_sync_speed.value)))
-            warped_y[:, x] = np.roll(warped[:, x], shift_y, axis=0)
-
-        warped_y = cv2.cvtColor(warped_y, cv2.COLOR_RGB2BGR)
-        return warped_y
-
-#######################################################33 
-    # TODO: implement        
-    def _generate_perlin_flow(self, t, amp_x, amp_y, freq_x, freq_y):
-        fx = np.zeros((self.height, self.width), dtype=np.float32)
-        fy = np.zeros((self.height, self.width), dtype=np.float32)
-        for y in range(self.height):
-            for x in range(self.width):
-                nx = x * freq_x * PERLIN_SCALE
-                ny = y * freq_y * PERLIN_SCALE
-                fx[y, x] = amp_x * pnoise2(nx, ny, base=int(t))
-                fy[y, x] = amp_y * pnoise2(nx + 1000, ny + 1000, base=int(t))
-        return fx, fy
-
-    # TODO: implement
-    def _generate_fractal_flow(self, t, amp_x, amp_y, freq_x, freq_y, octaves, gain, lacunarity):
-        fx = np.zeros((self.height, self.width), dtype=np.float32)
-        fy = np.zeros((self.height, self.width), dtype=np.float32)
-
-        for y in range(self.height):
-            for x in range(self.width):
-                nx = x * freq_x * PERLIN_SCALE
-                ny = y * freq_y * PERLIN_SCALE
-
-                noise_x = 0.0
-                noise_y = 0.0
-                amplitude = 1.0
-                frequency = 1.0
-
-                for _ in range(octaves):
-                    noise_x += amplitude * pnoise2(nx * frequency, ny * frequency, base=int(t))
-                    noise_y += amplitude * pnoise2((nx + 1000) * frequency, (ny + 1000) * frequency, base=int(t))
-                    amplitude *= gain
-                    frequency *= lacunarity
-
-                fx[y, x] = amp_x * noise_x
-                fy[y, x] = amp_y * noise_y
-        return fx, fy
-
-    # TODO: implement
-    def _polar_warp(self, img, t, angle_amt, radius_amt, speed):
-        cx, cy = self.width / 2, self.height / 2
-        y, x = np.indices((self.height, self.width), dtype=np.float32)
-        dx = x - cx
-        dy = y - cy
-        r = np.sqrt(dx**2 + dy**2)
-        a = np.arctan2(dy, dx)
-
-        # Modify radius and angle
-        r_mod = r + np.sin(a * 5 + t * speed * 2) * radius_amt
-        a_mod = a + np.cos(r * 0.02 + t * speed * 2) * (angle_amt * np.pi / 180)
-
-        # Back to Cartesian
-        map_x = (r_mod * np.cos(a_mod) + cx).astype(np.float32)
-        map_y = (r_mod * np.sin(a_mod) + cy).astype(np.float32)
-
-        return cv2.remap(img, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
-
-    def _first_warp(self, frame: np.ndarray):
-        self.height, self.width = feedback_frame.shape[:2]
-        feedback_frame = cv2.resize(feedback_frame, (self.width, self.height))
-
-        # Create meshgrid for warping effect
-        x_indices, y_indices = np.meshgrid(np.arange(self.width), np.arange(self.height))
-
-        # Calculate warped indices using sine function
-        time = cv2.getTickCount() / cv2.getTickFrequency()
-        x_warp = x_indices + self.x_size * np.sin(y_indices / 20.0 + time * self.x_speed)
-        y_warp = y_indices + self.y_size * np.sin(x_indices / 20.0 + time * self.y_speed)
-
-        # Bound indices within valid range
-        x_warp = np.clip(x_warp, 0, self.width - 1).astype(np.float32)
-        y_warp = np.clip(y_warp, 0, self.height - 1).astype(np.float32)
-
-        # Remap frame using warped indices
-        feedback_frame = cv2.remap(feedback_frame, x_warp, y_warp, interpolation=cv2.INTER_LINEAR)  
-
-        return feedback_frame
-    
-    # TODO: implement
-    def warp(self, img, t, mode, amp_x, amp_y, freq_x, freq_y, angle_amt, radius_amt, speed, use_fractal, octaves, gain, lacunarity):
-        
-        if mode == WarpType.NONE:  # No warp
-            return img
-        elif mode == WarpType.SINE: # Sine warp
-            fx = np.sin(np.linspace(0, np.pi * 2, self.width)[None, :] + t) * amp_x
-            fy = np.cos(np.linspace(0, np.pi * 2, self.height)[:, None] + t) * amp_y
-            map_x, map_y = np.meshgrid(np.arange(self.width), np.arange(self.height))
-            map_x = (map_x + fx).astype(np.float32)
-            map_y = (map_y + fy).astype(np.float32)
-            return cv2.remap(img, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
-        
-        elif mode == WarpType.FRACTAL:
-            if use_fractal:
-                fx, fy = self._generate_fractal_flow(t, amp_x, amp_y, freq_x, freq_y, octaves, gain, lacunarity)
-            else:
-                fx, fy = self._generate_fractal_flow(t, amp_x, amp_y, freq_x, freq_y, 1, 1.0, 1.0)  # fallback: single octave
-            map_x, map_y = np.meshgrid(np.arange(self.width), np.arange(self.height))
-            map_x = (map_x + fx).astype(np.float32)
-            map_y = (map_y + fy).astype(np.float32)
-            return cv2.remap(img, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
-
-        elif mode == WarpType.RADIAL:
-            return self.polar_warp(img, t, angle_amt, radius_amt, speed)
-        
-        elif mode == WarpType.PERLIN:  # Perlin warp
-            # Fractal Perlin warp
-            fx, fy = self._generate_perlin_flow(t, amp_x, amp_y, freq_x, freq_y)
-            map_x, map_y = np.meshgrid(np.arange(self.width), np.arange(self.height))
-            map_x = (map_x + fx).astype(np.float32)
-            map_y = (map_y + fy).astype(np.float32)
-            return cv2.remap(img, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
-        elif mode == WarpType.WARP0:
-            return self._first_warp(img)
-
-##########################################################

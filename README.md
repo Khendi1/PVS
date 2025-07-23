@@ -7,7 +7,7 @@ PVS is designed for use with MIDI controllers. Turning knobs and pushing faders 
 There are many tunable parameters (~150 at the time of writing). Most parameters can be modulated by oscillators, including the oscillator parameters themselves (i.e. oscillator frequency, amplitude, phase, vertical shift).
 
 ## Background and Inspiration
-Despite my limited knowledge or exposure live video manipulation, the YouTube algorithm graciously provided me with [this video](https://www.youtube.com/watch?v=D3eHKI0nvKA). In describing his live image manipulator mechanical sculpture masterpeice, Dave Blair describes why his machine must use an expensive field-monitor commonly used in movie production, as it offers knobs to manipulate hue, saturation and value. While this requirement makes sense for his application, I was inspired to explore a purely code-based solution. I have since tried to emulate effects that can be acheived through analog video synthesis modules and mixers (feedback, oscillators, [composite analog sync modulation](https://www.youtube.com/watch?v=YlLN_H3Z8Gc)), as well as early digital animation techniques (perlin noise, fractal noise, [metaballs](https://steve.hollasch.net/cgindex/misc/metaballs.html))
+Despite my limited exposure to live video manipulation, the YouTube algorithm graciously provided me with [this video](https://www.youtube.com/watch?v=D3eHKI0nvKA). In describing his live image manipulator mechanical sculpture masterpeice, Dave Blair describes why his machine must use an expensive field-monitor commonly used in movie production, as it offers knobs to manipulate hue, saturation and value. While this requirement makes sense for his application, I was inspired to explore a purely code-based solution. I have since tried to emulate effects that can be acheived through analog video synthesis modules and mixers (feedback, oscillators, [composite analog sync modulation](https://www.youtube.com/watch?v=YlLN_H3Z8Gc)), as well as early digital animation techniques (perlin noise, fractal noise, [metaballs](https://steve.hollasch.net/cgindex/misc/metaballs.html)). 
 
 ## Requirements
 - python3
@@ -25,7 +25,7 @@ The app can be controlled through a (crappy) GUI or midi controller. The program
     - contrast, brightness
     - posterize
     - solarize
-- pixel manipulations:
+- Pixel manipulations:
     - sharpen insensity
     - various blur modes
     - various noise modes
@@ -42,13 +42,13 @@ The app can be controlled through a (crappy) GUI or midi controller. The program
     - supports a perlin noise wave form for more dynamic modulations
     - can be linked to any parameter in the ParamsTable
     - can be linked to other oscillator parameters
-- shape generator
+- Shape generator
     - show circles, squares, triangles, short rays 
     - shape line weight & fill color parameters (hsv, opacity)
     - shape size, position, and rotation control
     - tiling across x and y axis
     - tiling pitch across x and y axis
-- pattern generator
+- Pattern generator
     - attempts to emulate oscilator effects used analog video synthesis 
     - creates moving BRG bars, waves, concentric circles
 - metaballs

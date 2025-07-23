@@ -179,11 +179,13 @@ class ShapeGenerator:
         # Clip values to 0-255 and convert back to uint8
         return np.clip(blended_image, 0, 255).astype(np.uint8)
 
+    # TODO: create a common HSV to BGR conversion function
     def hsv_to_bgr(self, hsv):
         """ Convert HSV color to BGR color for OpenCV drawing functions """
 
         hsv_np = np.uint8([[hsv]])
         bgr = cv2.cvtColor(hsv_np, cv2.COLOR_HSV2BGR)[0][0]
+
         return (int(bgr[0]), int(bgr[1]), int(bgr[2]))
     
     def draw_shapes_on_frame(self, frame, width, height):
@@ -192,7 +194,6 @@ class ShapeGenerator:
         base_center_x, base_center_y = width // 2 + self.shape_x_shift.val(), height // 2 + self.shape_y_shift.val()
 
         # Create separate 3-channel (BGR) canvases for lines and fills
-        # These will temporarily hold the shapes on a black background
         temp_line_canvas = np.zeros((height, width, 3), dtype=np.uint8)
         temp_fill_canvas = np.zeros((height, width, 3), dtype=np.uint8)
 
@@ -203,16 +204,14 @@ class ShapeGenerator:
         for row in range(self.multiply_grid_y.val()):
             for col in range(self.multiply_grid_x.val()):
                 # Calculate center for each shape in the grid
-                # The subtraction ensures the grid is centered relative to base_center_x/y
                 current_center_x = base_center_x + col * self.grid_pitch_x.val() - (self.multiply_grid_x.val() - 1) * self.grid_pitch_x.val() // 2
                 current_center_y = base_center_y + row * self.grid_pitch_y.val() - (self.multiply_grid_y.val() - 1) * self.grid_pitch_y.val() // 2
 
                 self.draw_shape_on_canvas(temp_line_canvas, current_center_x, current_center_y)
 
-        # If fill is enabled, apply its opacity in a separate blend
+            # If fill is enabled, apply its opacity in a separate blend
             if self.fill_enabled:
-                    # line_weight=0 and line_color=(0,0,0) ensures only fills are drawn
-                    self.draw_shape_on_canvas(temp_fill_canvas, current_center_x, current_center_y)
+                self.draw_shape_on_canvas(temp_fill_canvas, current_center_x, current_center_y)
 
         # Line Overlay (BGRA)
         line_overlay_rgba = np.zeros((height, width, 4), dtype=np.uint8)
@@ -230,8 +229,7 @@ class ShapeGenerator:
             fill_alpha_mask = (temp_fill_canvas.sum(axis=2) > 0).astype(np.uint8) * int(self.fill_opacity * 255)
             fill_overlay_rgba[:,:,3] = fill_alpha_mask
 
-        # Blend the layers onto the display_frame using our custom self.blend_rgba_overlay function.
-        # Order matters if shapes overlap: typically fills then lines for outlining.
+        # blend the layers using our custom self.blend_rgba_overlay method
         if self.fill_enabled:
             frame = self.blend_rgba_overlay(frame, fill_overlay_rgba)
 
