@@ -8,21 +8,38 @@ from param import Param, ParamTable
 from buttons import Button
 import random
 
-class SaveButtons:
+class SaveController:
     """
     A class to handle the save, load, and randomize buttons in the GUI.
     It provides methods to save current parameter values, load next/previous values,
     and randomize parameter values.
     """
-    def __init__(self, width, height):
+    def __init__(self, width, height, 
+                yaml_filename: str = 'saved_values.yaml',
+                save_dir_name: str = 'save'):
 
         self.index = 0
         self.width = width
         self.height = height
+        self.save_dir_path = self.init_save_dir(save_dir_name, yaml_filename)
+        self.yaml_file_path = os.path.join(self.save_dir_path, yaml_filename)
         self.save = Button("Save", "save")
         self.fwd = Button("Load Next", "load_next")
         self.prev = Button("Load Prev", "load_prev")
         self.rand = Button("Load Random", "load_rand")
+
+    def init_save_dir(self, save_dir_name: str, yaml_filename: str):
+        
+        # Get the directory of the current script and go up one level to the project root
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.abspath(os.path.join(script_dir, os.pardir))
+
+        # Construct the path to the save dir and create it if it doesn't exist
+        save_dir_path = os.path.join(project_root, save_dir_name)
+        os.makedirs(save_dir_path, exist_ok=True)
+
+        return save_dir_path
+
 
     def on_fwd_button_click(self):
 
@@ -75,7 +92,31 @@ class SaveButtons:
                     params[param_name].set(d[tag])
                     dpg.set_value(param_name, d[tag])
 
-    def on_save_button_click(self, frame: np.ndarray):
+    def save2(self):
+        
+        current_yaml_data = {}
+
+        # Read existing YAML data if the file exists
+        if os.path.exists(self.yaml_file_path):
+            try:
+                with open(self.yaml_file_path, 'r') as f:
+                    current_yaml_data = yaml.safe_load(f)
+                    if current_yaml_data is None: # Handle empty YAML file
+                        current_yaml_data = {}
+                print(f"Successfully loaded existing YAML from: {self.yaml_file_path}")
+                print(f"Current YAML data: {current_yaml_data}")
+            except yaml.YAMLError as e:
+                print(f"Error loading YAML file {self.yaml_file_path}: {e}")
+                return
+            except Exception as e:
+                print(f"An unexpected error occurred while reading {self.yaml_file_path}: {e}")
+                return
+        else:
+            print(f"YAML file not found at {self.yaml_file_path}. A new one will be created.")
+
+
+    def save1(self):
+        """ Old method for saving values to a YAML file """
         date_time_str = datetime.now().strftime("%m-%d-%Y %H-%M")
         print(f"Saving values at {date_time_str}")
         
@@ -87,6 +128,10 @@ class SaveButtons:
         # Append the data to the YAML file
         with open("saved_values.yaml", "a") as f:
             yaml.dump([data], f, default_flow_style=False)
+
+    def on_save_button_click(self, frame: np.ndarray):
+        # self.save1()
+        self.save2(self)
         
         # Optionally, save the modified image
         # TODO: determine best way to grap a frame for saving w/o having to pass

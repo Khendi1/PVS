@@ -1,12 +1,19 @@
 from param import ParamTable
 from buttons import Buttons
 
+# Initialize parameters; this is to be populated by individual classes/effects/generators
+# and used to create the control panel
+params = ParamTable()
+toggles = Buttons()
+
 FPS = 30 # Desired frame rate
 
-NUM_OSCILLATORS = 4 # TODO: make this a command line arg via argparse
-osc_bank = []
+# TODO: make this a command line arg via argparse
+NUM_OSCILLATORS = 4 
+osc_bank = [] 
+
+# TODO: move to a better location (the class that uses it)
 posc_bank = []  
-# osc_vals = [osc.get_next_value() for osc in osc_bank]
 
 # Index for loading saved patches from a file
 save_index = 0
@@ -22,7 +29,3 @@ enable_polar_transform = False
 # this is currently broken and needs investigation. (only populates last param in list for each panel)
 panels = {}
 
-# Initialize parameters; this is to be populated by individual classes/effects/generators
-# and used to create the control panel
-params = ParamTable()
-toggles = Buttons()

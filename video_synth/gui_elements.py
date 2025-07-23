@@ -1,6 +1,16 @@
 import dearpygui.dearpygui as dpg
 from config import params
 
+def reset_slider_callback(self, sender, app_data, user_data):
+    param = params.get(str(user_data))
+    if param is None:
+        print(f"Slider or param not found for {user_data}")
+        return
+    print(f"Got reset callback for {user_data}; setting to default value {param.default_val}")
+    param.reset()
+    dpg.set_value(user_data, param.value)
+
+
 class TrackbarRow:
 
     def __init__(self, label, param, callback, button_callback, font):

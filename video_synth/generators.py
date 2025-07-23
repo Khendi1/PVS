@@ -63,8 +63,8 @@ class Oscillator:
         self.frequency = params.add(f"{name}_frequency", 0, 2, frequency)
         self.amplitude = params.add(f"{name}_amplitude", self.param_min, self.param_max, amplitude)
         self.phase = params.add(f"{name}_phase", 0, 360, phase)
-        self.seed = params.add(f"{name}_seed", 0, 100, seed)
-        self.shape = params.add(f"{name}_shape", 0, 4, shape) # TODO: use an enum for shape
+        self.seed = params.add(f"{name}_seed", 0, 100, seed) # TODO: Change ambiguous name to something more descriptive
+        self.shape = params.add(f"{name}_shape", 0, len(OscillatorShape)-1, shape)
         
         self.noise_octaves = params.add(f"{name}_noise_octaves", 1, 10, 6)
         self.noise_persistence = params.add(f"{name}_noise_persistence", 0.1, 1.0, 0.5)
@@ -109,39 +109,31 @@ class Oscillator:
         t = 0.0
 
         while True:
-            freq = self.get_frequency()
-            amp = self.get_amplitude()
-            phase_offset = self.get_phase()
-            seed = self.get_seed()
-            shape = int(self.get_shape())
-            direction = self.get_direction()
+            freq = self.frequency.value
+            amp = self.amplitude.value
+            phase_offset = self.phase.value
+            seed = self.seed.value
+            shape = int(self.shape.value)
+            direction = self.direction
 
             # Calculate the argument for the waveform functions
             arg = 2 * np.pi * freq * t + np.deg2rad(phase_offset)
 
-            if shape == 0:  # Sine wave
+            if shape == 0:  # null wave
+                pass
+            elif shape == 1:  # sine wave
                 sample = amp * np.sin(arg) + seed
                 sample *= direction
-            elif shape == 1:  # Square wave
+            elif shape == 2:  # square wave
                 sample = amp * np.sign(np.sin(arg)) + seed
-            elif shape == 2:  # Triangle wave
+            elif shape == 3:  # triangle wave
                 sample = amp * (2 / np.pi) * np.arcsin(np.sin(arg)) + seed
                 sample *= direction
-            elif shape == 3:  # Sawtooth wave
+            elif shape == 4:  # Sawtooth wave
                 sample = amp * (2 * (t * freq - np.floor(t * freq + 0.5))) + seed
                 sample *= direction
-            elif shape == 4:  # Perlin noise             
-                # For a "smoothly evolving" Perlin noise over time, the 'x' input to pnoise1
-                # should continuously increase. To make it "loop" or repeat after a certain period,
-                # you can use the repeat parameter in pnoise1 and modulo the input.
+            elif shape == 5:  # Perlin noise             
                 
-                # Let's say we want one full "cycle" of the Perlin noise to take
-                # a certain amount of time. The input to pnoise1 usually represents
-                # a spatial coordinate. For a temporal signal, time becomes that coordinate.
-                # The 'repeat' parameter in pnoise1 is key for looping.
-
-                # The effective "speed" of the Perlin noise evolution can be controlled by
-                # how fast the input `x` changes.
                 # noise_input_x = self._time / 10.0 # Adjust divisor for desired speed/smoothness
                 noise_input_x = (t * self.frequency.value) # % self.noise_repeat
 
@@ -159,6 +151,7 @@ class Oscillator:
 
             if self.linked_param is not None:
                 if shape == 4:
+                    # TODO: handle perlin noise mapping using the map_value method
                     mapped_sample = self._scale_value(self.linked_param, sample, in_min=-1.0, in_max=1.0) * self.amplitude.value
                 elif isinstance(self.linked_param.default_val, float):
                     mapped_sample = map_value(round(sample, 5), self.param_min, self.param_max, self.linked_param.min, self.linked_param.max, round_down=False)
@@ -170,39 +163,7 @@ class Oscillator:
             yield sample
             t += 1 / self.sample_rate  # Increment time by sample period 
         
-    def update_params(self, freq=None, amp=None, phase=None, shape=None, direction=None, seed=None):
-        if freq is not None:
-            self.frequency.value = freq
-        if amp is not None:
-            self.amplitude.value = amp
-        if phase is not None:
-            self.phase.value = phase
-        if shape is not None:
-            self.shape.value = shape
-        if self.direction is not None:
-            self.direction = direction
-        if self.seed is not None:
-            self.seed.value = seed
-    
-    def get_frequency(self):
-        return self.frequency.value
-    
-    def get_amplitude(self):
-        return self.amplitude.value
-
-    def get_phase(self):
-        return self.phase.value
-
-    def get_shape(self):
-        return self.shape.value
-
-    def get_direction(self):
-        return self.direction
-
-    def get_seed(self):
-        return self.seed.value
-
-    def link_param(self, param):
+    def link_param(self, param: Param):
         """
         Links the oscillator parameters to a parameter object.
 

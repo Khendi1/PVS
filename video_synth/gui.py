@@ -2,73 +2,11 @@ from config import *
 from gui_elements import TrackbarRow, TrackbarCallback
 import dearpygui.dearpygui as dpg
 from generators import Oscillator
-from save import SaveButtons
+from save import SaveController
 from buttons import Button
 
 import yaml
 import os
-
-def save(
-    data: dict = params,
-    yaml_filename: str = 'saved_values.yaml',
-    sibling_dir_name: str = 'save'
-):
-    """
-    Opens a YAML file in a sibling directory, appends/updates entries
-    from a dictionary where values are Params objects, storing only their 'value' member.
-
-    Args:
-        data (dict): A dictionary where keys are strings and values
-                                are instances of the Params class.
-        yaml_filename (str): The name of the YAML file (e.g., 'my_settings.yaml').
-        sibling_dir_name (str): The name of the sibling directory where the YAML file
-                                is located or will be created.
-    """
-    # Get the directory of the current script and go up one level to the project root
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.abspath(os.path.join(script_dir, os.pardir))
-
-    # Construct the path to the save dir and create it if it doesn't exist
-    sibling_dir_path = os.path.join(project_root, sibling_dir_name)
-    os.makedirs(sibling_dir_path, exist_ok=True)
-
-    # Construct the full path to the YAML file
-    yaml_file_path = os.path.join(sibling_dir_path, yaml_filename)
-
-    current_yaml_data = {}
-
-    # Read existing YAML data if the file exists
-    if os.path.exists(yaml_file_path):
-        try:
-            with open(yaml_file_path, 'r') as f:
-                current_yaml_data = yaml.safe_load(f)
-                if current_yaml_data is None: # Handle empty YAML file
-                    current_yaml_data = {}
-            print(f"Successfully loaded existing YAML from: {yaml_file_path}")
-            print(f"Current YAML data: {current_yaml_data}")
-        except yaml.YAMLError as e:
-            print(f"Error loading YAML file {yaml_file_path}: {e}")
-            return
-        except Exception as e:
-            print(f"An unexpected error occurred while reading {yaml_file_path}: {e}")
-            return
-    else:
-        print(f"YAML file not found at {yaml_file_path}. A new one will be created.")
-
-    # Prepare the new entry by extracting value member from Params objects
-    new_data = {}
-    for key, param_obj in data.items():
-            new_data[key] = param_obj.value
-    # Merge the transformed new data into the current YAML data
-    current_yaml_data.append(new_data)
-
-    try:
-        with open(yaml_file_path, 'w') as f:
-            yaml.safe_dump(current_yaml_data, f, default_flow_style=False, sort_keys=False)
-        print(f"Successfully appended/updated data and saved to: {yaml_file_path}")
-    except Exception as e:
-        print(f"Error writing to YAML file {yaml_file_path}: {e}")
-
 
 class Interface:
 
@@ -108,7 +46,7 @@ class Interface:
         # Perform action based on button click
         # TODO: I don't like this, but it works for now
         if user_data == "save":
-            save()
+            self.saver.save2()
         elif user_data == "reset_all":
             self.reset_values()
         elif user_data == "random":
@@ -182,7 +120,7 @@ class Interface:
         with dpg.window(tag="Controls", label="Controls", width=width, height=height):
             self.create_trackbars(width, height)
             # self.create_trackbar_panels_for_param()
-            self.save_buttons = SaveButtons(width, height).create_save_buttons()
+            self.saver = SaveController(width, height).create_save_buttons()
             self.create_buttons(width, height)
             # dpg.set_viewport_resize_callback(resize_buttons)
 

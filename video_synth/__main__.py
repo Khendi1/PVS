@@ -20,17 +20,17 @@ def apply_effects(frame, fx: Effects_Library):
         frame = fx.metaballs.do_metaballs(frame)
         frame = fx.patterns.generate_pattern_frame(frame)
         frame = fx.basic.shift_frame(frame)
-        frame = fx.reflector.apply_reflection(frame)
         frame = fx.sync.sync(frame)
+        frame = fx.reflector.apply_reflection(frame)
         frame = fx.color.modify_hsv(frame)
         frame = fx.color.adjust_brightness_contrast(frame)
-        frame = fx.pixels.sharpen_frame(frame)
         frame = fx.pixels.glitch_image(frame)
         frame = fx.noise.apply_noise(frame)
         frame = fx.color.polarize_frame_hsv(frame)
         frame = fx.color.solarize_image(frame)
         frame = fx.color.posterize(frame)
         frame = fx.pixels.gaussian_blur(frame)
+        frame = fx.pixels.sharpen_frame(frame)
 
         # TODO: test this,test ordering
         # image_height, image_width = frame.shape[:2]

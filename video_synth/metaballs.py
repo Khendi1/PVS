@@ -2,6 +2,10 @@ import cv2
 import numpy as np
 import time
 from config import params
+from gui import TrackbarRow, TrackbarCallback
+from buttons import Button
+import dearpygui.dearpygui as dpg
+from param import Param
 
 class LavaLampSynth:
     def __init__(self, width=800, height=600):
@@ -58,6 +62,7 @@ class LavaLampSynth:
 
         self.setup_metaballs()
 
+
     def adjust_parameters(self):
         """
         Adjusts the parameters based on the current values in the config.
@@ -76,6 +81,7 @@ class LavaLampSynth:
                 ball['vx'] *= (self.speed_multiplier.value / self.current_speed_multiplier)
                 ball['vy'] *= (self.speed_multiplier.value / self.current_speed_multiplier)
             self.current_speed_multiplier = self.speed_multiplier.value
+
 
     def setup_metaballs(self):
         """
@@ -214,37 +220,63 @@ class LavaLampSynth:
 
         return frame
 
-    def run(self):
-        """
-        Runs the main animation loop.
-        """
-        # Create an OpenCV window
-        cv2.namedWindow('Lava Lamp Synth', cv2.WINDOW_AUTOSIZE)
+    # def metaballs_sliders(self, default_font_id=None, global_font_id=None):
+    #     with dpg.collapsing_header(label=f"\tMetaballs", tag="metaballs"):
+    #         num_metaballs_slider = TrackbarRow(
+    #             "Num Metaballs",
+    #             params.get("num_metaballs"),
+    #             TrackbarCallback(params.get("num_metaballs"), "num_metaballs").__call__,
+    #             self.reset_slider_callback,
+    #             default_font_id)
+            
+    #         min_radius_slider = TrackbarRow(
+    #             "Min Radius",
+    #             params.get("min_radius"),
+    #             TrackbarCallback(params.get("min_radius"), "min_radius").__call__,
+    #             self.reset_slider_callback,
+    #             default_font_id)
+            
+    #         max_radius_slider = TrackbarRow(
+    #             "Max Radius",
+    #             params.get("max_radius"),
+    #             TrackbarCallback(params.get("max_radius"), "max_radius").__call__,
+    #             self.reset_slider_callback,
+    #             default_font_id)
+            
+    #         max_speed_slider = TrackbarRow(
+    #             "Max Speed",
+    #             params.get("max_speed"),
+    #             TrackbarCallback(params.get("max_speed"), "max_speed").__call__,
+    #             self.reset_slider_callback,
+    #             default_font_id)
+            
+    #         threshold_slider = TrackbarRow(
+    #             "Threshold",
+    #             params.get("threshold"),
+    #             TrackbarCallback(params.get("threshold"), "threshold").__call__,
+    #             self.reset_slider_callback,
+    #             default_font_id)
+            
+    #         smooth_coloring_max_field_slider = TrackbarRow(
+    #             "Smooth Coloring Max Field",
+    #             params.get("smooth_coloring_max_field"),
+    #             TrackbarCallback(params.get("smooth_coloring_max_field"), "smooth_coloring_max_field").__call__,
+    #             self.reset_slider_callback,
+    #             default_font_id)
+            
+    #         feedback_alpha_slider = TrackbarRow(
+    #             "Feedback Alpha",
+    #             params.get("metaballs_feedback"),
+    #             TrackbarCallback(params.get("metaballs_feedback"), "metaballs_feedback").__call__,
+    #             self.reset_slider_callback,
+    #             default_font_id)
 
-        print("Lava Lamp / Metaballs Animation Running...")
-        print("Press 'q' to quit.")
+    #         frame_blend_slider = TrackbarRow(
+    #             "Frame Blend",
+    #             params.get("metaballs_frame_blend"),
+    #             TrackbarCallback(params.get("metaballs_frame_blend"), "metaballs_frame_blend").__call__,
+    #             self.reset_slider_callback,
+    #             default_font_id)
 
-        # --- Animation Loop ---
-        while True:
-            frame = self.do_metaballs() # Get the updated frame
+    #     dpg.bind_item_font("metaballs", global_font_id)
 
-            # Display the frame
-            cv2.imshow('Lava Lamp Synth', frame)
-
-            # Wait for a short period (1ms) and check for 'q' key press
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord('q'):
-                break # Exit the loop if 'q' is pressed
-
-        # --- Cleanup ---
-        cv2.destroyAllWindows() # Close all OpenCV windows
-
-def main():
-    """
-    Main function to instantiate and run the LavaLampSynth.
-    """
-    synth = LavaLampSynth(width=800, height=600)
-    synth.run()
-
-if __name__ == "__main__":
-    main()
