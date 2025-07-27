@@ -1,8 +1,5 @@
 import cv2
 import dearpygui.dearpygui as dpg 
-# import numpy as np
-# import time
-
 from config import *
 from gui import Interface
 from generators import Oscillator
@@ -90,8 +87,6 @@ def main():
     print(f'Enjoy {len(params.keys())} tunable parameters!\n')
 
     try:
-        # Keep the main thread alive indefinitely so the MIDI input thread can run.
-        # It sleeps periodically to prevent busy-waiting.
         while True:
             # Capture a frame from the camera
             ret, frame = cap.read()
@@ -101,20 +96,15 @@ def main():
 
             # update osc values
             osc_vals = [osc.get_next_value() for osc in osc_bank if osc.linked_param is not None]
-            # print(f"Oscillator values: {osc_vals}")
             
-            prev_frame1 = feedback_frame.copy()
-
             # effect ordering leads to unique results
+            # TODO: create effect sequencer class
             if toggles.val("effects_first") == True:
                 feedback_frame = apply_effects(feedback_frame, fx)
                 feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
             else:
                 feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
                 feedback_frame = apply_effects(feedback_frame, fx) 
-
-            # TODO: test this
-            # frame = e.limit_hues_kmeans(frame)
 
             # Apply temporal filtering to the resulting feedback frame
             feedback_frame = fx.basic.apply_temporal_filter(prev_frame, feedback_frame)

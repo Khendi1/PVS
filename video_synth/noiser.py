@@ -169,7 +169,6 @@ class ImageNoiser:
         and setting them to a random value within the 0-255 range.
         Intensity controls the proportion of pixels affected.
         """
-        noisy_image = image.copy()
         amount = self._noise_intensity # Proportion of pixels to affect
 
         num_pixels_to_affect = np.ceil(amount * image.size / image.shape[-1] if image.ndim == 3 else image.size).astype(int)
@@ -186,12 +185,12 @@ class ImageNoiser:
             y, x = random_y[i], random_x[i]
             if image.ndim == 3: # Color image (e.g., BGR)
                 # Assign a list of 3 random values to the (y, x) pixel
-                noisy_image[y, x] = [random.randint(0, 255) for _ in range(image.shape[2])]
+                image[y, x] = [random.randint(0, 255) for _ in range(image.shape[2])]
             else: # Grayscale image
                 # Assign a single random value to the (y, x) pixel
-                noisy_image[y, x] = random.randint(0, 255)
+                image[y, x] = random.randint(0, 255)
                 
-        return noisy_image.astype(np.uint8)
+        return image.astype(np.uint8)
 
     def _apply_random_noise(self, image: np.ndarray) -> np.ndarray:
         """

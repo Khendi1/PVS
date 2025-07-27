@@ -7,7 +7,7 @@ PVS is designed for use with MIDI controllers. Turning knobs and pushing faders 
 There are many tunable parameters (~150 at the time of writing). Most parameters can be modulated by oscillators, including the oscillator parameters themselves (i.e. oscillator frequency, amplitude, phase, vertical shift).
 
 ## Background and Inspiration
-Despite my limited exposure to live video manipulation, the YouTube algorithm graciously provided me with [this video](https://www.youtube.com/watch?v=D3eHKI0nvKA). In describing his live image manipulator mechanical sculpture masterpeice, Dave Blair describes why his machine must use an expensive field-monitor commonly used in movie production, as it offers knobs to manipulate hue, saturation and value. While this requirement makes sense for his application, I was inspired to explore a purely code-based solution. I have since tried to emulate effects that can be acheived through analog video synthesis modules and mixers (feedback, oscillators, [composite analog sync modulation](https://www.youtube.com/watch?v=YlLN_H3Z8Gc)), as well as early digital animation techniques (perlin noise, fractal noise, [metaballs](https://steve.hollasch.net/cgindex/misc/metaballs.html)). 
+Despite my limited exposure to live video manipulation, the YouTube algorithm graciously provided me with [this video](https://www.youtube.com/watch?v=D3eHKI0nvKA). In describing his live image manipulator mechanical sculpture masterpeice, Dave Blair describes why his machine must use an expensive field-monitor commonly used in movie production, as it offers knobs to manipulate hue, saturation and value. While this requirement makes sense for his application, I was inspired to explore a purely code-based solution, with the intention to solder up some encoders. I have since pivoted to using off-the-shelf controllers to emulate effects normally acheived through analog video synthesis modules and mixers (feedback, oscillators, [composite analog sync modulation](https://www.youtube.com/watch?v=YlLN_H3Z8Gc)), as well as early digital animation techniques (perlin noise, fractal noise, [metaballs](https://steve.hollasch.net/cgindex/misc/metaballs.html)).
 
 ## Requirements
 - python3
@@ -53,6 +53,7 @@ The app can be controlled through a (crappy) GUI or midi controller. The program
     - creates moving BRG bars, waves, concentric circles
 - metaballs
     - attempts to recreate a classic animation[] technique
+- reaction diffusion
 - locally save and recall patches (currently broken after imlementing params class)
 
 ## Known issues
