@@ -53,7 +53,9 @@ The app can be controlled through a (crappy) GUI or midi controller. The program
     - creates moving BRG bars, waves, concentric circles
 - metaballs
     - attempts to recreate a classic animation[] technique
-- reaction diffusion
+- reaction diffusion (under development)
+- plasma (under development)
+- keying (under development)
 - locally save and recall patches (currently broken after imlementing params class)
 
 ## Known issues
