@@ -1,33 +1,46 @@
+"""
+Main module for the video synthesizer application.
+This module initializes video sources, applies effects, and manages the main loop.
+All components are modular and can be extended or modified independently.
+All parameters are managed via the ParamTable class in config.py. 
+Parameter values can be modified via the GUI or linked to MIDI controllers.
+Soureces include webcam, video files, capture card 1 (hdmi), capture card 2 (composite), metaballs generator, and plasma generator.
+"""
+
 import cv2
 import dearpygui.dearpygui as dpg 
 from config import *
 from gui import Interface
 from generators import Oscillator
-from fx_lib import Effects_Library
 from midi_input import *
-from plasma import *
+from animations import *
+from mix import *
+from fx import *
+from shapes import ShapeGenerator
+from patterns3 import *
 
 image_height, image_width = None, None
 
-def apply_effects(frame, fx: Effects_Library):
+def apply_effects(frame, patterns: Patterns, basic: Effects, color: Color, 
+                  pixels: Pixels, noise: ImageNoiser, reflector: Reflector, 
+                  sync: Sync, warp: Warp, shapes: ShapeGenerator):
+    global image_height, image_width
 
     # TODO: use frame skip slider to control frame skip
     if True: 
-
-        frame = fx.metaballs.do_metaballs(frame)
-        frame = fx.patterns.generate_pattern_frame(frame)
-        frame = fx.basic.shift_frame(frame)
-        frame = fx.sync.sync(frame)
-        frame = fx.reflector.apply_reflection(frame)
-        frame = fx.color.modify_hsv(frame)
-        frame = fx.color.adjust_brightness_contrast(frame)
-        frame = fx.pixels.glitch_image(frame)
-        frame = fx.noise.apply_noise(frame)
-        frame = fx.color.polarize_frame_hsv(frame)
-        frame = fx.color.solarize_image(frame)
-        frame = fx.color.posterize(frame)
-        frame = fx.pixels.gaussian_blur(frame)
-        frame = fx.pixels.sharpen_frame(frame)
+        frame = patterns.generate_pattern_frame(frame)
+        frame = basic.shift_frame(frame)
+        frame = sync.sync(frame)
+        frame = reflector.apply_reflection(frame)
+        frame = color.modify_hsv(frame)
+        frame = color.adjust_brightness_contrast(frame)
+        frame = pixels.glitch_image(frame)
+        frame = noise.apply_noise(frame)
+        frame = color.polarize_frame_hsv(frame)
+        frame = color.solarize_image(frame)
+        frame = color.posterize(frame)
+        frame = pixels.gaussian_blur(frame)
+        frame = pixels.sharpen_frame(frame)
 
         # TODO: test this,test ordering
         # image_height, image_width = frame.shape[:2]
@@ -42,26 +55,30 @@ def apply_effects(frame, fx: Effects_Library):
 
     return frame
 
+def failback_camera():
+    # TODO: implement a fallback camera source if the selected source fails
+    pass
+
+def debug_midi_controller_connections():
+    test_ports()
+
 def main():
+    global image_height, image_width, skip1, cap1, cap2
+    print("Initializing video capture...")
 
-    # Initialize the video capture object (0 for default camera)
-    cap = cv2.VideoCapture(0)
-    if not cap.isOpened():
-        raise IOError("Cannot open webcam")
+    mixer = Mixer()
 
-    # Note: Setting FPS may not work on all cameras, it depends on the camera's
-    cap.set(cv2.CAP_PROP_FPS, FPS)
+    # Initialize mixer video sources with their default settings
+    mixer.start_video(params.get("source1").val, 1) # TODO: move to init function
+    mixer.start_video(params.get("source2").val, 2)
+    frame = mixer.mix_sources(mode="blend")
 
-    # Create an initial empty frame
-    ret, frame = cap.read()
-    if not ret:
-        raise IOError("Cannot read frame")
-    
-    # Create a copy of the frame for feedback
+    # Create a copy of the frame for feedback and get its dimensions
     feedback_frame = frame.copy()
     image_height, image_width = frame.shape[:2]
 
     cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty("Modified Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     # Initialize the general purpose oscillator bank
     for i in range(NUM_OSCILLATORS):
@@ -69,11 +86,37 @@ def main():
     print(f"Oscillator bank initialized with {len(osc_bank)} oscillators.")
     
     # Initialize effects classes; these contain Params to be modified by the generators
-    fx = Effects_Library(image_width, image_height)
+    basic = Effects(image_width, image_height)
+    color = Color()
+    pixels = Pixels(image_width, image_height)
+    noise = ImageNoiser(NoiseType.NONE)
+    shapes = ShapeGenerator(image_width, image_height)
+    patterns = Patterns(image_width, image_height)
+    # key = Keying(image_width, image_height)     # TODO: test this
+    reflector = Reflector()                    
+    sync = Sync() 
+    warp = Warp(image_width, image_height)
+
+    # Convenient dictionary of effects to be passed to the apply_effects function
+    fx = {
+        "basic": basic,
+        "color": color,
+        "pixels": pixels,
+        "noise": noise,
+        "shapes": shapes,
+        "patterns": patterns,
+        # "key": key,    # TODO: test this
+        "reflector": reflector,
+        "sync": sync,
+        "warp": warp
+    }
+
 
     # Initialize the midi input controller before creating the GUI
-    mixer1 = MidiInputController(controller=MidiMix())
-    mixer2 = MidiInputController(controller=SMC_Mixer())
+    # TODO: This assumes both controllers are always connected in a specific order; improve this
+    # debug_midi_controller_connections()
+    controller1 = MidiInputController(controller=MidiMix())
+    controller2 = MidiInputController(controller=SMC_Mixer())
 
     # Create control panel after initializing objects that will be used in the GUI
     gui = Interface()
@@ -82,39 +125,35 @@ def main():
     # Create a copy of the feedback frame for temporal filtering
     prev_frame = feedback_frame.copy()
 
-    t = 0
-
     print(f'Enjoy {len(params.keys())} tunable parameters!\n')
 
     try:
         while True:
-            # Capture a frame from the camera
-            ret, frame = cap.read()
-            if not ret:
-                print("Error")
-                break
+            # retreive and mix frames from the selected sources
+            frame = mix_sources()
+            if skip1 or frame is None:
+                skip1 = False
+                continue
 
             # update osc values
             osc_vals = [osc.get_next_value() for osc in osc_bank if osc.linked_param is not None]
             
-            # effect ordering leads to unique results
-            # TODO: create effect sequencer class
+            # relevant section
             if toggles.val("effects_first") == True:
-                feedback_frame = apply_effects(feedback_frame, fx)
+                feedback_frame = apply_effects(feedback_frame, **fx)
                 feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
             else:
                 feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
-                feedback_frame = apply_effects(feedback_frame, fx) 
+                feedback_frame = apply_effects(feedback_frame, **fx) 
 
-            # Apply temporal filtering to the resulting feedback frame
-            feedback_frame = fx.basic.apply_temporal_filter(prev_frame, feedback_frame)
+            # Apply temporal filtering and frame buffer averaging to the resulting feedback frame
+            feedback_frame = basic.apply_temporal_filter(prev_frame, feedback_frame)
+            feedback_frame = basic.avg_frame_buffer(feedback_frame)
             prev_frame = feedback_frame.copy()
 
             # Display the resulting frame and control panel
             cv2.imshow('Modified Frame', feedback_frame)
             dpg.render_dearpygui_frame()
-
-            t += 0.1
 
             # Break the loop if 'q' is pressed
             key = cv2.waitKey(1) & 0xFF
@@ -122,16 +161,14 @@ def main():
                 print(f"Key pressed: {key}")
                 break
 
-            # time.sleep(1)
-
     except KeyboardInterrupt:
         print("\nCtrl+C detected. Signaling MIDI thread to stop...")
-        mixer1.thread_stop = True
-        mixer2.thread_stop = True
+        controller1.thread_stop = True
+        controller2.thread_stop = True
         # Wait for the MIDI thread to finish, with a timeout
-        mixer1.thread.join(timeout=5)
-        mixer2.thread.join(timeout=5)
-        if mixer1.thread.is_alive() or mixer2.thread.is_alive():
+        controller1.thread.join(timeout=5)
+        controller2.thread.join(timeout=5)
+        if controller1.thread.is_alive() or controller2.thread.is_alive():
             print("MIDI thread did not terminate gracefully. Forcing exit.")
         else:
             print("MIDI thread stopped successfully.")
@@ -139,7 +176,9 @@ def main():
         print("Exiting main program.")
         # Release the capture and destroy all windows
         dpg.destroy_context()
-        cap.release()
+        for cap in live_caps:
+            if cap and cap.isOpened():
+                cap.release()
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":

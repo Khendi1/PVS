@@ -6,7 +6,10 @@ from buttons import Buttons
 params = ParamTable()
 toggles = Buttons()
 
-FPS = 30 # Desired frame rate
+FPS = 45 # Desired frame rate
+
+cap1 = None
+cap2 = None
 
 # TODO: make this a command line arg via argparse
 NUM_OSCILLATORS = 4 

@@ -1,10 +1,11 @@
 import numpy as np
-from enum import IntEnum
+from enum import IntEnum, Enum
 import cv2
 from config import *
 import random
 import math
 from noise import pnoise2
+from collections import deque
 
 
 class WarpType(IntEnum):
@@ -509,6 +510,122 @@ class Warp:
             return self._first_warp(img)
 
 
+# Define an Enum for different reflection modes
+class ReflectionMode(Enum):
+    """Enumeration for different image reflection modes."""
+    NONE = 0        # No reflection
+    HORIZONTAL = 1  # Reflect across the Y-axis (flip horizontally)
+    VERTICAL = 2    # Reflect across the X-axis (flip vertically)
+    BOTH = 3       # Reflect across both X and Y axes (flip horizontally and vertically)
+    QUAD_SYMMETRY = 4  # Reflect across both axes with quadrants (not implemented)
+    SPLIT = 5      # Reflect left half onto right half
+
+    def __str__(self):
+        return self.name.replace('_', ' ').title()
+
+
+class Reflector:
+    """
+    A class to apply reflection transformations to image frames from a stream.
+    """
+    def __init__(self, mode: ReflectionMode = ReflectionMode.NONE):
+        """
+        Initializes the StreamReflector with a specified reflection mode.
+
+        Args:
+            mode (ReflectionMode): The reflection mode to apply. Defaults to NONE.
+        """
+        if not isinstance(mode, ReflectionMode):
+            raise ValueError("mode must be an instance of ReflectionMode Enum.")
+        self._mode = params.add("reflection_mode", 0, len(ReflectionMode) - 1, ReflectionMode.NONE.value)
+        self.num_axis = 3
+        print(f"StreamReflector initialized with mode: {self._mode}")
+
+    @property
+    def mode(self) -> ReflectionMode:
+        """Get the current reflection mode."""
+        return self._mode
+
+    @mode.setter
+    def mode(self, new_mode: ReflectionMode):
+        """Set the reflection mode."""
+        if not isinstance(new_mode, ReflectionMode):
+            raise ValueError("new_mode must be an instance of ReflectionMode Enum.")
+        self._mode = new_mode
+        print(f"Reflection mode set to: {self._mode}")
+
+    def apply_reflection(self, frame: np.ndarray) -> np.ndarray:
+        """
+        Applies the currently set reflection mode to the input image frame.
+
+        Args:
+            frame (np.ndarray): The input image frame (NumPy array).
+
+        Returns:
+            np.ndarray: The reflected image frame.
+        """
+        if self._mode.value == ReflectionMode.NONE.value:
+            return frame.copy()  # Return a copy to ensure original isn't modified
+        elif self._mode.value == ReflectionMode.HORIZONTAL.value:
+            # cv2.flip(src, flipCode): flipCode > 0 for horizontal, 0 for vertical, < 0 for both
+            return cv2.flip(frame, 1)
+        elif self._mode.value == ReflectionMode.VERTICAL.value:
+            return cv2.flip(frame, 0)
+        elif self._mode.value == ReflectionMode.BOTH.value:
+            return cv2.flip(frame, -1)
+        elif self._mode.value == ReflectionMode.QUAD_SYMMETRY.value:
+            return self._apply_quad_symmetry(frame)
+        elif self._mode.value == ReflectionMode.SPLIT.value:  # New mode: reflect left half onto right half
+            height, width = frame.shape[:2]
+            w_half = width // 2
+            output_frame = frame.copy()
+            left_half = frame[:, :w_half]
+            # Reflect left half horizontally
+            reflected_left = cv2.flip(left_half, 1)
+            # Place reflected left half onto right half
+            output_frame[:, w_half:] = reflected_left[:, :width - w_half]
+            return output_frame
+        else:
+            print(f"Warning: Unknown reflection mode: {self._mode}. Returning original frame.")
+            return frame.copy()
+
+    def _apply_quad_symmetry(self, frame: np.ndarray) -> np.ndarray:
+        """
+        Applies a 4-quadrant kaleidoscope-like reflection to the image.
+        It takes the top-left quadrant and reflects it to fill the other three.
+        """
+        height, width = frame.shape[:2]
+        
+        # Calculate half dimensions
+        h_half = height // 2
+        w_half = width // 2
+
+        # Ensure dimensions are at least 2x2 for quadrants to exist
+        if h_half == 0 or w_half == 0:
+            print("Warning: Image too small for quad symmetry. Returning original.")
+            return frame.copy()
+
+        # Extract the top-left quadrant
+        top_left_quadrant = frame[0:h_half, 0:w_half].copy() # .copy() is important to avoid modifying original
+
+        # Create reflected versions
+        top_right_quadrant = cv2.flip(top_left_quadrant, 1)  # Flip horizontally
+        bottom_left_quadrant = cv2.flip(top_left_quadrant, 0) # Flip vertically
+        bottom_right_quadrant = cv2.flip(top_left_quadrant, -1) # Flip both horizontally and vertically
+
+        # Create a new canvas to assemble the reflected parts
+        # Ensure the output frame matches the original dimensions, even if they were odd
+        output_frame = np.zeros_like(frame)
+
+        # Place the quadrants into the output frame
+        output_frame[0:h_half, 0:w_half] = top_left_quadrant
+        output_frame[0:h_half, w_half:width] = top_right_quadrant
+        output_frame[h_half:height, 0:w_half] = bottom_left_quadrant
+        output_frame[h_half:height, w_half:width] = bottom_right_quadrant
+
+        return output_frame
+
+
 class Effects:
 
     def __init__(self, image_width: int, image_height: int):
@@ -532,13 +649,38 @@ class Effects:
         self.polar_y = params.add("polar_y", -image_height, image_height, 0)
         self.polar_radius = params.add("polar_radius", 0.1, 100, 1.0)
 
-
         self.lissajous_A = params.add("lissajous_A", 0, 100, 50)
         self.lissajous_B = params.add("lissajous_B", 0, 100, 50)
         self.lissajous_a = params.add("lissajous_a", 0, 100, 50)
         self.lissajous_b = params.add("lissajous_b", 0, 100, 50)
         self.lissajous_delta = params.add("lissajous_delta", 0, 360, 0)
 
+        self.max_buffer_size = 30
+        self.buffer_size = params.add("buffer_size", 0, self.max_buffer_size, 5)
+        # this should probably be initialized in reset() to avoid issues with reloading config
+        self.frame_buffer = deque(maxlen=self.max_buffer_size)
+
+    def avg_frame_buffer(self, frame):
+
+        if self.buffer_size.value <= 1:
+            return frame
+
+        self.frame_buffer.append(frame.astype(np.float32))
+
+        while len(self.frame_buffer) > self.buffer_size.value:
+            del self.frame_buffer[0]
+            # print(f"Removing oldest frame from buffer, size now {len(self.frame_buffer)}")
+
+        # If the buffer is not yet full, return the original frame.
+        if len(self.frame_buffer) < self.buffer_size.value:
+            # print(f"Buffering frames: {len(self.frame_buffer)}/{self.buffer_size.value}")
+            return frame.copy()
+
+        # Calculate the average of all frames in the buffer
+        avg_frame = np.mean(self.frame_buffer, axis=0)
+
+        # Convert the averaged frame back to the correct data type (uint8)
+        return np.clip(avg_frame, 0, 255).astype(np.uint8)
 
     def shift_frame(self, frame: np.ndarray):
         """
@@ -666,4 +808,530 @@ class Effects:
             cv2.circle(frame, (x, y), 1, (255, 255, 255), -1)
 
         return frame
+
+
+
+import numpy as np
+import cv2
+from enum import IntEnum
+import random
+import time
+from config import params
+
+class NoiseType(IntEnum):
+    NONE = 0
+    GAUSSIAN = 1
+    POISSON = 2
+    SALT_AND_PEPPER = 3
+    SPECKLE = 4
+    SPARSE = 5
+    RANDOM = 6
+
+class ImageNoiser:
+
+    def __init__(self, noise_type: NoiseType = NoiseType.NONE, noise_intensity: float = 0.1):
+        """
+        Initializes the ImageNoiser with a default noise type and intensity.
+
+        Args:
+            noise_type (NoiseType): The type of noise to apply. Defaults to NONE.
+            noise_intensity (float): The intensity of the noise, typically between 0.0 and 1.0.
+                                     Its interpretation varies by noise type. Defaults to 0.1.
+        """
+        if not isinstance(noise_type, NoiseType):
+            raise ValueError("noise_type must be an instance of NoiseType Enum.")
+        if not (0.0 <= noise_intensity <= 1.0):
+            print("Warning: noise_intensity should ideally be between 0.0 and 1.0.")
+
+        # self._noise_type = noise_type
+        # self._noise_intensity = noise_intensity
+        self._noise_type = params.add("noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, noise_type.value)
+        self._noise_intensity = params.add("noise_intensity", 0.0, 1.0, noise_intensity)
+        print(f"ImageNoiser initialized with type: {self._noise_type.value}, intensity: {self._noise_intensity}")
+
+    @property
+    def noise_type(self) -> NoiseType:
+        """Get the current noise type."""
+        return self._noise_type.val()
+
+    @noise_type.setter
+    def noise_type(self, new_type: NoiseType):
+        """Set the noise type."""
+        if not isinstance(new_type, NoiseType):
+            raise ValueError("noise_type must be an instance of NoiseType Enum.")
+        self._noise_type.value = new_type
+        print(f"Noise type set to: {self._noise_type.val()}")
+
+    @property
+    def noise_intensity(self) -> float:
+        """Get the current noise intensity."""
+        return self._noise_intensity.value
+
+    @noise_intensity.setter
+    def noise_intensity(self, new_intensity: float):
+        """Set the noise intensity."""
+        if not (0.0 <= new_intensity <= 1.0):
+            print("Warning: noise_intensity should ideally be between 0.0 and 1.0.")
+        self._noise_intensity.value = new_intensity
+        print(f"Noise intensity set to: {self._noise_intensity}")
+
+    def apply_noise(self, image: np.ndarray) -> np.ndarray:
+        """
+        Applies the currently set noise type to the input image.
+
+        Args:
+            image (np.ndarray): The input image (NumPy array).
+                                Expected to be in BGR format for color images
+                                or grayscale for single-channel images, with
+                                pixel values typically 0-255 (uint8).
+
+        Returns:
+            np.ndarray: The image with noise applied.
+        """
+        # Ensure image is a float type for calculations, then convert back to uint8
+        # Make a copy to avoid modifying the original image
+        noisy_image = image.astype(np.float32)
+
+        # Dispatch to the appropriate noise function based on noise_type
+        if self._noise_type.value == NoiseType.NONE.value:
+            return self._apply_none_noise(noisy_image)
+        elif self._noise_type.value == NoiseType.GAUSSIAN.value:
+            return self._apply_gaussian_noise(noisy_image)
+        elif self._noise_type.value == NoiseType.POISSON.value:
+            return self._apply_poisson_noise(noisy_image)
+        elif self._noise_type.value == NoiseType.SALT_AND_PEPPER.value:
+            return self._apply_salt_and_pepper_noise(noisy_image)
+        elif self._noise_type.value == NoiseType.SPECKLE.value:
+            return self._apply_speckle_noise(noisy_image)
+        elif self._noise_type.value == NoiseType.SPARSE.value:
+            return self._apply_sparse_noise(noisy_image)
+        elif self._noise_type.value == NoiseType.RANDOM.value:
+            return self._apply_random_noise(noisy_image)
+        else:
+            print(f"Unknown noise type: {self._noise_type.value}. Returning original image.")
+            return image.copy() # Return original if type is unknown
+
+    def _apply_none_noise(self, image: np.ndarray) -> np.ndarray:
+        """Returns the image without applying any noise."""
+        return image.astype(np.uint8)
+
+    def _apply_gaussian_noise(self, image: np.ndarray) -> np.ndarray:
+        """
+        Applies Gaussian (normal distribution) noise to the image.
+        Intensity controls the standard deviation of the noise.
+        """
+        mean = 0
+        # Standard deviation scales with intensity, up to a max of ~50 for uint8 range
+        std_dev = self._noise_intensity * 50
+        gaussian_noise = np.random.normal(mean, std_dev, image.shape).astype(np.float32)
+        noisy_image = image + gaussian_noise
+        # Clip values to 0-255 range and convert back to uint8
+        return np.clip(noisy_image, 0, 255).astype(np.uint8)
+
+    def _apply_poisson_noise(self, image: np.ndarray) -> np.ndarray:
+        """
+        Applies Poisson noise to the image.
+        For typical 0-255 images, this is simulated by adding noise
+        proportional to the pixel intensity.
+        Intensity controls the scaling factor for the Poisson distribution.
+        """
+        # Scale to a range suitable for Poisson (e.g., 0-100), Then add noise and scale back
+        scaled_image = image / 255.0 * 100.0 # Scale to 0-100 for better Poisson distribution
+        poisson_noise = np.random.poisson(scaled_image * self._noise_intensity.value * 2).astype(np.float32)
+        noisy_image = image + (poisson_noise / 100.0 * 255.0) # Scale noise back to 0-255 range
+        return np.clip(noisy_image, 0, 255).astype(np.uint8)
+
+    def _apply_salt_and_pepper_noise(self, image: np.ndarray) -> np.ndarray:
+        """
+        Applies Salt & Pepper noise to the image.
+        Intensity controls the proportion of pixels affected.
+        """
+        noisy_image = image.copy() # TODO: is a copy needed?
+        amount = self._noise_intensity # Proportion of pixels to affect
+        s_vs_p = 0.5 # Ratio of salt vs. pepper (0.5 means equal)
+
+        # Apply salt noise (white pixels)
+        num_salt = np.ceil(amount * image.size * s_vs_p).astype(int)
+        coords = [np.random.randint(0, i - 1, num_salt) for i in image.shape]
+        noisy_image[tuple(coords)] = 255
+
+        # Apply pepper noise (black pixels)
+        num_pepper = np.ceil(amount * image.size * (1.0 - s_vs_p)).astype(int)
+        coords = [np.random.randint(0, i - 1, num_pepper) for i in image.shape]
+        noisy_image[tuple(coords)] = 0
+        return noisy_image.astype(np.uint8)
+
+    def _apply_speckle_noise(self, image: np.ndarray) -> np.ndarray:
+        """
+        Applies Speckle (multiplicative) noise to the image.
+        noisy_image = image + image * noise
+        Intensity controls the standard deviation of the noise.
+        """
+        mean = 0
+        std_dev = self._noise_intensity * 0.5 # Scale std_dev for multiplicative noise
+        speckle_noise = np.random.normal(mean, std_dev, image.shape).astype(np.float32)
+        noisy_image = image + image * speckle_noise
+        return np.clip(noisy_image, 0, 255).astype(np.uint8)
+
+    def _apply_sparse_noise(self, image: np.ndarray) -> np.ndarray:
+        """
+        Applies sparse noise by randomly selecting a percentage of pixels
+        and setting them to a random value within the 0-255 range.
+        Intensity controls the proportion of pixels affected.
+        """
+        amount = self._noise_intensity # Proportion of pixels to affect
+
+        num_pixels_to_affect = np.ceil(amount * image.size / image.shape[-1] if image.ndim == 3 else image.size).astype(int)
+
+        # Get image dimensions
+        height, width = image.shape[0], image.shape[1]
+
+        # Generate random (y, x) coordinates for the pixels to affect
+        random_y = np.random.randint(0, height, num_pixels_to_affect)
+        random_x = np.random.randint(0, width, num_pixels_to_affect)
+
+        # Apply random values to the selected pixels
+        for i in range(num_pixels_to_affect):
+            y, x = random_y[i], random_x[i]
+            if image.ndim == 3: # Color image (e.g., BGR)
+                # Assign a list of 3 random values to the (y, x) pixel
+                image[y, x] = [random.randint(0, 255) for _ in range(image.shape[2])]
+            else: # Grayscale image
+                # Assign a single random value to the (y, x) pixel
+                image[y, x] = random.randint(0, 255)
+                
+        return image.astype(np.uint8)
+
+    def _apply_random_noise(self, image: np.ndarray) -> np.ndarray:
+        """
+        Applies uniform random noise to every pixel.
+        Intensity controls the maximum range of the random noise added.
+        """
+        # Generate random noise in the range [-intensity*127.5, intensity*127.5]
+        # Then add it to the image
+        noise_range = self._noise_intensity * 127.5 # Max deviation from original pixel value
+        random_noise = np.random.uniform(-noise_range, noise_range, image.shape).astype(np.float32)
+        noisy_image = image + random_noise
+        return np.clip(noisy_image, 0, 255).astype(np.uint8)
+
+# from config import params, toggles
+
+# class Keying:
+#     def __init__(self, image_width: int, image_height: int):
+        
+#         # TODO: implement keying parameters
+#         # This probably needs to be a separate class
+#         self.key_upper_hue = params.add("key_upper_hue", 0, 180, 0)
+#         self.key_lower_hue = params.add("key_lower_hue", 0, 180, 0)
+#         self.key_upper_sat = params.add("key_upper_sat", 0, 255, 255)
+#         self.key_lower_sat = params.add("key_lower_sat", 0, 255, 0)
+#         self.key_upper_val = params.add("key_upper_val", 0, 255, 255)
+#         self.key_lower_val = params.add("key_lower_val", 0, 255, 0)
+#         # self.key_fuzz = params.add("key_fuzz", 0, 100, 0)
+#         # self.key_invert = params.add("key_invert", 0, 1, 0)
+#         # self.key_feather = params.add("key_feather", 0, 100, 0)
+
+
+# import cv2
+# import numpy as np
+# import random
+# import os
+
+# GLITCH_DURATION_FRAMES = 60 
+# GLITCH_INTENSITY_MAX = 50 
+# BLOCK_SIZE_MAX = 60
+
+# class GlitchEffect:
+#     def __init__(self):
+#         self.glitch_phase_start_frame = 0
+#         self.glitch_cycle_start_frame = 0
+#         self.band_div = params.add("glitch_band_div", 5, 1, 10, "Glitch Band Division", "Glitch Effects")
+
+#     def reset(self):
+#         self.glitch_phase_start_frame = 0
+#         self.glitch_cycle_start_frame = 0
+
+# # --- Helper Functions for Glitch Effects ---
+# def apply_evolving_pixel_shift(frame, frame_num, glitch_phase_start_frame):
+#     height, width, _ = frame.shape
+#     current_phase_frame = (frame_num - glitch_phase_start_frame) % GLITCH_DURATION_FRAMES
+
+#     # Calculate shift amount and direction based on current_phase_frame
+#     # Use a sinusoidal or linear progression for smooth evolution
+#     progress = current_phase_frame / GLITCH_DURATION_FRAMES
+#     shift_amount_x = int(GLITCH_INTENSITY_MAX * np.sin(progress * np.pi * 2)) # oscillates
+#     shift_amount_y = int(GLITCH_INTENSITY_MAX * np.cos(progress * np.pi * 2)) # oscillates
+
+#     glitched_frame = np.copy(frame)
+
+#     # Apply shift to different horizontal/vertical bands
+#     band_height = height // 5
+#     band_width = width // 5
+
+#     for i in range(5):
+#         y_start = i * band_height
+#         y_end = min((i + 1) * band_height, height)
+        
+#         # Shift horizontal bands
+#         if i % 2 == 0: # Even bands shift right
+#             shifted_band = np.roll(frame[y_start:y_end, :], shift_amount_x, axis=1)
+#         else: # Odd bands shift left
+#             shifted_band = np.roll(frame[y_start:y_end, :], -shift_amount_x, axis=1)
+#         glitched_frame[y_start:y_end, :] = shifted_band
+
+#     for i in range(5):
+#         x_start = i * band_width
+#         x_end = min((i + 1) * band_width, width)
+
+#         # Shift vertical bands
+#         if i % 2 == 0: # Even bands shift down
+#             shifted_band = np.roll(glitched_frame[:, x_start:x_end], shift_amount_y, axis=0)
+#         else: # Odd bands shift up
+#             shifted_band = np.roll(glitched_frame[:, x_start:x_end], -shift_amount_y, axis=0)
+#         glitched_frame[:, x_start:x_end] = shifted_band
+
+#     return glitched_frame
+
+# def apply_gradual_color_split(frame, frame_num, glitch_phase_start_frame):
+#     """
+#     Gradually separates and then merges color channels.
+#     Optimized: Uses cv2.split and np.roll which are fast matrix operations.
+#     """
+#     height, width, _ = frame.shape
+#     current_phase_frame = (frame_num - glitch_phase_start_frame) % GLITCH_DURATION_FRAMES
+
+#     # Calculate separation amount
+#     # Increases then decreases over the phase
+#     progress = current_phase_frame / GLITCH_DURATION_FRAMES
+#     separation_amount = int(GLITCH_INTENSITY_MAX * np.sin(progress * np.pi)) # Peaks at mid-phase
+
+#     b, g, r = cv2.split(frame)
+#     glitched_frame = np.zeros_like(frame)
+
+#     # Shift channels independently
+#     # Red channel shifts right, Green stays, Blue channel shifts left
+#     glitched_frame[:, :, 2] = np.roll(r, separation_amount, axis=1) # Red
+#     glitched_frame[:, :, 1] = g # Green (no shift)
+#     glitched_frame[:, :, 0] = np.roll(b, -separation_amount, axis=1) # Blue
+
+#     return glitched_frame
+
+# def apply_morphing_block_corruption(frame, frame_num, glitch_phase_start_frame):
+#     """
+#     Corrupts random blocks, with the size and number of corrupted blocks
+#     morphing over time.
+#     Optimized: Operations within each block are vectorized. The loop is for
+#     applying effects to multiple distinct random blocks.
+#     """
+#     height, width, _ = frame.shape
+#     current_phase_frame = (frame_num - glitch_phase_start_frame) % GLITCH_DURATION_FRAMES
+
+#     glitched_frame = np.copy(frame)
+
+#     # Calculate corruption intensity and block size based on progress
+#     progress = current_phase_frame / GLITCH_DURATION_FRAMES
+#     # Intensity: starts low, peaks, then goes low again
+#     corruption_intensity = int(255 * np.sin(progress * np.pi))
+#     # Block size: starts small, grows, then shrinks
+#     current_block_size = int(BLOCK_SIZE_MAX * np.sin(progress * np.pi))
+#     if current_block_size < 10: # Ensure minimum block size
+#         current_block_size = 10
+
+#     # Number of blocks to corrupt: more blocks when intensity is high
+#     num_blocks = int(10 + 20 * np.sin(progress * np.pi))
+
+#     for _ in range(num_blocks):
+#         # Random top-left corner for the block
+#         # Ensure block fits within frame
+#         x = random.randint(0, max(0, width - current_block_size))
+#         y = random.randint(0, max(0, height - current_block_size))
+
+#         # Get the region of interest
+#         # Ensure slice does not go out of bounds
+#         x_end = min(x + current_block_size, width)
+#         y_end = min(y + current_block_size, height)
+        
+#         # Only proceed if the block has valid dimensions
+#         if x_end > x and y_end > y:
+#             roi = glitched_frame[y:y_end, x:x_end]
+
+#             # Apply different corruption methods based on a random choice
+#             corruption_type = random.choice(['solid_color', 'noise', 'pixelate'])
+
+#             if corruption_type == 'solid_color':
+#                 # Fill with a random color based on intensity
+#                 color = [random.randint(0, corruption_intensity),
+#                          random.randint(0, corruption_intensity),
+#                          random.randint(0, corruption_intensity)]
+#                 roi[:, :] = color
+#             elif corruption_type == 'noise':
+#                 # Add random noise. Ensure noise shape matches ROI.
+#                 # Ensure the 'high' value for randint is always greater than 'low'.
+#                 # If corruption_intensity // 2 is 0, make the upper bound 1 to avoid ValueError.
+#                 low_bound = -corruption_intensity // 2
+#                 high_bound = corruption_intensity // 2
+#                 if high_bound <= low_bound: # This happens if corruption_intensity is 0 or 1
+#                     high_bound = low_bound + 1 # Ensure high > low
+
+#                 noise = np.random.randint(low_bound, high_bound, roi.shape, dtype=np.int16)
+#                 # Apply noise and clip values to 0-255 range
+#                 roi_with_noise = np.clip(roi.astype(np.int16) + noise, 0, 255).astype(np.uint8)
+#                 glitched_frame[y:y_end, x:x_end] = roi_with_noise
+#             elif corruption_type == 'pixelate':
+#                 # Simple pixelation by resizing down and up
+#                 # Ensure current_block_size is large enough for pixelation
+#                 if current_block_size > 5:
+#                     # Calculate new dimensions for pixelation (e.g., divide by 5)
+#                     pixel_width = max(1, (x_end - x) // 5)
+#                     pixel_height = max(1, (y_end - y) // 5)
+                    
+#                     small_roi = cv2.resize(roi, (pixel_width, pixel_height), interpolation=cv2.INTER_LINEAR)
+#                     pixelated_roi = cv2.resize(small_roi, (x_end - x, y_end - y), interpolation=cv2.INTER_NEAREST)
+#                     glitched_frame[y:y_end, x:x_end] = pixelated_roi
+
+#     return glitched_frame
+
+# def apply_horizontal_scroll_freeze_glitch(frame, frame_num, glitch_cycle_start_frame, fixed_y_end, growth_duration):
+#     """
+#     Applies a horizontal scrolling glitch effect that freezes and distorts a band.
+#     The bottom of the bar is fixed, and the top grows for a random duration.
+#     Each row within the bar has a random side-to-side shift.
+#     """
+#     height, width, _ = frame.shape
+#     glitched_frame = np.copy(frame)
+
+#     # Calculate current progress within the growth cycle
+#     current_frame_in_cycle = frame_num - glitch_cycle_start_frame
+    
+#     # Growth progress, clamped to 1.0
+#     growth_progress = min(1.0, current_frame_in_cycle / growth_duration)
+
+#     # Determine the glitch band height based on growth progress
+#     # Starts small (e.g., 10 pixels) and grows up to BLOCK_SIZE_MAX (60)
+#     glitch_band_height = int(10 + (BLOCK_SIZE_MAX - 10) * growth_progress)
+#     glitch_band_height = max(1, glitch_band_height) # Ensure minimum height of 1
+
+#     # The bottom of the bar is fixed at fixed_y_end
+#     y_end = fixed_y_end
+#     # The top of the bar moves upwards as it grows
+#     y_start = max(0, y_end - glitch_band_height)
+
+#     # Ensure y_start and y_end are valid indices
+#     y_start = min(y_start, height - 1)
+#     y_end = min(y_end, height)
+#     if y_start >= y_end: # Handle cases where band becomes invalid (e.g., too small or out of bounds)
+#         return glitched_frame # Return original if band is invalid
+
+#     # Get the ROI from the original frame (or glitched_frame if applying sequentially)
+#     roi = glitched_frame[y_start:y_end, :]
+
+#     # Apply random horizontal shift to each row within the band
+#     # The maximum random shift scales with growth progress
+#     max_row_shift = int(GLITCH_INTENSITY_MAX * growth_progress)
+#     if max_row_shift < 1: # Ensure a minimum shift range
+#         max_row_shift = 1
+
+#     randomly_shifted_roi = np.copy(roi)
+#     for r_idx in range(roi.shape[0]): # Iterate through each row in the ROI
+#         row_shift = random.randint(-max_row_shift, max_row_shift)
+#         randomly_shifted_roi[r_idx, :] = np.roll(roi[r_idx, :], row_shift, axis=0) # axis=0 for 1D array roll
+
+#     # Now, use this randomly_shifted_roi for further processing (noise, etc.)
+#     shifted_roi = randomly_shifted_roi
+
+#     # Add some random noise to the shifted band for more distortion
+#     noise_intensity = int(100 * np.sin(growth_progress * np.pi)) # Noise intensity varies
+    
+#     low_bound_noise = -noise_intensity // 2
+#     high_bound_noise = noise_intensity // 2
+#     if high_bound_noise <= low_bound_noise:
+#         high_bound_noise = low_bound_noise + 1
+
+#     noise = np.random.randint(low_bound_noise, high_bound_noise, shifted_roi.shape, dtype=np.int16)
+#     corrupted_roi = np.clip(shifted_roi.astype(np.int16) + noise, 0, 255).astype(np.uint8)
+
+#     # Replace the band in the glitched frame with the corrupted ROI
+#     glitched_frame[y_start:y_end, :] = corrupted_roi
+
+#     return glitched_frame
+
+
+# # --- Main Processing Function for Webcam ---
+
+# def apply_glitch_effects_to_webcam():
+#     """
+#     Captures video from webcam, applies time-evolving glitch effects,
+#     and displays the output in real-time.
+#     """
+#     # Use 0 for default webcam
+#     cap = cv2.VideoCapture(0)
+
+#     if not cap.isOpened():
+#         print("Error: Could not open webcam. Please ensure it's connected and not in use.")
+#         return
+
+#     print("Webcam stream started. Press 'q' to quit.")
+
+#     frame_count = 0
+    
+#     # State for horizontal scroll freeze glitch
+#     current_fixed_y_end = None
+#     current_growth_duration = None
+#     last_scroll_glitch_reset_frame = 0 # Marks when the fixed_y_end and growth_duration were last set
+
+#     while True:
+#         ret, frame = cap.read()
+#         if not ret:
+#             print("Failed to grab frame from webcam. Exiting...")
+#             break
+
+#         # Get frame dimensions for dynamic calculations
+#         height, width, _ = frame.shape
+
+#         # Reset phase start frame if a new phase begins for existing effects
+#         if frame_count % GLITCH_DURATION_FRAMES == 0:
+#             glitch_phase_start_frame_shift = frame_count
+#         if frame_count % (GLITCH_DURATION_FRAMES * 1.5) == 0: # Slightly different cycle for color
+#             glitch_phase_start_frame_color = frame_count
+#         if frame_count % (GLITCH_DURATION_FRAMES * 0.75) == 0: # Faster cycle for blocks
+#             glitch_phase_start_frame_blocks = frame_count
+
+#         # Check if it's time to reset the horizontal scroll glitch state
+#         # This will happen on the very first frame or when the current growth duration is over
+#         if frame_count == 0 or (frame_count - last_scroll_glitch_reset_frame) >= current_growth_duration:
+#             last_scroll_glitch_reset_frame = frame_count
+#             current_fixed_y_end = random.randint(height // 4, height)
+#             # Choose a random duration for the growth phase
+#             current_growth_duration = random.randint(GLITCH_DURATION_FRAMES // 2, GLITCH_DURATION_FRAMES * 2) # Random period for growth
+
+#         # Apply effects to the current frame
+#         # All effects are applied concurrently for a layered glitch appearance.
+#         # frame = apply_evolving_pixel_shift(frame, frame_count, glitch_phase_start_frame_shift)
+#         # frame = apply_gradual_color_split(frame, frame_count, glitch_phase_start_frame_color)
+#         # frame = apply_morphing_block_corruption(frame, frame_count, glitch_phase_start_frame_blocks)
+        
+#         # Apply the new scrolling glitch effect, passing its specific state
+#         frame = apply_horizontal_scroll_freeze_glitch(
+#             frame,
+#             frame_count,
+#             last_scroll_glitch_reset_frame,
+#             current_fixed_y_end,
+#             current_growth_duration
+#         )
+
+#         # Display the glitched frame
+#         cv2.imshow('Live Glitch Effect', frame)
+
+#         frame_count += 1
+
+#         # Check for 'q' key press to exit
+#         if cv2.waitKey(1) & 0xFF == ord('q'):
+#             break
+
+#     cap.release()
+#     cv2.destroyAllWindows()
+#     print("Webcam stream stopped.")
+
+# if __name__ == "__main__":
+#     apply_glitch_effects_to_webcam()
 

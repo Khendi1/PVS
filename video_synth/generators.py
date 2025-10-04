@@ -61,7 +61,8 @@ class Oscillator:
         self.param_max = max_amplitude
         self.param_min = min_amplitude
         self.frequency = params.add(f"{name}_frequency", 0, 2, frequency)
-        self.amplitude = params.add(f"{name}_amplitude", self.param_min, self.param_max, amplitude)
+        self.amplitude = params.add(f"{name}_amplitude", -100, 100, amplitude)
+        # self.amplitude = params.add(f"{name}_amplitude", self.param_min, self.param_max, amplitude)
         self.phase = params.add(f"{name}_phase", 0, 360, phase)
         self.seed = params.add(f"{name}_seed", 0, 100, seed) # TODO: Change ambiguous name to something more descriptive
         self.shape = params.add(f"{name}_shape", 0, len(OscillatorShape)-1, shape)
@@ -150,16 +151,17 @@ class Oscillator:
                 raise ValueError(f"Invalid shape value. Must be 0 (sine), 1 (square), 2 (triangle), or 3 (sawtooth). got shape={shape}")
 
             if self.linked_param is not None:
-                if shape == 4:
+                if shape == 5:
                     # TODO: handle perlin noise mapping using the map_value method
                     mapped_sample = self._scale_value(self.linked_param, sample, in_min=-1.0, in_max=1.0) * self.amplitude.value
                 elif isinstance(self.linked_param.default_val, float):
+                    # mapped_sample = self._scale_value(self.linked_param, sample, in_min=-1.0, in_max=1.0) #* #self.amplitude.value
                     mapped_sample = map_value(round(sample, 5), self.param_min, self.param_max, self.linked_param.min, self.linked_param.max, round_down=False)
                 elif isinstance(self.linked_param.default_val, int):
                     mapped_sample = map_value(sample, self.param_min, self.param_max, self.linked_param.min, self.linked_param.max)
         
                 self.linked_param.value = mapped_sample
-                print(f'{sample} mapped to {mapped_sample} for linked param {self.linked_param.name}')
+                # print(f'{sample} mapped to {mapped_sample} for linked param {self.linked_param.name}')
             yield sample
             t += 1 / self.sample_rate  # Increment time by sample period 
         

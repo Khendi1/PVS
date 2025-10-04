@@ -4,9 +4,8 @@ from datetime import datetime
 import yaml
 import os
 import numpy as np
-from param import Param, ParamTable
-from buttons import Button
 import random
+from buttons import Button
 
 class SaveController:
     """
@@ -27,6 +26,7 @@ class SaveController:
         self.fwd = Button("Load Next", "load_next")
         self.prev = Button("Load Prev", "load_prev")
         self.rand = Button("Load Random", "load_rand")
+
 
     def init_save_dir(self, save_dir_name: str, yaml_filename: str):
         
@@ -55,6 +55,7 @@ class SaveController:
         except Exception as e:
             print(f"Error loading values: {e}")
 
+
     def on_prev_button_click(self):
 
         print(f"Prev button clicked!")
@@ -69,6 +70,7 @@ class SaveController:
         except Exception as e:
             print(f"Error loading values: {e}")
 
+
     def on_rand_button_click(self):
         print(f"Random button clicked!")
     
@@ -82,7 +84,8 @@ class SaveController:
             
         except Exception as e:
             print(f"Error loading values: {e}")
-    
+
+
     def load_param_vals(self, saved_values):
         d = saved_values[0][self.index]
         print(f"loaded values at index {self.index}: {d}\n\n")
@@ -91,6 +94,7 @@ class SaveController:
                 if tag == param_name:
                     params[param_name].set(d[tag])
                     dpg.set_value(param_name, d[tag])
+
 
     def save2(self):
         
@@ -115,26 +119,10 @@ class SaveController:
             print(f"YAML file not found at {self.yaml_file_path}. A new one will be created.")
 
 
-    def save1(self):
-        """ Old method for saving values to a YAML file """
-        date_time_str = datetime.now().strftime("%m-%d-%Y %H-%M")
-        print(f"Saving values at {date_time_str}")
-        
-        data = {}
-        for k, v in params.items():
-            print(f"{k}: {v.value}")
-            data[k] = v.value
-        
-        # Append the data to the YAML file
-        with open("saved_values.yaml", "a") as f:
-            yaml.dump([data], f, default_flow_style=False)
-
     def on_save_button_click(self, frame: np.ndarray):
-        # self.save1()
         self.save2(self)
         
-        # Optionally, save the modified image
-        # TODO: determine best way to grap a frame for saving w/o having to pass
+        # TODO: determine best way to grap a frame for saving w/o having to pass into method
         # cv2.imwrite(f"{date_time_str}.jpg", frame)
 
     def create_save_buttons(self):
@@ -150,3 +138,18 @@ class SaveController:
 
         with dpg.group(horizontal=True):
             dpg.add_button(label=self.rand.label, callback=self.on_rand_button_click, user_data=self.rand.tag, width=width//3)
+
+
+class Timeline:
+    def __init__(self, sliders):
+        self.labels = [s.labels for s in sliders]
+        self.current_state = [s.value for s in sliders]
+        self.prev_state = self.current_state
+
+    def update(self, sliders=None, buttons=None):
+        if sliders is not None:
+            self.labels = [s.labels for s in sliders]
+            self
+            self.current_state = [s.value for s in sliders]
+        self.prev_state = self.current_state
+        self.current_state = [s.value for s in sliders]

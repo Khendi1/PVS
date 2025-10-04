@@ -266,14 +266,14 @@ class SMC_Mixer:
 
         # each dict entry is a page of parameters
         self.fader_params = {
-            0: [ 'metaballs_frame_blend', 'metaballs_feedback', 'smooth_coloring_max_field', 'threshold', 'radius_multiplier', 'speed_multiplier', 'num_metaballs', 'metaball_zoom'],
+            0: [ 'frame_blend', 'metaballs_feedback', 'smooth_coloring_max_field', 'threshold', 'radius_multiplier', 'speed_multiplier', 'num_metaballs', 'metaball_zoom'],
             1: ['alpha', 'temporal_filter', 'x_sync_speed', 'x_sync_freq', 'x_sync_amp', 'y_sync_speed', 'y_sync_freq', 'y_sync_amp'],
             2: ['hue_shift', 'sat_shift', 'val_shift', 'val_threshold', 'val_hue_shift', 'contrast', 'hue_invert', 'hue_invert_angle'],
         }
         self.fader_config = self.fader_params.get(0, [])
 
         self.encoder_params = {
-            0: ['metaballs_frame_blend', 'metaball_skew_angle', 'metaball_skew_intensity', 'metaball_hue', 'metaballs_saturation', 'metaballs_value', 'metaballs_contrast', 'metaballs_brightness'],
+            0: ['frame_blend', 'metaball_skew_angle', 'metaball_skew_intensity', 'metaball_hue', 'metaballs_saturation', 'metaballs_value', 'metaballs_contrast', 'metaballs_brightness'],
             1: ['hue_shift', 'sat_shift', 'val_shift', 'zoom', 'r_shift', 'x_shift', 'y_shift', 'blur_kernel_size', ''],
             2: ['alpha', 'temporal_filter', 'blur_kernel_size', 'zoom', 'r_shift', 'x_shift', 'y_shift', ''],
         }
@@ -363,7 +363,7 @@ class MidiMix:
 
         # each dict entry is a page of parameters
         self.fader_params = {
-            1: ['alpha', 'temporal_filter', 'hue_shift', 'sat_shift', 'val_shift', 'contrast', 'brightness', 'blur_kernel_size', 'metaballs_frame_blend'], 
+            1: ['alpha', 'temporal_filter', 'hue_shift', 'sat_shift', 'val_shift', 'contrast', 'brightness', 'blur_kernel_size', 'frame_blend'], 
             # 2: ['hue_shift', 'sat_shift', 'val_shift', 'val_threshold', 'val_hue_shift', 'contrast', 'hue_invert', 'hue_invert_angle'],
         }
         self.fader_config = self.fader_params.get(1, [])
@@ -450,6 +450,8 @@ if __name__ == "__main__":
 
     print("\nMain program is running. The MIDI thread is listening in the background.")
     print("Press Ctrl+C to stop the MIDI thread and exit the program.")
+    
+    listen_to_midi_device()
 
     try:
         # Keep the main thread alive indefinitely so the MIDI input thread can run.
@@ -467,3 +469,63 @@ if __name__ == "__main__":
             print("MIDI thread stopped successfully.")
     finally:
         print("Exiting main program.")
+
+
+# Import the mido library for MIDI communication
+import mido
+import time
+
+def test_ports():
+    """
+    Lists available MIDI input devices.
+    """
+    input_ports = mido.get_input_names()
+
+    if not input_ports:
+        print("No MIDI input devices found.")
+        print("Please ensure your MIDI device is connected and recognized by your system.")
+        return
+
+    print("Available MIDI input devices:")
+    for i, port_name in enumerate(input_ports):
+        print(f"  {i}: {port_name}")
+
+def listen_to_midi_device():
+    """
+    Connects to the first available MIDI input device and prints incoming messages.
+    """
+    input_ports = mido.get_input_names()
+
+    if not input_ports:
+        print("No MIDI input devices found.")
+        print("Please ensure your MIDI device is connected and recognized by your system.")
+        return
+
+    print("Available MIDI input devices:")
+    for i, port_name in enumerate(input_ports):
+        print(f"  {i}: {port_name}")
+
+    # Attempt to connect to the first available input port
+    try:
+        # You can modify this to let the user select a port, e.g.,
+        # selected_index = int(input("Enter the number of the device to listen to: "))
+        # port_name_to_open = input_ports[selected_index]
+        
+        port_name_to_open = input_ports[0] # Automatically pick the first one
+        
+        print(f"\nAttempting to open MIDI input port: '{port_name_to_open}'")
+        with mido.open_input(port_name_to_open) as inport:
+            print(f"Successfully opened '{inport.name}'. Listening for MIDI messages...")
+            print("Press Ctrl+C to stop listening.")
+
+            # Loop indefinitely to listen for messages
+            for msg in inport:
+                print(f"Received MIDI message: {msg}")
+
+    except IndexError:
+        print("Invalid device selection. Please run the script again and choose a valid number.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        print("\nStopped listening to MIDI messages.")
+    

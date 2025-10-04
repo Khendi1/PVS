@@ -1,9 +1,7 @@
 from config import *
-from gui_elements import TrackbarRow, TrackbarCallback
 import dearpygui.dearpygui as dpg
-from generators import Oscillator
 from save import SaveController
-from buttons import Button
+from buttons import Buttons, Button
 
 import yaml
 import os
@@ -112,7 +110,6 @@ class Interface:
                         osc_bank[i].linked_param = param
                         break
 
-
     def create_control_window(self, width=550, height=600):
 
         dpg.create_context()
@@ -129,6 +126,58 @@ class Interface:
         dpg.show_viewport()
         dpg.set_primary_window("Controls", True)
 
+    # def select_source1_callback(self, sender, app_data):
+    #     """
+    #     Callback for the first dropdown menu.
+    #     """
+    #     from mix import start_video
+    #     selected_source1 = app_data
+    #     # Show/hide file path input based on selection
+    #     if app_data == "Video File":
+    #         dpg.show_item("file_path_source_1")
+    #         # If switching to video file, try to load it immediately
+    #         start_video(selected_source1, 1)
+    #     else:
+    #         dpg.hide_item("file_path_source_1")
+    #         start_video(selected_source1, 1)
+
+    # def select_source2_callback(self, sender, app_data):
+    #     """
+    #     Callback for the second dropdown menu.
+    #     """
+    #     global selected_source2
+    #     from mix import start_video
+    #     selected_source2 = app_data
+    #     # Show/hide file path input based on selection
+    #     if app_data == "Video File":
+    #         dpg.show_item("file_path_source_2")
+    #         # If switching to video file, try to load it immediately
+    #         start_video(selected_source2, 2)
+    #     else:
+    #         dpg.hide_item("file_path_source_2")
+    #         start_video(selected_source2, 2)
+
+    def mix_panel(self):
+        from mix import default_video_file_path, video_sources, select_source1_callback, select_source2_callback
+        dpg.add_text("Video Source 1")
+        dpg.add_combo(video_sources, default_value="Webcam", tag="source_1", callback=select_source1_callback)
+        # Initially hide the input text for file path 1 as webcam is default
+        dpg.add_input_text(label="Video File Path 1", tag="file_path_source_1", default_value="video1.mp4", show=False)
+        
+        dpg.add_text("Video Source 2")
+        dpg.add_combo(video_sources, default_value="Metaballs", tag="source_2", callback=select_source2_callback)
+        dpg.add_input_text(label="Video File Path 2", tag="file_path_source_2", default_value=default_video_file_path)
+        dpg.add_spacer(height=10)
+
+        dpg.add_text("Mixer")
+        # dpg.add_slider_float(label="Blending", default_value=alpha, min_value=0.0, max_value=1.0, callback=alpha_callback, format="%.2f")
+        frame_blend_slider = TrackbarRow(
+            "Frame Blend",
+            params.get("frame_blend"),
+            TrackbarCallback(params.get("frame_blend"), "frame_blend").__call__,
+            self.reset_slider_callback,
+            None) # fix defulat font_id=None
+  
 
     def hsv_sliders(self, default_font_id=None, global_font_id=None):
 
@@ -216,6 +265,13 @@ class Interface:
                 params.get("alpha"), 
                 TrackbarCallback(params.get("alpha"), "alpha").__call__, 
                 self.reset_slider_callback, 
+                default_font_id)
+            
+            frame_buffer_size_slider = TrackbarRow(
+                "Frame Buffer Size",
+                params.get("buffer_size"),
+                TrackbarCallback(params.get("buffer_size"), "buffer_size").__call__,
+                self.reset_slider_callback,
                 default_font_id)
             
             blur_kernel_slider = TrackbarRow(
@@ -455,13 +511,6 @@ class Interface:
                 "Feedback Alpha",
                 params.get("metaballs_feedback"),
                 TrackbarCallback(params.get("metaballs_feedback"), "metaballs_feedback").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-
-            frame_blend_slider = TrackbarRow(
-                "Frame Blend",
-                params.get("metaballs_frame_blend"),
-                TrackbarCallback(params.get("metaballs_frame_blend"), "metaballs_frame_blend").__call__,
                 self.reset_slider_callback,
                 default_font_id)
 
@@ -1068,6 +1117,34 @@ class Interface:
             dpg.bind_item_font(f"osc{i}", global_font_id)
 
 
+    def reaction_diffusion_sliders(self, default_font_id=None, global_font_id=None):
+        with dpg.collapsing_header(label=f"\tReaction Diffusion", tag="reaction_diffusion"):
+            rd_diffusion_rate_a_slider = TrackbarRow(
+                "Diffusion Rate A",
+                params.get("da"),
+                TrackbarCallback(params.get("da"), "da").__call__,
+                self.reset_slider_callback,
+                default_font_id)
+            rd_diffusion_rate_b_slider = TrackbarRow(
+                "Diffusion Rate B",
+                params.get("db"),
+                TrackbarCallback(params.get("db"), "db").__call__,
+                self.reset_slider_callback,
+                default_font_id)
+            rd_feed_rate_slider = TrackbarRow(
+                "Feed Rate",
+                params.get("feed"),
+                TrackbarCallback(params.get("feed"), "feed").__call__,
+                self.reset_slider_callback,
+                default_font_id)
+            rd_kill_rate_slider = TrackbarRow(
+                "Kill Rate",
+                params.get("kill"),
+                TrackbarCallback(params.get("kill"), "kill").__call__,
+                self.reset_slider_callback,
+                default_font_id)
+        dpg.bind_item_font("reaction_diffusion", global_font_id)
+
     def create_trackbars(self, width, height):
 
         with dpg.font_registry():
@@ -1076,6 +1153,7 @@ class Interface:
         dpg.bind_font(default_font_id)
 
         self.hsv_sliders(default_font_id, global_font_id)
+        self.mix_panel()
         self.effects_sliders(default_font_id, global_font_id)
         self.reflector_sliders(default_font_id, global_font_id)
         self.pan_sliders(default_font_id, global_font_id)
@@ -1084,6 +1162,7 @@ class Interface:
         self.sync_sliders(default_font_id, global_font_id)
         self.pattern_sliders(default_font_id, global_font_id)
         self.noiser_sliders(default_font_id, global_font_id)
+        # self.reaction_diffusion_sliders(default_font_id, global_font_id)
         # self.keying_sliders(default_font_id, global_font_id)
         # self.perlin_generator_sliders(default_font_id, global_font_id)
         # self.shape_generator_sliders(default_font_id, global_font_id)
@@ -1206,3 +1285,77 @@ class Interface:
 
 
 
+
+
+import dearpygui.dearpygui as dpg
+from config import params
+
+def reset_slider_callback(self, sender, app_data, user_data):
+    param = params.get(str(user_data))
+    if param is None:
+        print(f"Slider or param not found for {user_data}")
+        return
+    print(f"Got reset callback for {user_data}; setting to default value {param.default_val}")
+    param.reset()
+    dpg.set_value(user_data, param.value)
+
+
+class TrackbarRow:
+
+    def __init__(self, label, param, callback, button_callback, font):
+
+        self.label = label #TODO: method to get label from param name
+        self.tag = param.name
+        self.callback = callback
+        self.button_callback = button_callback
+        self.slider = None
+        self.button = None
+        self.value = param.default_val
+        self.type = type(param.default_val).__name__
+        self.param = param
+        self.font = font
+        self.create()
+
+    def create(self):
+        with dpg.group(horizontal=True):
+            # self.button = dpg.add_button(label="Reset", callback=lambda x: self.reset, width=50)
+            self.button = dpg.add_button(label="Reset", callback=self.button_callback, width=50, tag=self.tag + "_reset", user_data=self.tag)
+            if self.type == 'float':
+                self.slider = dpg.add_slider_float(label=self.label, tag=self.tag, 
+                                                   default_value=self.param.default_val, 
+                                                   min_value=self.param.min, 
+                                                   max_value=self.param.max, 
+                                                   callback=self.callback, 
+                                                   width=-100)
+            else:
+                self.slider = dpg.add_slider_int(label=self.label, tag=self.tag, default_value=self.param.default_val, min_value=self.param.min, max_value=self.param.max, callback=self.callback, width=-100)
+            dpg.bind_item_font(self.tag, self.font)
+            dpg.bind_item_font(self.tag + "_reset", self.font)
+
+class TrackbarCallback:
+    """
+    A callable class instance used as a callback for Dear PyGui trackbars.
+    It updates a specified Param object's value and an associated text item.
+    """
+    def __init__(self, target_param_obj, display_text_tag=None):
+        """
+        Initializes the callback instance.
+        Args:
+            target_param_obj (Param): The Param object whose 'value' attribute
+                                      this trackbar will control.
+            display_text_tag (str, optional): The tag of a dpg.add_text item
+                                            to update with the current value.
+        """
+        self.target_param = target_param_obj
+        self.display_text_tag = display_text_tag
+
+    def __call__(self, sender, app_data):
+        """
+        This method is invoked when the trackbar's value changes.
+        Args: 
+            sender: The tag/ID of the trackbar that triggered the callback.
+            app_data: The new value of the trackbar.
+        """
+        # Update the Param object's value
+        params.set(self.target_param.name, app_data)
+        dpg.set_value(sender, app_data)
