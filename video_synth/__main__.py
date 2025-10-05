@@ -135,6 +135,9 @@ def main():
                 skip1 = False
                 continue
 
+            # TODO: test this placement
+            feedback_frame = frame.copy()
+
             # update osc values
             osc_vals = [osc.get_next_value() for osc in osc_bank if osc.linked_param is not None]
             
