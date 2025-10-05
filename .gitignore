@@ -2,3 +2,5 @@ venv1/
 video_synth/__pycache__/
 save/*
 !save/.gitkeep
+.vscode/
+.VSCodeCounter/

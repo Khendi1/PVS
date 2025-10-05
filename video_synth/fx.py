@@ -6,6 +6,7 @@ import random
 import math
 from noise import pnoise2
 from collections import deque
+import time
 
 
 class WarpType(IntEnum):
@@ -276,10 +277,6 @@ class Pixels:
         self.blur_type = params.add("blur_type", 0, 4, 1) # 1=Gaussian, 2=Median, 3=Box, 4=Bilateral
         self.blur_kernel_size = params.add("blur_kernel_size", 1, 100, 1)
 
-        self.num_glitches = params.add("num_glitches", 0, 100, 0)
-        self.glitch_size = params.add("glitch_size", 1, 100, 0)
-
-# TODO: implement
     def gaussian_blur(self, frame: np.ndarray):
         mode = self.blur_type.value
         if mode == BlurType.NONE:
@@ -296,33 +293,6 @@ class Pixels:
         
         return frame
    
-    # TODO: implement
-    def glitch_image(self, image: np.ndarray):
-        height, width, _ = image.shape
-
-        for _ in range(self.num_glitches.value):
-            x = random.randint(0, width - 1)
-            y = random.randint(0, height - 1)
-
-            x_glitch_size = random.randint(1, self.glitch_size.value)
-            y_glitch_size = random.randint(1, self.glitch_size.value)
-
-            # Ensure the glitch area does not exceed image boundaries
-            x_end = min(x + x_glitch_size, width)
-            y_end = min(y + y_glitch_size, height)
-
-            # Extract a random rectangle
-            glitch_area = image[y:y_end, x:x_end].copy()
-
-            # Shuffle the pixels
-            glitch_area = glitch_area.reshape((-1, 3))
-            np.random.shuffle(glitch_area)
-            glitch_area = glitch_area.reshape((y_end - y, x_end - x, 3))
-
-            # Apply the glitch
-            image[y:y_end, x:x_end] = glitch_area
-        return image
-
 
     def sharpen_frame(self, frame: np.ndarray):
 
@@ -810,14 +780,6 @@ class Effects:
         return frame
 
 
-
-import numpy as np
-import cv2
-from enum import IntEnum
-import random
-import time
-from config import params
-
 class NoiseType(IntEnum):
     NONE = 0
     GAUSSIAN = 1
@@ -826,6 +788,7 @@ class NoiseType(IntEnum):
     SPECKLE = 4
     SPARSE = 5
     RANDOM = 6
+
 
 class ImageNoiser:
 
@@ -1015,301 +978,317 @@ class ImageNoiser:
         return np.clip(noisy_image, 0, 255).astype(np.uint8)
 
 
-# GLITCH_DURATION_FRAMES = 60 
-# GLITCH_INTENSITY_MAX = 50 
-# BLOCK_SIZE_MAX = 60
+# TODO: move to GlitchEffect class, add to params
+GLITCH_DURATION_FRAMES = 60 
+GLITCH_INTENSITY_MAX = 50 
+BLOCK_SIZE_MAX = 60
 
-# class GlitchEffect:
-#     def __init__(self):
-#         self.glitch_phase_start_frame = 0
-#         self.glitch_cycle_start_frame = 0
-#         self.band_div = params.add("glitch_band_div", 5, 1, 10, "Glitch Band Division", "Glitch Effects")
 
-#     def reset(self):
-#         self.glitch_phase_start_frame = 0
-#         self.glitch_cycle_start_frame = 0
-
-# # --- Helper Functions for Glitch Effects ---
-# def apply_evolving_pixel_shift(frame, frame_num, glitch_phase_start_frame):
-#     height, width, _ = frame.shape
-#     current_phase_frame = (frame_num - glitch_phase_start_frame) % GLITCH_DURATION_FRAMES
-
-#     # Calculate shift amount and direction based on current_phase_frame
-#     # Use a sinusoidal or linear progression for smooth evolution
-#     progress = current_phase_frame / GLITCH_DURATION_FRAMES
-#     shift_amount_x = int(GLITCH_INTENSITY_MAX * np.sin(progress * np.pi * 2)) # oscillates
-#     shift_amount_y = int(GLITCH_INTENSITY_MAX * np.cos(progress * np.pi * 2)) # oscillates
-
-#     glitched_frame = np.copy(frame)
-
-#     # Apply shift to different horizontal/vertical bands
-#     band_height = height // 5
-#     band_width = width // 5
-
-#     for i in range(5):
-#         y_start = i * band_height
-#         y_end = min((i + 1) * band_height, height)
-        
-#         # Shift horizontal bands
-#         if i % 2 == 0: # Even bands shift right
-#             shifted_band = np.roll(frame[y_start:y_end, :], shift_amount_x, axis=1)
-#         else: # Odd bands shift left
-#             shifted_band = np.roll(frame[y_start:y_end, :], -shift_amount_x, axis=1)
-#         glitched_frame[y_start:y_end, :] = shifted_band
-
-#     for i in range(5):
-#         x_start = i * band_width
-#         x_end = min((i + 1) * band_width, width)
-
-#         # Shift vertical bands
-#         if i % 2 == 0: # Even bands shift down
-#             shifted_band = np.roll(glitched_frame[:, x_start:x_end], shift_amount_y, axis=0)
-#         else: # Odd bands shift up
-#             shifted_band = np.roll(glitched_frame[:, x_start:x_end], -shift_amount_y, axis=0)
-#         glitched_frame[:, x_start:x_end] = shifted_band
-
-#     return glitched_frame
-
-# def apply_gradual_color_split(frame, frame_num, glitch_phase_start_frame):
-#     """
-#     Gradually separates and then merges color channels.
-#     Optimized: Uses cv2.split and np.roll which are fast matrix operations.
-#     """
-#     height, width, _ = frame.shape
-#     current_phase_frame = (frame_num - glitch_phase_start_frame) % GLITCH_DURATION_FRAMES
-
-#     # Calculate separation amount
-#     # Increases then decreases over the phase
-#     progress = current_phase_frame / GLITCH_DURATION_FRAMES
-#     separation_amount = int(GLITCH_INTENSITY_MAX * np.sin(progress * np.pi)) # Peaks at mid-phase
-
-#     b, g, r = cv2.split(frame)
-#     glitched_frame = np.zeros_like(frame)
-
-#     # Shift channels independently
-#     # Red channel shifts right, Green stays, Blue channel shifts left
-#     glitched_frame[:, :, 2] = np.roll(r, separation_amount, axis=1) # Red
-#     glitched_frame[:, :, 1] = g # Green (no shift)
-#     glitched_frame[:, :, 0] = np.roll(b, -separation_amount, axis=1) # Blue
-
-#     return glitched_frame
-
-# def apply_morphing_block_corruption(frame, frame_num, glitch_phase_start_frame):
-#     """
-#     Corrupts random blocks, with the size and number of corrupted blocks
-#     morphing over time.
-#     Optimized: Operations within each block are vectorized. The loop is for
-#     applying effects to multiple distinct random blocks.
-#     """
-#     height, width, _ = frame.shape
-#     current_phase_frame = (frame_num - glitch_phase_start_frame) % GLITCH_DURATION_FRAMES
-
-#     glitched_frame = np.copy(frame)
-
-#     # Calculate corruption intensity and block size based on progress
-#     progress = current_phase_frame / GLITCH_DURATION_FRAMES
-#     # Intensity: starts low, peaks, then goes low again
-#     corruption_intensity = int(255 * np.sin(progress * np.pi))
-#     # Block size: starts small, grows, then shrinks
-#     current_block_size = int(BLOCK_SIZE_MAX * np.sin(progress * np.pi))
-#     if current_block_size < 10: # Ensure minimum block size
-#         current_block_size = 10
-
-#     # Number of blocks to corrupt: more blocks when intensity is high
-#     num_blocks = int(10 + 20 * np.sin(progress * np.pi))
-
-#     for _ in range(num_blocks):
-#         # Random top-left corner for the block
-#         # Ensure block fits within frame
-#         x = random.randint(0, max(0, width - current_block_size))
-#         y = random.randint(0, max(0, height - current_block_size))
-
-#         # Get the region of interest
-#         # Ensure slice does not go out of bounds
-#         x_end = min(x + current_block_size, width)
-#         y_end = min(y + current_block_size, height)
-        
-#         # Only proceed if the block has valid dimensions
-#         if x_end > x and y_end > y:
-#             roi = glitched_frame[y:y_end, x:x_end]
-
-#             # Apply different corruption methods based on a random choice
-#             corruption_type = random.choice(['solid_color', 'noise', 'pixelate'])
-
-#             if corruption_type == 'solid_color':
-#                 # Fill with a random color based on intensity
-#                 color = [random.randint(0, corruption_intensity),
-#                          random.randint(0, corruption_intensity),
-#                          random.randint(0, corruption_intensity)]
-#                 roi[:, :] = color
-#             elif corruption_type == 'noise':
-#                 # Add random noise. Ensure noise shape matches ROI.
-#                 # Ensure the 'high' value for randint is always greater than 'low'.
-#                 # If corruption_intensity // 2 is 0, make the upper bound 1 to avoid ValueError.
-#                 low_bound = -corruption_intensity // 2
-#                 high_bound = corruption_intensity // 2
-#                 if high_bound <= low_bound: # This happens if corruption_intensity is 0 or 1
-#                     high_bound = low_bound + 1 # Ensure high > low
-
-#                 noise = np.random.randint(low_bound, high_bound, roi.shape, dtype=np.int16)
-#                 # Apply noise and clip values to 0-255 range
-#                 roi_with_noise = np.clip(roi.astype(np.int16) + noise, 0, 255).astype(np.uint8)
-#                 glitched_frame[y:y_end, x:x_end] = roi_with_noise
-#             elif corruption_type == 'pixelate':
-#                 # Simple pixelation by resizing down and up
-#                 # Ensure current_block_size is large enough for pixelation
-#                 if current_block_size > 5:
-#                     # Calculate new dimensions for pixelation (e.g., divide by 5)
-#                     pixel_width = max(1, (x_end - x) // 5)
-#                     pixel_height = max(1, (y_end - y) // 5)
-                    
-#                     small_roi = cv2.resize(roi, (pixel_width, pixel_height), interpolation=cv2.INTER_LINEAR)
-#                     pixelated_roi = cv2.resize(small_roi, (x_end - x, y_end - y), interpolation=cv2.INTER_NEAREST)
-#                     glitched_frame[y:y_end, x:x_end] = pixelated_roi
-
-#     return glitched_frame
-
-# def apply_horizontal_scroll_freeze_glitch(frame, frame_num, glitch_cycle_start_frame, fixed_y_end, growth_duration):
-#     """
-#     Applies a horizontal scrolling glitch effect that freezes and distorts a band.
-#     The bottom of the bar is fixed, and the top grows for a random duration.
-#     Each row within the bar has a random side-to-side shift.
-#     """
-#     height, width, _ = frame.shape
-#     glitched_frame = np.copy(frame)
-
-#     # Calculate current progress within the growth cycle
-#     current_frame_in_cycle = frame_num - glitch_cycle_start_frame
+class GlitchEffect:
     
-#     # Growth progress, clamped to 1.0
-#     growth_progress = min(1.0, current_frame_in_cycle / growth_duration)
-
-#     # Determine the glitch band height based on growth progress
-#     # Starts small (e.g., 10 pixels) and grows up to BLOCK_SIZE_MAX (60)
-#     glitch_band_height = int(10 + (BLOCK_SIZE_MAX - 10) * growth_progress)
-#     glitch_band_height = max(1, glitch_band_height) # Ensure minimum height of 1
-
-#     # The bottom of the bar is fixed at fixed_y_end
-#     y_end = fixed_y_end
-#     # The top of the bar moves upwards as it grows
-#     y_start = max(0, y_end - glitch_band_height)
-
-#     # Ensure y_start and y_end are valid indices
-#     y_start = min(y_start, height - 1)
-#     y_end = min(y_end, height)
-#     if y_start >= y_end: # Handle cases where band becomes invalid (e.g., too small or out of bounds)
-#         return glitched_frame # Return original if band is invalid
-
-#     # Get the ROI from the original frame (or glitched_frame if applying sequentially)
-#     roi = glitched_frame[y_start:y_end, :]
-
-#     # Apply random horizontal shift to each row within the band
-#     # The maximum random shift scales with growth progress
-#     max_row_shift = int(GLITCH_INTENSITY_MAX * growth_progress)
-#     if max_row_shift < 1: # Ensure a minimum shift range
-#         max_row_shift = 1
-
-#     randomly_shifted_roi = np.copy(roi)
-#     for r_idx in range(roi.shape[0]): # Iterate through each row in the ROI
-#         row_shift = random.randint(-max_row_shift, max_row_shift)
-#         randomly_shifted_roi[r_idx, :] = np.roll(roi[r_idx, :], row_shift, axis=0) # axis=0 for 1D array roll
-
-#     # Now, use this randomly_shifted_roi for further processing (noise, etc.)
-#     shifted_roi = randomly_shifted_roi
-
-#     # Add some random noise to the shifted band for more distortion
-#     noise_intensity = int(100 * np.sin(growth_progress * np.pi)) # Noise intensity varies
-    
-#     low_bound_noise = -noise_intensity // 2
-#     high_bound_noise = noise_intensity // 2
-#     if high_bound_noise <= low_bound_noise:
-#         high_bound_noise = low_bound_noise + 1
-
-#     noise = np.random.randint(low_bound_noise, high_bound_noise, shifted_roi.shape, dtype=np.int16)
-#     corrupted_roi = np.clip(shifted_roi.astype(np.int16) + noise, 0, 255).astype(np.uint8)
-
-#     # Replace the band in the glitched frame with the corrupted ROI
-#     glitched_frame[y_start:y_end, :] = corrupted_roi
-
-#     return glitched_frame
+    def __init__(self):
+        self.glitch_phase_start_frame = 0
+        self.glitch_cycle_start_frame = 0
+        self.band_div = params.add("glitch_band_div", 5, 1, 10, "Glitch Band Division", "Glitch Effects")
+        self.num_glitches = params.add("num_glitches", 0, 100, 0)
+        self.glitch_size = params.add("glitch_size", 1, 100, 0)
 
 
-# # --- Main Processing Function for Webcam ---
+    def reset(self):
+        self.glitch_phase_start_frame = 0
+        self.glitch_cycle_start_frame = 0
 
-# def apply_glitch_effects_to_webcam():
-#     """
-#     Captures video from webcam, applies time-evolving glitch effects,
-#     and displays the output in real-time.
-#     """
-#     # Use 0 for default webcam
-#     cap = cv2.VideoCapture(0)
+    # TODO: implement, rename
+    def glitch_image(self, image: np.ndarray):
+        height, width, _ = image.shape
 
-#     if not cap.isOpened():
-#         print("Error: Could not open webcam. Please ensure it's connected and not in use.")
-#         return
+        for _ in range(self.num_glitches.value):
+            x = random.randint(0, width - 1)
+            y = random.randint(0, height - 1)
 
-#     print("Webcam stream started. Press 'q' to quit.")
+            x_glitch_size = random.randint(1, self.glitch_size.value)
+            y_glitch_size = random.randint(1, self.glitch_size.value)
 
-#     frame_count = 0
-    
-#     # State for horizontal scroll freeze glitch
-#     current_fixed_y_end = None
-#     current_growth_duration = None
-#     last_scroll_glitch_reset_frame = 0 # Marks when the fixed_y_end and growth_duration were last set
+            # Ensure the glitch area does not exceed image boundaries
+            x_end = min(x + x_glitch_size, width)
+            y_end = min(y + y_glitch_size, height)
 
-#     while True:
-#         ret, frame = cap.read()
-#         if not ret:
-#             print("Failed to grab frame from webcam. Exiting...")
-#             break
+            # Extract a random rectangle
+            glitch_area = image[y:y_end, x:x_end].copy()
 
-#         # Get frame dimensions for dynamic calculations
-#         height, width, _ = frame.shape
+            # Shuffle the pixels
+            glitch_area = glitch_area.reshape((-1, 3))
+            np.random.shuffle(glitch_area)
+            glitch_area = glitch_area.reshape((y_end - y, x_end - x, 3))
 
-#         # Reset phase start frame if a new phase begins for existing effects
-#         if frame_count % GLITCH_DURATION_FRAMES == 0:
-#             glitch_phase_start_frame_shift = frame_count
-#         if frame_count % (GLITCH_DURATION_FRAMES * 1.5) == 0: # Slightly different cycle for color
-#             glitch_phase_start_frame_color = frame_count
-#         if frame_count % (GLITCH_DURATION_FRAMES * 0.75) == 0: # Faster cycle for blocks
-#             glitch_phase_start_frame_blocks = frame_count
+            # Apply the glitch
+            image[y:y_end, x:x_end] = glitch_area
+        return image
 
-#         # Check if it's time to reset the horizontal scroll glitch state
-#         # This will happen on the very first frame or when the current growth duration is over
-#         if frame_count == 0 or (frame_count - last_scroll_glitch_reset_frame) >= current_growth_duration:
-#             last_scroll_glitch_reset_frame = frame_count
-#             current_fixed_y_end = random.randint(height // 4, height)
-#             # Choose a random duration for the growth phase
-#             current_growth_duration = random.randint(GLITCH_DURATION_FRAMES // 2, GLITCH_DURATION_FRAMES * 2) # Random period for growth
+    def apply_evolving_pixel_shift(self, frame, frame_num, glitch_phase_start_frame):
+        height, width, _ = frame.shape
+        current_phase_frame = (frame_num - glitch_phase_start_frame) % GLITCH_DURATION_FRAMES
 
-#         # Apply effects to the current frame
-#         # All effects are applied concurrently for a layered glitch appearance.
-#         # frame = apply_evolving_pixel_shift(frame, frame_count, glitch_phase_start_frame_shift)
-#         # frame = apply_gradual_color_split(frame, frame_count, glitch_phase_start_frame_color)
-#         # frame = apply_morphing_block_corruption(frame, frame_count, glitch_phase_start_frame_blocks)
+        # Calculate shift amount and direction based on current_phase_frame
+        # Use a sinusoidal or linear progression for smooth evolution
+        progress = current_phase_frame / GLITCH_DURATION_FRAMES
+        shift_amount_x = int(GLITCH_INTENSITY_MAX * np.sin(progress * np.pi * 2)) # oscillates
+        shift_amount_y = int(GLITCH_INTENSITY_MAX * np.cos(progress * np.pi * 2)) # oscillates
+
+        glitched_frame = np.copy(frame)
+
+        # Apply shift to different horizontal/vertical bands
+        band_height = height // 5
+        band_width = width // 5
+
+        for i in range(5): # TODO: make band_div param
+            y_start = i * band_height
+            y_end = min((i + 1) * band_height, height)
+            
+            # Shift horizontal bands
+            if i % 2 == 0: # Even bands shift right
+                shifted_band = np.roll(frame[y_start:y_end, :], shift_amount_x, axis=1)
+            else: # Odd bands shift left
+                shifted_band = np.roll(frame[y_start:y_end, :], -shift_amount_x, axis=1)
+            glitched_frame[y_start:y_end, :] = shifted_band
+
+        for i in range(5): # TODO: make band_div param
+            x_start = i * band_width
+            x_end = min((i + 1) * band_width, width)
+
+            # Shift vertical bands
+            if i % 2 == 0: # Even bands shift down
+                shifted_band = np.roll(glitched_frame[:, x_start:x_end], shift_amount_y, axis=0)
+            else: # Odd bands shift up
+                shifted_band = np.roll(glitched_frame[:, x_start:x_end], -shift_amount_y, axis=0)
+            glitched_frame[:, x_start:x_end] = shifted_band
+
+        return glitched_frame
+
+    def apply_gradual_color_split(self, frame, frame_num, glitch_phase_start_frame):
+        """
+        Gradually separates and then merges color channels.
+        Optimized: Uses cv2.split and np.roll which are fast matrix operations.
+        """
+        height, width, _ = frame.shape
+        current_phase_frame = (frame_num - glitch_phase_start_frame) % GLITCH_DURATION_FRAMES
+
+        # Calculate separation amount
+        # Increases then decreases over the phase
+        progress = current_phase_frame / GLITCH_DURATION_FRAMES
+        separation_amount = int(GLITCH_INTENSITY_MAX * np.sin(progress * np.pi)) # Peaks at mid-phase
+
+        b, g, r = cv2.split(frame)
+        glitched_frame = np.zeros_like(frame)
+
+        # Shift channels independently
+        # Red channel shifts right, Green stays, Blue channel shifts left
+        glitched_frame[:, :, 2] = np.roll(r, separation_amount, axis=1) # Red
+        glitched_frame[:, :, 1] = g # Green (no shift)
+        glitched_frame[:, :, 0] = np.roll(b, -separation_amount, axis=1) # Blue
+
+        return glitched_frame
+
+    def apply_morphing_block_corruption(self, frame, frame_num, glitch_phase_start_frame):
+        """
+        Corrupts random blocks, with the size and number of corrupted blocks
+        morphing over time.
+        Optimized: Operations within each block are vectorized. The loop is for
+        applying effects to multiple distinct random blocks.
+        """
+        height, width, _ = frame.shape
+        current_phase_frame = (frame_num - glitch_phase_start_frame) % GLITCH_DURATION_FRAMES
+
+        glitched_frame = np.copy(frame)
+
+        # Calculate corruption intensity and block size based on progress
+        progress = current_phase_frame / GLITCH_DURATION_FRAMES
+        # Intensity: starts low, peaks, then goes low again
+        corruption_intensity = int(255 * np.sin(progress * np.pi))
+        # Block size: starts small, grows, then shrinks
+        current_block_size = int(BLOCK_SIZE_MAX * np.sin(progress * np.pi))
+        if current_block_size < 10: # Ensure minimum block size
+            current_block_size = 10
+
+        # Number of blocks to corrupt: more blocks when intensity is high
+        num_blocks = int(10 + 20 * np.sin(progress * np.pi))
+
+        for _ in range(num_blocks):
+            # Random top-left corner for the block
+            # Ensure block fits within frame
+            x = random.randint(0, max(0, width - current_block_size))
+            y = random.randint(0, max(0, height - current_block_size))
+
+            # Get the region of interest
+            # Ensure slice does not go out of bounds
+            x_end = min(x + current_block_size, width)
+            y_end = min(y + current_block_size, height)
+            
+            # Only proceed if the block has valid dimensions
+            if x_end > x and y_end > y:
+                roi = glitched_frame[y:y_end, x:x_end]
+
+                # Apply different corruption methods based on a random choice
+                corruption_type = random.choice(['solid_color', 'noise', 'pixelate'])
+
+                if corruption_type == 'solid_color':
+                    # Fill with a random color based on intensity
+                    color = [random.randint(0, corruption_intensity),
+                            random.randint(0, corruption_intensity),
+                            random.randint(0, corruption_intensity)]
+                    roi[:, :] = color
+                elif corruption_type == 'noise':
+                    # Add random noise. Ensure noise shape matches ROI.
+                    # Ensure the 'high' value for randint is always greater than 'low'.
+                    # If corruption_intensity // 2 is 0, make the upper bound 1 to avoid ValueError.
+                    low_bound = -corruption_intensity // 2
+                    high_bound = corruption_intensity // 2
+                    if high_bound <= low_bound: # This happens if corruption_intensity is 0 or 1
+                        high_bound = low_bound + 1 # Ensure high > low
+
+                    noise = np.random.randint(low_bound, high_bound, roi.shape, dtype=np.int16)
+                    # Apply noise and clip values to 0-255 range
+                    roi_with_noise = np.clip(roi.astype(np.int16) + noise, 0, 255).astype(np.uint8)
+                    glitched_frame[y:y_end, x:x_end] = roi_with_noise
+                elif corruption_type == 'pixelate':
+                    # Simple pixelation by resizing down and up
+                    # Ensure current_block_size is large enough for pixelation
+                    if current_block_size > 5:
+                        # Calculate new dimensions for pixelation (e.g., divide by 5)
+                        pixel_width = max(1, (x_end - x) // 5)
+                        pixel_height = max(1, (y_end - y) // 5)
+                        
+                        small_roi = cv2.resize(roi, (pixel_width, pixel_height), interpolation=cv2.INTER_LINEAR)
+                        pixelated_roi = cv2.resize(small_roi, (x_end - x, y_end - y), interpolation=cv2.INTER_NEAREST)
+                        glitched_frame[y:y_end, x:x_end] = pixelated_roi
+
+        return glitched_frame
+
+    def apply_horizontal_scroll_freeze_glitch(self, frame, frame_num, glitch_cycle_start_frame, fixed_y_end, growth_duration):
+        """
+        Applies a horizontal scrolling glitch effect that freezes and distorts a band.
+        The bottom of the bar is fixed, and the top grows for a random duration.
+        Each row within the bar has a random side-to-side shift.
+        """
+        height, width, _ = frame.shape
+        glitched_frame = np.copy(frame)
+
+        # Calculate current progress within the growth cycle
+        current_frame_in_cycle = frame_num - glitch_cycle_start_frame
         
-#         # Apply the new scrolling glitch effect, passing its specific state
-#         frame = apply_horizontal_scroll_freeze_glitch(
-#             frame,
-#             frame_count,
-#             last_scroll_glitch_reset_frame,
-#             current_fixed_y_end,
-#             current_growth_duration
-#         )
+        # Growth progress, clamped to 1.0
+        growth_progress = min(1.0, current_frame_in_cycle / growth_duration)
 
-#         # Display the glitched frame
-#         cv2.imshow('Live Glitch Effect', frame)
+        # Determine the glitch band height based on growth progress
+        # Starts small (e.g., 10 pixels) and grows up to BLOCK_SIZE_MAX (60)
+        glitch_band_height = int(10 + (BLOCK_SIZE_MAX - 10) * growth_progress)
+        glitch_band_height = max(1, glitch_band_height) # Ensure minimum height of 1
 
-#         frame_count += 1
+        # The bottom of the bar is fixed at fixed_y_end
+        y_end = fixed_y_end
+        # The top of the bar moves upwards as it grows
+        y_start = max(0, y_end - glitch_band_height)
 
-#         # Check for 'q' key press to exit
-#         if cv2.waitKey(1) & 0xFF == ord('q'):
-#             break
+        # Ensure y_start and y_end are valid indices
+        y_start = min(y_start, height - 1)
+        y_end = min(y_end, height)
+        if y_start >= y_end: # Handle cases where band becomes invalid (e.g., too small or out of bounds)
+            return glitched_frame # Return original if band is invalid
 
-#     cap.release()
-#     cv2.destroyAllWindows()
-#     print("Webcam stream stopped.")
+        # Get the ROI from the original frame (or glitched_frame if applying sequentially)
+        roi = glitched_frame[y_start:y_end, :]
 
-# if __name__ == "__main__":
-#     apply_glitch_effects_to_webcam()
+        # Apply random horizontal shift to each row within the band
+        # The maximum random shift scales with growth progress
+        max_row_shift = int(GLITCH_INTENSITY_MAX * growth_progress)
+        if max_row_shift < 1: # Ensure a minimum shift range
+            max_row_shift = 1
+
+        randomly_shifted_roi = np.copy(roi)
+        for r_idx in range(roi.shape[0]): # Iterate through each row in the ROI
+            row_shift = random.randint(-max_row_shift, max_row_shift)
+            randomly_shifted_roi[r_idx, :] = np.roll(roi[r_idx, :], row_shift, axis=0) # axis=0 for 1D array roll
+
+        # Now, use this randomly_shifted_roi for further processing (noise, etc.)
+        shifted_roi = randomly_shifted_roi
+
+        # Add some random noise to the shifted band for more distortion
+        noise_intensity = int(100 * np.sin(growth_progress * np.pi)) # Noise intensity varies
+        
+        low_bound_noise = -noise_intensity // 2
+        high_bound_noise = noise_intensity // 2
+        if high_bound_noise <= low_bound_noise:
+            high_bound_noise = low_bound_noise + 1
+
+        noise = np.random.randint(low_bound_noise, high_bound_noise, shifted_roi.shape, dtype=np.int16)
+        corrupted_roi = np.clip(shifted_roi.astype(np.int16) + noise, 0, 255).astype(np.uint8)
+
+        # Replace the band in the glitched frame with the corrupted ROI
+        glitched_frame[y_start:y_end, :] = corrupted_roi
+
+        return glitched_frame
+
+    def apply_glitch_effects_to_webcam(self, frame):
+        """
+        Captures video from webcam, applies time-evolving glitch effects,
+        and displays the output in real-time.
+        """
+        # Use 0 for default webcam
+        cap = cv2.VideoCapture(0)
+
+        if not cap.isOpened():
+            print("Error: Could not open webcam. Please ensure it's connected and not in use.")
+            return
+
+        print("Webcam stream started. Press 'q' to quit.")
+
+        frame_count = 0
+        
+        # State for horizontal scroll freeze glitch
+        current_fixed_y_end = None
+        current_growth_duration = None
+        last_scroll_glitch_reset_frame = 0 # Marks when the fixed_y_end and growth_duration were last set
+
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                print("Failed to grab frame from webcam. Exiting...")
+                break
+
+            # Get frame dimensions for dynamic calculations
+            height, width, _ = frame.shape
+
+            # Reset phase start frame if a new phase begins for existing effects
+            if frame_count % GLITCH_DURATION_FRAMES == 0:
+                glitch_phase_start_frame_shift = frame_count
+            if frame_count % (GLITCH_DURATION_FRAMES * 1.5) == 0: # Slightly different cycle for color
+                glitch_phase_start_frame_color = frame_count
+            if frame_count % (GLITCH_DURATION_FRAMES * 0.75) == 0: # Faster cycle for blocks
+                glitch_phase_start_frame_blocks = frame_count
+
+            # Check if it's time to reset the horizontal scroll glitch state
+            # This will happen on the very first frame or when the current growth duration is over
+            if frame_count == 0 or (frame_count - last_scroll_glitch_reset_frame) >= current_growth_duration:
+                last_scroll_glitch_reset_frame = frame_count
+                current_fixed_y_end = random.randint(height // 4, height)
+                # Choose a random duration for the growth phase
+                current_growth_duration = random.randint(GLITCH_DURATION_FRAMES // 2, GLITCH_DURATION_FRAMES * 2) # Random period for growth
+
+            # Apply effects to the current frame
+            # All effects are applied concurrently for a layered glitch appearance.
+            # frame = apply_evolving_pixel_shift(frame, frame_count, glitch_phase_start_frame_shift)
+            # frame = apply_gradual_color_split(frame, frame_count, glitch_phase_start_frame_color)
+            # frame = apply_morphing_block_corruption(frame, frame_count, glitch_phase_start_frame_blocks)
+            
+            # Apply the new scrolling glitch effect, passing its specific state
+            frame = apply_horizontal_scroll_freeze_glitch(
+                frame,
+                frame_count,
+                last_scroll_glitch_reset_frame,
+                current_fixed_y_end,
+                current_growth_duration
+            )
+
+            frame_count += 1
+            return frame
 

@@ -251,6 +251,9 @@ class ReactionDiffusionSimulator:
 
 
 class LavaLampSynth:
+    # BUG: find bug; when increasing num_metaballs, their sizes seem to get smaller
+    # TODO: add parameters to control metaball colors, blending modes, and feedback intensity
+    # BUG: find bug: when reducing metaball size then returning to original/larger sizes, they get smaller each time
     def __init__(self, width=800, height=600):
         """
         Initializes the LavaLampSynth with given dimensions.
@@ -462,6 +465,7 @@ class LavaLampSynth:
             return current_frame
         return frame
 
+    # TODO: re-enable METABALL SLIDERS when we have metaball parameters
     # def metaballs_sliders(self, default_font_id=None, global_font_id=None):
     #     with dpg.collapsing_header(label=f"\tMetaballs", tag="metaballs"):
     #         num_metaballs_slider = TrackbarRow(
@@ -521,4 +525,63 @@ class LavaLampSynth:
     #             default_font_id)
 
     #     dpg.bind_item_font("metaballs", global_font_id)
+
+
+class MoirePattern:
+    #TODO: implement dynamic moire pattern animation
+    #TODO: add parameters to control line frequency, angle, and animation speed
+    def __init__(self):
+        pass
+
+
+    def create_moire_pattern(size=(800, 800)):
+        """
+        Generates a Moire pattern image by combining two sets of oscillating lines.
+
+        The Moire effect is created when two regular patterns (like grids or
+        sine waves) are superimposed, resulting in a new, larger-scale pattern.
+        """
+        # 1. Initialize an empty image canvas (8-bit grayscale)
+        height, width = size
+        canvas = np.zeros(size, dtype=np.uint8)
+
+        # Create coordinate grids
+        # 'X' gives column index for every pixel, 'Y' gives row index
+        X, Y = np.meshgrid(np.arange(width), np.arange(height))
+
+        # --- Pattern 1: Vertical lines, slightly angled ---
+        # Freq: 0.1, Angle: 1 degree
+        frequency1 = 0.1
+        angle1 = np.deg2rad(1)
+
+        # Project coordinates onto the angled line
+        P1 = X * np.cos(angle1) + Y * np.sin(angle1)
+
+        # Use sine wave to create oscillating intensity (lines)
+        pattern1 = (np.sin(P1 * frequency1) * 127 + 128).astype(np.uint8)
+
+        # --- Pattern 2: Vertical lines, slightly different frequency and angle ---
+        # Freq: 0.105, Angle: -1 degree
+        frequency2 = 0.105
+        angle2 = np.deg2rad(-1)
+
+        # Project coordinates onto the second angled line
+        P2 = X * np.cos(angle2) + Y * np.sin(angle2)
+        
+        # Second sine wave pattern
+        pattern2 = (np.sin(P2 * frequency2) * 127 + 128).astype(np.uint8)
+
+        # 2. Combine patterns to create the Moire effect
+        # Multiplication or addition of the two patterns creates the interference.
+        # Here, we use multiplication (scaled and normalized) for a strong effect.
+        combined_pattern = (pattern1.astype(np.float32) * pattern2.astype(np.float32)) / 255.0
+        
+        # Scale back to 0-255 range and convert to 8-bit integer
+        moire_image = (combined_pattern * 255).astype(np.uint8)
+
+        # 3. Apply a contrast stretch (optional but makes pattern clearer)
+        # The Moire effect is usually visible in the darker parts of the image.
+        moire_image = cv2.equalizeHist(moire_image)
+
+        return moire_image
 
