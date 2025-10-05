@@ -985,7 +985,7 @@ BLOCK_SIZE_MAX = 60
 
 
 class GlitchEffect:
-    
+
     def __init__(self):
         self.glitch_phase_start_frame = 0
         self.glitch_cycle_start_frame = 0
@@ -1227,6 +1227,9 @@ class GlitchEffect:
         glitched_frame[y_start:y_end, :] = corrupted_roi
 
         return glitched_frame
+
+    def scanline_distortion(self, frame, frame_num):
+        pass # TODO: implement scanline distortion effect
 
     def apply_glitch_effects_to_webcam(self, frame):
         """

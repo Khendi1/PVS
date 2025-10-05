@@ -34,7 +34,7 @@ def apply_effects(frame, patterns: Patterns, basic: Effects, color: Color,
         frame = reflector.apply_reflection(frame)
         frame = color.modify_hsv(frame)
         frame = color.adjust_brightness_contrast(frame)
-        frame = pixels.glitch_image(frame)
+        # frame = pixels.glitch_image(frame)
         frame = noise.apply_noise(frame)
         frame = color.polarize_frame_hsv(frame)
         frame = color.solarize_image(frame)
@@ -42,16 +42,35 @@ def apply_effects(frame, patterns: Patterns, basic: Effects, color: Color,
         frame = pixels.gaussian_blur(frame)
         frame = pixels.sharpen_frame(frame)
 
-        # TODO: test this,test ordering
+        #TODO: implement glitch effect class functions
+        # frame = glitch.apply_evolving_pixel_shift(frame, ...)
+        # frame = glitch.apply_gradual_color_split(frame, ...)
+        # frame = glitch.apply_morphing_block_corruption(frame, ...)
+        # frame = glitch.apply_horizontal_scroll_freeze_glitch(frame, ...)
+        # frame = glitch.apply_vertical_jitter_glitch(frame, ...)
+        # frame = glitch.scanline_distortion(frame, ...)
+
+        # TODO: test these effects, test ordering
         # image_height, image_width = frame.shape[:2]
-        # frame = generate_plasma_effect(image_width, image_height)
         # frame = fx.polar_transform(frame, params.get("polar_x"), params.get("polar_y"), params.get("polar_radius"))
         # frame = fx.apply_perlin_noise
         # warp_frame = fx.warp_frame(frame)
+
+        # BUG: does lissajous need to be on black background to work properly?
         # frame = np.zeros((height, width, 3), dtype=np.uint8)
         # frame = fx.lissajous_pattern(frame, t)
+
         # TODO: fix bug where shape hue affects the entire frame hue
         # frame = s.draw_shapes_on_frame(frame, c.image_width, c.image_height)
+
+        # TODO: Move to mixer.py
+        # frame = generate_plasma_effect(image_width, image_height)
+
+        # TODO: move to mixer.py, test moire pattern generator
+        # frame = moire.create_moire_pattern(size=(image_width, image_height))
+
+        # TODO: test shader integration, move to mixer.py
+        # frame = shader_app.run_shader_app_glfw()
 
     return frame
 
