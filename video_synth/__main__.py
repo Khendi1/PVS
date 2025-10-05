@@ -85,11 +85,10 @@ def main():
     global image_height, image_width, skip1, cap1, cap2
     print("Initializing video capture...")
 
-    mixer = Mixer()
-
     # Initialize mixer video sources with their default settings
-    mixer.start_video(params.get("source1").val, 1) # TODO: move to init function
-    mixer.start_video(params.get("source2").val, 2)
+    mixer = Mixer()
+    mixer.start_video("Webcam", 1) # TODO: move to init function
+    mixer.start_video("Metaballs", 2)
     frame = mixer.mix_sources(mode="blend")
 
     #BUG: mixer not properly initializing on first run; workaround is to loop until a valid frame is obtained
@@ -145,7 +144,7 @@ def main():
 
     # Create control panel after initializing objects that will be used in the GUI
     gui = Interface()
-    gui.create_control_window()
+    gui.create_control_window(mixer=mixer)
 
     # Create a copy of the feedback frame for temporal filtering
     prev_frame = feedback_frame.copy()
@@ -156,8 +155,8 @@ def main():
         while True:
             # retreive and mix frames from the selected sources
             frame = mixer.mix_sources()
-            if skip1 or frame is None:
-                skip1 = False
+            if mixer.skip1 or frame is None:
+                mixer.skip1 = False
                 continue
 
             # TODO: test this placement
@@ -204,7 +203,7 @@ def main():
         print("Exiting main program.")
         # Release the capture and destroy all windows
         dpg.destroy_context()
-        for cap in live_caps:
+        for cap in mixer.live_caps:
             if cap and cap.isOpened():
                 cap.release()
         cv2.destroyAllWindows()

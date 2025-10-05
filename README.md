@@ -10,6 +10,7 @@ This suite plays well with lots of other tools and hardware, so take a look at t
 
 
 ## Features and Parameters:
+
 - Feedback & Filtering:
     - Alpha blend: blends raw frame with modified frame
     - Temporal filter: blends current alpha-blend frame with previous alpha-blend frame to reduce strobing effects
@@ -55,9 +56,13 @@ This suite plays well with lots of other tools and hardware, so take a look at t
 - plasma generator
 - locally save and recall patches (currently broken after imlementing params class)
 
+## Pending Features & Issue Tracking
+
+This project is meant to be my fun, relaxing, creative exploration, not a demonstration of proper project management techniques. Instead of tying up precious creative time with Github issue tracking, task tags (i.e. TODO, BUG, etc.) are instead stored inline. The VSCode TODO Tree extension is useful for displaying these tags using various views.
+
 ## Background and Inspiration
 
-My exploration of video manipulation was inspired by [this video](https://www.youtube.com/watch?v=D3eHKI0nvKA), which was graciously provided by the algorithm. In describing his live image manipulator mechanical sculpture masterpeice, Dave Blair describes why his machine must use an expensive field-monitor commonly used in movie production, as it offers knobs to manipulate hue, saturation and value. While this requirement makes sense for his application, I was inspired to explore a purely code-based solution, with the intention to solder up some encoders. I have since pivoted to using off-the-shelf controllers to emulate effects normally acheived through analog video synthesis modules and mixers (feedback, oscillators, [composite analog sync modulation](https://www.youtube.com/watch?v=YlLN_H3Z8Gc)), as well as early digital animation techniques (perlin noise, fractal noise, [metaballs](https://steve.hollasch.net/cgindex/misc/metaballs.html), plasma, moire, etc.).
+My exploration into video art was inspired by [this video](https://www.youtube.com/watch?v=D3eHKI0nvKA), which was graciously provided by the algorithm. In describing his live image manipulator mechanical sculpture masterpeice, Dave Blair describes why his machine must use an expensive field-monitor commonly used in movie production, as it offers knobs to manipulate hue, saturation and value. While this requirement makes sense for his application, I was inspired to explore a purely code-based solution, with the intention to solder up some encoders. I have since pivoted to using off-the-shelf controllers to emulate effects normally acheived through analog video synthesis modules and mixers (feedback, oscillators, [composite analog sync modulation](https://www.youtube.com/watch?v=YlLN_H3Z8Gc)), as well as early digital animation techniques (perlin noise, fractal noise, [metaballs](https://steve.hollasch.net/cgindex/misc/metaballs.html), plasma, moire, etc.).
 
 ## Requirements
 - python3
@@ -65,6 +70,9 @@ My exploration of video manipulation was inspired by [this video](https://www.yo
 - webcam
 
 ## Optional Off-The-Shelf Hardware
+
+These are cheap, readily available components that help with converting and capturing various common formats. 
+
 - Midi controllers (see [Control](#control) section)
 - HDMI capture device (hdmi pass-thru can be a useful feature)
 - HDMI 1-in-4-out
@@ -76,18 +84,25 @@ My exploration of video manipulation was inspired by [this video](https://www.yo
 - VGA capture device
 
 ## Optional DIY Hardware
-- GBS Video Feedback Synth (also see notes from Gleix for bend)
-- 2-in-1 out composite switcher
+
+These tools require a combination of off-the-shelf components, discrete component, DIY assembly, and enclosure design
+
+- GBS Video Feedback Synth (instructions by [LofiFuture]())
+    - more bend points for 74HC identified by [Gleix]()
+- 2-in-1-out passive composite switcher
 - Klompf Dirty Video Mixer
-- VC9900 Glitch Box w/ GBSControl
+- VC9900 Glitch Box (bend points from the GBS Feedback Synth apply here) w/ [GBSControl]()
 
 ## Optional Custom PCBs
-- CHA/V by Jonas Bers
-- Archer Enhancer by lightmusicvisuals
-- PixelSlasher by CTXz
-- recurBOY by cyberboy666
-- _rupture_ by cyberboy666
-- sync_ope by cyberboy666
+
+These are custom PCBs that I have built and utilize. They may be available fully assembled in online shops, but they can also be manufactured and assembled DIY style.
+
+- CHA/V by [Jonas Bers](https://jonasbers.com/chav/)
+- Archer Experimenter by [lightmusicvisuals](https://github.com/lightmusicvisuals/archer_experimenter)
+- PixelSlasher by [CTXz](https://github.com/CTXz/Video-Glitch-Array/tree/master/PixelSlasher)
+- recurBOY by [cyberboy666](https://github.com/cyberboy666/recurBOY)
+- _rupture_ by [cyberboy666](https://github.com/cyberboy666/_rupture_)
+- sync_ope by [cyberboy666](https://github.com/cyberboy666/sync_ope)
 
 ## Control
 The app can be controlled through a (crappy) GUI or midi controller. The program is currently configured to use a cheap AKAI MIDI Mix or MVAVE SMC Mixer, but there are provisions to configure a new controller with relative ease. To implement a new controller, see the required functions you must expose in the example ```SMC_Mixer()``` or ```MidiMix()``` classes in ```midi.py```. Most work involves the mapping.
@@ -95,5 +110,10 @@ The app can be controlled through a (crappy) GUI or midi controller. The program
 The current configuration will be superceded by a class/subclass structure.
 
 ## My Current Configuration
+* TODO: include VGA capture device in sources
+* TODO: include CHA/V, link to VGA capture source
+* TODO: add posterize, solarize, to effects
+* note that the Unmixed HDMI Display is not the fully mixed video. It is essentially a placeholder to indicate that there is another HDMI output available.
+
 ![Video Synthesizer Diagram](documentation/diagram.svg)
 

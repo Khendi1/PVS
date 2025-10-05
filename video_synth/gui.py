@@ -2,6 +2,7 @@ from config import *
 import dearpygui.dearpygui as dpg
 from save import SaveController
 from buttons import Buttons, Button
+from mix import *
 
 import yaml
 import os
@@ -110,12 +111,12 @@ class Interface:
                         osc_bank[i].linked_param = param
                         break
 
-    def create_control_window(self, width=550, height=600):
+    def create_control_window(self, width=550, height=600, mixer=None):
 
         dpg.create_context()
 
         with dpg.window(tag="Controls", label="Controls", width=width, height=height):
-            self.create_trackbars(width, height)
+            self.create_trackbars(width, height, mixer)
             # self.create_trackbar_panels_for_param()
             self.saver = SaveController(width, height).create_save_buttons()
             self.create_buttons(width, height)
@@ -157,16 +158,16 @@ class Interface:
     #         dpg.hide_item("file_path_source_2")
     #         start_video(selected_source2, 2)
 
-    def mix_panel(self):
-        from mix import default_video_file_path, video_sources, select_source1_callback, select_source2_callback
+    def mix_panel(self, mixer):
+        
         dpg.add_text("Video Source 1")
-        dpg.add_combo(video_sources, default_value="Webcam", tag="source_1", callback=select_source1_callback)
+        dpg.add_combo(list(MixSources.__members__.keys()), default_value="Webcam", tag="source_1", callback=mixer.select_source1_callback)
         # Initially hide the input text for file path 1 as webcam is default
         dpg.add_input_text(label="Video File Path 1", tag="file_path_source_1", default_value="video1.mp4", show=False)
         
         dpg.add_text("Video Source 2")
-        dpg.add_combo(video_sources, default_value="Metaballs", tag="source_2", callback=select_source2_callback)
-        dpg.add_input_text(label="Video File Path 2", tag="file_path_source_2", default_value=default_video_file_path)
+        dpg.add_combo(mixer.video_sources, default_value="Metaballs", tag="source_2", callback=mixer.select_source2_callback)
+        dpg.add_input_text(label="Video File Path 2", tag="file_path_source_2", default_value=mixer.default_video_file_path)
         dpg.add_spacer(height=10)
 
         dpg.add_text("Mixer")
@@ -177,6 +178,9 @@ class Interface:
             TrackbarCallback(params.get("frame_blend"), "frame_blend").__call__,
             self.reset_slider_callback,
             None) # fix defulat font_id=None
+        
+        # luma_key_slider = TrackbarRow(
+
   
 
     def hsv_sliders(self, default_font_id=None, global_font_id=None):
@@ -330,19 +334,19 @@ class Interface:
             #     self.reset_slider_callback,
             #     default_font_id)
 
-            num_glitches_slider = TrackbarRow(
-                "Glitch Qty", 
-                params.get("num_glitches"), 
-                TrackbarCallback(params.get("num_glitches"), "num_glitches").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
+            # num_glitches_slider = TrackbarRow(
+            #     "Glitch Qty", 
+            #     params.get("num_glitches"), 
+            #     TrackbarCallback(params.get("num_glitches"), "num_glitches").__call__, 
+            #     self.reset_slider_callback, 
+            #     default_font_id)
             
-            glitch_size_slider = TrackbarRow(
-                "Glitch Size", 
-                params.get("glitch_size"), 
-                TrackbarCallback(params.get("glitch_size"), "glitch_size").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
+            # glitch_size_slider = TrackbarRow(
+            #     "Glitch Size", 
+            #     params.get("glitch_size"), 
+            #     TrackbarCallback(params.get("glitch_size"), "glitch_size").__call__, 
+            #     self.reset_slider_callback, 
+            #     default_font_id)
             
         dpg.bind_item_font("effects", global_font_id)
 
@@ -1145,7 +1149,7 @@ class Interface:
                 default_font_id)
         dpg.bind_item_font("reaction_diffusion", global_font_id)
 
-    def create_trackbars(self, width, height):
+    def create_trackbars(self, width, height, mixer):
 
         with dpg.font_registry():
             global_font_id = dpg.add_font("C:/Windows/Fonts/arial.ttf", 18) # Larger font size for the header
@@ -1153,12 +1157,12 @@ class Interface:
         dpg.bind_font(default_font_id)
 
         self.hsv_sliders(default_font_id, global_font_id)
-        self.mix_panel()
+        self.mix_panel(mixer)
         self.effects_sliders(default_font_id, global_font_id)
         self.reflector_sliders(default_font_id, global_font_id)
         self.pan_sliders(default_font_id, global_font_id)
         self.metaballs_sliders(default_font_id, global_font_id)
-        self.plasma_sliders(default_font_id, global_font_id)
+        # self.plasma_sliders(default_font_id, global_font_id)
         self.sync_sliders(default_font_id, global_font_id)
         self.pattern_sliders(default_font_id, global_font_id)
         self.noiser_sliders(default_font_id, global_font_id)
