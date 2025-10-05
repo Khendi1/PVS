@@ -73,6 +73,12 @@ def main():
     mixer.start_video(params.get("source2").val, 2)
     frame = mixer.mix_sources(mode="blend")
 
+    #BUG: mixer not properly initializing on first run; workaround is to loop until a valid frame is obtained
+    #BUG: fix initialization of video sources in mixer.py
+    while frame is None:
+        print("Waiting for a valid video source...")
+        frame = mixer.mix_sources(mode="blend")
+
     # Create a copy of the frame for feedback and get its dimensions
     feedback_frame = frame.copy()
     image_height, image_width = frame.shape[:2]
@@ -105,7 +111,6 @@ def main():
         "noise": noise,
         "shapes": shapes,
         "patterns": patterns,
-        # "key": key,    # TODO: test this
         "reflector": reflector,
         "sync": sync,
         "warp": warp
@@ -114,6 +119,7 @@ def main():
 
     # Initialize the midi input controller before creating the GUI
     # TODO: This assumes both controllers are always connected in a specific order; improve this
+    #BUG: fix initialization of MIDI controllers in midi_input.py
     # debug_midi_controller_connections()
     controller1 = MidiInputController(controller=MidiMix())
     controller2 = MidiInputController(controller=SMC_Mixer())
@@ -130,7 +136,7 @@ def main():
     try:
         while True:
             # retreive and mix frames from the selected sources
-            frame = mix_sources()
+            frame = mixer.mix_sources()
             if skip1 or frame is None:
                 skip1 = False
                 continue
