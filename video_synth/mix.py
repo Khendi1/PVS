@@ -55,10 +55,8 @@ class Mixer():
             "Image File"]
         self.video_sources += list(self.animation_sources.keys())
         
-        # self.selected_source1 = params.add("source1", 0, len(self.video_sources)-1, 0) #, self.video_sources, callback=self.select_source1_callback)
-        # self.selected_source2 = params.add("source2", 0, len(self.video_sources)-1, 1) #, self.video_sources, callback=self.select_source2_callback)
-        self.selected_source1 = "Webcam"
-        self.selected_source2 = "Metaballs"
+        self.selected_source1 = params.add("source1", 0, len(self.video_sources)-1, MixSources.WEBCAM.value) #, self.video_sources, callback=self.select_source1_callback)
+        self.selected_source2 = params.add("source2", 0, len(self.video_sources)-1, MixSources.METABALLS.value) #, self.video_sources, callback=self.select_source2_callback)
 
         # --- Parameters for blending and keying ---
 
@@ -77,13 +75,18 @@ class Mixer():
         # amount to blend the metaball frame wisth the input frame
         self.frame_blend = params.add("frame_blend", 0.0, 1.0, 0.5)
 
+        self.start_video(self.selected_source1.value, 1)
+        self.start_video(self.selected_source2.value, 2)
 
     #TODO: make this more modular
-    def start_video(self, source, index):
+    def start_video(self, source , index):
         """
         Initializes a video capture object based on the source name.
         """
-        if source == "Webcam":
+
+        print(f"Starting source {index}: {MixSources(source).name}, source value: {source}")
+
+        if source == MixSources.WEBCAM.value:
             if index == 1:
                 if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
                     self.cap1.release()
@@ -91,8 +94,7 @@ class Mixer():
                 self.live_caps.append(self.cap1)
                 if not self.cap1.isOpened():
                     print("Error: Could not open webcam for source 1.")
-                # frame = self.cap1.read()
-                skip1 = True
+                self.skip1 = True
             elif index == 2:
                 if self.cap2 and not isinstance(self.cap2, LavaLampSynth): # or plasma, reddif,...
                     self.cap2.release()
@@ -101,7 +103,7 @@ class Mixer():
                 if not self.cap2.isOpened():
                     print("Error: Could not open webcam for source 2.")
 
-        elif source == "Composite Capture":
+        elif source == MixSources.COMPOSITE_CAPTURE.value:
             if index == 1:
                 if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
                     self.cap1.release()
@@ -117,7 +119,7 @@ class Mixer():
                 if not self.cap2.isOpened():
                     print("Error: Could not open capture device for source 2.")
         
-        elif source == "VGA Capture":
+        elif source == MixSources.VGA_CAPTURE.value:
             if index == 1:
                 if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
                     self.cap1.release()
@@ -133,7 +135,7 @@ class Mixer():
                 if not self.cap2.isOpened():
                     print("Error: Could not open capture device for source 2.")
 
-        elif source == "HDMI Capture":
+        elif source == MixSources.HDMI_CAPTURE.value:
             if index == 1:
                 if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
                     self.cap1.release()
@@ -149,7 +151,7 @@ class Mixer():
                 if not self.cap2.isOpened():
                     print("Error: Could not open capture device for source 2.")
 
-        elif source == "Metaballs":
+        elif source == MixSources.METABALLS.value:
             if index == 1:
                 if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
                     self.cap1.release()
@@ -159,7 +161,7 @@ class Mixer():
                     self.cap2.release()
                 self.cap2 = self.animation_sources["Metaballs"]
 
-        elif source == "Plasma":
+        elif source == MixSources.PLASMA.value:
             if index == 1:
                 if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
                     self.cap1.release()
@@ -169,7 +171,7 @@ class Mixer():
                     self.cap2.release()
                 self.cap2 = self.animation_sources["Plasma"]
 
-        elif source == "ReactionDiffusion":
+        elif source == MixSources.REACTION_DIFFUSION.value:
             if index == 1:
                 if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
                     self.cap1.release()
@@ -179,7 +181,7 @@ class Mixer():
                     self.cap2.release()
                 self.cap2 = self.animation_sources["ReactionDiffusion"]
         
-        elif source == "Moire":
+        elif source == MixSources.MOIRE.value:
             if index == 1:
                 if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
                     self.cap1.release()
@@ -189,7 +191,7 @@ class Mixer():
                     self.cap2.release()
                 self.cap2 = self.animation_sources["Moire"]
         
-        elif source == "Shader":
+        elif source == MixSources.SHADER.value:
             if index == 1:
                 if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
                     self.cap1.release()
@@ -199,7 +201,7 @@ class Mixer():
                     self.cap2.release()
                 self.cap2 = self.animation_sources["Shader"]
 
-        elif source == "Image File":
+        elif source == MixSources.IMAGE_FILE.value:
             file_path = dpg.get_value(f"file_path_source_{index}")
             if not file_path:  # If field is empty, use default
                 file_path = "test_image.jpg"
@@ -218,7 +220,7 @@ class Mixer():
                 if self.cap2 == 0:
                     print(f"Error: Could not load image '{file_path}' for source 2.")
 
-        elif source == "Video File":
+        elif source == MixSources.VIDEO_FILE.value:
             file_path = dpg.get_value(f"file_path_source_{index}")
             if not file_path:  # If field is empty, use default
                 file_path = self.default_video_file_path
@@ -239,84 +241,42 @@ class Mixer():
                 if not self.cap2.isOpened():
                     print(f"Error: Could not open video file '{file_path}' for source 2.")
 
+        else:
+            print(f"Error: Unknown source '{source}' for source {index}.")
+
     def select_source1_callback(self, sender, app_data):
-        global selected_source1
-        
+
+        print(f"app_data: {app_data}, selected_source1: {self.selected_source1.value}")
         # Abort if the same source is selected
-        if app_data == selected_source1 or app_data == selected_source2:
+        if app_data == selected_source1.value or app_data == self.selected_source2.value:
             return
         
         selected_source1 = app_data
-        print(f"Source 1 selected: {selected_source1}")
+        print(f"Source 1 selected: {MixSources(selected_source1.value).name}")
         # Show/hide file path input based on selection
         if app_data == "Video File":
             dpg.show_item("file_path_source_1")
             # If switching to video file, try to load it immediately
-            self.start_video(selected_source1, 1)
+            self.start_video(selected_source1.value, 1)
         else:
             dpg.hide_item("file_path_source_1")
-            self.start_video(selected_source1, 1)
+            self.start_video(selected_source1.value, 1)
 
     def select_source2_callback(self, sender, app_data):
         """
         Callback for the second dropdown menu.
         """
-        global selected_source2
-        selected_source2 = app_data
-        print(f"Selected source 2: {selected_source2}")
+        self.selected_source2 = app_data
+        print(app_data)
+        print(f"Selected source 2: {MixSources(self.selected_source2.value).name}")
         # Show/hide file path input based on selection
         if app_data == "Video File":
             dpg.show_item("file_path_source_2")
             # If switching to video file, try to load it immediately
-            self.start_video(selected_source2, 2)
+            self.start_video(self.selected_source2.value, 2)
         else:
             dpg.hide_item("file_path_source_2")
-            self.start_video(selected_source2, 2)
-
-    def mix_sources_old(self):
-        ret1, frame1 = False, None
-        ret2, frame2 = False, None
-
-        # Read from source 1
-        if selected_source1 == "Metaballs" and isinstance(self.cap1, LavaLampSynth):
-            frame1 = self.cap1.do_metaballs(np.zeros((self.cap1.height, self.cap1.width, 3), dtype=np.uint8))
-            ret1 = True
-        elif selected_source1 == "Plasma":
-            frame1 = generate_plasma_effect(image_width, image_height)
-            ret1 = True
-        elif selected_source1 == "Webcam" or selected_source1 == "Video File" or selected_source1 == "Capture" and self.cap1 and self.cap1.isOpened():
-            ret1, frame1 = self.cap1.read()
-            image_height, image_width = frame1.shape[:2]
-            if not ret1: # If reading fails, release and try to re-open
-                self.cap1.release()
-                self.cap1 = cv2.VideoCapture(selected_source1 if selected_source1 == "Webcam" else dpg.get_value("file_path_source_1"))
-                if not self.cap1.isOpened(): print("Error: Failed to reopen source 1.")
-
-        # Read from source 2
-        if isinstance(self.cap2, LavaLampSynth):
-            frame2 = self.cap2.do_metaballs(np.zeros((image_height, image_width, 3), dtype=np.uint8))
-            ret2 = True
-        elif selected_source2 == "Plasma":
-            frame2 = generate_plasma_effect(image_width, image_height)
-            ret2 = True
-        
-        elif selected_source2 in ["Webcam", "Video File", "Capture"] and self.cap2 and self.cap2.isOpened():
-            ret2, frame2 = self.cap2.read()
-            if not ret2: # If reading fails, release and try to re-open
-                self.cap2.release()
-                self.cap2 = cv2.VideoCapture(selected_source2 if selected_source2 == "Webcam" else dpg.get_value("file_path_source_2"))
-                if not self.cap2.isOpened(): print("Error: Failed to reopen source 2.")
-
-        # Process and display frames
-        if ret1 and ret2:
-            # Ensure frames are the same size for blending
-            height, width, _ = frame1.shape
-            frame2 = cv2.resize(frame2, (width, height))
-
-            # Blend the two frames using the alpha value from the slider
-            alpha = self.frame_blend.value
-            blended_frame = cv2.addWeighted(frame1, alpha, frame2, 1 - alpha, 0)
-            return blended_frame
+            self.start_video(self.selected_source2.value, 2)
 
     def blend(self, frame1, frame2):
         alpha = self.frame_blend.value
@@ -349,22 +309,21 @@ class Mixer():
         ret1, frame1 = False, None
         ret2, frame2 = False, None
 
-
         # Read from source 1
-        if self.selected_source1 == "Metaballs" and isinstance(self.cap1, LavaLampSynth):
+        if self.selected_source1.value == MixSources.METABALLS.value and isinstance(self.cap1, LavaLampSynth):
             frame1 = self.cap1.do_metaballs(np.zeros((self.cap1.height, self.cap1.width, 3), dtype=np.uint8))
             ret1 = True
-        elif self.selected_source1 == "Plasma":
+        elif self.selected_source1.value == MixSources.PLASMA.value:
             frame1 = generate_plasma_effect(image_width, image_height)
             ret1 = True
-        elif self.selected_source1 == "Webcam" or self.selected_source1 == "Video File" or self.selected_source1 == "Capture" and self.cap1 and self.cap1.isOpened():
+        elif self.selected_source1.value == MixSources.WEBCAM.value or self.selected_source1.value == MixSources.VIDEO_FILE.value or self.selected_source1.value == MixSources.HDMI_CAPTURE.value and self.cap1 and self.cap1.isOpened():
             ret1, frame1 = self.cap1.read()
             image_height, image_width = frame1.shape[:2]
 
             if not ret1: # If reading fails, release and try to re-open
-                print(f"Error: Source 1 '{self.selected_source1}' read failed, attempting to reopen.")
+                print(f"Error: Source 1 '{self.selected_source1.value}' read failed, attempting to reopen.")
                 self.cap1.release()
-                self.cap1 = cv2.VideoCapture(self.selected_source1 if self.selected_source1 == "Webcam" else dpg.get_value("file_path_source_1"))
+                self.cap1 = cv2.VideoCapture(self.selected_source1.value if self.selected_source1.value == "Webcam" else dpg.get_value("file_path_source_1"))
                 if not self.cap1.isOpened(): print("Error: Failed to reopen source 1.")
 
         # Read from source 2
@@ -372,16 +331,16 @@ class Mixer():
             frame2 = self.cap2.do_metaballs(np.zeros((600, 800, 3), dtype=np.uint8))
             # frame2 = self.cap2.do_metaballs(np.zeros((image_height, image_width, 3), dtype=np.uint8))
             ret2 = True
-        elif self.selected_source2 == "Plasma":
+        elif self.selected_source2.value == MixSources.PLASMA.value:
             frame2 = generate_plasma_effect(image_width, image_height)
             ret2 = True
         
-        elif self.selected_source2 in ["Webcam", "Video File", "Capture"] and self.cap2 and self.cap2.isOpened():
+        elif self.selected_source2.value in ["Webcam", "Video File", "Capture"] and self.cap2 and self.cap2.isOpened():
             ret2, frame2 = self.cap2.read()
             if not ret2: # If reading fails, release and try to re-open
-                print(f"Error: Source 2 '{self.selected_source2}' read failed, attempting to reopen.")
+                print(f"Error: Source 2 '{self.selected_source2.value}' read failed, attempting to reopen.")
                 self.cap2.release()
-                self.cap2 = cv2.VideoCapture(self.selected_source2 if self.selected_source2 == "Webcam" else dpg.get_value("file_path_source_2"))
+                self.cap2 = cv2.VideoCapture(self.selected_source2.value if self.selected_source2.value == "Webcam" else dpg.get_value("file_path_source_2"))
                 if not self.cap2.isOpened(): print("Error: Failed to reopen source 2.")
 
         # Process and display frames
@@ -415,5 +374,6 @@ class Mixer():
                 return self.blend(frame1, frame2)
         else:
             print("Error: Could not retrieve frames from both sources.")
-            print( f"Source 1 ret: {ret1}, Source 2 ret: {ret2}" )
+            print( f"Source 1 {MixSources(self.selected_source1.value).name} ret: {ret1},\n"
+                  f"Source 2 {MixSources(self.selected_source2.value).name} ret: {ret2}" )
             return None

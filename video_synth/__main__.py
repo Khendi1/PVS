@@ -87,14 +87,12 @@ def main():
 
     # Initialize mixer video sources with their default settings
     mixer = Mixer()
-    mixer.start_video("Webcam", 1) # TODO: move to init function
-    mixer.start_video("Metaballs", 2)
     frame = mixer.mix_sources(mode="blend")
 
     #BUG: mixer not properly initializing on first run; workaround is to loop until a valid frame is obtained
     #BUG: fix initialization of video sources in mixer.py
     while frame is None:
-        print("Waiting for a valid video source...")
+        print("\nWaiting for a valid video source...")
         frame = mixer.mix_sources(mode="blend")
 
     # Create a copy of the frame for feedback and get its dimensions
