@@ -2,7 +2,7 @@ import cv2
 import dearpygui.dearpygui as dpg
 import numpy as np
 from config import *
-from enum import IntEnum
+from enum import IntEnum, Enum, auto
 from animations import *
 
 class MixModes(IntEnum):
@@ -10,22 +10,26 @@ class MixModes(IntEnum):
     LUMA_KEY = 1
     CHROMA_KEY = 2
 
-class MixSources(IntEnum):
-    WEBCAM = 0
-    HDMI_CAPTURE = 1
-    COMPOSITE_CAPTURE = 2
-    VGA_CAPTURE = 3
-    VIDEO_FILE = 4
-    IMAGE_FILE = 5
-    METABALLS = 6
-    PLASMA = 7
-    REACTION_DIFFUSION = 8
-    MOIRE = 9
-    SHADER = 10  
+class MixSources(Enum):
+    INTERNAL_WEBCAM = 0
+    HDMI_CAPTURE = auto()
+    COMPOSITE_CAPTURE = auto()
+    VGA_CAPTURE = auto()
+    VIDEO_FILE = auto()
+    IMAGE_FILE = auto()
+    METABALLS = auto()
+    PLASMA = auto()
+    REACTION_DIFFUSION = auto()
+    MOIRE = auto()
+    SHADER = auto()
+    EXTERNAL_WEBCAM = auto()
+    # Add more sources as needed. If you add more, update the start_video and mix_sources functions
+    # HDMI_CAPTURE_2 = auto()
+    # COMPOSITE_CAPTURE_2 = auto() 
 
-LIVE_SOURCE_VALUES = [MixSources.WEBCAM.value, MixSources.HDMI_CAPTURE.value, MixSources.COMPOSITE_CAPTURE.value, MixSources.VGA_CAPTURE.value]
+LIVE_SOURCE_VALUES = [MixSources.INTERNAL_WEBCAM.value, MixSources.EXTERNAL_WEBCAM, MixSources.HDMI_CAPTURE.value, MixSources.COMPOSITE_CAPTURE.value, MixSources.VGA_CAPTURE.value]
 FILE_SOURCE_VALUES = [MixSources.VIDEO_FILE.value, MixSources.IMAGE_FILE.value]
-ANIMATED_SOURCE_VALUES = [MixSources.METABALLS.value, MixSources.PLASMA.value, MixSources.REACTION_DIFFUSION.value, MixSources.MOIRE.value, MixSources.SHADER]
+ANIMATED_SOURCE_VALUES = [MixSources.METABALLS.value, MixSources.PLASMA.value, MixSources.REACTION_DIFFUSION.value, MixSources.MOIRE.value, MixSources.SHADER.value]
 
 class Mixer():
     def __init__(self):
@@ -52,14 +56,14 @@ class Mixer():
         # Dictionary of available animation sources. These differ from captured sources 
         # in that they generate frames algorithmically rather than capturing from a device or file.
         self.animation_sources = {
-            "Metaballs": LavaLampSynth(width=640, height=480), #800x600 default size
+            MixSources.METABALLS.name: LavaLampSynth(width=640, height=480), #800x600 default size
             # "Plasma": Plasma(),
             # "Moire": MoirePatternGenerator(size=(800, 600)),
             # "Shader": 
-            "ReactionDiffusion": ReactionDiffusionSimulator(800, 600)
+            MixSources.REACTION_DIFFUSION.name: ReactionDiffusionSimulator(800, 600)
         }
 
-        self.selected_source1 = params.add("source1", 0, len(MixSources)-1, MixSources.WEBCAM.value) 
+        self.selected_source1 = params.add("source1", 0, len(MixSources)-1, MixSources.INTERNAL_WEBCAM.value) 
         self.selected_source2 = params.add("source2", 0, len(MixSources)-1, MixSources.METABALLS.value)
 
         # --- Parameters for blending and keying ---
@@ -91,71 +95,55 @@ class Mixer():
         """
 
         print(f"Starting source {index}: {MixSources(source).name}, source value: {source}")
+        print(type(source))
 
-        if source == MixSources.WEBCAM.value:
+        if source in (LIVE_SOURCE_VALUES + FILE_SOURCE_VALUES):
             if index == 1:
+                # Release previous capture if it exists and is not an animation
                 if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
                     self.cap1.release()
-                self.cap1 = cv2.VideoCapture(0)
+
+                # Initialize new capture
+                self.cap1 = cv2.VideoCapture(source)
+
+                # Add to list of live captures for proper release on exit
                 self.live_caps.append(self.cap1)
-                if not self.cap1.isOpened():
-                    print("Error: Could not open webcam for source 1.")
+
+                # Skip the first frame to allow camera to adjust
                 self.skip1 = True
+
+                if not self.cap1.isOpened():
+                    print("Error: Could not open live video source for source 1.")
+                    # TODO: Handle error as needed (e.g., fallback to default source)
+                    
             elif index == 2:
+                # Release previous capture if it exists and is not an animation
                 if self.cap2 and not isinstance(self.cap2, LavaLampSynth): # or plasma, reddif,...
                     self.cap2.release()
-                self.cap2 = cv2.VideoCapture(0)
+
+                self.cap2 = cv2.VideoCapture(source)
+                # Skip the first frame to allow camera to adjust
+                self.skip2 = True
+
+                # Add to list of live captures for proper release on exit
                 self.live_caps.append(self.cap2)
+
                 if not self.cap2.isOpened():
                     print("Error: Could not open webcam for source 2.")
+        else:
+            if index == 1:
+                # Release previous capture if it exists and is not an animation
+                if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
+                    self.cap1.release()
 
-        elif source == MixSources.COMPOSITE_CAPTURE.value:
-            if index == 1:
-                if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
-                    self.cap1.release()
-                self.cap1 = cv2.VideoCapture(2) # May need to adjust index based on system
-                self.live_caps.append(self.cap1)
-                if not self.cap1.isOpened():
-                    print("Error: Could not open capture device for source 1.")
-            elif index == 2:
-                if self.cap2 and not isinstance(self.cap2, LavaLampSynth): # or plasma, reddif,...
-                    self.cap2.release()
-                self.cap2 = cv2.VideoCapture(2) # May need to adjust index based on system
-                self.live_caps.append(self.cap2)
-                if not self.cap2.isOpened():
-                    print("Error: Could not open capture device for source 2.")
-        
-        elif source == MixSources.VGA_CAPTURE.value:
-            if index == 1:
-                if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
-                    self.cap1.release()
-                self.cap1 = cv2.VideoCapture(3) # May need to adjust index based on system
-                self.live_caps.append(self.cap1)
-                if not self.cap1.isOpened():
-                    print("Error: Could not open capture device for source 1.")
-            elif index == 2:
-                if self.cap2 and not isinstance(self.cap2, LavaLampSynth): # or plasma, reddif,...
-                    self.cap2.release()
-                self.cap2 = cv2.VideoCapture(3) # May need to adjust index based on system
-                self.live_caps.append(self.cap2)
-                if not self.cap2.isOpened():
-                    print("Error: Could not open capture device for source 2.")
+                self.cap1 = self.animation_sources[MixSources(source).name]
 
-        elif source == MixSources.HDMI_CAPTURE.value:
-            if index == 1:
-                if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
-                    self.cap1.release()
-                self.cap1 = cv2.VideoCapture(1)
-                self.live_caps.append(self.cap1)
-                if not self.cap1.isOpened():
-                    print("Error: Could not open capture device for source 1.")
-            elif index == 2:
+            if index == 2:
+                # Release previous capture if it exists and is not an animation
                 if self.cap2 and not isinstance(self.cap2, LavaLampSynth): # or plasma, reddif,...
                     self.cap2.release()
-                self.cap2 = cv2.VideoCapture(1)
-                self.live_caps.append(self.cap2)
-                if not self.cap2.isOpened():
-                    print("Error: Could not open capture device for source 2.")
+                
+                self.cap2 = self.animation_sources[MixSources(source).name]
 
         elif source == MixSources.METABALLS.value:
             if index == 1:
@@ -166,105 +154,6 @@ class Mixer():
                 if self.cap2 and not isinstance(self.cap2, LavaLampSynth): # or plasma, reddif,...
                     self.cap2.release()
                 self.cap2 = self.animation_sources["Metaballs"]
-
-        elif source == MixSources.PLASMA.value:
-            if index == 1:
-                if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
-                    self.cap1.release()
-                self.cap1 = self.animation_sources["Plasma"]
-            if index == 2:
-                if self.cap2 and not isinstance(self.cap2, LavaLampSynth): # or plasma, reddif,...
-                    self.cap2.release()
-                self.cap2 = self.animation_sources["Plasma"]
-
-        elif source == MixSources.REACTION_DIFFUSION.value:
-            if index == 1:
-                if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
-                    self.cap1.release()
-                self.cap1 = self.animation_sources["ReactionDiffusion"]
-            if index == 2:
-                if self.cap2 and not isinstance(self.cap2, LavaLampSynth): # or plasma, reddif,...
-                    self.cap2.release()
-                self.cap2 = self.animation_sources["ReactionDiffusion"]
-        
-        elif source == MixSources.MOIRE.value:
-            if index == 1:
-                if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
-                    self.cap1.release()
-                self.cap1 = self.animation_sources["Moire"]
-            if index == 2:
-                if self.cap2 and not isinstance(self.cap2, LavaLampSynth): # or plasma, reddif,...
-                    self.cap2.release()
-                self.cap2 = self.animation_sources["Moire"]
-        
-        elif source == MixSources.SHADER.value:
-            if index == 1:
-                if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
-                    self.cap1.release()
-                self.cap1 = self.animation_sources["Shader"]
-            if index == 2:
-                if self.cap2 and not isinstance(self.cap2, LavaLampSynth): # or plasma, reddif,...
-                    self.cap2.release()
-                self.cap2 = self.animation_sources["Shader"]
-
-        elif source == MixSources.IMAGE_FILE.value:
-            file_path = dpg.get_value(f"file_path_source_{index}")
-            if not file_path:  # If field is empty, use default
-                file_path = "test_image.jpg"
-                dpg.set_value(f"file_path_source_{index}", file_path)
-            
-            if index == 1:
-                if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
-                    self.cap1.release()
-                # self.cap1 = load_opencv_image_as_texture(file_path)
-                if self.cap1 == 0:
-                    print(f"Error: Could not load image '{file_path}' for source 1.")
-            elif index == 2:
-                if self.cap2 and not isinstance(self.cap2, LavaLampSynth): # or plasma, reddif,...
-                    self.cap2.release()
-                # self.cap2 = load_opencv_image_as_texture(file_path)
-                if self.cap2 == 0:
-                    print(f"Error: Could not load image '{file_path}' for source 2.")
-
-        elif source == MixSources.VIDEO_FILE.value:
-            file_path = dpg.get_value(f"file_path_source_{index}")
-            if not file_path:  # If field is empty, use default
-                file_path = self.default_video_file_path
-                dpg.set_value(f"file_path_source_{index}", file_path)
-            print(f"Loading video file '{file_path}' for source {index}.")
-            if index == 1:
-                if self.cap1 and not isinstance(self.cap1, LavaLampSynth): # or plasma, reddif,...
-                    self.cap1.release()
-                self.cap1 = cv2.VideoCapture(file_path)
-
-                new_width = 640
-                new_height = 360
-
-                # Attempt to set the properties
-                self.cap1.set(cv2.CAP_PROP_FRAME_WIDTH, new_width)
-                self.cap1.set(cv2.CAP_PROP_FRAME_HEIGHT, new_height)
-
-
-                self.live_caps.append(self.cap1)
-                if not self.cap1.isOpened():
-                    print(f"Error: Could not open video file '{file_path}' for source 1.")
-            elif index == 2:
-                if self.cap2 and not isinstance(self.cap2, LavaLampSynth): # or plasma, reddif,...
-                    self.cap2.release()
-                self.cap2 = cv2.VideoCapture(file_path)
-                new_width = 640
-                new_height = 360
-
-                # Attempt to set the properties
-                self.cap2.set(cv2.CAP_PROP_FRAME_WIDTH, new_width)
-                self.cap2.set(cv2.CAP_PROP_FRAME_HEIGHT, new_height)
-
-                self.live_caps.append(self.cap2)
-                if not self.cap2.isOpened():
-                    print(f"Error: Could not open video file '{file_path}' for source 2.")
-
-        else:
-            print(f"Error: Unknown source '{source}' for source {index}.")
 
     def select_source1_callback(self, sender, app_data):
 
@@ -361,7 +250,7 @@ class Mixer():
             if not ret2: # If reading fails, release and try to re-open
                 print(f"Error: Source 2 '{self.selected_source2.value}' read failed, attempting to reopen.")
                 self.cap2.release()
-                self.cap2 = cv2.VideoCapture(self.selected_source2.value if self.selected_source2.value == MixSources.WEBCAM.value else dpg.get_value("file_path_source_2"))
+                self.cap2 = cv2.VideoCapture(self.selected_source2.value if self.selected_source2.value == MixSources.INTERNAL_WEBCAM.value else dpg.get_value("file_path_source_2"))
                 if not self.cap2.isOpened(): print("Error: Failed to reopen source 2.")
 
         # Process and display frames

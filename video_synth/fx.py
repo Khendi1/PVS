@@ -46,13 +46,13 @@ class Color:
         self.sat_shift = params.add("sat_shift", 0, 255, 0)
         self.val_shift = params.add("val_shift", 0, 255, 0)
 
-        self.levels_per_channel = params.add("posterize_levels", 2, 128, 2.0)
-        self.solarize_threshold = params.add("solarize_threshold", 0, 128, 0.0)
+        self.levels_per_channel = params.add("posterize_levels", 0, 100, 0.0)
         self.num_hues = params.add("num_hues", 2, 10, 8)
 
         self.val_threshold = params.add("val_threshold", 0, 255, 0)
         self.val_hue_shift = params.add("val_hue_shift", 0, 255, 0)
 
+        self.solarize_threshold = params.add("solarize_threshold", 0, 100, 0.0)
         self.hue_invert_angle = params.add("hue_invert_angle", 0, 360, 0)
         self.hue_invert_strength = params.add("hue_invert_strength", 0.0, 1.0, 0.0)
 
@@ -117,6 +117,7 @@ class Color:
         # Merge the modified channels and convert back to BGR color space.
         return cv2.cvtColor(cv2.merge((hsv[HSV.H.value], hsv[HSV.S.value], hsv[HSV.V.value])), cv2.COLOR_HSV2BGR)
 
+    
     def limit_hues_kmeans(self, frame: np.ndarray):
 
         if self.num_hues.value <= self.num_hues.max:
@@ -174,23 +175,21 @@ class Color:
 
         # Calculate the step size for quantization
         # Each pixel value will be mapped to one of 'levels_per_channel' distinct values.
-        # For example, if levels_per_channel is 8, values 0-31 map to 0, 32-63 map to 32, etc.
         step = 256 // self.levels_per_channel.value
         
         # Calculate the half-step to round to the nearest quantization level
         half_step = step // 2
 
         # Apply posterization to each color channel (B, G, R)
-        # This involves dividing by the step, multiplying by the step, and adding half_step for rounding.
-        # The `np.clip` ensures values stay within 0-255.
         
         # Method 1: Simple quantization (floor division)
         # posterized_frame = (frame // step) * step
 
         # Method 2: Quantization with rounding (often looks better)
         posterized_frame = ((frame + half_step) // step) * step
+        
+        # Ensure values stay within 0-255.
         posterized_frame = np.clip(posterized_frame, 0, 255).astype(np.uint8)
-
 
         return posterized_frame
 

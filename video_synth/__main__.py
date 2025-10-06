@@ -143,6 +143,7 @@ def apply_effects(frame, patterns: Patterns, basic: Effects, color: Color,
         # frame = glitch.scanline_distortion(frame, ...)
 
         # TODO: test these effects, test ordering
+        # frame = color limit_hues_kmeans(frame)
         # image_height, image_width = frame.shape[:2]
         # frame = fx.polar_transform(frame, params.get("polar_x"), params.get("polar_y"), params.get("polar_radius"))
         # frame = fx.apply_perlin_noise

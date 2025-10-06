@@ -130,7 +130,7 @@ class Interface:
     def mix_panel(self, mixer):
         with dpg.collapsing_header(label=f"\tMixer", tag="mixer"):
             dpg.add_text("Video Source 1")
-            dpg.add_combo(list(MixSources.__members__.keys()), default_value="WEBCAM", tag="source_1", callback=mixer.select_source1_callback)
+            dpg.add_combo(list(MixSources.__members__.keys()), default_value="INTERNAL_WEBCAM", tag="source_1", callback=mixer.select_source1_callback)
             # Initially hide the input text for file path 1 as webcam is default
             dpg.add_input_text(label="Video File Path 1", tag="file_path_source_1", default_value=mixer.default_video_file_path, show=False)
             
@@ -213,9 +213,9 @@ class Interface:
                 None) # fix defulat font_id=None
         
 
-    def hsv_sliders(self, default_font_id=None, global_font_id=None):
+    def color_sliders(self, default_font_id=None, global_font_id=None):
 
-        with dpg.collapsing_header(label=f"\tHSV", tag="hsv"):
+        with dpg.collapsing_header(label=f"\tColor", tag="color"):
         
             hue_slider = TrackbarRow(
                 "Hue Shift", 
@@ -280,7 +280,21 @@ class Interface:
                 self.reset_slider_callback,
                 default_font_id)
             
-        dpg.bind_item_font("hsv", global_font_id)
+            posterize_slider = TrackbarRow(
+                "Posterize Levels",
+                params.get("posterize_levels"),
+                TrackbarCallback(params.get("posterize_levels"), "posterize_levels").__call__,
+                self.reset_slider_callback,
+                default_font_id)
+            
+            solarize_slider = TrackbarRow(
+                "Solarize Threshold",
+                params.get("solarize_threshold"),
+                TrackbarCallback(params.get("solarize_threshold"), "solarize_threshold").__call__,
+                self.reset_slider_callback,
+                default_font_id)
+            
+        dpg.bind_item_font("color", global_font_id)
 
 
     def effects_sliders(self, default_font_id=None, global_font_id=None):
@@ -326,20 +340,6 @@ class Interface:
                 "Blur Type",
                 params.get("blur_type"),
                 TrackbarCallback(params.get("blur_type"), "blur_type").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            posterize_slider = TrackbarRow(
-                "Posterize Levels",
-                params.get("posterize_levels"),
-                TrackbarCallback(params.get("posterize_levels"), "posterize_levels").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            solarize_slider = TrackbarRow(
-                "Solarize Threshold",
-                params.get("solarize_threshold"),
-                TrackbarCallback(params.get("solarize_threshold"), "solarize_threshold").__call__,
                 self.reset_slider_callback,
                 default_font_id)
             
@@ -1248,7 +1248,7 @@ class Interface:
 
         self.test_sliders(default_font_id, global_font_id)
         self.mix_panel(mixer)
-        self.hsv_sliders(default_font_id, global_font_id)
+        self.color_sliders(default_font_id, global_font_id)
         self.effects_sliders(default_font_id, global_font_id)
         self.reflector_sliders(default_font_id, global_font_id)
         self.pan_sliders(default_font_id, global_font_id)
