@@ -21,11 +21,103 @@ from patterns3 import *
 
 image_height, image_width = None, None
 
+def check_frame_dimensions(frame):
+
+    if frame is None:
+        print("Frame is None. Unable to determine dimensions.")
+        return
+    
+    frame_shape = frame.shape
+
+    if len(frame_shape) == 3:
+        height, width, channels = frame_shape
+        print(f"Frame Size: {width}x{height} pixels")
+        print(f"Frame Channels: {channels}")
+    elif len(frame_shape) == 2:
+        height, width = frame_shape
+        print(f"Frame Size: {width}x{height} pixels (Grayscale)")
+        print(f"Frame Channels: 1")
+    else:
+        print(f"Frame shape is unexpected: {frame_shape}")
+
+
+def resize_to_match(frame1: np.ndarray, frame2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Compares the spatial dimensions (Height x Width) of two OpenCV frames (NumPy arrays).
+    If they do not match, the frame with the higher total resolution is downscaled
+    to match the dimensions of the lower-resolution frame.
+    
+    Args:
+        frame1: The first OpenCV frame (NumPy array).
+        frame2: The second OpenCV frame (NumPy array).
+
+    Returns:
+        A tuple (frame1_resized, frame2_resized) where one or both frames may have 
+        been resized to ensure matching spatial dimensions.
+    """
+    
+    # Extract Height (H) and Width (W). Slicing [:2] handles both grayscale (H, W) 
+    # and color (H, W, C) images uniformly.
+    h1, w1 = frame1.shape[:2]
+    h2, w2 = frame2.shape[:2]
+    res1 = h1 * w1
+    res2 = h2 * w2
+
+    # Check for perfect match ---
+    if (h1, w1) == (h2, w2):
+        print("INFO: Dimensions match ({}x{}). No resizing performed.".format(w1, h1))
+        return frame1, frame2
+
+    print(f"WARNING: Dimensions mismatch. Frame 1: {w1}x{h1}, Frame 2: {w2}x{h2}.")
+
+    # --- 2. Determine target dimensions and resize the larger frame ---
+    
+    # Target dimensions (W, H) must match the smaller frame
+    if res1 > res2:
+        # Frame 1 is larger, resize Frame 1 to match Frame 2
+        target_width, target_height = w2, h2
+        frame_to_resize = frame1
+        frame_to_keep = frame2
+        
+        # Use INTER_AREA for high-quality downscaling
+        resized_frame = cv2.resize(
+            frame_to_resize, 
+            (target_width, target_height), 
+            interpolation=cv2.INTER_AREA
+        )
+        print(f"ACTION: Downscaled Frame 1 to match Frame 2's size: {target_width}x{target_height}.")
+        return resized_frame, frame_to_keep
+        
+    else: # res2 >= res1
+        # Frame 2 is larger or equal in pixel count (even if dimensions are swapped like 100x200 vs 200x100)
+        # We treat frame 1's dimensions as the target size.
+        target_width, target_height = w1, h1
+        frame_to_resize = frame2
+        frame_to_keep = frame1
+        
+        # Use INTER_AREA for high-quality downscaling
+        resized_frame = cv2.resize(
+            frame_to_resize, 
+            (target_width, target_height), 
+            interpolation=cv2.INTER_AREA
+        )
+        print(f"ACTION: Downscaled Frame 2 to match Frame 1's size: {target_width}x{target_height}.")
+        return frame_to_keep, resized_frame
+
 def apply_effects(frame, patterns: Patterns, basic: Effects, color: Color, 
                   pixels: Pixels, noise: ImageNoiser, reflector: Reflector, 
                   sync: Sync, warp: Warp, shapes: ShapeGenerator):
+    """ 
+    Applies a sequence of visual effects to the input frame based on current parameters.
+    Each effect is modular and can be enabled/disabled via the GUI.
+    The order of effects can be adjusted to achieve different visual styles.
+    
+    Returns the modified frame.
+    """
+    
     global image_height, image_width
 
+    # TODO: implement effect sequencer
     # TODO: use frame skip slider to control frame skip
     if True: 
         frame = patterns.generate_pattern_frame(frame)
@@ -83,20 +175,22 @@ def debug_midi_controller_connections():
 
 def main():
     global image_height, image_width, skip1, cap1, cap2
-    print("Initializing video capture...")
+    print("Initializing video synthesizer...")
 
     # Initialize mixer video sources with their default settings
     mixer = Mixer()
-    frame = mixer.mix_sources(mode="blend")
 
-    #BUG: mixer not properly initializing on first run; workaround is to loop until a valid frame is obtained
-    #BUG: fix initialization of video sources in mixer.py
+    # Retrieve an initial frame to determine image dimensions; 
+    # required for initializing effects
+    frame = mixer.mix_sources()  
+
     while frame is None:
         print("\nWaiting for a valid video source...")
-        frame = mixer.mix_sources(mode="blend")
+        frame = mixer.mix_sources()
 
     # Create a copy of the frame for feedback and get its dimensions
     feedback_frame = frame.copy()
+    prev_frame = frame.copy()
     image_height, image_width = frame.shape[:2]
 
     cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
@@ -114,7 +208,6 @@ def main():
     noise = ImageNoiser(NoiseType.NONE)
     shapes = ShapeGenerator(image_width, image_height)
     patterns = Patterns(image_width, image_height)
-    # key = Keying(image_width, image_height)     # TODO: test this
     reflector = Reflector()                    
     sync = Sync() 
     warp = Warp(image_width, image_height)
@@ -132,10 +225,9 @@ def main():
         "warp": warp
     }
 
-
     # Initialize the midi input controller before creating the GUI
     # TODO: This assumes both controllers are always connected in a specific order; improve this
-    #BUG: fix initialization of MIDI controllers in midi_input.py
+    # BUG: fix initialization of MIDI controllers in midi_input.py
     # debug_midi_controller_connections()
     controller1 = MidiInputController(controller=MidiMix())
     controller2 = MidiInputController(controller=SMC_Mixer())
@@ -143,9 +235,6 @@ def main():
     # Create control panel after initializing objects that will be used in the GUI
     gui = Interface()
     gui.create_control_window(mixer=mixer)
-
-    # Create a copy of the feedback frame for temporal filtering
-    prev_frame = feedback_frame.copy()
 
     print(f'Enjoy {len(params.keys())} tunable parameters!\n')
 
@@ -155,17 +244,22 @@ def main():
             frame = mixer.mix_sources()
             if mixer.skip1 or frame is None:
                 mixer.skip1 = False
+                print("Skipping frame due to source read failure...")
                 continue
-
-            # TODO: test this placement
-            feedback_frame = frame.copy()
 
             # update osc values
             osc_vals = [osc.get_next_value() for osc in osc_bank if osc.linked_param is not None]
             
+            # print("\nframe dims:")
+            # check_frame_dimensions(frame)
+            # print("\nfeedback dims:")
+            # check_frame_dimensions(feedback_frame)
+            # frame, feedback_frame = resize_to_match(frame, feedback_frame)
+
             # relevant section
-            if toggles.val("effects_first") == True:
+            if toggles.val("effects_first") == True:         
                 feedback_frame = apply_effects(feedback_frame, **fx)
+                # Blend the current dry frame with the previous wet frame using the alpha param
                 feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
             else:
                 feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)

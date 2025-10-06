@@ -365,7 +365,6 @@ class Warp:
         self.y_size = params.add("y_size", 0.0, 100.0, 10.0)
     
     
-#######################################################33 
     # TODO: implement        
     def _generate_perlin_flow(self, t, amp_x, amp_y, freq_x, freq_y):
         fx = np.zeros((self.height, self.width), dtype=np.float32)

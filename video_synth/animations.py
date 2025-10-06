@@ -6,9 +6,6 @@ import random
 from generators import Oscillator
 from config import params
 
-import tkinter as tk
-from tkinter import ttk
-from PIL import Image, ImageTk
 
 class Plasma:
     def __init__(self, width=800, height=600):
