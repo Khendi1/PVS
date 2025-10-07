@@ -5,9 +5,18 @@ import noise
 import random
 from generators import Oscillator
 from config import params
+from abc import ABC, abstractmethod
 
+class Animation(ABC):
+    def __init__(self, width=800, height=600):
+        self.width = width
+        self.height = height
 
-class Plasma:
+    @abstractmethod
+    def get_frame(self, frame: np.ndarray = None):
+        raise NotImplementedError("Subclasses should implement this method.")
+
+class Plasma(Animation):
     def __init__(self, width=800, height=600):
         self.width = width
         self.height = height
@@ -106,8 +115,11 @@ class Plasma:
 
         return plasma_pattern
 
+    def get_frame(self):
+        return self.generate_plasma_effect(self.width, self.height)
 
-class ReactionDiffusionSimulator:
+
+class ReactionDiffusionSimulator(Animation):
 
     def __init__(self, width=500, height=500, da=1.0, db=0.5, feed=0.055, kill=0.062, randomize_seed=False, max_seed_size=50, num_seeds=15):
         self.width = width
@@ -246,8 +258,13 @@ class ReactionDiffusionSimulator:
         
         return cv2.cvtColor(hsv_image, cv2.COLOR_HSV2BGR)
 
+    def get_frame(self):
+        """
+        Public method to get the next frame of the simulation.
+        """
+        return self.run()
 
-class LavaLampSynth:
+class LavaLampSynth(Animation):
     # BUG: find bug; when increasing num_metaballs, their sizes seem to get smaller
     # TODO: add parameters to control metaball colors, blending modes, and feedback intensity
     # BUG: find bug: when reducing metaball size then returning to original/larger sizes, they get smaller each time
@@ -410,59 +427,62 @@ class LavaLampSynth:
         """
         Updates metaball positions and generates the current frame, applying feedback.
         """
-        if frame is not None:
-            # Update metaball positions for the next frame
+        # Update metaball positions for the next frame
 
-            if self.num_metaballs.value != len(self.metaballs):
-                self.setup_metaballs()
-            
-            if self.current_radius_multiplier != self.radius_multplier.value or self.current_speed_multiplier != self.speed_multiplier.value:
-                self.adjust_parameters()
+        if self.num_metaballs.value != len(self.metaballs):
+            self.setup_metaballs()
+        
+        if self.current_radius_multiplier != self.radius_multplier.value or self.current_speed_multiplier != self.speed_multiplier.value:
+            self.adjust_parameters()
 
-            for ball in self.metaballs:
-                ball['x'] += ball['vx']
-                ball['y'] += ball['vy']
+        for ball in self.metaballs:
+            ball['x'] += ball['vx']
+            ball['y'] += ball['vy']
 
-                # Simple bouncing off the window edges
-                # Check horizontal bounds
-                if ball['x'] - ball['radius'] < 0:
-                    ball['x'] = ball['radius']
-                    ball['vx'] *= -1
-                elif ball['x'] + ball['radius'] > self.width:
-                    ball['x'] = self.width - ball['radius']
-                    ball['vx'] *= -1
+            # Simple bouncing off the window edges
+            # Check horizontal bounds
+            if ball['x'] - ball['radius'] < 0:
+                ball['x'] = ball['radius']
+                ball['vx'] *= -1
+            elif ball['x'] + ball['radius'] > self.width:
+                ball['x'] = self.width - ball['radius']
+                ball['vx'] *= -1
 
-                # Check vertical bounds
-                if ball['y'] - ball['radius'] < 0:
-                    ball['y'] = ball['radius']
-                    ball['vy'] *= -1
-                elif ball['y'] + ball['radius'] > self.height:
-                    ball['y'] = self.height - ball['radius']
-                    ball['vy'] *= -1
+            # Check vertical bounds
+            if ball['y'] - ball['radius'] < 0:
+                ball['y'] = ball['radius']
+                ball['vy'] *= -1
+            elif ball['y'] + ball['radius'] > self.height:
+                ball['y'] = self.height - ball['radius']
+                ball['vy'] *= -1
 
-            # Generate the current frame using the class's configuration
-            current_frame = self.create_metaball_frame(self.metaballs,
-                                                    threshold=self.threshold.value,
-                                                    max_field_strength=self.smooth_coloring_max_field.value)
-            
-            # Apply feedback effect
-            if self.previous_frame is None:
-                # If it's the first frame, just use the current frame
-                self.previous_frame = current_frame
-            else:
-                # Blend the current frame with the previous frame
-                # alpha * current_frame + beta * previous_frame + gamma
-                current_frame = cv2.addWeighted(current_frame, 1-self.feedback_alpha.value, 
-                                                self.previous_frame, self.feedback_alpha.value, 0)
-                self.previous_frame = current_frame # Store this blended frame for the next iteration
+        # Generate the current frame using the class's configuration
+        current_frame = self.create_metaball_frame(self.metaballs,
+                                                threshold=self.threshold.value,
+                                                max_field_strength=self.smooth_coloring_max_field.value)
+        
+        # Apply feedback effect
+        if self.previous_frame is None:
+            # If it's the first frame, just use the current frame
+            self.previous_frame = current_frame
+        else:
+            # Blend the current frame with the previous frame
+            # alpha * current_frame + beta * previous_frame + gamma
+            current_frame = cv2.addWeighted(current_frame, 1-self.feedback_alpha.value, 
+                                            self.previous_frame, self.feedback_alpha.value, 0)
+            self.previous_frame = current_frame # Store this blended frame for the next iteration
 
-            # TODO: replace this with the new mix param
-            # return cv2.addWeighted(current_frame, 1 - self.frame_blend.value,
-                                            # frame, self.frame_blend.value, 0) if frame is not None else current_frame
-            return current_frame
-        return frame
+        # TODO: replace this with the new mix param
+        # return cv2.addWeighted(current_frame, 1 - self.frame_blend.value,
+                                        # frame, self.frame_blend.value, 0) if frame is not None else current_frame
+        return current_frame
 
-    # TODO: re-enable METABALL SLIDERS when we have metaball parameters
+    def get_frame(self, frame: np.ndarray = None):
+        """
+        Public method to get the next frame of the metaball animation.
+        """
+        return self.do_metaballs(frame)
+
     # def metaballs_sliders(self, default_font_id=None, global_font_id=None):
     #     with dpg.collapsing_header(label=f"\tMetaballs", tag="metaballs"):
     #         num_metaballs_slider = TrackbarRow(
@@ -524,7 +544,7 @@ class LavaLampSynth:
     #     dpg.bind_item_font("metaballs", global_font_id)
 
 
-class MoirePattern:
+class MoirePattern(Animation):
     #TODO: implement dynamic moire pattern animation
     #TODO: add parameters to control line frequency, angle, and animation speed
     def __init__(self):
@@ -582,3 +602,5 @@ class MoirePattern:
 
         return moire_image
 
+    def get_frame(self):
+        return self.create_moire_pattern((self.width, self.height))
