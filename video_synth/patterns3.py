@@ -5,8 +5,10 @@ from enum import Enum
 import random
 import noise # For Perlin noise generation
 from param import ParamTable, Param
-from config import params, posc_bank
+from config import params
 from generators import Oscillator
+
+posc_bank = []  
 
 # --- BarMode Enum ---
 class BarMode(Enum):

@@ -472,9 +472,6 @@ class LavaLampSynth(Animation):
                                             self.previous_frame, self.feedback_alpha.value, 0)
             self.previous_frame = current_frame # Store this blended frame for the next iteration
 
-        # TODO: replace this with the new mix param
-        # return cv2.addWeighted(current_frame, 1 - self.frame_blend.value,
-                                        # frame, self.frame_blend.value, 0) if frame is not None else current_frame
         return current_frame
 
     def get_frame(self, frame: np.ndarray = None):

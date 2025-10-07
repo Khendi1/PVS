@@ -650,6 +650,7 @@ class Effects:
         # Convert the averaged frame back to the correct data type (uint8)
         return np.clip(avg_frame, 0, 255).astype(np.uint8)
 
+
     def shift_frame(self, frame: np.ndarray):
         """
         Shifts all pixels in an OpenCV frame by the specified x and y amounts,
@@ -907,20 +908,19 @@ class ImageNoiser:
         Applies Salt & Pepper noise to the image.
         Intensity controls the proportion of pixels affected.
         """
-        noisy_image = image.copy() # TODO: is a copy needed?
         amount = self._noise_intensity # Proportion of pixels to affect
         s_vs_p = 0.5 # Ratio of salt vs. pepper (0.5 means equal)
 
         # Apply salt noise (white pixels)
         num_salt = np.ceil(amount * image.size * s_vs_p).astype(int)
         coords = [np.random.randint(0, i - 1, num_salt) for i in image.shape]
-        noisy_image[tuple(coords)] = 255
+        image[tuple(coords)] = 255
 
         # Apply pepper noise (black pixels)
         num_pepper = np.ceil(amount * image.size * (1.0 - s_vs_p)).astype(int)
         coords = [np.random.randint(0, i - 1, num_pepper) for i in image.shape]
-        noisy_image[tuple(coords)] = 0
-        return noisy_image.astype(np.uint8)
+        image[tuple(coords)] = 0
+        return image.astype(np.uint8)
 
     def _apply_speckle_noise(self, image: np.ndarray) -> np.ndarray:
         """

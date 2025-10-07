@@ -15,9 +15,6 @@ cap2 = None
 NUM_OSCILLATORS = 4 
 osc_bank = [] 
 
-# TODO: move to a better location (the class that uses it)
-posc_bank = []  
-
 # Index for loading saved patches from a file
 save_index = 0
 

@@ -4,7 +4,7 @@ This module initializes video sources, applies effects, and manages the main loo
 All components are modular and can be extended or modified independently.
 All parameters are managed via the ParamTable class in config.py. 
 Parameter values can be modified via the GUI or linked to MIDI controllers.
-Soureces include webcam, video files, capture card 1 (hdmi), capture card 2 (composite), metaballs generator, and plasma generator.
+Soureces include webcam, video files, capture card, metaballs generator, and plasma generator.
 """
 
 import cv2
