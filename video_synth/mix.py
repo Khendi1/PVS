@@ -5,6 +5,10 @@ from config import *
 from enum import IntEnum, Enum, auto
 from animations import *
 
+def failback_camera():
+    # TODO: implement a fallback camera source if the selected source fails, move to mixer class
+    pass
+
 class MixModes(IntEnum):
     BLEND = 0
     LUMA_KEY = 1

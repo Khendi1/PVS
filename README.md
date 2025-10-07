@@ -91,7 +91,7 @@ This project is meant to be my fun, relaxing, creative exploration, not a demons
 
 ## Background and Inspiration
 
-My exploration into video art was inspired by [this video](https://www.youtube.com/watch?v=D3eHKI0nvKA), which was graciously provided by the algorithm. In describing his kinetic video feedback synthesizer masterpeice, Dave Blair explains why his machine must use an expensive field-monitor commonly used in movie production, as it offers analog knobs to manipulate image properties. While this requirement makes sense for his application, I was inspired to explore a purely code-based solution, with the original intention to solder up an HID-capable MCU + encoders and interface it to a basic openCV program.
+My journey into video art was inspired by [this video](https://www.youtube.com/watch?v=D3eHKI0nvKA), which was graciously provided by the algorithm. In describing his kinetic video feedback synthesizer masterpeice, Dave Blair explains why his machine must use an expensive field-monitor commonly used in movie production, as it offers analog knobs to manipulate image properties. While this requirement makes sense for his application, I was inspired to explore a purely code-based solution, with the original intention to solder up an HID-capable MCU + encoders and interface it to a basic openCV program.
 
 I have since pivoted to using off-the-shelf MIDI controllers to emulate effects normally acheived through analog video synthesis modules and mixers (feedback, oscillators, sync modulation), as well as early digital animation techniques (perlin noise, fractal noise, [metaballs](https://steve.hollasch.net/cgindex/misc/metaballs.html), plasma, moire, etc.), op art, and 
 

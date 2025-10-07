@@ -601,7 +601,7 @@ class Effects:
         self.height = image_height
         self.width = image_width
 
-        self.frame_skip = params.add("frame_skip", 1, 10, 1)
+        self.frame_skip = params.add("frame_skip", 0, 10, 0)
         self.alpha = params.add("alpha", 0.0, 1.0, 0.0)
         self.temporal_filter = params.add("temporal_filter", 0, 1.0, 1.0)
         
