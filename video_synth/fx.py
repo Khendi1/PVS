@@ -7,7 +7,9 @@ import math
 from noise import pnoise2
 from collections import deque
 import time
-
+from buttons import Button
+import dearpygui.dearpygui as dpg
+from sliders import *
 
 class WarpType(IntEnum):
     NONE = 0
@@ -263,6 +265,77 @@ class Color:
         polarized_frame = cv2.cvtColor(hsv_frame.astype(np.uint8), cv2.COLOR_HSV2BGR)
         return polarized_frame    
 
+    def create_sliders(self, default_font_id=None, global_font_id=None):
+
+        with dpg.collapsing_header(label=f"\tColor", tag="color"):
+        
+            hue_slider = TrackbarRow2(
+                "Hue Shift", 
+                params["hue_shift"], 
+                TrackbarCallback(params.get("hue_shift"), "hue_shift").__call__, 
+                default_font_id)
+            
+            sat_slider = TrackbarRow2(
+                "Sat Shift", 
+                params.get("sat_shift"), 
+                TrackbarCallback(params.get("sat_shift"), "sat_shift").__call__, 
+                default_font_id)
+            
+            val_slider = TrackbarRow2(
+                "Val Shift", 
+                params.get("val_shift"), 
+                TrackbarCallback(params.get("val_shift"), "val_shift").__call__, 
+                default_font_id)
+            
+            contrast_slider = TrackbarRow2(
+                "Contrast", 
+                params.get("contrast"), 
+                TrackbarCallback(params.get("contrast"), "contrast").__call__, 
+                default_font_id)
+            
+            brightness_slider = TrackbarRow2(
+                "Brighness", 
+                params.get("brightness"), 
+                TrackbarCallback(params.get("brightness"), "brightness").__call__, 
+                default_font_id)
+
+            val_threshold_slider = TrackbarRow2(
+                "Val Threshold", 
+                params.get("val_threshold"), 
+                TrackbarCallback(params.get("val_threshold"), "val_threshold").__call__, 
+                default_font_id)
+            
+            val_hue_shift_slider = TrackbarRow2(
+                "Hue Shift for Val", 
+                params.get("val_hue_shift"), 
+                TrackbarCallback(params.get("val_hue_shift"), "val_hue_shift").__call__, 
+                default_font_id)      
+            
+            hue_invert_angle_slider = TrackbarRow2(
+                "Hue Invert Angle",
+                params.get("hue_invert_angle"),
+                TrackbarCallback(params.get("hue_invert_angle"), "hue_invert_angle").__call__,
+                default_font_id)
+            
+            hue_invert_strength_slider = TrackbarRow2(
+                "Hue Invert Strength",
+                params.get("hue_invert_strength"),
+                TrackbarCallback(params.get("hue_invert_strength"), "hue_invert_strength").__call__,
+                default_font_id)
+            
+            posterize_slider = TrackbarRow2(
+                "Posterize Levels",
+                params.get("posterize_levels"),
+                TrackbarCallback(params.get("posterize_levels"), "posterize_levels").__call__,
+                default_font_id)
+            
+            solarize_slider = TrackbarRow2(
+                "Solarize Threshold",
+                params.get("solarize_threshold"),
+                TrackbarCallback(params.get("solarize_threshold"), "solarize_threshold").__call__,
+                default_font_id)
+            
+        dpg.bind_item_font("color", global_font_id)
 
 class Pixels:
     
@@ -478,7 +551,6 @@ class Warp:
             return self._first_warp(img)
 
 
-# Define an Enum for different reflection modes
 class ReflectionMode(Enum):
     """Enumeration for different image reflection modes."""
     NONE = 0        # No reflection
@@ -975,22 +1047,35 @@ class ImageNoiser:
         noisy_image = image + random_noise
         return np.clip(noisy_image, 0, 255).astype(np.uint8)
 
-
-# TODO: move to GlitchEffect class, add to params
-GLITCH_DURATION_FRAMES = 60 
-GLITCH_INTENSITY_MAX = 50 
-BLOCK_SIZE_MAX = 60
-
-
 class GlitchEffect:
 
     def __init__(self):
         self.glitch_phase_start_frame = 0
         self.glitch_cycle_start_frame = 0
-        self.band_div = params.add("glitch_band_div", 5, 1, 10, "Glitch Band Division", "Glitch Effects")
+
+        # State for horizontal scroll freeze glitch
+        self.current_fixed_y_end = None
+        self.current_growth_duration = None
+        self.last_scroll_glitch_reset_frame = 0 # Marks when the fixed_y_end and growth_duration were last set
+        self.glitch_phase_start_frame_shift = 0
+        self.glitch_phase_start_frame_color = 0
+        self.glitch_phase_start_frame_block = 0
+
+        self.enable_pixel_shift = Button("Enable Pixel Shift Glitch", "enable_pixel_shift", False)
+        self.enable_color_split = Button("Enable Color Split Glitch", "enable_color_split", False)
+        self.enable_block_corruption = Button("Enable Block Corruption Glitch", "enable_block_corruption", False)
+        self.enable_random_rectangles = Button("Enable Random Rectangles Glitch", "enable_random_rectangles", False)
+        self.enable_horizontal_scroll_freeze = Button("Enable Horizontal Scroll Freeze Glitch", "enable_horizontal_scroll_freeze", False)
+
+        self.glitch_duration_frames = params.add("glitch_duration_frames", 1, 300, 60)
+        self.glitch_intensity_max = params.add("glitch_intensity_max", 0, 100, 50)
+        self.glitch_block_size_max = params.add("glitch_block_size_max", 0, 200, 60)
+        self.band_div = params.add("glitch_band_div", 1, 10, 5) 
         self.num_glitches = params.add("num_glitches", 0, 100, 0)
         self.glitch_size = params.add("glitch_size", 1, 100, 0)
 
+    def create_buttons(self, gui):
+        dpg.add_button(label=self.enable_pixel_shift.label, callback=self.enable_pixel_shift.toggle, parent=gui)
 
     def reset(self):
         self.glitch_phase_start_frame = 0
@@ -1025,21 +1110,21 @@ class GlitchEffect:
 
     def apply_evolving_pixel_shift(self, frame, frame_num, glitch_phase_start_frame):
         height, width, _ = frame.shape
-        current_phase_frame = (frame_num - glitch_phase_start_frame) % GLITCH_DURATION_FRAMES
+        current_phase_frame = (frame_num - glitch_phase_start_frame) % self.glitch_duration_frames.value
 
         # Calculate shift amount and direction based on current_phase_frame
         # Use a sinusoidal or linear progression for smooth evolution
-        progress = current_phase_frame / GLITCH_DURATION_FRAMES
-        shift_amount_x = int(GLITCH_INTENSITY_MAX * np.sin(progress * np.pi * 2)) # oscillates
-        shift_amount_y = int(GLITCH_INTENSITY_MAX * np.cos(progress * np.pi * 2)) # oscillates
+        progress = current_phase_frame / self.glitch_duration_frames.value
+        shift_amount_x = int(self.glitch_intensity_max.value * np.sin(progress * np.pi * 2)) # oscillates
+        shift_amount_y = int(self.glitch_intensity_max.value * np.cos(progress * np.pi * 2)) 
 
         glitched_frame = np.copy(frame)
 
         # Apply shift to different horizontal/vertical bands
-        band_height = height // 5
-        band_width = width // 5
+        band_height = height // self.band_div.value
+        band_width = width // self.band_div.value
 
-        for i in range(5): # TODO: make band_div param
+        for i in range(self.band_div.value):
             y_start = i * band_height
             y_end = min((i + 1) * band_height, height)
             
@@ -1050,7 +1135,7 @@ class GlitchEffect:
                 shifted_band = np.roll(frame[y_start:y_end, :], -shift_amount_x, axis=1)
             glitched_frame[y_start:y_end, :] = shifted_band
 
-        for i in range(5): # TODO: make band_div param
+        for i in range(self.band_div.value):
             x_start = i * band_width
             x_end = min((i + 1) * band_width, width)
 
@@ -1069,12 +1154,12 @@ class GlitchEffect:
         Optimized: Uses cv2.split and np.roll which are fast matrix operations.
         """
         height, width, _ = frame.shape
-        current_phase_frame = (frame_num - glitch_phase_start_frame) % GLITCH_DURATION_FRAMES
+        current_phase_frame = (frame_num - glitch_phase_start_frame) % self.glitch_duration_frames.value
 
         # Calculate separation amount
         # Increases then decreases over the phase
-        progress = current_phase_frame / GLITCH_DURATION_FRAMES
-        separation_amount = int(GLITCH_INTENSITY_MAX * np.sin(progress * np.pi)) # Peaks at mid-phase
+        progress = current_phase_frame / self.glitch_duration_frames.value
+        separation_amount = int(self.glitch_intensity_max.value * np.sin(progress * np.pi)) # Peaks at mid-phase
 
         b, g, r = cv2.split(frame)
         glitched_frame = np.zeros_like(frame)
@@ -1095,16 +1180,16 @@ class GlitchEffect:
         applying effects to multiple distinct random blocks.
         """
         height, width, _ = frame.shape
-        current_phase_frame = (frame_num - glitch_phase_start_frame) % GLITCH_DURATION_FRAMES
+        current_phase_frame = (frame_num - glitch_phase_start_frame) % self.glitch_duration_frames.value
 
         glitched_frame = np.copy(frame)
 
         # Calculate corruption intensity and block size based on progress
-        progress = current_phase_frame / GLITCH_DURATION_FRAMES
+        progress = current_phase_frame / self.glitch_duration_frames.value
         # Intensity: starts low, peaks, then goes low again
         corruption_intensity = int(255 * np.sin(progress * np.pi))
         # Block size: starts small, grows, then shrinks
-        current_block_size = int(BLOCK_SIZE_MAX * np.sin(progress * np.pi))
+        current_block_size = int(self.glitch_block_size_max.value * np.sin(progress * np.pi))
         if current_block_size < 10: # Ensure minimum block size
             current_block_size = 10
 
@@ -1178,8 +1263,8 @@ class GlitchEffect:
         growth_progress = min(1.0, current_frame_in_cycle / growth_duration)
 
         # Determine the glitch band height based on growth progress
-        # Starts small (e.g., 10 pixels) and grows up to BLOCK_SIZE_MAX (60)
-        glitch_band_height = int(10 + (BLOCK_SIZE_MAX - 10) * growth_progress)
+        # Starts small (e.g., 10 pixels) and grows up to self.glitch_block_size_max.value (60)
+        glitch_band_height = int(10 + (self.glitch_block_size_max.value - 10) * growth_progress)
         glitch_band_height = max(1, glitch_band_height) # Ensure minimum height of 1
 
         # The bottom of the bar is fixed at fixed_y_end
@@ -1198,7 +1283,7 @@ class GlitchEffect:
 
         # Apply random horizontal shift to each row within the band
         # The maximum random shift scales with growth progress
-        max_row_shift = int(GLITCH_INTENSITY_MAX * growth_progress)
+        max_row_shift = int(self.glitch_intensity_max.value * growth_progress)
         if max_row_shift < 1: # Ensure a minimum shift range
             max_row_shift = 1
 
@@ -1229,67 +1314,41 @@ class GlitchEffect:
     def scanline_distortion(self, frame, frame_num):
         pass # TODO: implement scanline distortion effect
 
-    def apply_glitch_effects_to_webcam(self, frame):
-        """
-        Captures video from webcam, applies time-evolving glitch effects,
-        and displays the output in real-time.
-        """
-        # Use 0 for default webcam
-        cap = cv2.VideoCapture(0)
+    def apply_glitch_effects(self, frame, frame_count):
+      
+        # Get frame dimensions for dynamic calculations
+        height, width, _ = frame.shape
 
-        if not cap.isOpened():
-            print("Error: Could not open webcam. Please ensure it's connected and not in use.")
-            return
+        # Reset phase start frame if a new phase begins for existing effects
+        if frame_count % self.glitch_duration_frames.value == 0:
+            self.glitch_phase_start_frame_shift = frame_count
+        if frame_count % (self.glitch_duration_frames.value * 1.5) == 0: # Slightly different cycle for color
+            self.glitch_phase_start_frame_color = frame_count
+        if frame_count % (self.glitch_duration_frames.value * 0.75) == 0: # Faster cycle for blocks
+            self.glitch_phase_start_frame_blocks = frame_count
 
-        print("Webcam stream started. Press 'q' to quit.")
+        # Check if it's time to reset the horizontal scroll glitch state
+        # This will happen on the very first frame or when the current growth duration is over
+        if frame_count == 0 or (frame_count - self.last_scroll_glitch_reset_frame) >= self.current_growth_duration:
+            self.last_scroll_glitch_reset_frame = frame_count
+            self.current_fixed_y_end = random.randint(height // 4, height)
+            # Choose a random duration for the growth phase
+            self.current_growth_duration = random.randint(self.glitch_duration_frames.value // 2, self.glitch_duration_frames.value * 2) # Random period for growth
 
-        frame_count = 0
+        # Apply effects to the current frame
+        frame = self.apply_evolving_pixel_shift(frame, frame_count, self.glitch_phase_start_frame_shift)
+        frame = self.apply_gradual_color_split(frame, frame_count, self.glitch_phase_start_frame_color)
+        frame = self.apply_morphing_block_corruption(frame, frame_count, self.glitch_phase_start_frame_blocks)
         
-        # State for horizontal scroll freeze glitch
-        current_fixed_y_end = None
-        current_growth_duration = None
-        last_scroll_glitch_reset_frame = 0 # Marks when the fixed_y_end and growth_duration were last set
+        # Apply the new scrolling glitch effect, passing its specific state
+        frame = self.apply_horizontal_scroll_freeze_glitch(
+            frame,
+            frame_count,
+            self.last_scroll_glitch_reset_frame,
+            self.current_fixed_y_end,
+            self.current_growth_duration
+        )
 
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                print("Failed to grab frame from webcam. Exiting...")
-                break
-
-            # Get frame dimensions for dynamic calculations
-            height, width, _ = frame.shape
-
-            # Reset phase start frame if a new phase begins for existing effects
-            if frame_count % GLITCH_DURATION_FRAMES == 0:
-                glitch_phase_start_frame_shift = frame_count
-            if frame_count % (GLITCH_DURATION_FRAMES * 1.5) == 0: # Slightly different cycle for color
-                glitch_phase_start_frame_color = frame_count
-            if frame_count % (GLITCH_DURATION_FRAMES * 0.75) == 0: # Faster cycle for blocks
-                glitch_phase_start_frame_blocks = frame_count
-
-            # Check if it's time to reset the horizontal scroll glitch state
-            # This will happen on the very first frame or when the current growth duration is over
-            if frame_count == 0 or (frame_count - last_scroll_glitch_reset_frame) >= current_growth_duration:
-                last_scroll_glitch_reset_frame = frame_count
-                current_fixed_y_end = random.randint(height // 4, height)
-                # Choose a random duration for the growth phase
-                current_growth_duration = random.randint(GLITCH_DURATION_FRAMES // 2, GLITCH_DURATION_FRAMES * 2) # Random period for growth
-
-            # Apply effects to the current frame
-            # All effects are applied concurrently for a layered glitch appearance.
-            # frame = apply_evolving_pixel_shift(frame, frame_count, glitch_phase_start_frame_shift)
-            # frame = apply_gradual_color_split(frame, frame_count, glitch_phase_start_frame_color)
-            # frame = apply_morphing_block_corruption(frame, frame_count, glitch_phase_start_frame_blocks)
-            
-            # Apply the new scrolling glitch effect, passing its specific state
-            frame = apply_horizontal_scroll_freeze_glitch(
-                frame,
-                frame_count,
-                last_scroll_glitch_reset_frame,
-                current_fixed_y_end,
-                current_growth_duration
-            )
-
-            frame_count += 1
-            return frame
+        frame_count += 1
+        return frame
 

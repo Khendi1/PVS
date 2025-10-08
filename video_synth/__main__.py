@@ -10,20 +10,20 @@ Soureces include webcam, video files, capture card, metaballs generator, and pla
 import cv2
 import dearpygui.dearpygui as dpg 
 from config import *
+from shared_objects import *
 from gui import Interface
 from generators import Oscillator
 from midi_input import *
-from animations import *
 from mix import *
 from fx import *
 from shapes import ShapeGenerator
-from patterns3 import *
+from patterns3 import Patterns
 
 image_height, image_width = None, None
 
 def apply_effects(frame, frame_count, patterns: Patterns, basic: Effects, color: Color, 
                   pixels: Pixels, noise: ImageNoiser, reflector: Reflector, 
-                  sync: Sync, warp: Warp, shapes: ShapeGenerator):
+                  sync: Sync, warp: Warp, shapes: ShapeGenerator, glitch: GlitchEffect):
     """ 
     Applies a sequence of visual effects to the input frame based on current parameters.
     Each effect is modular and can be enabled/disabled via the GUI.
@@ -52,16 +52,10 @@ def apply_effects(frame, frame_count, patterns: Patterns, basic: Effects, color:
         frame = pixels.sharpen_frame(frame)
 
         #TODO: implement glitch effect class functions
-        # frame = glitch.apply_evolving_pixel_shift(frame, ...)
-        # frame = glitch.apply_gradual_color_split(frame, ...)
-        # frame = glitch.apply_morphing_block_corruption(frame, ...)
-        # frame = glitch.apply_horizontal_scroll_freeze_glitch(frame, ...)
-        # frame = glitch.apply_vertical_jitter_glitch(frame, ...)
-        # frame = glitch.scanline_distortion(frame, ...)
+        frame = glitch.apply_glitch_effects(frame, frame_count)
 
         # TODO: test these effects, test ordering
         # frame = color limit_hues_kmeans(frame)
-        # image_height, image_width = frame.shape[:2]
         # frame = fx.polar_transform(frame, params.get("polar_x"), params.get("polar_y"), params.get("polar_radius"))
         # frame = fx.apply_perlin_noise
         # warp_frame = fx.warp_frame(frame)
@@ -78,13 +72,15 @@ def apply_effects(frame, frame_count, patterns: Patterns, basic: Effects, color:
 
 def main():
     global image_height, image_width, cap1, cap2
+    global fx, basic, color, pixels, noise, shapes, patterns
+    global reflector, sync, warp, glitch
+
     print("Initializing video synthesizer...")
 
     # Initialize mixer video sources with their default settings
     mixer = Mixer()
 
     # Retrieve an initial frame to determine image dimensions; 
-    # required for initializing effects
     frame = mixer.mix_sources()  
     frame_count = 0
 
@@ -92,6 +88,11 @@ def main():
     feedback_frame = frame.copy()
     prev_frame = frame.copy()
     image_height, image_width = frame.shape[:2]
+
+    # Initialize shared objects and effects with image dimensions
+    # This must be done after reading the first frame to get correct dimensions
+    # all effects classes are initialized here
+    init_shared_objects(width=image_width, height=image_height)
 
     cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Modified Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
@@ -101,34 +102,12 @@ def main():
         osc_bank.append(Oscillator(name=f"osc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=i%4))
     print(f"Oscillator bank initialized with {len(osc_bank)} oscillators.")
     
-    # Initialize effects classes; these contain Params to be modified by the generators
-    basic = Effects(image_width, image_height)
-    color = Color()
-    pixels = Pixels(image_width, image_height)
-    noise = ImageNoiser(NoiseType.NONE)
-    shapes = ShapeGenerator(image_width, image_height)
-    patterns = Patterns(image_width, image_height)
-    reflector = Reflector()                    
-    sync = Sync() 
-    warp = Warp(image_width, image_height)
-
-    # Convenient dictionary of effects to be passed to the apply_effects function
-    fx = {
-        "basic": basic,
-        "color": color,
-        "pixels": pixels,
-        "noise": noise,
-        "shapes": shapes,
-        "patterns": patterns,
-        "reflector": reflector,
-        "sync": sync,
-        "warp": warp
-    }
 
     # Initialize the midi input controller before creating the GUI
     # TODO: This assumes both controllers are always connected in a specific order; improve this
     # BUG: fix initialization of MIDI controllers in midi_input.py
     # test_ports()
+    
     controller1 = MidiInputController(controller=MidiMix())
     controller2 = MidiInputController(controller=SMC_Mixer())
 
@@ -150,12 +129,6 @@ def main():
             # update osc values
             osc_vals = [osc.get_next_value() for osc in osc_bank if osc.linked_param is not None]
             
-            # print("\nframe dims:")
-            # check_frame_dimensions(frame)
-            # print("\nfeedback dims:")
-            # check_frame_dimensions(feedback_frame)
-            # frame, feedback_frame = resize_to_match(frame, feedback_frame)
-
             # relevant section
             if toggles.val("effects_first") == True:         
                 feedback_frame = apply_effects(feedback_frame, frame_count, **fx)
@@ -166,8 +139,8 @@ def main():
                 feedback_frame = apply_effects(feedback_frame, frame_count, **fx) 
 
             # Apply temporal filtering and frame buffer averaging to the resulting feedback frame
-            feedback_frame = basic.apply_temporal_filter(prev_frame, feedback_frame)
-            feedback_frame = basic.avg_frame_buffer(feedback_frame)
+            feedback_frame = fx[FX.BASIC].apply_temporal_filter(prev_frame, feedback_frame)
+            feedback_frame = fx[FX.BASIC].avg_frame_buffer(feedback_frame)
             prev_frame = feedback_frame.copy()
 
             # Display the resulting frame and control panel

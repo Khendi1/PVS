@@ -3,7 +3,9 @@ import dearpygui.dearpygui as dpg
 from save import SaveController
 from buttons import Buttons, Button
 from mix import *
-
+# from fx import *
+from shared_objects import fx, FX
+from sliders import TrackbarRow, TrackbarCallback, TrackbarRow2
 
 class Interface:
 
@@ -212,89 +214,51 @@ class Interface:
                 self.reset_slider_callback,
                 None) # fix defulat font_id=None
         
+    def glitch_panel(self, default_font_id=None, global_font_id=None):
+        with dpg.collapsing_header(label=f"\tGlitch", tag="glitch"):
+            glitch_intensity_slider = TrackbarRow(
+                "Glitch Intensity",
+                params.get("glitch_intensity_max"),
+                TrackbarCallback(params.get("glitch_intensity_max"), "glitch_intensity_max").__call__,
+                self.reset_slider_callback,
+                default_font_id)
+            
+            glitch_duration_slider = TrackbarRow(
+                "Glitch Duration",
+                params.get("glitch_duration_frames"),
+                TrackbarCallback(params.get("glitch_duration_frames"), "glitch_duration_frames").__call__,
+                self.reset_slider_callback,
+                default_font_id)
+            
+            glitch_block_size_slider = TrackbarRow(
+                "Glitch Block Size",
+                params.get("glitch_block_size_max"),
+                TrackbarCallback(params.get("glitch_block_size_max"), "glitch_block_size_max").__call__,
+                self.reset_slider_callback,
+                default_font_id)
+            
+            glitch_band_div_slider = TrackbarRow(
+                "Glitch Band Divisor",
+                params.get("glitch_band_div"),
+                TrackbarCallback(params.get("glitch_band_div"), "glitch_band_div").__call__,
+                self.reset_slider_callback,
+                default_font_id)            
 
-    def color_sliders(self, default_font_id=None, global_font_id=None):
-
-        with dpg.collapsing_header(label=f"\tColor", tag="color"):
-        
-            hue_slider = TrackbarRow(
-                "Hue Shift", 
-                params["hue_shift"], 
-                TrackbarCallback(params.get("hue_shift"), "hue_shift").__call__, 
+            num_glitches_slider = TrackbarRow(
+                "Glitch Qty", 
+                params.get("num_glitches"), 
+                TrackbarCallback(params.get("num_glitches"), "num_glitches").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
             
-            sat_slider = TrackbarRow(
-                "Sat Shift", 
-                params.get("sat_shift"), 
-                TrackbarCallback(params.get("sat_shift"), "sat_shift").__call__, 
+            glitch_size_slider = TrackbarRow(
+                "Glitch Size", 
+                params.get("glitch_size"), 
+                TrackbarCallback(params.get("glitch_size"), "glitch_size").__call__, 
                 self.reset_slider_callback, 
                 default_font_id)
             
-            val_slider = TrackbarRow(
-                "Val Shift", 
-                params.get("val_shift"), 
-                TrackbarCallback(params.get("val_shift"), "val_shift").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            contrast_slider = TrackbarRow(
-                "Contrast", 
-                params.get("contrast"), 
-                TrackbarCallback(params.get("contrast"), "contrast").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            brightness_slider = TrackbarRow(
-                "Brighness", 
-                params.get("brightness"), 
-                TrackbarCallback(params.get("brightness"), "brightness").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-
-            val_threshold_slider = TrackbarRow(
-                "Val Threshold", 
-                params.get("val_threshold"), 
-                TrackbarCallback(params.get("val_threshold"), "val_threshold").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            val_hue_shift_slider = TrackbarRow(
-                "Hue Shift for Val", 
-                params.get("val_hue_shift"), 
-                TrackbarCallback(params.get("val_hue_shift"), "val_hue_shift").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)      
-            
-            hue_invert_angle_slider = TrackbarRow(
-                "Hue Invert Angle",
-                params.get("hue_invert_angle"),
-                TrackbarCallback(params.get("hue_invert_angle"), "hue_invert_angle").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            hue_invert_strength_slider = TrackbarRow(
-                "Hue Invert Strength",
-                params.get("hue_invert_strength"),
-                TrackbarCallback(params.get("hue_invert_strength"), "hue_invert_strength").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            posterize_slider = TrackbarRow(
-                "Posterize Levels",
-                params.get("posterize_levels"),
-                TrackbarCallback(params.get("posterize_levels"), "posterize_levels").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            solarize_slider = TrackbarRow(
-                "Solarize Threshold",
-                params.get("solarize_threshold"),
-                TrackbarCallback(params.get("solarize_threshold"), "solarize_threshold").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-        dpg.bind_item_font("color", global_font_id)
+        dpg.bind_item_font("glitch", global_font_id)
 
 
     def effects_sliders(self, default_font_id=None, global_font_id=None):
@@ -356,35 +320,7 @@ class Interface:
                 TrackbarCallback(params.get("num_hues"), "num_hues").__call__,
                 self.reset_slider_callback,
                 default_font_id)
-            
-            # noise_intensity_slider = TrackbarRow(
-            #     "Noise Intensity",
-            #     params.get("noise_intensity"),
-            #     TrackbarCallback(params.get("noise_intensity"), "noise_intensity").__call__,
-            #     self.reset_slider_callback,
-            #     default_font_id)
 
-            # noise_type_slider = TrackbarRow(
-            #     "Noise Type",
-            #     params.get("noise_type"),
-            #     TrackbarCallback(params.get("noise_type"), "noise_type").__call__,
-            #     self.reset_slider_callback,
-            #     default_font_id)
-
-            # num_glitches_slider = TrackbarRow(
-            #     "Glitch Qty", 
-            #     params.get("num_glitches"), 
-            #     TrackbarCallback(params.get("num_glitches"), "num_glitches").__call__, 
-            #     self.reset_slider_callback, 
-            #     default_font_id)
-            
-            # glitch_size_slider = TrackbarRow(
-            #     "Glitch Size", 
-            #     params.get("glitch_size"), 
-            #     TrackbarCallback(params.get("glitch_size"), "glitch_size").__call__, 
-            #     self.reset_slider_callback, 
-            #     default_font_id)
-            
         dpg.bind_item_font("effects", global_font_id)
 
 
@@ -1248,8 +1184,10 @@ class Interface:
 
         self.test_sliders(default_font_id, global_font_id)
         self.mix_panel(mixer)
-        self.color_sliders(default_font_id, global_font_id)
+        fx[FX.COLOR].create_sliders(default_font_id, global_font_id)
+        # self.color_sliders(default_font_id, global_font_id)
         self.effects_sliders(default_font_id, global_font_id)
+        self.glitch_panel(default_font_id, global_font_id)
         self.reflector_sliders(default_font_id, global_font_id)
         self.pan_sliders(default_font_id, global_font_id)
         self.metaballs_sliders(default_font_id, global_font_id)
@@ -1297,64 +1235,3 @@ class Interface:
                 
             dpg.bind_item_font(panel_name, global_font_id)
 
-
-class TrackbarRow:
-
-    def __init__(self, label, param, callback, button_callback, font):
-
-        self.label = label #TODO: method to get label from param name
-        self.tag = param.name
-        self.callback = callback
-        self.button_callback = button_callback
-        self.slider = None
-        self.button = None
-        self.value = param.default_val
-        self.type = type(param.default_val).__name__
-        self.param = param
-        self.font = font
-        self.create()
-
-    def create(self):
-        with dpg.group(horizontal=True):
-            # self.button = dpg.add_button(label="Reset", callback=lambda x: self.reset, width=50)
-            self.button = dpg.add_button(label="Reset", callback=self.button_callback, width=50, tag=self.tag + "_reset", user_data=self.tag)
-            if self.type == 'float':
-                self.slider = dpg.add_slider_float(label=self.label, tag=self.tag, 
-                                                   default_value=self.param.default_val, 
-                                                   min_value=self.param.min, 
-                                                   max_value=self.param.max, 
-                                                   callback=self.callback, 
-                                                   width=-100)
-            else:
-                self.slider = dpg.add_slider_int(label=self.label, tag=self.tag, default_value=self.param.default_val, min_value=self.param.min, max_value=self.param.max, callback=self.callback, width=-100)
-            dpg.bind_item_font(self.tag, self.font)
-            dpg.bind_item_font(self.tag + "_reset", self.font)
-
-
-class TrackbarCallback:
-    """
-    A callable class instance used as a callback for Dear PyGui trackbars.
-    It updates a specified Param object's value and an associated text item.
-    """
-    def __init__(self, target_param_obj, display_text_tag=None):
-        """
-        Initializes the callback instance.
-        Args:
-            target_param_obj (Param): The Param object whose 'value' attribute
-                                      this trackbar will control.
-            display_text_tag (str, optional): The tag of a dpg.add_text item
-                                            to update with the current value.
-        """
-        self.target_param = target_param_obj
-        self.display_text_tag = display_text_tag
-
-    def __call__(self, sender, app_data):
-        """
-        This method is invoked when the trackbar's value changes.
-        Args: 
-            sender: The tag/ID of the trackbar that triggered the callback.
-            app_data: The new value of the trackbar.
-        """
-        # Update the Param object's value
-        params.set(self.target_param.name, app_data)
-        dpg.set_value(sender, app_data)
