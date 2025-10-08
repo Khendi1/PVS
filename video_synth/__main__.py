@@ -23,7 +23,8 @@ image_height, image_width = None, None
 
 def apply_effects(frame, frame_count, patterns: Patterns, basic: Effects, color: Color, 
                   pixels: Pixels, noise: ImageNoiser, reflector: Reflector, 
-                  sync: Sync, warp: Warp, shapes: ShapeGenerator, glitch: GlitchEffect):
+                  sync: Sync, warp: Warp, shapes: ShapeGenerator, glitch: GlitchEffect,
+                  ptz: PTZ):
     """ 
     Applies a sequence of visual effects to the input frame based on current parameters.
     Each effect is modular and can be enabled/disabled via the GUI.
@@ -38,7 +39,7 @@ def apply_effects(frame, frame_count, patterns: Patterns, basic: Effects, color:
     # TODO: use frame skip slider to control frame skip
     if frame_count % (params.val("frame_skip") + 1) == 0: 
         frame = patterns.generate_pattern_frame(frame)
-        frame = basic.shift_frame(frame)
+        frame = ptz.shift_frame(frame)
         frame = sync.sync(frame)
         frame = reflector.apply_reflection(frame)
         frame = color.modify_hsv(frame)
@@ -72,8 +73,8 @@ def apply_effects(frame, frame_count, patterns: Patterns, basic: Effects, color:
 
 def main():
     global image_height, image_width, cap1, cap2
-    global fx, basic, color, pixels, noise, shapes, patterns
-    global reflector, sync, warp, glitch
+    global fx
+    
 
     print("Initializing video synthesizer...")
 

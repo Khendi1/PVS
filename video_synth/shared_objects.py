@@ -13,12 +13,14 @@ class FX(StrEnum):
     COLOR = auto()
     PIXELS = auto()
     NOISE = auto()
+    PTZ = auto()
     SHAPES = auto()
     PATTERNS = auto()
     REFLECTOR = auto()
     SYNC = auto()
     WARP = auto()
     GLITCH = auto()
+    LISSAJOUS = auto()
 
 # Initialize effects classes; these contain Params to be modified by the generators
 basic = None
@@ -31,6 +33,7 @@ reflector = None
 sync = None
 warp = None
 glitch = None
+ptz = None
 
 # Convenient dictionary of effects to be passed to the apply_effects function
 fx = {}
@@ -49,6 +52,7 @@ def init_shared_objects(width, height):
     sync = Sync() 
     warp = Warp(width, height)
     glitch = GlitchEffect()
+    ptz = PTZ(width, height)
 
     # Convenient dictionary of effects to be passed to the apply_effects function
     fx.clear() # Clear any previous state
@@ -62,5 +66,6 @@ def init_shared_objects(width, height):
         FX.REFLECTOR: reflector,
         FX.SYNC: sync,
         FX.WARP: warp,
-        FX.GLITCH: glitch
+        FX.GLITCH: glitch,
+        FX.PTZ: ptz
     })

@@ -7,6 +7,8 @@ import noise # For Perlin noise generation
 from param import ParamTable, Param
 from config import params
 from generators import Oscillator
+from sliders import TrackbarCallback, TrackbarRow2
+import dearpygui.dearpygui as dpg
 
 posc_bank = []  
 
@@ -577,6 +579,151 @@ class Patterns:
         pattern[:, :, 1] = green_channel # Green
         pattern[:, :, 2] = red_channel # Red
         return pattern
+    
+
+    def create_sliders(self, default_font_id=None, global_font_id=None):
+        with dpg.collapsing_header(label=f"\tPattern Generator", tag="pattern_generator"):
+            pattern_type_slider = TrackbarRow2(
+                "Pattern Type",
+                params.get("pattern_type"),
+                TrackbarCallback(params.get("pattern_type"), "pattern_type").__call__,
+                default_font_id)
+            
+            pattern_mod = TrackbarRow2(
+                "Pattern Mod",  
+                params.get("pattern_mod"),
+                TrackbarCallback(params.get("pattern_mod"), "pattern_mod").__call__,
+                default_font_id)
+            
+            pattern_r = TrackbarRow2(
+                "Pattern R",
+                params.get("pattern_r"),
+                TrackbarCallback(params.get("pattern_r"), "pattern_r").__call__,
+                default_font_id)
+            pattern_g = TrackbarRow2(
+                "Pattern G",
+                params.get("pattern_g"),
+                TrackbarCallback(params.get("pattern_g"), "pattern_g").__call__,
+                default_font_id)
+            pattern_b = TrackbarRow2(
+                "Pattern B",
+                params.get("pattern_b"),
+                TrackbarCallback(params.get("pattern_b"), "pattern_b").__call__,
+                default_font_id)
+                  
+            pattern_bar_x_freq_slider = TrackbarRow2(
+                "Bar x Density",
+                params.get("bar_x_freq"),
+                TrackbarCallback(params.get("bar_x_freq"), "bar_x_freq").__call__,
+                default_font_id)
+            pattern_bar_y_freq_slider = TrackbarRow2(
+                "Bar y Density",
+                params.get("bar_y_freq"),
+                TrackbarCallback(params.get("bar_y_freq"), "bar_y_freq").__call__,
+                default_font_id)
+            
+            # speed_slider = TrackbarRow2(
+            #     "Speed",
+            #     params.get("pattern_speed"),
+            #     TrackbarCallback(params.get("pattern_speed"), "pattern_speed").__call__,
+            #     self.reset_slider_callback,
+            #     default_font_id)
+
+            pattern_distance = TrackbarRow2(
+                "Pattern Distance",
+                params.get("pattern_distance"),
+                TrackbarCallback(params.get("pattern_distance"), "pattern_distance").__call__,
+                default_font_id)
+
+            angle_amt_slider = TrackbarRow2(
+                "Radial Frequency",
+                params.get("pattern_radial_freq"),
+                TrackbarCallback(params.get("pattern_radial_freq"), "pattern_radial_freq").__call__,
+                default_font_id)
+            radius_amt_slider = TrackbarRow2(
+                "Angular Frequency",
+                params.get("pattern_angular_freq"),
+                TrackbarCallback(params.get("pattern_angular_freq"), "pattern_angular_freq").__call__,
+                default_font_id)
+            
+            radial_mod_slider = TrackbarRow2(
+                "Radial Mod",
+                params.get("pattern_radial_mod"),
+                TrackbarCallback(params.get("pattern_radial_mod"), "pattern_radial_mod").__call__,
+                default_font_id)
+            
+            angle_mod_slider = TrackbarRow2(
+                "Angle Mode",
+                params.get("pattern_angle_mod"),
+                TrackbarCallback(params.get("pattern_angle_mod"), "pattern_angle_mod").__call__,
+                default_font_id)
+
+            # use_fractal_slider = TrackbarRow2(
+            #     "Use Fractal",
+            #     params.get("pattern_use_fractal"),
+            #     TrackbarCallback(params.get("pattern_use_fractal"), "pattern_use_fractal").__call__,
+            #     self.reset_slider_callback,
+            #     default_font_id)
+
+            # octaves_slider = TrackbarRow2(
+            #     "Octaves",
+            #     params.get("pattern_octaves"),
+            #     TrackbarCallback(params.get("pattern_octaves"), "pattern_octaves").__call__,
+            #     self.reset_slider_callback,
+            #     default_font_id)
+            # gain_slider = TrackbarRow2(
+            #     "Gain",
+            #     params.get("pattern_gain"),
+            #     TrackbarCallback(params.get("pattern_gain"), "pattern_gain").__call__,
+            #     self.reset_slider_callback,
+            #     default_font_id)
+            # lacunarity_slider = TrackbarRow2(
+            #     "Lacunarity",
+            #     params.get("pattern_lacunarity"),
+            #     TrackbarCallback(params.get("pattern_lacunarity"), "pattern_lacunarity").__call__,
+            #     self.reset_slider_callback,
+            #     default_font_id)
+            
+            posc_freq_sliders = []
+            posc_amp_sliders = []
+            posc_phase_sliders = []
+            posc_seed_sliders = []
+            posc_shape_sliders = []
+            for i in range(3):
+                with dpg.collapsing_header(label=f"\tpOscillator {i}", tag=f"posc{i}"):
+                    posc_shape_sliders.append(TrackbarRow2(
+                        f"pOsc {i} Shape", 
+                        params.get(f"posc{i}_shape"), 
+                        TrackbarCallback(params.get(f"posc{i}_shape"), f"posc{i}_shape").__call__, 
+                        default_font_id))
+                    posc_freq_sliders.append(TrackbarRow2(
+                        f"pOsc {i} Freq", 
+                        params.get(f"posc{i}_frequency"), 
+                        TrackbarCallback(params.get(f"posc{i}_frequency"), f"posc{i}_frequency").__call__, 
+                        default_font_id))
+                    
+                    posc_amp_sliders.append(TrackbarRow2(
+                        f"pOsc {i} Amp", 
+                        params.get(f"posc{i}_amplitude"), 
+                        TrackbarCallback(params.get(f"posc{i}_amplitude"), f"posc{i}_amplitude").__call__, 
+                        default_font_id))
+                    
+                    posc_phase_sliders.append(TrackbarRow2(
+                        f"pOsc {i} Phase", 
+                        params.get(f"posc{i}_phase"), 
+                        TrackbarCallback(params.get(f"posc{i}_phase"), f"posc{i}_phase").__call__, 
+                        default_font_id))
+                    
+                    posc_seed_sliders.append(TrackbarRow2(
+                        f"pOsc {i} Seed", 
+                        params.get(f"posc{i}_seed"), 
+                        TrackbarCallback(params.get(f"posc{i}_seed"), f"posc{i}_seed").__call__, 
+                        default_font_id))
+                dpg.bind_item_font(f"posc{i}", global_font_id)
+
+        dpg.bind_item_font("pattern_generator", global_font_id)
+
+    
 
 
 # --- Main Execution Block ---
