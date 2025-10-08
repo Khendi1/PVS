@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 from config import params, image_width, image_height
 from enum import IntEnum
+from sliders import TrackbarRow2, TrackbarCallback
+import dearpygui.dearpygui as dpg
 
 class Shape(IntEnum):
 
@@ -237,3 +239,132 @@ class ShapeGenerator:
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         return frame
+    
+
+    def create_sliders(self, default_font_id=None, global_font_id=None):
+        with dpg.collapsing_header(label=f"\tShape Generator", tag="shape_generator"):
+            shape_slider = TrackbarRow2(
+                "Shape Type",
+                params.get("shape_type"),
+                TrackbarCallback(params.get("shape_type"), "shape_type").__call__,
+                default_font_id)
+            
+            canvas_rotation_slider = TrackbarRow2(
+                "Canvas Rotation", 
+                params.get("canvas_rotation"), 
+                TrackbarCallback(params.get("canvas_rotation"), "canvas_rotation").__call__, 
+                default_font_id)
+
+            size_multiplier_slider = TrackbarRow2(
+                "Size Multiplier", 
+                params.get("size_multiplier"), 
+                TrackbarCallback(params.get("size_multiplier"), "size_multiplier").__call__, 
+                default_font_id)
+            
+            aspect_ratio_slider = TrackbarRow2(
+                "Aspect Ratio", 
+                params.get("aspect_ratio"), 
+                TrackbarCallback(params.get("aspect_ratio"), "aspect_ratio").__call__, 
+                default_font_id)
+            
+            rotation_slider = TrackbarRow2(
+                "Rotation", 
+                params.get("rotation_angle"), 
+                TrackbarCallback(params.get("rotation_angle"), "rotation_angle").__call__, 
+                default_font_id)
+            
+            multiply_grid_x_slider = TrackbarRow2(
+                "Multiply Grid X", 
+                params.get("multiply_grid_x"), 
+                TrackbarCallback(params.get("multiply_grid_x"), "multiply_grid_x").__call__, 
+                default_font_id)
+            
+            multiply_grid_y_slider = TrackbarRow2(
+                "Multiply Grid Y", 
+                params.get("multiply_grid_y"), 
+                TrackbarCallback(params.get("multiply_grid_y"), "multiply_grid_y").__call__, 
+                default_font_id)
+            
+            grid_pitch_x_slider = TrackbarRow2(
+                "Grid Pitch X", 
+                params.get("grid_pitch_x"), 
+                TrackbarCallback(params.get("grid_pitch_x"), "grid_pitch_x").__call__, 
+                default_font_id)
+            
+            grid_pitch_y_slider = TrackbarRow2(
+                "Grid Pitch Y", 
+                params.get("grid_pitch_y"), 
+                TrackbarCallback(params.get("grid_pitch_y"), "grid_pitch_y").__call__, 
+                default_font_id)
+            
+            shape_y_shift_slider = TrackbarRow2(
+                "Shape Y Shift", 
+                params.get("shape_y_shift"), 
+                TrackbarCallback(params.get("shape_y_shift"), "shape_y_shift").__call__, 
+                default_font_id)
+            
+            shape_x_shift_slider = TrackbarRow2(
+                "Shape X Shift", 
+                params.get("shape_x_shift"), 
+                TrackbarCallback(params.get("shape_x_shift"), "shape_x_shift").__call__, 
+                default_font_id)
+
+            with dpg.collapsing_header(label=f"\Line Generator", tag="line_generator"):
+
+                line_hue_slider = TrackbarRow2(
+                    "Line Hue", 
+                    params.get("line_hue"), 
+                    TrackbarCallback(params.get("line_hue"), "line_hue").__call__, 
+                        default_font_id)
+                
+                line_sat_slider = TrackbarRow2(
+                    "Line Sat", 
+                    params.get("line_sat"), 
+                    TrackbarCallback(params.get("line_sat"), "line_sat").__call__, 
+                        default_font_id)
+                
+                line_val_slider = TrackbarRow2(
+                    "Line Val", 
+                    params.get("line_val"), 
+                    TrackbarCallback(params.get("line_val"), "line_val").__call__, 
+                        default_font_id)
+                
+                line_weight_slider = TrackbarRow2(
+                    "Line Width", 
+                    params.get("line_weight"), 
+                    TrackbarCallback(params.get("line_weight"), "line_weight").__call__, 
+                        default_font_id)
+                
+                line_opacity_slider = TrackbarRow2(
+                    "Line Opacity", 
+                    params.get("line_opacity"), 
+                    TrackbarCallback(params.get("line_opacity"), "line_opacity").__call__, 
+                        default_font_id)
+            dpg.bind_item_font("line_generator", global_font_id)
+
+            with dpg.collapsing_header(label=f"\tFill Generator", tag="fill_generator"):
+                fill_hue_slider = TrackbarRow2(
+                    "Fill Hue", 
+                    params.get("fill_hue"), 
+                    TrackbarCallback(params.get("fill_hue"), "fill_hue").__call__, 
+                        default_font_id)
+                
+                fill_sat_slider = TrackbarRow2(
+                    "Fill Sat", 
+                    params.get("fill_sat"), 
+                    TrackbarCallback(params.get("fill_sat"), "fill_sat").__call__, 
+                        default_font_id)
+                
+                fill_val_slider = TrackbarRow2(
+                    "Fill Val", 
+                    params.get("fill_val"), 
+                    TrackbarCallback(params.get("fill_val"), "fill_val").__call__, 
+                        default_font_id)
+                
+                fill_opacity_slider = TrackbarRow2(
+                    "Fill Opacity", 
+                    params.get("fill_opacity"), 
+                    TrackbarCallback(params.get("fill_opacity"), "fill_opacity").__call__, 
+                        default_font_id)
+            dpg.bind_item_font("fill_generator", global_font_id)
+        dpg.bind_item_font("shape_generator", global_font_id)

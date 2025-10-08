@@ -7,13 +7,13 @@ class Button:
         self.tag = tag
         self.user_data = tag
         self.callback = None
-        self.val = default_val
+        self.value = default_val
     
     def val(self):
-        return self.val
+        return self.value
     
     def toggle(self):
-        self.val = not self.val
+        self.value = not self.value
 
     def on_toggle_button_click(self, sender, app_data, user_data):
         self.toggle()

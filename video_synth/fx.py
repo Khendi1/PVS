@@ -7,7 +7,9 @@ import math
 from noise import pnoise2
 from collections import deque
 import time
-
+from buttons import Button
+import dearpygui.dearpygui as dpg
+from sliders import *
 
 class WarpType(IntEnum):
     NONE = 0
@@ -263,6 +265,77 @@ class Color:
         polarized_frame = cv2.cvtColor(hsv_frame.astype(np.uint8), cv2.COLOR_HSV2BGR)
         return polarized_frame    
 
+    def create_sliders(self, default_font_id=None, global_font_id=None):
+
+        with dpg.collapsing_header(label=f"\tColor", tag="color"):
+        
+            hue_slider = TrackbarRow2(
+                "Hue Shift", 
+                params["hue_shift"], 
+                TrackbarCallback(params.get("hue_shift"), "hue_shift").__call__, 
+                default_font_id)
+            
+            sat_slider = TrackbarRow2(
+                "Sat Shift", 
+                params.get("sat_shift"), 
+                TrackbarCallback(params.get("sat_shift"), "sat_shift").__call__, 
+                default_font_id)
+            
+            val_slider = TrackbarRow2(
+                "Val Shift", 
+                params.get("val_shift"), 
+                TrackbarCallback(params.get("val_shift"), "val_shift").__call__, 
+                default_font_id)
+            
+            contrast_slider = TrackbarRow2(
+                "Contrast", 
+                params.get("contrast"), 
+                TrackbarCallback(params.get("contrast"), "contrast").__call__, 
+                default_font_id)
+            
+            brightness_slider = TrackbarRow2(
+                "Brighness", 
+                params.get("brightness"), 
+                TrackbarCallback(params.get("brightness"), "brightness").__call__, 
+                default_font_id)
+
+            val_threshold_slider = TrackbarRow2(
+                "Val Threshold", 
+                params.get("val_threshold"), 
+                TrackbarCallback(params.get("val_threshold"), "val_threshold").__call__, 
+                default_font_id)
+            
+            val_hue_shift_slider = TrackbarRow2(
+                "Hue Shift for Val", 
+                params.get("val_hue_shift"), 
+                TrackbarCallback(params.get("val_hue_shift"), "val_hue_shift").__call__, 
+                default_font_id)      
+            
+            hue_invert_angle_slider = TrackbarRow2(
+                "Hue Invert Angle",
+                params.get("hue_invert_angle"),
+                TrackbarCallback(params.get("hue_invert_angle"), "hue_invert_angle").__call__,
+                default_font_id)
+            
+            hue_invert_strength_slider = TrackbarRow2(
+                "Hue Invert Strength",
+                params.get("hue_invert_strength"),
+                TrackbarCallback(params.get("hue_invert_strength"), "hue_invert_strength").__call__,
+                default_font_id)
+            
+            posterize_slider = TrackbarRow2(
+                "Posterize Levels",
+                params.get("posterize_levels"),
+                TrackbarCallback(params.get("posterize_levels"), "posterize_levels").__call__,
+                default_font_id)
+            
+            solarize_slider = TrackbarRow2(
+                "Solarize Threshold",
+                params.get("solarize_threshold"),
+                TrackbarCallback(params.get("solarize_threshold"), "solarize_threshold").__call__,
+                default_font_id)
+            
+        dpg.bind_item_font("color", global_font_id)
 
 class Pixels:
     
@@ -345,6 +418,43 @@ class Sync:
         warped_y = cv2.cvtColor(warped_y, cv2.COLOR_RGB2BGR)
         return warped_y
 
+
+    def create_sliders(self, default_font_id=None, global_font_id=None):
+        with dpg.collapsing_header(label=f"\tSync", tag="sync"):
+                
+                x_sync_speed_slider = TrackbarRow2(
+                    "X Sync Speed",
+                    params.get("x_sync_speed"),
+                    TrackbarCallback(params.get("x_sync_speed"), "x_sync_speed").__call__,
+                    default_font_id)
+                
+                x_sync_freq_slider = TrackbarRow2(
+                    "X Sync Freq",
+                    params.get("x_sync_freq"),
+                    TrackbarCallback(params.get("x_sync_freq"), "x_sync_freq").__call__,
+                    default_font_id)
+                
+                x_sync_amp_slider = TrackbarRow2(
+                    "X Sync Amp",
+                    params.get("x_sync_amp"),
+                    TrackbarCallback(params.get("x_sync_amp"), "x_sync_amp").__call__,
+                    default_font_id)
+                x_sync_speed_slider = TrackbarRow2(
+                    "Y Sync Speed",
+                    params.get("y_sync_speed"),
+                    TrackbarCallback(params.get("y_sync_speed"), "y_sync_speed").__call__,
+                    default_font_id)
+                x_sync_freq_slider = TrackbarRow2(
+                    "Y Sync Freq",
+                    params.get("y_sync_freq"),
+                    TrackbarCallback(params.get("y_sync_freq"), "y_sync_freq").__call__,
+                    default_font_id)
+                x_sync_amp_slider = TrackbarRow2(
+                    "Y Sync Amp",
+                    params.get("y_sync_amp"),
+                    TrackbarCallback(params.get("y_sync_amp"), "y_sync_amp").__call__,
+                    default_font_id)
+        dpg.bind_item_font("sync", global_font_id)
 
 class Warp:
 
@@ -478,7 +588,73 @@ class Warp:
             return self._first_warp(img)
 
 
-# Define an Enum for different reflection modes
+    def create_sliders(self, default_font_id=None, global_font_id=None):
+        with dpg.collapsing_header(label=f"\tWarp", tag="warp"):
+            warp_type_slider = TrackbarRow2(
+                "Warp Type",
+                params.get("warp_type"),
+                TrackbarCallback(params.get("warp_type"), "warp_type").__call__,
+                default_font_id)
+            warp_angle_amt_slider = TrackbarRow2(
+                "Warp Angle Amt",
+                params.get("warp_angle_amt"),
+                TrackbarCallback(params.get("warp_angle_amt"), "warp_angle_amt").__call__,
+                default_font_id)
+            
+            warp_radius_amt_slider = TrackbarRow2(
+                "Warp Radius Amt",
+                params.get("warp_radius_amt"),
+                TrackbarCallback(params.get("warp_radius_amt"), "warp_radius_amt").__call__,
+                default_font_id)
+            
+            warp_speed_slider = TrackbarRow2(
+                "Warp Speed",
+                params.get("warp_speed"),
+                TrackbarCallback(params.get("warp_speed"), "warp_speed").__call__,
+                default_font_id)
+            
+            warp_use_fractal_slider = TrackbarRow2(
+                "Warp Use Fractal",
+                params.get("warp_use_fractal"),
+                TrackbarCallback(params.get("warp_use_fractal"), "warp_use_fractal").__call__,
+                default_font_id)
+            warp_octaves_slider = TrackbarRow2(
+                "Warp Octaves",
+                params.get("warp_octaves"),
+                TrackbarCallback(params.get("warp_octaves"), "warp_octaves").__call__,
+                default_font_id)
+            warp_gain_slider = TrackbarRow2(
+                "Warp Gain",
+                params.get("warp_gain"),
+                TrackbarCallback(params.get("warp_gain"), "warp_gain").__call__,
+                default_font_id)
+            warp_lacunarity_slider = TrackbarRow2(
+                "Warp Lacunarity",
+                params.get("warp_lacunarity"),
+                TrackbarCallback(params.get("warp_lacunarity"), "warp_lacunarity").__call__,
+                default_font_id)
+            x_speed_slider = TrackbarRow2(
+                "X Speed",
+                params.get("x_speed"),
+                TrackbarCallback(params.get("x_speed"), "x_speed").__call__,
+                default_font_id)
+            y_speed_slider = TrackbarRow2(
+                "Y Speed",
+                params.get("y_speed"),
+                TrackbarCallback(params.get("y_speed"), "y_speed").__call__,
+                default_font_id)
+            x_size_slider = TrackbarRow2(
+                "X Size",
+                params.get("x_size"),
+                TrackbarCallback(params.get("x_size"), "x_size").__call__,
+                default_font_id)
+            y_size_slider = TrackbarRow2(
+                "Y Size",
+                params.get("y_size"),
+                TrackbarCallback(params.get("y_size"), "y_size").__call__,
+                default_font_id)
+
+
 class ReflectionMode(Enum):
     """Enumeration for different image reflection modes."""
     NONE = 0        # No reflection
@@ -593,62 +769,34 @@ class Reflector:
 
         return output_frame
 
+    def create_sliders(self, default_font_id=None, global_font_id=None):
+        with dpg.collapsing_header(label=f"\tReflector", tag="reflector"):
+            reflection_mode_slider = TrackbarRow2(
+                "Reflection Mode",
+                params.get("reflection_mode"),
+                TrackbarCallback(params.get("reflection_mode"), "reflection_mode").__call__,
+                default_font_id)
+            # reflection_strength_slider = TrackbarRow2(
+            #     "Reflection Strength",
+            #     params.get("reflection_strength"),
+            #     TrackbarCallback(params.get("reflection_strength"), "reflection_strength").__call__,
+            #     self.reset_slider_callback,
+            #     default_font_id)
+        dpg.bind_item_font("reflector", global_font_id)
 
-class Effects:
-
+class PTZ:
     def __init__(self, image_width: int, image_height: int):
 
         self.height = image_height
         self.width = image_width
-
-        self.frame_skip = params.add("frame_skip", 0, 10, 0)
-        self.alpha = params.add("alpha", 0.0, 1.0, 0.0)
-        self.temporal_filter = params.add("temporal_filter", 0, 1.0, 1.0)
-        
-        # TODO: implement
-        self.sequence = params.add("sequence", 0, 100, 0)
-
         self.x_shift = params.add("x_shift", -image_width, image_width, 0, family="Pan") # min/max depends on image size
         self.y_shift = params.add("y_shift", -image_height, image_height, 0, family="Pan") # min/max depends on image size
         self.zoom = params.add("zoom", 0.75, 3, 1.0, family="Pan")
         self.r_shift = params.add("r_shift", -360, 360, 0.0, family="Pan")
 
-        self.polar_x = params.add("polar_x", -image_width, image_width, 0)
-        self.polar_y = params.add("polar_y", -image_height, image_height, 0)
+        self.polar_x = params.add("polar_x", -image_width//2, image_width//2, 0)
+        self.polar_y = params.add("polar_y", -image_height//2, image_height//2, 0)
         self.polar_radius = params.add("polar_radius", 0.1, 100, 1.0)
-
-        self.lissajous_A = params.add("lissajous_A", 0, 100, 50)
-        self.lissajous_B = params.add("lissajous_B", 0, 100, 50)
-        self.lissajous_a = params.add("lissajous_a", 0, 100, 50)
-        self.lissajous_b = params.add("lissajous_b", 0, 100, 50)
-        self.lissajous_delta = params.add("lissajous_delta", 0, 360, 0)
-
-        self.max_buffer_size = 30
-        self.buffer_size = params.add("buffer_size", 0, self.max_buffer_size, 5)
-        # this should probably be initialized in reset() to avoid issues with reloading config
-        self.frame_buffer = deque(maxlen=self.max_buffer_size)
-
-    def avg_frame_buffer(self, frame):
-
-        if self.buffer_size.value <= 1:
-            return frame
-
-        self.frame_buffer.append(frame.astype(np.float32))
-
-        while len(self.frame_buffer) > self.buffer_size.value:
-            del self.frame_buffer[0]
-            # print(f"Removing oldest frame from buffer, size now {len(self.frame_buffer)}")
-
-        # If the buffer is not yet full, return the original frame.
-        if len(self.frame_buffer) < self.buffer_size.value:
-            # print(f"Buffering frames: {len(self.frame_buffer)}/{self.buffer_size.value}")
-            return frame.copy()
-
-        # Calculate the average of all frames in the buffer
-        avg_frame = np.mean(self.frame_buffer, axis=0)
-
-        # Convert the averaged frame back to the correct data type (uint8)
-        return np.clip(avg_frame, 0, 255).astype(np.uint8)
 
 
     def shift_frame(self, frame: np.ndarray):
@@ -708,6 +856,113 @@ class Effects:
             max_radius,
             flags=cv2.INTER_LINEAR + cv2.WARP_FILL_OUTLIERS # or +WARP_POLAR_LOG
         )
+
+    def on_button_click(self, sender, app_data, user_data):
+        print(f"Button clicked: {user_data}, {app_data}, {sender}")
+        # Perform action based on button click
+        if enable_polar_transform == True:
+            enable_polar_transform = False
+        else:
+            enable_polar_transform = True
+
+    def create_sliders(self, default_font_id=None, global_font_id=None, width=550, height=600):
+        with dpg.collapsing_header(label=f"\tPan", tag="pan"):
+            
+            x_shift_slider = TrackbarRow2(
+                "X Shift", 
+                params.get("x_shift"), 
+                TrackbarCallback(params.get("x_shift"), "x_shift").__call__, 
+                default_font_id)         
+
+            y_shift_slider = TrackbarRow2(
+                "Y Shift", 
+                params.get("y_shift"), 
+                TrackbarCallback(params.get("y_shift"), "y_shift").__call__, 
+                default_font_id)
+            
+            r_shift_slider = TrackbarRow2(
+                "R Shift", 
+                params.get("r_shift"), 
+                TrackbarCallback(params.get("r_shift"), "r_shift").__call__, 
+                default_font_id)
+            
+            zoom_slider = TrackbarRow2(
+                "Zoom",
+                params.get("zoom"),
+                TrackbarCallback(params.get("zoom"), "zoom").__call__,
+                default_font_id)
+
+            enable_polar_transform_button = Button("Enable Polar Transform", "enable_polar_transform")
+            dpg.add_button(label=enable_polar_transform_button.label, tag="enable_polar_transform", callback=self.on_button_click, user_data=enable_polar_transform_button.tag, width=width)
+            dpg.bind_item_font(enable_polar_transform_button.tag, default_font_id)
+            polar_x_slider = TrackbarRow2(
+                "Polar Center X", 
+                params.get("polar_x"), 
+                TrackbarCallback(params.get("polar_x"), "polar_x").__call__, 
+                default_font_id)
+            
+            polar_y_slider = TrackbarRow2(
+                "Polar Center Y", 
+                params.get("polar_y"), 
+                TrackbarCallback(params.get("polar_y"), "polar_y").__call__, 
+                default_font_id)
+            
+            polar_radius_slider = TrackbarRow2(
+                "Polar radius", 
+                params.get("polar_radius"), 
+                TrackbarCallback(params.get("polar_radius"), "polar_radius").__call__, 
+                default_font_id)
+        dpg.bind_item_font("pan", global_font_id)
+
+
+
+
+class Effects:
+
+    def __init__(self, image_width: int, image_height: int):
+
+        self.height = image_height
+        self.width = image_width
+
+        self.frame_skip = params.add("frame_skip", 0, 10, 0)
+        self.alpha = params.add("alpha", 0.0, 1.0, 0.0)
+        self.temporal_filter = params.add("temporal_filter", 0, 1.0, 1.0)
+        
+        # TODO: implement
+        self.sequence = params.add("sequence", 0, 100, 0)
+
+        self.lissajous_A = params.add("lissajous_A", 0, 100, 50)
+        self.lissajous_B = params.add("lissajous_B", 0, 100, 50)
+        self.lissajous_a = params.add("lissajous_a", 0, 100, 50)
+        self.lissajous_b = params.add("lissajous_b", 0, 100, 50)
+        self.lissajous_delta = params.add("lissajous_delta", 0, 360, 0)
+
+        self.max_buffer_size = 30
+        self.buffer_size = params.add("buffer_size", 0, self.max_buffer_size, 5)
+        # this should probably be initialized in reset() to avoid issues with reloading config
+        self.frame_buffer = deque(maxlen=self.max_buffer_size)
+
+    def avg_frame_buffer(self, frame):
+
+        if self.buffer_size.value <= 1:
+            return frame
+
+        self.frame_buffer.append(frame.astype(np.float32))
+
+        while len(self.frame_buffer) > self.buffer_size.value:
+            del self.frame_buffer[0]
+            # print(f"Removing oldest frame from buffer, size now {len(self.frame_buffer)}")
+
+        # If the buffer is not yet full, return the original frame.
+        if len(self.frame_buffer) < self.buffer_size.value:
+            # print(f"Buffering frames: {len(self.frame_buffer)}/{self.buffer_size.value}")
+            return frame.copy()
+
+        # Calculate the average of all frames in the buffer
+        avg_frame = np.mean(self.frame_buffer, axis=0)
+
+        # Convert the averaged frame back to the correct data type (uint8)
+        return np.clip(avg_frame, 0, 255).astype(np.uint8)
 
     
     def apply_temporal_filter(self, prev_frame, cur_frame):
@@ -777,6 +1032,91 @@ class Effects:
             cv2.circle(frame, (x, y), 1, (255, 255, 255), -1)
 
         return frame
+
+
+    def create_sliders(self, default_font_id=None, global_font_id=None):
+    
+        with dpg.collapsing_header(label=f"\tEffects", tag="effects"):
+
+            temporal_filter_slider = TrackbarRow2(
+                "Temporal Filter", 
+                params.get("temporal_filter"), 
+                TrackbarCallback(params.get("temporal_filter"), "temporal_filter").__call__, 
+                default_font_id)
+        
+            alpha_slider = TrackbarRow2(
+                "Feedback", 
+                params.get("alpha"), 
+                TrackbarCallback(params.get("alpha"), "alpha").__call__, 
+                default_font_id)
+            
+            frame_buffer_size_slider = TrackbarRow2(
+                "Frame Buffer Size",
+                params.get("buffer_size"),
+                TrackbarCallback(params.get("buffer_size"), "buffer_size").__call__,
+                default_font_id)
+            
+            frame_skip_slider = TrackbarRow2(
+                "Frame Skip",
+                params.get("frame_skip"),
+                TrackbarCallback(params.get("frame_skip"), "frame_skip").__call__,
+                default_font_id)
+            
+            blur_kernel_slider = TrackbarRow2(
+                "Blur Kernel", 
+                params.get("blur_kernel_size"), 
+                TrackbarCallback(params.get("blur_kernel_size"), "blur_kernel_size").__call__, 
+                default_font_id)
+            
+            blur_type_slider = TrackbarRow2(
+                "Blur Type",
+                params.get("blur_type"),
+                TrackbarCallback(params.get("blur_type"), "blur_type").__call__,
+                default_font_id)
+            
+            sharpen_slider = TrackbarRow2(
+                "Sharpen Amount",
+                params.get("sharpen_intensity"),
+                TrackbarCallback(params.get("sharpen_intensity"), "sharpen_intensity").__call__,
+                default_font_id)
+            
+            num_hues_slider = TrackbarRow2(
+                "Num Hues",
+                params.get("num_hues"),
+                TrackbarCallback(params.get("num_hues"), "num_hues").__call__,
+                default_font_id)
+
+        dpg.bind_item_font("effects", global_font_id)
+
+    
+    def temp_create_sliders(self, default_font_id=None, global_font_id=None):
+            with dpg.collapsing_header(label=f"\tLissajous", tag="Lissajous"):
+                lissajous_A_slider = TrackbarRow2(
+                    "Lissajous A",
+                    params.get("lissajous_A"),
+                    TrackbarCallback(params.get("lissajous_A"), "lissajous_A").__call__,
+                        default_font_id)
+                lissajous_B_slider = TrackbarRow2(
+                    "Lissajous B",
+                    params.get("lissajous_B"),
+                    TrackbarCallback(params.get("lissajous_B"), "lissajous_B").__call__,
+                        default_font_id)
+                lissajous_a_slider = TrackbarRow2(
+                    "Lissajous a",
+                    params.get("lissajous_a"),
+                    TrackbarCallback(params.get("lissajous_a"), "lissajous_a").__call__,
+                        default_font_id)
+                lissajous_b_slider = TrackbarRow2(
+                    "Lissajous b",
+                    params.get("lissajous_b"),
+                    TrackbarCallback(params.get("lissajous_b"), "lissajous_b").__call__,
+                        default_font_id)
+                lissajous_delta_slider = TrackbarRow2(
+                    "Lissajous Delta",
+                    params.get("lissajous_delta"),
+                    TrackbarCallback(params.get("lissajous_delta"), "lissajous_delta").__call__,
+                        default_font_id)
+            dpg.bind_item_font("Lissajous", global_font_id)
 
 
 class NoiseType(IntEnum):
@@ -976,10 +1316,42 @@ class ImageNoiser:
         return np.clip(noisy_image, 0, 255).astype(np.uint8)
 
 
-# TODO: move to GlitchEffect class, add to params
-GLITCH_DURATION_FRAMES = 60 
-GLITCH_INTENSITY_MAX = 50 
-BLOCK_SIZE_MAX = 60
+    def create_sliders(self, default_font_id=None, global_font_id=None):
+        with dpg.collapsing_header(label=f"\tNoiser", tag="noiser"):
+            noise_type_slider = TrackbarRow2(
+                "Noise Type", 
+                params.get("noise_type"), 
+                TrackbarCallback(params.get("noise_type"), "noise_type").__call__, 
+                default_font_id)
+            
+            noise_intensity_slider = TrackbarRow2(
+                "Noise Intensity", 
+                params.get("noise_intensity"), 
+                TrackbarCallback(params.get("noise_intensity"), "noise_intensity").__call__, 
+                default_font_id)
+            
+            # noise_speed_slider = TrackbarRow2(
+            #     "Noise Speed", 
+            #     params.get("noise_speed"), 
+            #     TrackbarCallback(params.get("noise_speed"), "noise_speed").__call__, 
+            #     self.reset_slider_callback, 
+            #     default_font_id)
+            
+            # noise_freq_x_slider = TrackbarRow2(
+            #     "Noise Freq X", 
+            #     params.get("noise_freq_x"), 
+            #     TrackbarCallback(params.get("noise_freq_x"), "noise_freq_x").__call__, 
+            #     self.reset_slider_callback, 
+            #     default_font_id)
+            
+            # noise_freq_y_slider = TrackbarRow2(
+            #     "Noise Freq Y", 
+            #     params.get("noise_freq_y"), 
+            #     TrackbarCallback(params.get("noise_freq_y"), "noise_freq_y").__call__, 
+            #     self.reset_slider_callback, 
+            #     default_font_id)
+
+        dpg.bind_item_font("noiser", global_font_id)
 
 
 class GlitchEffect:
@@ -987,9 +1359,34 @@ class GlitchEffect:
     def __init__(self):
         self.glitch_phase_start_frame = 0
         self.glitch_cycle_start_frame = 0
-        self.band_div = params.add("glitch_band_div", 5, 1, 10, "Glitch Band Division", "Glitch Effects")
+
+        # State for horizontal scroll freeze glitch
+        self.current_fixed_y_end = None
+        self.current_growth_duration = None
+        self.last_scroll_glitch_reset_frame = 0 # Marks when the fixed_y_end and growth_duration were last set
+        self.glitch_phase_start_frame_shift = 0
+        self.glitch_phase_start_frame_color = 0
+        self.glitch_phase_start_frame_block = 0
+
+        self.enable_pixel_shift = Button("Enable Pixel Shift Glitch", "enable_pixel_shift", False)
+        self.enable_color_split = Button("Enable Color Split Glitch", "enable_color_split", False)
+        self.enable_block_corruption = Button("Enable Block Corruption Glitch", "enable_block_corruption", False)
+        self.enable_random_rectangles = Button("Enable Random Rectangles Glitch", "enable_random_rectangles", False)
+        self.enable_horizontal_scroll_freeze = Button("Enable Horizontal Scroll Freeze Glitch", "enable_horizontal_scroll_freeze", False)
+
+        self.glitch_duration_frames = params.add("glitch_duration_frames", 1, 300, 60)
+        self.glitch_intensity_max = params.add("glitch_intensity_max", 0, 100, 50)
+        self.glitch_block_size_max = params.add("glitch_block_size_max", 0, 200, 60)
+        self.band_div = params.add("glitch_band_div", 1, 10, 5) 
         self.num_glitches = params.add("num_glitches", 0, 100, 0)
         self.glitch_size = params.add("glitch_size", 1, 100, 0)
+
+    def create_buttons(self, gui):
+        dpg.add_button(label=self.enable_pixel_shift.label, callback=self.enable_pixel_shift.toggle, parent=gui)
+        dpg.add_button(label=self.enable_color_split.label, callback=self.enable_color_split.toggle, parent=gui)
+        dpg.add_button(label=self.enable_block_corruption.label, callback=self.enable_block_corruption.toggle, parent=gui)
+        dpg.add_button(label=self.enable_random_rectangles.label, callback=self.enable_random_rectangles.toggle, parent=gui)
+        dpg.add_button(label=self.enable_horizontal_scroll_freeze.label, callback=self.enable_horizontal_scroll_freeze.toggle, parent=gui)
 
 
     def reset(self):
@@ -1025,21 +1422,21 @@ class GlitchEffect:
 
     def apply_evolving_pixel_shift(self, frame, frame_num, glitch_phase_start_frame):
         height, width, _ = frame.shape
-        current_phase_frame = (frame_num - glitch_phase_start_frame) % GLITCH_DURATION_FRAMES
+        current_phase_frame = (frame_num - glitch_phase_start_frame) % self.glitch_duration_frames.value
 
         # Calculate shift amount and direction based on current_phase_frame
         # Use a sinusoidal or linear progression for smooth evolution
-        progress = current_phase_frame / GLITCH_DURATION_FRAMES
-        shift_amount_x = int(GLITCH_INTENSITY_MAX * np.sin(progress * np.pi * 2)) # oscillates
-        shift_amount_y = int(GLITCH_INTENSITY_MAX * np.cos(progress * np.pi * 2)) # oscillates
+        progress = current_phase_frame / self.glitch_duration_frames.value
+        shift_amount_x = int(self.glitch_intensity_max.value * np.sin(progress * np.pi * 2)) # oscillates
+        shift_amount_y = int(self.glitch_intensity_max.value * np.cos(progress * np.pi * 2)) 
 
         glitched_frame = np.copy(frame)
 
         # Apply shift to different horizontal/vertical bands
-        band_height = height // 5
-        band_width = width // 5
+        band_height = height // self.band_div.value
+        band_width = width // self.band_div.value
 
-        for i in range(5): # TODO: make band_div param
+        for i in range(self.band_div.value):
             y_start = i * band_height
             y_end = min((i + 1) * band_height, height)
             
@@ -1050,7 +1447,7 @@ class GlitchEffect:
                 shifted_band = np.roll(frame[y_start:y_end, :], -shift_amount_x, axis=1)
             glitched_frame[y_start:y_end, :] = shifted_band
 
-        for i in range(5): # TODO: make band_div param
+        for i in range(self.band_div.value):
             x_start = i * band_width
             x_end = min((i + 1) * band_width, width)
 
@@ -1069,12 +1466,12 @@ class GlitchEffect:
         Optimized: Uses cv2.split and np.roll which are fast matrix operations.
         """
         height, width, _ = frame.shape
-        current_phase_frame = (frame_num - glitch_phase_start_frame) % GLITCH_DURATION_FRAMES
+        current_phase_frame = (frame_num - glitch_phase_start_frame) % self.glitch_duration_frames.value
 
         # Calculate separation amount
         # Increases then decreases over the phase
-        progress = current_phase_frame / GLITCH_DURATION_FRAMES
-        separation_amount = int(GLITCH_INTENSITY_MAX * np.sin(progress * np.pi)) # Peaks at mid-phase
+        progress = current_phase_frame / self.glitch_duration_frames.value
+        separation_amount = int(self.glitch_intensity_max.value * np.sin(progress * np.pi)) # Peaks at mid-phase
 
         b, g, r = cv2.split(frame)
         glitched_frame = np.zeros_like(frame)
@@ -1095,16 +1492,16 @@ class GlitchEffect:
         applying effects to multiple distinct random blocks.
         """
         height, width, _ = frame.shape
-        current_phase_frame = (frame_num - glitch_phase_start_frame) % GLITCH_DURATION_FRAMES
+        current_phase_frame = (frame_num - glitch_phase_start_frame) % self.glitch_duration_frames.value
 
         glitched_frame = np.copy(frame)
 
         # Calculate corruption intensity and block size based on progress
-        progress = current_phase_frame / GLITCH_DURATION_FRAMES
+        progress = current_phase_frame / self.glitch_duration_frames.value
         # Intensity: starts low, peaks, then goes low again
         corruption_intensity = int(255 * np.sin(progress * np.pi))
         # Block size: starts small, grows, then shrinks
-        current_block_size = int(BLOCK_SIZE_MAX * np.sin(progress * np.pi))
+        current_block_size = int(self.glitch_block_size_max.value * np.sin(progress * np.pi))
         if current_block_size < 10: # Ensure minimum block size
             current_block_size = 10
 
@@ -1178,8 +1575,8 @@ class GlitchEffect:
         growth_progress = min(1.0, current_frame_in_cycle / growth_duration)
 
         # Determine the glitch band height based on growth progress
-        # Starts small (e.g., 10 pixels) and grows up to BLOCK_SIZE_MAX (60)
-        glitch_band_height = int(10 + (BLOCK_SIZE_MAX - 10) * growth_progress)
+        # Starts small (e.g., 10 pixels) and grows up to self.glitch_block_size_max.value (60)
+        glitch_band_height = int(10 + (self.glitch_block_size_max.value - 10) * growth_progress)
         glitch_band_height = max(1, glitch_band_height) # Ensure minimum height of 1
 
         # The bottom of the bar is fixed at fixed_y_end
@@ -1198,7 +1595,7 @@ class GlitchEffect:
 
         # Apply random horizontal shift to each row within the band
         # The maximum random shift scales with growth progress
-        max_row_shift = int(GLITCH_INTENSITY_MAX * growth_progress)
+        max_row_shift = int(self.glitch_intensity_max.value * growth_progress)
         if max_row_shift < 1: # Ensure a minimum shift range
             max_row_shift = 1
 
@@ -1229,67 +1626,86 @@ class GlitchEffect:
     def scanline_distortion(self, frame, frame_num):
         pass # TODO: implement scanline distortion effect
 
-    def apply_glitch_effects_to_webcam(self, frame):
-        """
-        Captures video from webcam, applies time-evolving glitch effects,
-        and displays the output in real-time.
-        """
-        # Use 0 for default webcam
-        cap = cv2.VideoCapture(0)
+    def apply_glitch_effects(self, frame, frame_count):
+      
+        # Get frame dimensions for dynamic calculations
+        height, width, _ = frame.shape
 
-        if not cap.isOpened():
-            print("Error: Could not open webcam. Please ensure it's connected and not in use.")
-            return
+        # Reset phase start frame if a new phase begins for existing effects
+        if frame_count % self.glitch_duration_frames.value == 0:
+            self.glitch_phase_start_frame_shift = frame_count
+        if frame_count % (self.glitch_duration_frames.value * 1.5) == 0: # Slightly different cycle for color
+            self.glitch_phase_start_frame_color = frame_count
+        if frame_count % (self.glitch_duration_frames.value * 0.75) == 0: # Faster cycle for blocks
+            self.glitch_phase_start_frame_blocks = frame_count
 
-        print("Webcam stream started. Press 'q' to quit.")
+        # Check if it's time to reset the horizontal scroll glitch state
+        # This will happen on the very first frame or when the current growth duration is over
+        if frame_count == 0 or (frame_count - self.last_scroll_glitch_reset_frame) >= self.current_growth_duration:
+            self.last_scroll_glitch_reset_frame = frame_count
+            self.current_fixed_y_end = random.randint(height // 4, height)
+            # Choose a random duration for the growth phase
+            self.current_growth_duration = random.randint(self.glitch_duration_frames.value // 2, self.glitch_duration_frames.value * 2) # Random period for growth
 
-        frame_count = 0
-        
-        # State for horizontal scroll freeze glitch
-        current_fixed_y_end = None
-        current_growth_duration = None
-        last_scroll_glitch_reset_frame = 0 # Marks when the fixed_y_end and growth_duration were last set
-
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                print("Failed to grab frame from webcam. Exiting...")
-                break
-
-            # Get frame dimensions for dynamic calculations
-            height, width, _ = frame.shape
-
-            # Reset phase start frame if a new phase begins for existing effects
-            if frame_count % GLITCH_DURATION_FRAMES == 0:
-                glitch_phase_start_frame_shift = frame_count
-            if frame_count % (GLITCH_DURATION_FRAMES * 1.5) == 0: # Slightly different cycle for color
-                glitch_phase_start_frame_color = frame_count
-            if frame_count % (GLITCH_DURATION_FRAMES * 0.75) == 0: # Faster cycle for blocks
-                glitch_phase_start_frame_blocks = frame_count
-
-            # Check if it's time to reset the horizontal scroll glitch state
-            # This will happen on the very first frame or when the current growth duration is over
-            if frame_count == 0 or (frame_count - last_scroll_glitch_reset_frame) >= current_growth_duration:
-                last_scroll_glitch_reset_frame = frame_count
-                current_fixed_y_end = random.randint(height // 4, height)
-                # Choose a random duration for the growth phase
-                current_growth_duration = random.randint(GLITCH_DURATION_FRAMES // 2, GLITCH_DURATION_FRAMES * 2) # Random period for growth
-
-            # Apply effects to the current frame
-            # All effects are applied concurrently for a layered glitch appearance.
-            # frame = apply_evolving_pixel_shift(frame, frame_count, glitch_phase_start_frame_shift)
-            # frame = apply_gradual_color_split(frame, frame_count, glitch_phase_start_frame_color)
-            # frame = apply_morphing_block_corruption(frame, frame_count, glitch_phase_start_frame_blocks)
-            
-            # Apply the new scrolling glitch effect, passing its specific state
-            frame = apply_horizontal_scroll_freeze_glitch(
+        # Apply effects to the current frame
+        if self.enable_random_rectangles.value:
+            frame = self.glitch_image(frame)
+        if self.enable_pixel_shift.value:
+            frame = self.apply_evolving_pixel_shift(frame, frame_count, self.glitch_phase_start_frame_shift)
+        if self.enable_color_split.value:
+            frame = self.apply_gradual_color_split(frame, frame_count, self.glitch_phase_start_frame_color)
+        if self.enable_block_corruption.value:
+            frame = self.apply_morphing_block_corruption(frame, frame_count, self.glitch_phase_start_frame_blocks)
+        if self.enable_horizontal_scroll_freeze.value:        
+            frame = self.apply_horizontal_scroll_freeze_glitch(
                 frame,
                 frame_count,
-                last_scroll_glitch_reset_frame,
-                current_fixed_y_end,
-                current_growth_duration
+                self.last_scroll_glitch_reset_frame,
+                self.current_fixed_y_end,
+                self.current_growth_duration
             )
 
-            frame_count += 1
-            return frame
+        frame_count += 1
+        return frame
 
+    def create_sliders(self, default_font_id=None, global_font_id=None):
+        with dpg.collapsing_header(label=f"\tGlitch", tag="glitch"):
+            glitch_intensity_slider = TrackbarRow2(
+                "Glitch Intensity",
+                params.get("glitch_intensity_max"),
+                TrackbarCallback(params.get("glitch_intensity_max"), "glitch_intensity_max").__call__,
+                default_font_id)
+            
+            glitch_duration_slider = TrackbarRow2(
+                "Glitch Duration",
+                params.get("glitch_duration_frames"),
+                TrackbarCallback(params.get("glitch_duration_frames"), "glitch_duration_frames").__call__,
+                default_font_id)
+            
+            glitch_block_size_slider = TrackbarRow2(
+                "Glitch Block Size",
+                params.get("glitch_block_size_max"),
+                TrackbarCallback(params.get("glitch_block_size_max"), "glitch_block_size_max").__call__,
+                default_font_id)
+            
+            glitch_band_div_slider = TrackbarRow2(
+                "Glitch Band Divisor",
+                params.get("glitch_band_div"),
+                TrackbarCallback(params.get("glitch_band_div"), "glitch_band_div").__call__,
+                default_font_id)            
+
+            num_glitches_slider = TrackbarRow2(
+                "Glitch Qty", 
+                params.get("num_glitches"), 
+                TrackbarCallback(params.get("num_glitches"), "num_glitches").__call__, 
+                default_font_id)
+            
+            glitch_size_slider = TrackbarRow2(
+                "Glitch Size", 
+                params.get("glitch_size"), 
+                TrackbarCallback(params.get("glitch_size"), "glitch_size").__call__, 
+                default_font_id)
+            
+            self.create_buttons("glitch")
+            
+        dpg.bind_item_font("glitch", global_font_id)

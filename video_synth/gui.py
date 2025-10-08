@@ -3,7 +3,9 @@ import dearpygui.dearpygui as dpg
 from save import SaveController
 from buttons import Buttons, Button
 from mix import *
-
+# from fx import *
+from shared_objects import fx, FX
+from sliders import TrackbarRow, TrackbarCallback, TrackbarRow2
 
 class Interface:
 
@@ -19,7 +21,7 @@ class Interface:
         # only creates last param in list
         # self.panels = self.build_panels_dict(params.all())
 
-
+    # TODO: this has been moved to the trackbar class; remove after moving all create slider functions to their respective classes
     def reset_slider_callback(self, sender, app_data, user_data):
         param = params.get(str(user_data))
         if param is None:
@@ -213,255 +215,6 @@ class Interface:
                 None) # fix defulat font_id=None
         
 
-    def color_sliders(self, default_font_id=None, global_font_id=None):
-
-        with dpg.collapsing_header(label=f"\tColor", tag="color"):
-        
-            hue_slider = TrackbarRow(
-                "Hue Shift", 
-                params["hue_shift"], 
-                TrackbarCallback(params.get("hue_shift"), "hue_shift").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            sat_slider = TrackbarRow(
-                "Sat Shift", 
-                params.get("sat_shift"), 
-                TrackbarCallback(params.get("sat_shift"), "sat_shift").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            val_slider = TrackbarRow(
-                "Val Shift", 
-                params.get("val_shift"), 
-                TrackbarCallback(params.get("val_shift"), "val_shift").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            contrast_slider = TrackbarRow(
-                "Contrast", 
-                params.get("contrast"), 
-                TrackbarCallback(params.get("contrast"), "contrast").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            brightness_slider = TrackbarRow(
-                "Brighness", 
-                params.get("brightness"), 
-                TrackbarCallback(params.get("brightness"), "brightness").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-
-            val_threshold_slider = TrackbarRow(
-                "Val Threshold", 
-                params.get("val_threshold"), 
-                TrackbarCallback(params.get("val_threshold"), "val_threshold").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            val_hue_shift_slider = TrackbarRow(
-                "Hue Shift for Val", 
-                params.get("val_hue_shift"), 
-                TrackbarCallback(params.get("val_hue_shift"), "val_hue_shift").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)      
-            
-            hue_invert_angle_slider = TrackbarRow(
-                "Hue Invert Angle",
-                params.get("hue_invert_angle"),
-                TrackbarCallback(params.get("hue_invert_angle"), "hue_invert_angle").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            hue_invert_strength_slider = TrackbarRow(
-                "Hue Invert Strength",
-                params.get("hue_invert_strength"),
-                TrackbarCallback(params.get("hue_invert_strength"), "hue_invert_strength").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            posterize_slider = TrackbarRow(
-                "Posterize Levels",
-                params.get("posterize_levels"),
-                TrackbarCallback(params.get("posterize_levels"), "posterize_levels").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            solarize_slider = TrackbarRow(
-                "Solarize Threshold",
-                params.get("solarize_threshold"),
-                TrackbarCallback(params.get("solarize_threshold"), "solarize_threshold").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-        dpg.bind_item_font("color", global_font_id)
-
-
-    def effects_sliders(self, default_font_id=None, global_font_id=None):
-    
-        with dpg.collapsing_header(label=f"\tEffects", tag="effects"):
-
-            temporal_filter_slider = TrackbarRow(
-                "Temporal Filter", 
-                params.get("temporal_filter"), 
-                TrackbarCallback(params.get("temporal_filter"), "temporal_filter").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-        
-            alpha_slider = TrackbarRow(
-                "Feedback", 
-                params.get("alpha"), 
-                TrackbarCallback(params.get("alpha"), "alpha").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            frame_buffer_size_slider = TrackbarRow(
-                "Frame Buffer Size",
-                params.get("buffer_size"),
-                TrackbarCallback(params.get("buffer_size"), "buffer_size").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            frame_skip_slider = TrackbarRow(
-                "Frame Skip",
-                params.get("frame_skip"),
-                TrackbarCallback(params.get("frame_skip"), "frame_skip").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            blur_kernel_slider = TrackbarRow(
-                "Blur Kernel", 
-                params.get("blur_kernel_size"), 
-                TrackbarCallback(params.get("blur_kernel_size"), "blur_kernel_size").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            blur_type_slider = TrackbarRow(
-                "Blur Type",
-                params.get("blur_type"),
-                TrackbarCallback(params.get("blur_type"), "blur_type").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            sharpen_slider = TrackbarRow(
-                "Sharpen Amount",
-                params.get("sharpen_intensity"),
-                TrackbarCallback(params.get("sharpen_intensity"), "sharpen_intensity").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            num_hues_slider = TrackbarRow(
-                "Num Hues",
-                params.get("num_hues"),
-                TrackbarCallback(params.get("num_hues"), "num_hues").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            # noise_intensity_slider = TrackbarRow(
-            #     "Noise Intensity",
-            #     params.get("noise_intensity"),
-            #     TrackbarCallback(params.get("noise_intensity"), "noise_intensity").__call__,
-            #     self.reset_slider_callback,
-            #     default_font_id)
-
-            # noise_type_slider = TrackbarRow(
-            #     "Noise Type",
-            #     params.get("noise_type"),
-            #     TrackbarCallback(params.get("noise_type"), "noise_type").__call__,
-            #     self.reset_slider_callback,
-            #     default_font_id)
-
-            # num_glitches_slider = TrackbarRow(
-            #     "Glitch Qty", 
-            #     params.get("num_glitches"), 
-            #     TrackbarCallback(params.get("num_glitches"), "num_glitches").__call__, 
-            #     self.reset_slider_callback, 
-            #     default_font_id)
-            
-            # glitch_size_slider = TrackbarRow(
-            #     "Glitch Size", 
-            #     params.get("glitch_size"), 
-            #     TrackbarCallback(params.get("glitch_size"), "glitch_size").__call__, 
-            #     self.reset_slider_callback, 
-            #     default_font_id)
-            
-        dpg.bind_item_font("effects", global_font_id)
-
-
-    def reflector_sliders(self, default_font_id=None, global_font_id=None):
-        with dpg.collapsing_header(label=f"\tReflector", tag="reflector"):
-            reflection_mode_slider = TrackbarRow(
-                "Reflection Mode",
-                params.get("reflection_mode"),
-                TrackbarCallback(params.get("reflection_mode"), "reflection_mode").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            # reflection_strength_slider = TrackbarRow(
-            #     "Reflection Strength",
-            #     params.get("reflection_strength"),
-            #     TrackbarCallback(params.get("reflection_strength"), "reflection_strength").__call__,
-            #     self.reset_slider_callback,
-            #     default_font_id)
-        dpg.bind_item_font("reflector", global_font_id)
-
-
-    def pan_sliders(self, default_font_id=None, global_font_id=None, width=550, height=600):
-        with dpg.collapsing_header(label=f"\tPan", tag="pan"):
-            
-            x_shift_slider = TrackbarRow(
-                "X Shift", 
-                params.get("x_shift"), 
-                TrackbarCallback(params.get("x_shift"), "x_shift").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)         
-
-            y_shift_slider = TrackbarRow(
-                "Y Shift", 
-                params.get("y_shift"), 
-                TrackbarCallback(params.get("y_shift"), "y_shift").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            r_shift_slider = TrackbarRow(
-                "R Shift", 
-                params.get("r_shift"), 
-                TrackbarCallback(params.get("r_shift"), "r_shift").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            zoom_slider = TrackbarRow(
-                "Zoom",
-                params.get("zoom"),
-                TrackbarCallback(params.get("zoom"), "zoom").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-
-            enable_polar_transform_button = Button("Enable Polar Transform", "enable_polar_transform")
-            dpg.add_button(label=enable_polar_transform_button.label, tag="enable_polar_transform", callback=self.on_button_click, user_data=enable_polar_transform_button.tag, width=width)
-            dpg.bind_item_font(enable_polar_transform_button.tag, default_font_id)
-            polar_x_slider = TrackbarRow(
-                "Polar Center X", 
-                params.get("polar_x"), 
-                TrackbarCallback(params.get("polar_x"), "polar_x").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            polar_y_slider = TrackbarRow(
-                "Polar Center Y", 
-                params.get("polar_y"), 
-                TrackbarCallback(params.get("polar_y"), "polar_y").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            polar_radius_slider = TrackbarRow(
-                "Polar radius", 
-                params.get("polar_radius"), 
-                TrackbarCallback(params.get("polar_radius"), "polar_radius").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-        dpg.bind_item_font("pan", global_font_id)
-
-
     def metaballs_sliders(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tMetaballs", tag="metaballs"):
             num_metaballs_slider = TrackbarRow(
@@ -516,396 +269,6 @@ class Interface:
         dpg.bind_item_font("metaballs", global_font_id)
 
 
-    def pattern_sliders(self, default_font_id=None, global_font_id=None):
-        with dpg.collapsing_header(label=f"\tPattern Generator", tag="pattern_generator"):
-            pattern_type_slider = TrackbarRow(
-                "Pattern Type",
-                params.get("pattern_type"),
-                TrackbarCallback(params.get("pattern_type"), "pattern_type").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            pattern_mod = TrackbarRow(
-                "Pattern Mod",  
-                params.get("pattern_mod"),
-                TrackbarCallback(params.get("pattern_mod"), "pattern_mod").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            pattern_r = TrackbarRow(
-                "Pattern R",
-                params.get("pattern_r"),
-                TrackbarCallback(params.get("pattern_r"), "pattern_r").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            pattern_g = TrackbarRow(
-                "Pattern G",
-                params.get("pattern_g"),
-                TrackbarCallback(params.get("pattern_g"), "pattern_g").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            pattern_b = TrackbarRow(
-                "Pattern B",
-                params.get("pattern_b"),
-                TrackbarCallback(params.get("pattern_b"), "pattern_b").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-                  
-            pattern_bar_x_freq_slider = TrackbarRow(
-                "Bar x Density",
-                params.get("bar_x_freq"),
-                TrackbarCallback(params.get("bar_x_freq"), "bar_x_freq").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            pattern_bar_y_freq_slider = TrackbarRow(
-                "Bar y Density",
-                params.get("bar_y_freq"),
-                TrackbarCallback(params.get("bar_y_freq"), "bar_y_freq").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            # speed_slider = TrackbarRow(
-            #     "Speed",
-            #     params.get("pattern_speed"),
-            #     TrackbarCallback(params.get("pattern_speed"), "pattern_speed").__call__,
-            #     self.reset_slider_callback,
-            #     default_font_id)
-
-            pattern_distance = TrackbarRow(
-                "Pattern Distance",
-                params.get("pattern_distance"),
-                TrackbarCallback(params.get("pattern_distance"), "pattern_distance").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-
-            angle_amt_slider = TrackbarRow(
-                "Radial Frequency",
-                params.get("pattern_radial_freq"),
-                TrackbarCallback(params.get("pattern_radial_freq"), "pattern_radial_freq").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            radius_amt_slider = TrackbarRow(
-                "Angular Frequency",
-                params.get("pattern_angular_freq"),
-                TrackbarCallback(params.get("pattern_angular_freq"), "pattern_angular_freq").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            radial_mod_slider = TrackbarRow(
-                "Radial Mod",
-                params.get("pattern_radial_mod"),
-                TrackbarCallback(params.get("pattern_radial_mod"), "pattern_radial_mod").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            angle_mod_slider = TrackbarRow(
-                "Angle Mode",
-                params.get("pattern_angle_mod"),
-                TrackbarCallback(params.get("pattern_angle_mod"), "pattern_angle_mod").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-
-            # use_fractal_slider = TrackbarRow(
-            #     "Use Fractal",
-            #     params.get("pattern_use_fractal"),
-            #     TrackbarCallback(params.get("pattern_use_fractal"), "pattern_use_fractal").__call__,
-            #     self.reset_slider_callback,
-            #     default_font_id)
-
-            # octaves_slider = TrackbarRow(
-            #     "Octaves",
-            #     params.get("pattern_octaves"),
-            #     TrackbarCallback(params.get("pattern_octaves"), "pattern_octaves").__call__,
-            #     self.reset_slider_callback,
-            #     default_font_id)
-            # gain_slider = TrackbarRow(
-            #     "Gain",
-            #     params.get("pattern_gain"),
-            #     TrackbarCallback(params.get("pattern_gain"), "pattern_gain").__call__,
-            #     self.reset_slider_callback,
-            #     default_font_id)
-            # lacunarity_slider = TrackbarRow(
-            #     "Lacunarity",
-            #     params.get("pattern_lacunarity"),
-            #     TrackbarCallback(params.get("pattern_lacunarity"), "pattern_lacunarity").__call__,
-            #     self.reset_slider_callback,
-            #     default_font_id)
-            
-            posc_freq_sliders = []
-            posc_amp_sliders = []
-            posc_phase_sliders = []
-            posc_seed_sliders = []
-            posc_shape_sliders = []
-            for i in range(3):
-                with dpg.collapsing_header(label=f"\tpOscillator {i}", tag=f"posc{i}"):
-                    posc_shape_sliders.append(TrackbarRow(
-                        f"pOsc {i} Shape", 
-                        params.get(f"posc{i}_shape"), 
-                        TrackbarCallback(params.get(f"posc{i}_shape"), f"posc{i}_shape").__call__, 
-                        self.reset_slider_callback, 
-                        default_font_id))
-                    posc_freq_sliders.append(TrackbarRow(
-                        f"pOsc {i} Freq", 
-                        params.get(f"posc{i}_frequency"), 
-                        TrackbarCallback(params.get(f"posc{i}_frequency"), f"posc{i}_frequency").__call__, 
-                        self.reset_slider_callback, 
-                        default_font_id))
-                    
-                    posc_amp_sliders.append(TrackbarRow(
-                        f"pOsc {i} Amp", 
-                        params.get(f"posc{i}_amplitude"), 
-                        TrackbarCallback(params.get(f"posc{i}_amplitude"), f"posc{i}_amplitude").__call__, 
-                        self.reset_slider_callback, 
-                        default_font_id))
-                    
-                    posc_phase_sliders.append(TrackbarRow(
-                        f"pOsc {i} Phase", 
-                        params.get(f"posc{i}_phase"), 
-                        TrackbarCallback(params.get(f"posc{i}_phase"), f"posc{i}_phase").__call__, 
-                        self.reset_slider_callback, 
-                        default_font_id))
-                    
-                    posc_seed_sliders.append(TrackbarRow(
-                        f"pOsc {i} Seed", 
-                        params.get(f"posc{i}_seed"), 
-                        TrackbarCallback(params.get(f"posc{i}_seed"), f"posc{i}_seed").__call__, 
-                        self.reset_slider_callback, 
-                        default_font_id))
-                dpg.bind_item_font(f"posc{i}", global_font_id)
-
-        dpg.bind_item_font("pattern_generator", global_font_id)
-
-    
-    def sync_sliders(self, default_font_id=None, global_font_id=None):
-        with dpg.collapsing_header(label=f"\tSync", tag="sync"):
-                x_sync_speed_slider = TrackbarRow(
-                    "X Sync Speed",
-                    params.get("x_sync_speed"),
-                    TrackbarCallback(params.get("x_sync_speed"), "x_sync_speed").__call__,
-                    self.reset_slider_callback,
-                    default_font_id)
-                x_sync_freq_slider = TrackbarRow(
-                    "X Sync Freq",
-                    params.get("x_sync_freq"),
-                    TrackbarCallback(params.get("x_sync_freq"), "x_sync_freq").__call__,
-                    self.reset_slider_callback,
-                    default_font_id)
-                x_sync_amp_slider = TrackbarRow(
-                    "X Sync Amp",
-                    params.get("x_sync_amp"),
-                    TrackbarCallback(params.get("x_sync_amp"), "x_sync_amp").__call__,
-                    self.reset_slider_callback,
-                    default_font_id)
-                x_sync_speed_slider = TrackbarRow(
-                    "Y Sync Speed",
-                    params.get("y_sync_speed"),
-                    TrackbarCallback(params.get("y_sync_speed"), "y_sync_speed").__call__,
-                    self.reset_slider_callback,
-                    default_font_id)
-                x_sync_freq_slider = TrackbarRow(
-                    "Y Sync Freq",
-                    params.get("y_sync_freq"),
-                    TrackbarCallback(params.get("y_sync_freq"), "y_sync_freq").__call__,
-                    self.reset_slider_callback,
-                    default_font_id)
-                x_sync_amp_slider = TrackbarRow(
-                    "Y Sync Amp",
-                    params.get("y_sync_amp"),
-                    TrackbarCallback(params.get("y_sync_amp"), "y_sync_amp").__call__,
-                    self.reset_slider_callback,
-                    default_font_id)
-        dpg.bind_item_font("sync", global_font_id)
-
-    
-    def shape_generator_sliders(self, default_font_id=None, global_font_id=None):
-        with dpg.collapsing_header(label=f"\tShape Generator", tag="shape_generator"):
-            shape_slider = TrackbarRow(
-                "Shape Type",
-                params.get("shape_type"),
-                TrackbarCallback(params.get("shape_type"), "shape_type").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            
-            canvas_rotation_slider = TrackbarRow(
-                "Canvas Rotation", 
-                params.get("canvas_rotation"), 
-                TrackbarCallback(params.get("canvas_rotation"), "canvas_rotation").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-
-            size_multiplier_slider = TrackbarRow(
-                "Size Multiplier", 
-                params.get("size_multiplier"), 
-                TrackbarCallback(params.get("size_multiplier"), "size_multiplier").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            aspect_ratio_slider = TrackbarRow(
-                "Aspect Ratio", 
-                params.get("aspect_ratio"), 
-                TrackbarCallback(params.get("aspect_ratio"), "aspect_ratio").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            rotation_slider = TrackbarRow(
-                "Rotation", 
-                params.get("rotation_angle"), 
-                TrackbarCallback(params.get("rotation_angle"), "rotation_angle").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            multiply_grid_x_slider = TrackbarRow(
-                "Multiply Grid X", 
-                params.get("multiply_grid_x"), 
-                TrackbarCallback(params.get("multiply_grid_x"), "multiply_grid_x").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            multiply_grid_y_slider = TrackbarRow(
-                "Multiply Grid Y", 
-                params.get("multiply_grid_y"), 
-                TrackbarCallback(params.get("multiply_grid_y"), "multiply_grid_y").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            grid_pitch_x_slider = TrackbarRow(
-                "Grid Pitch X", 
-                params.get("grid_pitch_x"), 
-                TrackbarCallback(params.get("grid_pitch_x"), "grid_pitch_x").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            grid_pitch_y_slider = TrackbarRow(
-                "Grid Pitch Y", 
-                params.get("grid_pitch_y"), 
-                TrackbarCallback(params.get("grid_pitch_y"), "grid_pitch_y").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            shape_y_shift_slider = TrackbarRow(
-                "Shape Y Shift", 
-                params.get("shape_y_shift"), 
-                TrackbarCallback(params.get("shape_y_shift"), "shape_y_shift").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            shape_x_shift_slider = TrackbarRow(
-                "Shape X Shift", 
-                params.get("shape_x_shift"), 
-                TrackbarCallback(params.get("shape_x_shift"), "shape_x_shift").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-
-            with dpg.collapsing_header(label=f"\Line Generator", tag="line_generator"):
-
-                line_hue_slider = TrackbarRow(
-                    "Line Hue", 
-                    params.get("line_hue"), 
-                    TrackbarCallback(params.get("line_hue"), "line_hue").__call__, 
-                    self.reset_slider_callback, 
-                    default_font_id)
-                
-                line_sat_slider = TrackbarRow(
-                    "Line Sat", 
-                    params.get("line_sat"), 
-                    TrackbarCallback(params.get("line_sat"), "line_sat").__call__, 
-                    self.reset_slider_callback, 
-                    default_font_id)
-                
-                line_val_slider = TrackbarRow(
-                    "Line Val", 
-                    params.get("line_val"), 
-                    TrackbarCallback(params.get("line_val"), "line_val").__call__, 
-                    self.reset_slider_callback, 
-                    default_font_id)
-                
-                line_weight_slider = TrackbarRow(
-                    "Line Width", 
-                    params.get("line_weight"), 
-                    TrackbarCallback(params.get("line_weight"), "line_weight").__call__, 
-                    self.reset_slider_callback, 
-                    default_font_id)
-                
-                line_opacity_slider = TrackbarRow(
-                    "Line Opacity", 
-                    params.get("line_opacity"), 
-                    TrackbarCallback(params.get("line_opacity"), "line_opacity").__call__, 
-                    self.reset_slider_callback, 
-                    default_font_id)
-            dpg.bind_item_font("line_generator", global_font_id)
-
-            with dpg.collapsing_header(label=f"\tFill Generator", tag="fill_generator"):
-                fill_hue_slider = TrackbarRow(
-                    "Fill Hue", 
-                    params.get("fill_hue"), 
-                    TrackbarCallback(params.get("fill_hue"), "fill_hue").__call__, 
-                    self.reset_slider_callback, 
-                    default_font_id)
-                
-                fill_sat_slider = TrackbarRow(
-                    "Fill Sat", 
-                    params.get("fill_sat"), 
-                    TrackbarCallback(params.get("fill_sat"), "fill_sat").__call__, 
-                    self.reset_slider_callback, 
-                    default_font_id)
-                
-                fill_val_slider = TrackbarRow(
-                    "Fill Val", 
-                    params.get("fill_val"), 
-                    TrackbarCallback(params.get("fill_val"), "fill_val").__call__, 
-                    self.reset_slider_callback, 
-                    default_font_id)
-                
-                fill_opacity_slider = TrackbarRow(
-                    "Fill Opacity", 
-                    params.get("fill_opacity"), 
-                    TrackbarCallback(params.get("fill_opacity"), "fill_opacity").__call__, 
-                    self.reset_slider_callback, 
-                    default_font_id)
-            dpg.bind_item_font("fill_generator", global_font_id)
-        dpg.bind_item_font("shape_generator", global_font_id)
-
-    
-    def noiser_sliders(self, default_font_id=None, global_font_id=None):
-        with dpg.collapsing_header(label=f"\tNoiser", tag="noiser"):
-            noise_type_slider = TrackbarRow(
-                "Noise Type", 
-                params.get("noise_type"), 
-                TrackbarCallback(params.get("noise_type"), "noise_type").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            noise_intensity_slider = TrackbarRow(
-                "Noise Intensity", 
-                params.get("noise_intensity"), 
-                TrackbarCallback(params.get("noise_intensity"), "noise_intensity").__call__, 
-                self.reset_slider_callback, 
-                default_font_id)
-            
-            # noise_speed_slider = TrackbarRow(
-            #     "Noise Speed", 
-            #     params.get("noise_speed"), 
-            #     TrackbarCallback(params.get("noise_speed"), "noise_speed").__call__, 
-            #     self.reset_slider_callback, 
-            #     default_font_id)
-            
-            # noise_freq_x_slider = TrackbarRow(
-            #     "Noise Freq X", 
-            #     params.get("noise_freq_x"), 
-            #     TrackbarCallback(params.get("noise_freq_x"), "noise_freq_x").__call__, 
-            #     self.reset_slider_callback, 
-            #     default_font_id)
-            
-            # noise_freq_y_slider = TrackbarRow(
-            #     "Noise Freq Y", 
-            #     params.get("noise_freq_y"), 
-            #     TrackbarCallback(params.get("noise_freq_y"), "noise_freq_y").__call__, 
-            #     self.reset_slider_callback, 
-            #     default_font_id)
-
-        dpg.bind_item_font("noiser", global_font_id)
-
-
     def perlin_generator_sliders(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tNoise Generator", tag="noise_generator"):
             
@@ -930,43 +293,8 @@ class Interface:
                 self.reset_slider_callback, 
                 default_font_id)
         dpg.bind_item_font("noise_generator", global_font_id)
-
     
-    def lissajous_sliders(self, default_font_id=None, global_font_id=None):
-            with dpg.collapsing_header(label=f"\tLissajous", tag="Lissajous"):
-                lissajous_A_slider = TrackbarRow(
-                    "Lissajous A",
-                    params.get("lissajous_A"),
-                    TrackbarCallback(params.get("lissajous_A"), "lissajous_A").__call__,
-                    self.reset_slider_callback,
-                    default_font_id)
-                lissajous_B_slider = TrackbarRow(
-                    "Lissajous B",
-                    params.get("lissajous_B"),
-                    TrackbarCallback(params.get("lissajous_B"), "lissajous_B").__call__,
-                    self.reset_slider_callback,
-                    default_font_id)
-                lissajous_a_slider = TrackbarRow(
-                    "Lissajous a",
-                    params.get("lissajous_a"),
-                    TrackbarCallback(params.get("lissajous_a"), "lissajous_a").__call__,
-                    self.reset_slider_callback,
-                    default_font_id)
-                lissajous_b_slider = TrackbarRow(
-                    "Lissajous b",
-                    params.get("lissajous_b"),
-                    TrackbarCallback(params.get("lissajous_b"), "lissajous_b").__call__,
-                    self.reset_slider_callback,
-                    default_font_id)
-                lissajous_delta_slider = TrackbarRow(
-                    "Lissajous Delta",
-                    params.get("lissajous_delta"),
-                    TrackbarCallback(params.get("lissajous_delta"), "lissajous_delta").__call__,
-                    self.reset_slider_callback,
-                    default_font_id)
-            dpg.bind_item_font("Lissajous", global_font_id)
 
-    
     def plasma_sliders(self, default_font_id=None, global_font_id=None):
         plasma_freq_sliders = []
         plasma_amp_sliders = []
@@ -1145,82 +473,6 @@ class Interface:
         dpg.bind_item_font("reaction_diffusion", global_font_id)
 
 
-    def warp_sliders(self, default_font_id=None, global_font_id=None):
-        with dpg.collapsing_header(label=f"\tWarp", tag="warp"):
-            warp_type_slider = TrackbarRow(
-                "Warp Type",
-                params.get("warp_type"),
-                TrackbarCallback(params.get("warp_type"), "warp_type").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            warp_angle_amt_slider = TrackbarRow(
-                "Warp Angle Amt",
-                params.get("warp_angle_amt"),
-                TrackbarCallback(params.get("warp_angle_amt"), "warp_angle_amt").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            warp_radius_amt_slider = TrackbarRow(
-                "Warp Radius Amt",
-                params.get("warp_radius_amt"),
-                TrackbarCallback(params.get("warp_radius_amt"), "warp_radius_amt").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            warp_speed_slider = TrackbarRow(
-                "Warp Speed",
-                params.get("warp_speed"),
-                TrackbarCallback(params.get("warp_speed"), "warp_speed").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            warp_use_fractal_slider = TrackbarRow(
-                "Warp Use Fractal",
-                params.get("warp_use_fractal"),
-                TrackbarCallback(params.get("warp_use_fractal"), "warp_use_fractal").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            warp_octaves_slider = TrackbarRow(
-                "Warp Octaves",
-                params.get("warp_octaves"),
-                TrackbarCallback(params.get("warp_octaves"), "warp_octaves").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            warp_gain_slider = TrackbarRow(
-                "Warp Gain",
-                params.get("warp_gain"),
-                TrackbarCallback(params.get("warp_gain"), "warp_gain").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            warp_lacunarity_slider = TrackbarRow(
-                "Warp Lacunarity",
-                params.get("warp_lacunarity"),
-                TrackbarCallback(params.get("warp_lacunarity"), "warp_lacunarity").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            x_speed_slider = TrackbarRow(
-                "X Speed",
-                params.get("x_speed"),
-                TrackbarCallback(params.get("x_speed"), "x_speed").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            y_speed_slider = TrackbarRow(
-                "Y Speed",
-                params.get("y_speed"),
-                TrackbarCallback(params.get("y_speed"), "y_speed").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            x_size_slider = TrackbarRow(
-                "X Size",
-                params.get("x_size"),
-                TrackbarCallback(params.get("x_size"), "x_size").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-            y_size_slider = TrackbarRow(
-                "Y Size",
-                params.get("y_size"),
-                TrackbarCallback(params.get("y_size"), "y_size").__call__,
-                self.reset_slider_callback,
-                default_font_id)
-
-
     def moire_sliders(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tMoire", tag="moire"):
             pass
@@ -1248,15 +500,26 @@ class Interface:
 
         self.test_sliders(default_font_id, global_font_id)
         self.mix_panel(mixer)
-        self.color_sliders(default_font_id, global_font_id)
-        self.effects_sliders(default_font_id, global_font_id)
-        self.reflector_sliders(default_font_id, global_font_id)
-        self.pan_sliders(default_font_id, global_font_id)
+
+        # TODO: initialize using for loop over dict keys
+        fx[FX.COLOR].create_sliders(default_font_id, global_font_id)
+        fx[FX.BASIC].create_sliders(default_font_id, global_font_id)
+        fx[FX.GLITCH].create_sliders(default_font_id, global_font_id)
+        fx[FX.REFLECTOR].create_sliders(default_font_id, global_font_id)
+        fx[FX.PTZ].create_sliders(default_font_id, global_font_id)
+        fx[FX.SYNC].create_sliders(default_font_id, global_font_id)
+        fx[FX.PATTERNS].create_sliders(default_font_id, global_font_id)
+        fx[FX.NOISE].create_sliders(default_font_id, global_font_id)
+        fx[FX.WARP].create_sliders(default_font_id, global_font_id)
+        # fx[FX.PIXELS].create_sliders(default_font_id, global_font_id)
+        fx[FX.SHAPES].create_sliders(default_font_id, global_font_id)
+        # TODO: fix temp sliders
+        fx[FX.BASIC].temp_create_sliders(default_font_id, global_font_id)
+
+
         self.metaballs_sliders(default_font_id, global_font_id)
-        self.sync_sliders(default_font_id, global_font_id)
-        self.pattern_sliders(default_font_id, global_font_id)
-        self.noiser_sliders(default_font_id, global_font_id)
-        self.warp_sliders(default_font_id, global_font_id)
+        self.osc_sliders(default_font_id, global_font_id)
+        
         # self.moire_sliders(default_font_id, global_font_id)
         # self.plasma_sliders(default_font_id, global_font_id)
         # self.reaction_diffusion_sliders(default_font_id, global_font_id)
@@ -1264,9 +527,8 @@ class Interface:
         # self.shape_generator_sliders(default_font_id, global_font_id)
         # self.lissajous_sliders(default_font_id, global_font_id)
         # self.perlin_generator_sliders(default_font_id, global_font_id)
-        self.osc_sliders(default_font_id, global_font_id)
 
-
+    # under test; not currently used
     def build_panels_dict(self, params):
         panels = {}
         for p in params.values():
@@ -1276,7 +538,7 @@ class Interface:
                 
         return panels
 
-
+    # under test; not currently used
     def create_trackbar_panels_for_param(self):
         with dpg.font_registry():
             global_font_id = dpg.add_font("C:/Windows/Fonts/arial.ttf", 18) # Larger font size for the header
@@ -1297,64 +559,3 @@ class Interface:
                 
             dpg.bind_item_font(panel_name, global_font_id)
 
-
-class TrackbarRow:
-
-    def __init__(self, label, param, callback, button_callback, font):
-
-        self.label = label #TODO: method to get label from param name
-        self.tag = param.name
-        self.callback = callback
-        self.button_callback = button_callback
-        self.slider = None
-        self.button = None
-        self.value = param.default_val
-        self.type = type(param.default_val).__name__
-        self.param = param
-        self.font = font
-        self.create()
-
-    def create(self):
-        with dpg.group(horizontal=True):
-            # self.button = dpg.add_button(label="Reset", callback=lambda x: self.reset, width=50)
-            self.button = dpg.add_button(label="Reset", callback=self.button_callback, width=50, tag=self.tag + "_reset", user_data=self.tag)
-            if self.type == 'float':
-                self.slider = dpg.add_slider_float(label=self.label, tag=self.tag, 
-                                                   default_value=self.param.default_val, 
-                                                   min_value=self.param.min, 
-                                                   max_value=self.param.max, 
-                                                   callback=self.callback, 
-                                                   width=-100)
-            else:
-                self.slider = dpg.add_slider_int(label=self.label, tag=self.tag, default_value=self.param.default_val, min_value=self.param.min, max_value=self.param.max, callback=self.callback, width=-100)
-            dpg.bind_item_font(self.tag, self.font)
-            dpg.bind_item_font(self.tag + "_reset", self.font)
-
-
-class TrackbarCallback:
-    """
-    A callable class instance used as a callback for Dear PyGui trackbars.
-    It updates a specified Param object's value and an associated text item.
-    """
-    def __init__(self, target_param_obj, display_text_tag=None):
-        """
-        Initializes the callback instance.
-        Args:
-            target_param_obj (Param): The Param object whose 'value' attribute
-                                      this trackbar will control.
-            display_text_tag (str, optional): The tag of a dpg.add_text item
-                                            to update with the current value.
-        """
-        self.target_param = target_param_obj
-        self.display_text_tag = display_text_tag
-
-    def __call__(self, sender, app_data):
-        """
-        This method is invoked when the trackbar's value changes.
-        Args: 
-            sender: The tag/ID of the trackbar that triggered the callback.
-            app_data: The new value of the trackbar.
-        """
-        # Update the Param object's value
-        params.set(self.target_param.name, app_data)
-        dpg.set_value(sender, app_data)
