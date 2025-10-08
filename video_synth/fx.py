@@ -1383,6 +1383,11 @@ class GlitchEffect:
 
     def create_buttons(self, gui):
         dpg.add_button(label=self.enable_pixel_shift.label, callback=self.enable_pixel_shift.toggle, parent=gui)
+        dpg.add_button(label=self.enable_color_split.label, callback=self.enable_color_split.toggle, parent=gui)
+        dpg.add_button(label=self.enable_block_corruption.label, callback=self.enable_block_corruption.toggle, parent=gui)
+        dpg.add_button(label=self.enable_random_rectangles.label, callback=self.enable_random_rectangles.toggle, parent=gui)
+        dpg.add_button(label=self.enable_horizontal_scroll_freeze.label, callback=self.enable_horizontal_scroll_freeze.toggle, parent=gui)
+
 
     def reset(self):
         self.glitch_phase_start_frame = 0
@@ -1643,18 +1648,22 @@ class GlitchEffect:
             self.current_growth_duration = random.randint(self.glitch_duration_frames.value // 2, self.glitch_duration_frames.value * 2) # Random period for growth
 
         # Apply effects to the current frame
-        frame = self.apply_evolving_pixel_shift(frame, frame_count, self.glitch_phase_start_frame_shift)
-        frame = self.apply_gradual_color_split(frame, frame_count, self.glitch_phase_start_frame_color)
-        frame = self.apply_morphing_block_corruption(frame, frame_count, self.glitch_phase_start_frame_blocks)
-        
-        # Apply the new scrolling glitch effect, passing its specific state
-        frame = self.apply_horizontal_scroll_freeze_glitch(
-            frame,
-            frame_count,
-            self.last_scroll_glitch_reset_frame,
-            self.current_fixed_y_end,
-            self.current_growth_duration
-        )
+        if self.enable_random_rectangles.value:
+            frame = self.glitch_image(frame)
+        if self.enable_pixel_shift.value:
+            frame = self.apply_evolving_pixel_shift(frame, frame_count, self.glitch_phase_start_frame_shift)
+        if self.enable_color_split.value:
+            frame = self.apply_gradual_color_split(frame, frame_count, self.glitch_phase_start_frame_color)
+        if self.enable_block_corruption.value:
+            frame = self.apply_morphing_block_corruption(frame, frame_count, self.glitch_phase_start_frame_blocks)
+        if self.enable_horizontal_scroll_freeze.value:        
+            frame = self.apply_horizontal_scroll_freeze_glitch(
+                frame,
+                frame_count,
+                self.last_scroll_glitch_reset_frame,
+                self.current_fixed_y_end,
+                self.current_growth_duration
+            )
 
         frame_count += 1
         return frame
@@ -1696,5 +1705,7 @@ class GlitchEffect:
                 params.get("glitch_size"), 
                 TrackbarCallback(params.get("glitch_size"), "glitch_size").__call__, 
                 default_font_id)
+            
+            self.create_buttons("glitch")
             
         dpg.bind_item_font("glitch", global_font_id)

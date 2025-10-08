@@ -528,7 +528,7 @@ class Interface:
         # self.lissajous_sliders(default_font_id, global_font_id)
         # self.perlin_generator_sliders(default_font_id, global_font_id)
 
-
+    # under test; not currently used
     def build_panels_dict(self, params):
         panels = {}
         for p in params.values():
@@ -538,7 +538,7 @@ class Interface:
                 
         return panels
 
-
+    # under test; not currently used
     def create_trackbar_panels_for_param(self):
         with dpg.font_registry():
             global_font_id = dpg.add_font("C:/Windows/Fonts/arial.ttf", 18) # Larger font size for the header
