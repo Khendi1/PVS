@@ -1,5 +1,5 @@
 import numpy as np
-from enum import IntEnum, Enum
+from enum import IntEnum, Enum, auto
 import cv2
 from config import *
 import random
@@ -10,6 +10,7 @@ import time
 from buttons import Button
 import dearpygui.dearpygui as dpg
 from sliders import *
+
 
 class WarpType(IntEnum):
     NONE = 0
@@ -337,6 +338,7 @@ class Color:
             
         dpg.bind_item_font("color", global_font_id)
 
+
 class Pixels:
     
     def __init__(self, image_width: int, image_height: int):
@@ -455,6 +457,7 @@ class Sync:
                     TrackbarCallback(params.get("y_sync_amp"), "y_sync_amp").__call__,
                     default_font_id)
         dpg.bind_item_font("sync", global_font_id)
+
 
 class Warp:
 
@@ -784,6 +787,7 @@ class Reflector:
             #     default_font_id)
         dpg.bind_item_font("reflector", global_font_id)
 
+
 class PTZ:
     def __init__(self, image_width: int, image_height: int):
 
@@ -915,6 +919,10 @@ class PTZ:
         dpg.bind_item_font("pan", global_font_id)
 
 
+class LumaMode(IntEnum):
+    NONE = 0
+    WHITE = auto()
+    BLACK = auto()
 
 
 class Effects:
@@ -927,7 +935,9 @@ class Effects:
         self.frame_skip = params.add("frame_skip", 0, 10, 0)
         self.alpha = params.add("alpha", 0.0, 1.0, 0.0)
         self.temporal_filter = params.add("temporal_filter", 0, 1.0, 1.0)
-        
+        self.feedback_luma_threshold = params.add("feedback_luma_threshold", 0, 255, 0)
+        self.luma_select_mode = params.add("luma_select_mode", 0, len(LumaMode)-1, LumaMode.NONE.value)
+
         # TODO: implement
         self.sequence = params.add("sequence", 0, 100, 0)
 
@@ -941,6 +951,7 @@ class Effects:
         self.buffer_size = params.add("buffer_size", 0, self.max_buffer_size, 5)
         # this should probably be initialized in reset() to avoid issues with reloading config
         self.frame_buffer = deque(maxlen=self.max_buffer_size)
+
 
     def avg_frame_buffer(self, frame):
 
@@ -990,6 +1001,32 @@ class Effects:
 
         # Convert back to uint8 for display
         return cv2.convertScaleAbs(filtered_frame)
+
+
+    def apply_luma_feedback(self, prev_frame, cur_frame):
+        # The mask will determine which parts of the current frame are kept
+        gray = cv2.cvtColor(cur_frame, cv2.COLOR_BGR2GRAY)
+        
+        if self.luma_select_mode.value == LumaMode.NONE.value:
+            return cur_frame
+        elif self.luma_select_mode.value == LumaMode.BLACK.value:
+            # Use THRESH_BINARY_INV to key out DARK areas (Luma is low)
+            # Pixels with Luma < threshold become white (255) in the mask, meaning they are KEPT
+            ret, mask = cv2.threshold(gray, self.feedback_luma_threshold.value, 255, cv2.THRESH_BINARY_INV) 
+        elif self.luma_select_mode.value == LumaMode.WHITE.value:
+            ret, mask = cv2.threshold(gray, self.feedback_luma_threshold.value, 255, cv2.THRESH_BINARY) 
+
+        # Keep the keyed-out (bright) parts of the current frame
+        fg = cv2.bitwise_and(cur_frame, cur_frame, mask=mask)
+        
+        # Invert the mask to find the areas *not* keyed out (the dark areas)
+        mask_inv = cv2.bitwise_not(mask)
+        
+        # Use the inverted mask to "cut a hole" in the previous frame
+        bg = cv2.bitwise_and(prev_frame, prev_frame, mask=mask_inv)
+
+        # Combine the new foreground (fg) with the previous frame's background (bg)
+        return cv2.add(fg, bg)
 
 
     # TODO: implement
@@ -1049,6 +1086,20 @@ class Effects:
                 params.get("alpha"), 
                 TrackbarCallback(params.get("alpha"), "alpha").__call__, 
                 default_font_id)
+            
+            luma_slider = TrackbarRow2(
+                "Luma Feedback Threshold",
+                params.get("feedback_luma_threshold"),
+                TrackbarCallback(params.get("feedback_luma_threshold"), "feedback_luma_threshold").__call__,
+                default_font_id
+            )
+
+            luma_mode = TrackbarRow2(
+                "Luma Mode",
+                params.get("luma_select_mode"),
+                TrackbarCallback(params.get("luma_select_mode"), "luma_select_mode").__call__,
+                default_font_id
+            )
             
             frame_buffer_size_slider = TrackbarRow2(
                 "Frame Buffer Size",

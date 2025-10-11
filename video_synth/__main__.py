@@ -142,6 +142,7 @@ def main():
             # Apply temporal filtering and frame buffer averaging to the resulting feedback frame
             feedback_frame = fx[FX.BASIC].apply_temporal_filter(prev_frame, feedback_frame)
             feedback_frame = fx[FX.BASIC].avg_frame_buffer(feedback_frame)
+            feedback_frame = fx[FX.BASIC].apply_luma_feedback(prev_frame, feedback_frame)
             prev_frame = feedback_frame.copy()
 
             # Display the resulting frame and control panel
