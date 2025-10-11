@@ -22,23 +22,11 @@ class Button:
         dpg.add_button(label=self.label, tag=self.tag, callback=self.on_toggle_button_click, user_data=self.tag)
     
 class Buttons:
+    """
+    A singleton class to create and store Button instances
+    """
     def __init__(self):
         self.buttons = {
-            "invert": Button("Invert", "invert", default_val=False),
-            "polar_transform": Button("Polar Transform", "polar_transform", default_val=False),
-            "grayscale": Button("Grayscale", "grayscale", default_val=False),
-            "edge_detect": Button("Edge Detect", "edge_detect", default_val=False),
-            "cartoonify": Button("Cartoonify", "cartoonify", default_val=False),
-            "posterize": Button("Posterize", "posterize", default_val=False),
-            "sepia": Button("Sepia", "sepia", default_val=False),
-            "solarize": Button("Solarize", "solarize", default_val=False),
-            "negative": Button("Negative", "negative", default_val=False),
-            "swirl": Button("Swirl", "swirl", default_val=False),
-            "fisheye": Button("Fisheye", "fisheye", default_val=False),
-            "kaleidoscope": Button("Kaleidoscope", "kaleidoscope", default_val=False),
-            "pixelate": Button("Pixelate", "pixelate", default_val=False),
-            "vignette": Button("Vignette", "vignette", default_val=False),
-            "noise_overlay": Button("Noise Overlay", "noise_overlay", default_val=False),
             "effects_first": Button("Effects First", "effects_first", default_val=False),
             "shapes": Button("Shapes", "shapes", default_val=False)
         }

@@ -2,11 +2,15 @@ from fx import *
 from shapes import ShapeGenerator
 from patterns3 import Patterns    
 from enum import StrEnum, auto
+from mix import Mixer
 
 """
-This module initializes and holds shared objects used across the application.
-This simplifies code in main and imports into gui.py.
+This module initializes shared objects used across the application.
+Now classes with modifyable params are expected to define a create_sliders function and call it gui.py 
+gui panels within
 """
+
+mixer = Mixer()
 
 class FX(StrEnum):
     BASIC = auto()

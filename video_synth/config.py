@@ -1,6 +1,11 @@
 from param import ParamTable
 from buttons import Buttons
 
+"""
+This module stores common variables used across main, the gui, and most effects
+Note that the effects classes are initialized in shared_object.py to avoid circular import
+"""
+
 # Initialize parameters; this is to be populated by individual classes/effects/generators
 # and used to create the control panel
 params = ParamTable()

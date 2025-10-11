@@ -61,10 +61,8 @@ class Mixer():
         # in that they generate frames algorithmically rather than capturing from a device or file.
         self.animation_sources = {
             MixSources.METABALLS.name: LavaLampSynth(width=640, height=480), #800x600 default size
-            # "Plasma": Plasma(),
-            # "Moire": MoirePatternGenerator(size=(800, 600)),
-            # "Shader": 
-            MixSources.REACTION_DIFFUSION.name: ReactionDiffusionSimulator(800, 600)
+            MixSources.PLASMA.name: Plasma(width=640, height=480),
+            MixSources.REACTION_DIFFUSION.name: ReactionDiffusionSimulator(640, 480)
         }
 
         self.selected_source1 = params.add("source1", 0, len(MixSources)-1, MixSources.INTERNAL_WEBCAM.value) 

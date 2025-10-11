@@ -3,54 +3,11 @@ import dearpygui.dearpygui as dpg
 
 class TrackbarRow:
 
-    def __init__(self, label, param, callback, button_callback, font):
+    def __init__(self, label, param, font):
 
         self.label = label #TODO: method to get label from param name
         self.tag = param.name
-        self.callback = callback
-        self.button_callback = button_callback
-        self.slider = None
-        self.button = None
-        self.value = param.default_val
-        self.type = type(param.default_val).__name__
-        self.param = param
-        self.font = font
-        self.create()
-
-    def create(self):
-        with dpg.group(horizontal=True):
-            # self.button = dpg.add_button(label="Reset", callback=lambda x: self.reset, width=50)
-            self.button = dpg.add_button(label="Reset", callback=self.button_callback, width=50, tag=self.tag + "_reset", user_data=self.tag)
-            if self.type == 'float':
-                self.slider = dpg.add_slider_float(label=self.label, tag=self.tag, 
-                                                   default_value=self.param.default_val, 
-                                                   min_value=self.param.min, 
-                                                   max_value=self.param.max, 
-                                                   callback=self.callback, 
-                                                   width=-100)
-            else:
-                self.slider = dpg.add_slider_int(label=self.label, tag=self.tag, default_value=self.param.default_val, min_value=self.param.min, max_value=self.param.max, callback=self.callback, width=-100)
-            dpg.bind_item_font(self.tag, self.font)
-            dpg.bind_item_font(self.tag + "_reset", self.font)
-
-    def reset_slider_callback(self, sender, app_data, user_data):
-        param = params.get(str(user_data))
-        if param is None:
-            print(f"Slider or param not found for {user_data}")
-            return
-        print(f"Got reset callback for {user_data}; setting to default value {param.default_val}")
-        param.reset()
-        dpg.set_value(user_data, param.value)
-
-
-
-class TrackbarRow2:
-
-    def __init__(self, label, param, callback, font):
-
-        self.label = label #TODO: method to get label from param name
-        self.tag = param.name
-        self.callback = callback
+        self.callback = TrackbarCallback(param, param.name)
         self.slider = None
         self.button = None
         self.value = param.default_val

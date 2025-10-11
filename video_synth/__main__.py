@@ -1,10 +1,21 @@
 """
 Main module for the video synthesizer application.
-This module initializes video sources, applies effects, and manages the main loop.
-All components are modular and can be extended or modified independently.
+This module initializes the video mixer, applies effects, and manages the main loop.
+
 All parameters are managed via the ParamTable class in config.py. 
+
+To create new parameters and their corresponding sliders,
+you must first create a param and add it to the ParamTable.
+This is often done in class init functions.
+Then you must create a trackbar for it manually (for now).
+Existing classes expose a create_sliders function which is called in gui.py
+
 Parameter values can be modified via the GUI or linked to MIDI controllers.
-Soureces include webcam, video files, capture card, metaballs generator, and plasma generator.
+See how sample controllers are mapped in midi.py
+
+See mix.py to configure your video sources.
+
+Author: Kyle Henderson
 """
 
 import cv2
@@ -75,24 +86,18 @@ def main():
     global image_height, image_width, cap1, cap2
     global fx
     
-
     print("Initializing video synthesizer...")
 
-    # Initialize mixer video sources with their default settings
-    mixer = Mixer()
-
-    # Retrieve an initial frame to determine image dimensions; 
+    # Initialize mixer video sources and retreive frame
     frame = mixer.mix_sources()  
-    frame_count = 0
 
     # Create a copy of the frame for feedback and get its dimensions
     feedback_frame = frame.copy()
     prev_frame = frame.copy()
     image_height, image_width = frame.shape[:2]
+    frame_count = 0
 
-    # Initialize shared objects and effects with image dimensions
-    # This must be done after reading the first frame to get correct dimensions
-    # all effects classes are initialized here
+    # Initialize effects classes with image dimensions
     init_shared_objects(width=image_width, height=image_height)
 
     cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
@@ -104,17 +109,20 @@ def main():
     print(f"Oscillator bank initialized with {len(osc_bank)} oscillators.")
     
 
-    # Initialize the midi input controller before creating the GUI
     # TODO: This assumes both controllers are always connected in a specific order; improve this
     # BUG: fix initialization of MIDI controllers in midi_input.py
     # test_ports()
-    
+    # Initialize the midi input controller before creating the GUI
     controller1 = MidiInputController(controller=MidiMix())
     controller2 = MidiInputController(controller=SMC_Mixer())
 
     # Create control panel after initializing objects that will be used in the GUI
     gui = Interface()
     gui.create_control_window(mixer=mixer)
+
+    # list all available params 
+    # for k, v in params.params.items():
+    #     print(f'{k}: {v.min}-{v.max}, {v.value}')
 
     print(f'Enjoy {len(params.keys())} tunable parameters!\n')
 

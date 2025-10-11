@@ -6,15 +6,24 @@ import random
 from generators import Oscillator
 from config import params
 from abc import ABC, abstractmethod
+import dearpygui.dearpygui as dpg
+from shared_objects import *
 
 class Animation(ABC):
+    """
+    Abstract class to help unify animation frame retrieval
+    """
     def __init__(self, width=800, height=600):
         self.width = width
         self.height = height
 
+
     @abstractmethod
-    def get_frame(self, frame: np.ndarray = None):
+    def get_frame(self, frame: np.ndarray = None) -> np.ndarray:
+        """
+        """
         raise NotImplementedError("Subclasses should implement this method.")
+
 
 class Plasma(Animation):
     def __init__(self, width=800, height=600):
@@ -33,42 +42,43 @@ class Plasma(Animation):
             "plasma_flow_speed",
         ]
 
-        oscillators = [Oscillator(name=f"{self.plasma_params[i]}", frequency=0.5, amplitude=1.0, phase=0.0, shape=1) for i in range(4)]
+        self.oscillators = [Oscillator(name=f"{self.plasma_params[i]}", frequency=0.5, amplitude=1.0, phase=0.0, shape=1) for i in range(4)]
 
-        oscillators[0].link_param(self.plasma_speed)
-        oscillators[1].link_param(self.plasma_distance)
-        oscillators[2].link_param(self.plasma_color_speed)
-        oscillators[3].link_param(self.plasma_flow_speed)
+        self.oscillators[0].link_param(self.plasma_speed)
+        self.oscillators[1].link_param(self.plasma_distance)
+        self.oscillators[2].link_param(self.plasma_color_speed)
+        self.oscillators[3].link_param(self.plasma_flow_speed)
 
-    # --- MODIFIED generate_plasma_effect function ---
-    def generate_plasma_effect(frame_width, frame_height):
-        plasma_pattern = np.zeros((frame_height, frame_width, 3), dtype=np.uint8)
+    
+    def generate_plasma_effect(self):
+        plasma_pattern = np.zeros((self.height, self.width, 3), dtype=np.uint8)
 
+        # TODO: fix plasma oscillators
         # osc1_norm = (osc1_val + oscillator1_amp) / (2 * oscillator1_amp) if oscillator1_amp > 0 else 0.5
         # osc2_norm = (osc2_val + oscillator2_amp) / (2 * oscillator2_amp) if oscillator2_amp > 0 else 0.5
         # osc3_norm = (osc3_val + oscillator3_amp) / (2 * oscillator3_amp) if oscillator3_amp > 0 else 0.5
         # osc4_norm = (osc4_val + oscillator4_amp) / (2 * oscillator4_amp) if oscillator4_amp > 0 else 0.5
 
-        x_coords = np.linspace(0, frame_width - 1, frame_width, dtype=np.float32)
-        y_coords = np.linspace(0, frame_height - 1, frame_height, dtype=np.float32)
+        x_coords = np.linspace(0, self.width - 1, self.width, dtype=np.float32)
+        y_coords = np.linspace(0, self.height - 1, self.height, dtype=np.float32)
         X, Y = np.meshgrid(x_coords, y_coords)
 
         current_time = time.time()
 
-        for osc in oscillators:
+        for osc in self.oscillators:
             osc.get_next_value()
 
         # Base time offset for overall plasma evolution, influenced by Osc1
         # Adding a large random base to offset global direction
-        plasma_time_offset_base = current_time * (0.5 + plasma_speed.value * 2.0) + random.randint(0, 1000)
+        plasma_time_offset_base = current_time * (0.5 + self.plasma_speed.value * 2.0) + random.randint(0, 1000)
 
         # Spatial scaling for the main plasma, influenced by Osc2
-        scale_factor_x = 0.01 + plasma_distance.value * 0.02
-        scale_factor_y = 0.01 + plasma_distance.value * 0.02 #todo: make this different from x
+        scale_factor_x = 0.01 + self.plasma_distance.value * 0.02
+        scale_factor_y = 0.01 + self.plasma_distance.value * 0.02 #todo: make this different from x
 
-        # --- Generate Flow Fields (Domain Warping) using Perlin Noise ---
+        #  Generate Flow Fields (Domain Warping) using Perlin Noise 
         flow_scale = 0.005
-        flow_strength = plasma_flow_speed.value * 100
+        flow_strength = self.plasma_flow_speed.value * 100
 
         noise_x_perturb = np.zeros_like(X)
         noise_y_perturb = np.zeros_like(Y)
@@ -77,12 +87,11 @@ class Plasma(Animation):
         flow_noise_time = current_time * 0.1
 
         # Add random offsets to the base of Perlin noise for more varied flow
-        # These offsets should be large enough to jump to different parts of the noise space
         random_base_x = random.randint(0, 1000)
         random_base_y = random.randint(0, 1000) + 500 # Ensure different from X
 
-        for y in range(frame_height):
-            for x in range(frame_width):
+        for y in range(self.height):
+            for x in range(self.width):
                 nx = x * flow_scale
                 ny = y * flow_scale
 
@@ -92,18 +101,17 @@ class Plasma(Animation):
         perturbed_X = X + noise_x_perturb * flow_strength
         perturbed_Y = Y + noise_y_perturb * flow_strength
 
-        # --- Combine multiple sine waves for the core plasma "value" using perturbed coordinates ---
-        # Introduce different time offsets for each sine wave component to break global direction
+        # Combine multiple sine waves with time offsets break direction
         value = (
             np.sin(perturbed_X * scale_factor_x + plasma_time_offset_base) +
-            np.sin(perturbed_Y * scale_factor_y + plasma_time_offset_base * 0.8 + random.uniform(0, np.pi * 2)) + # Added random phase
-            np.sin((perturbed_X + perturbed_Y) * scale_factor_x * 0.7 + plasma_time_offset_base * 1.2 + random.uniform(0, np.pi * 2)) + # Added random phase
-            np.sin((perturbed_X - perturbed_Y) * scale_factor_y * 0.9 + plasma_time_offset_base * 0.6 + random.uniform(0, np.pi * 2)) # Added random phase
+            np.sin(perturbed_Y * scale_factor_y + plasma_time_offset_base * 0.8 + random.uniform(0, np.pi * 2)) + 
+            np.sin((perturbed_X + perturbed_Y) * scale_factor_x * 0.7 + plasma_time_offset_base * 1.2 + random.uniform(0, np.pi * 2)) + 
+            np.sin((perturbed_X - perturbed_Y) * scale_factor_y * 0.9 + plasma_time_offset_base * 0.6 + random.uniform(0, np.pi * 2))
         )
 
         normalized_value = (value + 4) / 8
 
-        hue_shift_val = plasma_color_speed.value * 2 * np.pi
+        hue_shift_val = self.plasma_color_speed.value * 2 * np.pi
 
         R = np.sin(normalized_value * np.pi * 3 + hue_shift_val) * 0.5 + 0.5
         G = np.sin(normalized_value * np.pi * 3 + hue_shift_val + np.pi * 2/3) * 0.5 + 0.5
@@ -116,7 +124,50 @@ class Plasma(Animation):
         return plasma_pattern
 
     def get_frame(self):
-        return self.generate_plasma_effect(self.width, self.height)
+        return self.generate_plasma_effect()
+
+
+    def create_sliders(self, default_font_id=None, global_font_id=None):
+        plasma_freq_sliders = []
+        plasma_amp_sliders = []
+        plasma_phase_sliders = []
+        plasma_seed_sliders = []
+        plasma_shape_sliders = []
+        plasma_params = [
+            "plasma_speed",
+            "plasma_distance",
+            "plasma_color_speed",
+            "plasma_flow_speed",
+        ]
+        with dpg.collapsing_header(label=f"\plasma Oscillator", tag="plasma_oscillator"):
+            for i in range(len(plasma_params)):
+                with dpg.collapsing_header(label=f"\t{plasma_params[i]}", tag=f"{plasma_params[i]}"):
+                    plasma_shape_sliders.append(TrackbarRow(
+                        f"{plasma_params[i]} Shape", 
+                        params.get(f"{plasma_params[i]}_shape"), 
+                        default_font_id))
+                    
+                    plasma_freq_sliders.append(TrackbarRow(
+                        f"{plasma_params[i]} Freq", 
+                        params.get(f"{plasma_params[i]}_frequency"), 
+                        default_font_id))
+                    
+                    plasma_amp_sliders.append(TrackbarRow(
+                        f"{plasma_params[i]} Amp", 
+                        params.get(f"{plasma_params[i]}_amplitude"),
+                        default_font_id))
+                    
+                    plasma_phase_sliders.append(TrackbarRow(
+                        f"{plasma_params[i]} Phase", 
+                        params.get(f"{plasma_params[i]}_phase"),
+                        default_font_id))
+                    
+                    plasma_seed_sliders.append(TrackbarRow(
+                        f"{plasma_params[i]} Seed", 
+                        params.get(f"{plasma_params[i]}_seed"),
+                        default_font_id))
+                dpg.bind_item_font(f"{plasma_params[i]}", global_font_id)
+        dpg.bind_item_font("plasma_oscillator", global_font_id)
 
 
 class ReactionDiffusionSimulator(Animation):
@@ -148,10 +199,9 @@ class ReactionDiffusionSimulator(Animation):
         self.next_A = np.copy(self.current_A)
         self.next_B = np.copy(self.current_B)
         
-        # New parameters for seed randomization
         self.randomize_seed = randomize_seed
         self.max_seed_size = max_seed_size
-        self.num_seeds = num_seeds # New parameter for number of seeds
+        self.num_seeds = num_seeds 
 
         self.initialize_seed()
 
@@ -241,17 +291,12 @@ class ReactionDiffusionSimulator(Animation):
             self.update_simulation()
 
         # Hue (H): Map chemical A concentration to hue (0-179 for OpenCV)
-        # A higher concentration of A can correspond to one end of the spectrum,
-        # and a lower concentration to another.
-        # We'll use a range that gives a nice gradient, e.g., 0 to 120 (blue to green/yellow)
         hue = (self.current_A * 120).astype(np.uint8) 
 
         # Saturation (S): Map chemical B concentration to saturation (0-255)
-        # Areas with more B will be more saturated (vibrant)
         saturation = (self.current_B * 255).astype(np.uint8)
 
         # Value (V): Map overall activity or a combination to brightness (0-255)
-        # Here, we'll use a combination of A and B to ensure brightness.
         value = ((self.current_A + self.current_B) / 2 * 255).astype(np.uint8)
 
         hsv_image = cv2.merge([hue, saturation, value])
@@ -263,6 +308,32 @@ class ReactionDiffusionSimulator(Animation):
         Public method to get the next frame of the simulation.
         """
         return self.run()
+
+
+    def create_sliders(self, default_font_id=None, global_font_id=None):
+        with dpg.collapsing_header(label=f"\tReaction Diffusion", tag="reaction_diffusion"):
+            rd_diffusion_rate_a_slider = TrackbarRow(
+                "Diffusion Rate A",
+                params.get("da"),
+                default_font_id)
+            
+            rd_diffusion_rate_b_slider = TrackbarRow(
+                "Diffusion Rate B",
+                params.get("db"),
+                default_font_id)
+            
+            rd_feed_rate_slider = TrackbarRow(
+                "Feed Rate",
+                params.get("feed"),
+                default_font_id)
+            
+            rd_kill_rate_slider = TrackbarRow(
+                "Kill Rate",
+                params.get("kill"),
+                default_font_id)
+        
+        dpg.bind_item_font("reaction_diffusion", global_font_id)
+
 
 class LavaLampSynth(Animation):
     # BUG: find bug; when increasing num_metaballs, their sizes seem to get smaller
@@ -400,7 +471,7 @@ class LavaLampSynth(Animation):
             # The field strength decreases with the squared distance from the center.
             field_strength += (r**2) / dist_sq
 
-        # --- Coloring the frame based on field strength ---
+        #  Coloring the frame based on field strength 
         if max_field_strength is not None:
             # Normalize the field strength to a 0-1 range based on max_field_strength.
             # This allows for a gradient effect, like a real lava lamp.
@@ -479,3 +550,43 @@ class LavaLampSynth(Animation):
         Public method to get the next frame of the metaball animation.
         """
         return self.do_metaballs(frame)
+
+
+    def create_sliders(self, default_font_id=None, global_font_id=None):
+        with dpg.collapsing_header(label=f"\tMetaballs", tag="metaballs"):
+            num_metaballs_slider = TrackbarRow(
+                "Num Metaballs",
+                params.get("num_metaballs"),
+                default_font_id)
+            
+            min_radius_slider = TrackbarRow(
+                "Min Radius",
+                params.get("min_radius"),
+                default_font_id)
+            
+            max_radius_slider = TrackbarRow(
+                "Max Radius",
+                params.get("max_radius"),
+                default_font_id)
+            
+            max_speed_slider = TrackbarRow(
+                "Max Speed",
+                params.get("max_speed"),
+                default_font_id)
+            
+            threshold_slider = TrackbarRow(
+                "Threshold",
+                params.get("threshold"),
+                default_font_id)
+            
+            smooth_coloring_max_field_slider = TrackbarRow(
+                "Smooth Coloring Max Field",
+                params.get("smooth_coloring_max_field"),
+                default_font_id)
+            
+            feedback_alpha_slider = TrackbarRow(
+                "Feedback Alpha",
+                params.get("metaballs_feedback"),
+                default_font_id)
+
+        dpg.bind_item_font("metaballs", global_font_id)

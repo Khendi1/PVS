@@ -7,7 +7,7 @@ import noise # For Perlin noise generation
 from param import ParamTable, Param
 from config import params
 from generators import Oscillator
-from sliders import TrackbarCallback, TrackbarRow2
+from sliders import TrackbarCallback, TrackbarRow
 import dearpygui.dearpygui as dpg
 
 posc_bank = []  
@@ -583,105 +583,89 @@ class Patterns:
 
     def create_sliders(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tPattern Generator", tag="pattern_generator"):
-            pattern_type_slider = TrackbarRow2(
+            pattern_type_slider = TrackbarRow(
                 "Pattern Type",
                 params.get("pattern_type"),
-                TrackbarCallback(params.get("pattern_type"), "pattern_type").__call__,
                 default_font_id)
             
-            pattern_mod = TrackbarRow2(
+            pattern_mod = TrackbarRow(
                 "Pattern Mod",  
                 params.get("pattern_mod"),
-                TrackbarCallback(params.get("pattern_mod"), "pattern_mod").__call__,
                 default_font_id)
             
-            pattern_r = TrackbarRow2(
+            pattern_r = TrackbarRow(
                 "Pattern R",
                 params.get("pattern_r"),
-                TrackbarCallback(params.get("pattern_r"), "pattern_r").__call__,
                 default_font_id)
-            pattern_g = TrackbarRow2(
+            
+            pattern_g = TrackbarRow(
                 "Pattern G",
                 params.get("pattern_g"),
-                TrackbarCallback(params.get("pattern_g"), "pattern_g").__call__,
                 default_font_id)
-            pattern_b = TrackbarRow2(
+            
+            pattern_b = TrackbarRow(
                 "Pattern B",
                 params.get("pattern_b"),
-                TrackbarCallback(params.get("pattern_b"), "pattern_b").__call__,
                 default_font_id)
                   
-            pattern_bar_x_freq_slider = TrackbarRow2(
+            pattern_bar_x_freq_slider = TrackbarRow(
                 "Bar x Density",
                 params.get("bar_x_freq"),
-                TrackbarCallback(params.get("bar_x_freq"), "bar_x_freq").__call__,
                 default_font_id)
-            pattern_bar_y_freq_slider = TrackbarRow2(
+            
+            pattern_bar_y_freq_slider = TrackbarRow(
                 "Bar y Density",
                 params.get("bar_y_freq"),
-                TrackbarCallback(params.get("bar_y_freq"), "bar_y_freq").__call__,
                 default_font_id)
             
-            # speed_slider = TrackbarRow2(
+            # speed_slider = TrackbarRow(
             #     "Speed",
             #     params.get("pattern_speed"),
-            #     TrackbarCallback(params.get("pattern_speed"), "pattern_speed").__call__,
-            #     self.reset_slider_callback,
             #     default_font_id)
 
-            pattern_distance = TrackbarRow2(
+            pattern_distance = TrackbarRow(
                 "Pattern Distance",
                 params.get("pattern_distance"),
-                TrackbarCallback(params.get("pattern_distance"), "pattern_distance").__call__,
                 default_font_id)
 
-            angle_amt_slider = TrackbarRow2(
+            angle_amt_slider = TrackbarRow(
                 "Radial Frequency",
                 params.get("pattern_radial_freq"),
-                TrackbarCallback(params.get("pattern_radial_freq"), "pattern_radial_freq").__call__,
                 default_font_id)
-            radius_amt_slider = TrackbarRow2(
+            
+            radius_amt_slider = TrackbarRow(
                 "Angular Frequency",
                 params.get("pattern_angular_freq"),
-                TrackbarCallback(params.get("pattern_angular_freq"), "pattern_angular_freq").__call__,
                 default_font_id)
             
-            radial_mod_slider = TrackbarRow2(
+            radial_mod_slider = TrackbarRow(
                 "Radial Mod",
                 params.get("pattern_radial_mod"),
-                TrackbarCallback(params.get("pattern_radial_mod"), "pattern_radial_mod").__call__,
                 default_font_id)
             
-            angle_mod_slider = TrackbarRow2(
+            angle_mod_slider = TrackbarRow(
                 "Angle Mode",
                 params.get("pattern_angle_mod"),
-                TrackbarCallback(params.get("pattern_angle_mod"), "pattern_angle_mod").__call__,
                 default_font_id)
 
-            # use_fractal_slider = TrackbarRow2(
+            # use_fractal_slider = TrackbarRow(
             #     "Use Fractal",
             #     params.get("pattern_use_fractal"),
-            #     TrackbarCallback(params.get("pattern_use_fractal"), "pattern_use_fractal").__call__,
-            #     self.reset_slider_callback,
             #     default_font_id)
 
-            # octaves_slider = TrackbarRow2(
+            # octaves_slider = TrackbarRow(
             #     "Octaves",
             #     params.get("pattern_octaves"),
-            #     TrackbarCallback(params.get("pattern_octaves"), "pattern_octaves").__call__,
-            #     self.reset_slider_callback,
             #     default_font_id)
-            # gain_slider = TrackbarRow2(
+
+            # gain_slider = TrackbarRow(
             #     "Gain",
             #     params.get("pattern_gain"),
-            #     TrackbarCallback(params.get("pattern_gain"), "pattern_gain").__call__,
-            #     self.reset_slider_callback,
             #     default_font_id)
-            # lacunarity_slider = TrackbarRow2(
+
+            # lacunarity_slider = TrackbarRow(
             #     "Lacunarity",
             #     params.get("pattern_lacunarity"),
-            #     TrackbarCallback(params.get("pattern_lacunarity"), "pattern_lacunarity").__call__,
-            #     self.reset_slider_callback,
             #     default_font_id)
             
             posc_freq_sliders = []
@@ -691,121 +675,31 @@ class Patterns:
             posc_shape_sliders = []
             for i in range(3):
                 with dpg.collapsing_header(label=f"\tpOscillator {i}", tag=f"posc{i}"):
-                    posc_shape_sliders.append(TrackbarRow2(
+                    posc_shape_sliders.append(TrackbarRow(
                         f"pOsc {i} Shape", 
                         params.get(f"posc{i}_shape"), 
-                        TrackbarCallback(params.get(f"posc{i}_shape"), f"posc{i}_shape").__call__, 
                         default_font_id))
-                    posc_freq_sliders.append(TrackbarRow2(
+                    
+                    posc_freq_sliders.append(TrackbarRow(
                         f"pOsc {i} Freq", 
                         params.get(f"posc{i}_frequency"), 
-                        TrackbarCallback(params.get(f"posc{i}_frequency"), f"posc{i}_frequency").__call__, 
                         default_font_id))
                     
-                    posc_amp_sliders.append(TrackbarRow2(
+                    posc_amp_sliders.append(TrackbarRow(
                         f"pOsc {i} Amp", 
                         params.get(f"posc{i}_amplitude"), 
-                        TrackbarCallback(params.get(f"posc{i}_amplitude"), f"posc{i}_amplitude").__call__, 
                         default_font_id))
                     
-                    posc_phase_sliders.append(TrackbarRow2(
+                    posc_phase_sliders.append(TrackbarRow(
                         f"pOsc {i} Phase", 
                         params.get(f"posc{i}_phase"), 
-                        TrackbarCallback(params.get(f"posc{i}_phase"), f"posc{i}_phase").__call__, 
                         default_font_id))
                     
-                    posc_seed_sliders.append(TrackbarRow2(
+                    posc_seed_sliders.append(TrackbarRow(
                         f"pOsc {i} Seed", 
                         params.get(f"posc{i}_seed"), 
-                        TrackbarCallback(params.get(f"posc{i}_seed"), f"posc{i}_seed").__call__, 
                         default_font_id))
+                    
                 dpg.bind_item_font(f"posc{i}", global_font_id)
 
         dpg.bind_item_font("pattern_generator", global_font_id)
-
-    
-
-
-# --- Main Execution Block ---
-if __name__ == "__main__":
-    # Define image dimensions
-    WIDTH, HEIGHT = 800, 600
-    FPS = 30 # Frames per second
-
-    # Initialize ParamTable
-    global_params = ParamTable()
-
-    # Create a bank of Oscillators
-    # We'll use 3 oscillators for modulation (osc0, osc1, osc2)
-    posc_bank = []
-    posc_bank.append(Oscillator("osc0", global_params, frequency=0.1, amplitude=0.5, phase=0.0, shape=0)) # Sine
-    posc_bank.append(Oscillator("osc1", global_params, frequency=0.05, amplitude=0.7, phase=np.pi/2, shape=1)) # Sawtooth
-    posc_bank.append(Oscillator("osc2", global_params, frequency=0.08, amplitude=0.6, phase=np.pi, shape=2)) # Square
-
-    # Create the PatternGenerator instance
-    pattern_gen = Pattern(WIDTH, HEIGHT)
-
-    # Set initial pattern type
-    pattern_gen.pattern_type = PatternType.PERLIN_BLOBS
-
-    # OpenCV window setup
-    cv2.namedWindow("Pattern Generator", cv2.WINDOW_AUTOSIZE)
-
-    start_time = time.time()
-    frame_count = 0
-
-    print("\n--- Controls ---")
-    print("Press '1' for BARS pattern")
-    print("Press '2' for WAVES pattern")
-    print("Press '3' for CHECKERS pattern")
-    print("Press '4' for RADIAL pattern")
-    print("Press '5' for PERLIN BLOBS pattern")
-    print("Press '6' for FRACTAL SINE pattern")
-    print("Press '0' for NONE pattern (black screen)")
-    print("Press 'Q' to quit")
-    print("----------------")
-
-    running = True
-    while running:
-        current_time = time.time()
-        delta_time = current_time - start_time
-        start_time = current_time # Reset start_time for next frame's delta_time
-
-        # Update all oscillators
-        for osc in posc_bank:
-            osc.update(delta_time)
-
-        # Generate the current frame
-        frame = pattern_gen.generate_pattern_frame(current_time)
-
-        # Display the frame
-        cv2.imshow("Pattern Generator", frame)
-
-        # Handle key presses
-        key = cv2.waitKey(1) & 0xFF # Wait for 1ms, get key press
-
-        if key == ord('q') or key == ord('Q'):
-            running = False
-        elif key == ord('0'):
-            pattern_gen.pattern_type = PatternType.NONE
-        elif key == ord('1'):
-            pattern_gen.pattern_type = PatternType.BARS
-        elif key == ord('2'):
-            pattern_gen.pattern_type = PatternType.WAVES
-        elif key == ord('3'):
-            pattern_gen.pattern_type = PatternType.CHECKERS
-        elif key == ord('4'):
-            pattern_gen.pattern_type = PatternType.RADIAL
-        elif key == ord('5'):
-            pattern_gen.pattern_type = PatternType.PERLIN_BLOBS
-        elif key == ord('6'):
-            pattern_gen.pattern_type = PatternType.FRACTAL_SINE
-        
-        # Optional: Print FPS for debugging
-        # frame_count += 1
-        # if frame_count % 30 == 0:
-        #     print(f"FPS: {1.0 / delta_time:.2f}")
-
-    cv2.destroyAllWindows()
-    print("Pattern Generator stopped.")
-

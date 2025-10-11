@@ -84,7 +84,11 @@ class Color:
         """
         Shifts the hue, saturation, and value of an image by specified amounts.
         """
-        return [self.shift_hue(hsv[HSV.H]), self.shift_sat(hsv[HSV.S]), self.shift_val(hsv[HSV.V])]
+        return [
+            self.shift_hue(hsv[HSV.H]),
+            self.shift_sat(hsv[HSV.S]),
+            self.shift_val(hsv[HSV.V]),
+        ]
 
     def val_threshold_hue_shift(self, hsv: list):
         """
@@ -104,12 +108,14 @@ class Color:
         mask = hsv[HSV.V.value] > self.val_threshold.value
 
         # Shift and wrap around the hue values for the masked pixels
-        hsv[HSV.H.value][mask] = (hsv[HSV.H.value][mask] + self.val_hue_shift.value) % 180
+        hsv[HSV.H.value][mask] = (
+            hsv[HSV.H.value][mask] + self.val_hue_shift.value
+        ) % 180
 
         return hsv
-    
+
     def modify_hsv(self, image: np.ndarray):
-        hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)        
+        hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         h, s, v = cv2.split(hsv_image)
         hsv = [h, s, v]
 
@@ -118,15 +124,17 @@ class Color:
         hsv = self.val_threshold_hue_shift(hsv)
 
         # Merge the modified channels and convert back to BGR color space.
-        return cv2.cvtColor(cv2.merge((hsv[HSV.H.value], hsv[HSV.S.value], hsv[HSV.V.value])), cv2.COLOR_HSV2BGR)
+        return cv2.cvtColor(
+            cv2.merge((hsv[HSV.H.value], hsv[HSV.S.value], hsv[HSV.V.value])),
+            cv2.COLOR_HSV2BGR,
+        )
 
-    
     def limit_hues_kmeans(self, frame: np.ndarray):
 
         if self.num_hues.value <= self.num_hues.max:
             return frame
 
-        hsv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)        
+        hsv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         # Reshape the image to a 2D array of pixels (N x 3) for K-Means
         # We'll focus on the Hue channel, so we can reshape to (N x 1) if we only want to cluster hue
@@ -179,18 +187,18 @@ class Color:
         # Calculate the step size for quantization
         # Each pixel value will be mapped to one of 'levels_per_channel' distinct values.
         step = 256 // self.levels_per_channel.value
-        
+
         # Calculate the half-step to round to the nearest quantization level
         half_step = step // 2
 
         # Apply posterization to each color channel (B, G, R)
-        
+
         # Method 1: Simple quantization (floor division)
         # posterized_frame = (frame // step) * step
 
         # Method 2: Quantization with rounding (often looks better)
         posterized_frame = ((frame + half_step) // step) * step
-        
+
         # Ensure values stay within 0-255.
         posterized_frame = np.clip(posterized_frame, 0, 255).astype(np.uint8)
 
@@ -214,7 +222,7 @@ class Color:
         # Ensure the image is in 8-bit format (0-255)
         if frame.dtype != np.uint8:
             print("Warning: Image not in uint8 format. Converting...")
-            frame = cv2.convertScaleAbs(frame) # Converts to uint8, scales if needed
+            frame = cv2.convertScaleAbs(frame)  # Converts to uint8, scales if needed
 
         frame = np.where(frame > self.solarize_threshold.value, 255 - frame, frame)
 
@@ -232,7 +240,9 @@ class Color:
         Returns:
             The adjusted image (NumPy array).
         """
-        adjusted_image = cv2.convertScaleAbs(image, alpha=self.contrast.value, beta=self.brightness.value)
+        adjusted_image = cv2.convertScaleAbs(
+            image, alpha=self.contrast.value, beta=self.brightness.value
+        )
         return adjusted_image
 
     def polarize_frame_hsv(self, frame: np.ndarray):
@@ -250,7 +260,7 @@ class Color:
         """
         if self.hue_invert_strength.value <= self.hue_invert_strength.min:
             return frame
-        
+
         # Convert to HSV color space and extract hsv channel
         hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV).astype(np.float32)
         hue_channel = hsv_frame[:, :, 0]
@@ -259,96 +269,83 @@ class Color:
         hue_shift = (self.hue_invert_angle.value / 360.0) * 180
 
         # Apply the hue shift with strength
-        shifted_hue = (hue_channel + hue_shift * self.hue_invert_strength.value) % 180  # Wrap aroundS
+        shifted_hue = (
+            hue_channel + hue_shift * self.hue_invert_strength.value
+        ) % 180  # Wrap aroundS
         hsv_frame[:, :, 0] = shifted_hue
 
         # Convert back to BGR
         polarized_frame = cv2.cvtColor(hsv_frame.astype(np.uint8), cv2.COLOR_HSV2BGR)
-        return polarized_frame    
+        return polarized_frame
 
     def create_sliders(self, default_font_id=None, global_font_id=None):
 
         with dpg.collapsing_header(label=f"\tColor", tag="color"):
-        
-            hue_slider = TrackbarRow2(
-                "Hue Shift", 
-                params["hue_shift"], 
-                TrackbarCallback(params.get("hue_shift"), "hue_shift").__call__, 
-                default_font_id)
-            
-            sat_slider = TrackbarRow2(
-                "Sat Shift", 
-                params.get("sat_shift"), 
-                TrackbarCallback(params.get("sat_shift"), "sat_shift").__call__, 
-                default_font_id)
-            
-            val_slider = TrackbarRow2(
-                "Val Shift", 
-                params.get("val_shift"), 
-                TrackbarCallback(params.get("val_shift"), "val_shift").__call__, 
-                default_font_id)
-            
-            contrast_slider = TrackbarRow2(
-                "Contrast", 
-                params.get("contrast"), 
-                TrackbarCallback(params.get("contrast"), "contrast").__call__, 
-                default_font_id)
-            
-            brightness_slider = TrackbarRow2(
-                "Brighness", 
-                params.get("brightness"), 
-                TrackbarCallback(params.get("brightness"), "brightness").__call__, 
-                default_font_id)
 
-            val_threshold_slider = TrackbarRow2(
-                "Val Threshold", 
-                params.get("val_threshold"), 
-                TrackbarCallback(params.get("val_threshold"), "val_threshold").__call__, 
-                default_font_id)
-            
-            val_hue_shift_slider = TrackbarRow2(
-                "Hue Shift for Val", 
-                params.get("val_hue_shift"), 
-                TrackbarCallback(params.get("val_hue_shift"), "val_hue_shift").__call__, 
-                default_font_id)      
-            
-            hue_invert_angle_slider = TrackbarRow2(
-                "Hue Invert Angle",
-                params.get("hue_invert_angle"),
-                TrackbarCallback(params.get("hue_invert_angle"), "hue_invert_angle").__call__,
-                default_font_id)
-            
-            hue_invert_strength_slider = TrackbarRow2(
+            hue_slider = TrackbarRow("Hue Shift", params["hue_shift"], default_font_id)
+
+            sat_slider = TrackbarRow(
+                "Sat Shift", params.get("sat_shift"), default_font_id
+            )
+
+            val_slider = TrackbarRow(
+                "Val Shift", params.get("val_shift"), default_font_id
+            )
+
+            contrast_slider = TrackbarRow(
+                "Contrast", params.get("contrast"), default_font_id
+            )
+
+            brightness_slider = TrackbarRow(
+                "Brighness", params.get("brightness"), default_font_id
+            )
+
+            val_threshold_slider = TrackbarRow(
+                "Val Threshold", params.get("val_threshold"), default_font_id
+            )
+
+            val_hue_shift_slider = TrackbarRow(
+                "Hue Shift for Val", params.get("val_hue_shift"), default_font_id
+            )
+
+            hue_invert_angle_slider = TrackbarRow(
+                "Hue Invert Angle", params.get("hue_invert_angle"), default_font_id
+            )
+
+            hue_invert_strength_slider = TrackbarRow(
                 "Hue Invert Strength",
                 params.get("hue_invert_strength"),
-                TrackbarCallback(params.get("hue_invert_strength"), "hue_invert_strength").__call__,
-                default_font_id)
-            
-            posterize_slider = TrackbarRow2(
-                "Posterize Levels",
-                params.get("posterize_levels"),
-                TrackbarCallback(params.get("posterize_levels"), "posterize_levels").__call__,
-                default_font_id)
-            
-            solarize_slider = TrackbarRow2(
-                "Solarize Threshold",
-                params.get("solarize_threshold"),
-                TrackbarCallback(params.get("solarize_threshold"), "solarize_threshold").__call__,
-                default_font_id)
-            
+                default_font_id,
+            )
+
+            posterize_slider = TrackbarRow(
+                "Posterize Levels", params.get("posterize_levels"), default_font_id
+            )
+
+            solarize_slider = TrackbarRow(
+                "Solarize Threshold", params.get("solarize_threshold"), default_font_id
+            )
+
         dpg.bind_item_font("color", global_font_id)
 
 
 class Pixels:
-    
+
     def __init__(self, image_width: int, image_height: int):
         self.image_width = image_width
         self.image_height = image_height
 
-        self.sharpen_type = params.add("sharpen_type", SharpenType.NONE.value, len(SharpenType), SharpenType.NONE.value)
+        self.sharpen_type = params.add(
+            "sharpen_type",
+            SharpenType.NONE.value,
+            len(SharpenType),
+            SharpenType.NONE.value,
+        )
         self.sharpen_intensity = params.add("sharpen_intensity", 4.0, 8.0, 4.0)
 
-        self.blur_type = params.add("blur_type", 0, 4, 1) # 1=Gaussian, 2=Median, 3=Box, 4=Bilateral
+        self.blur_type = params.add(
+            "blur_type", 0, 4, 1
+        )  # 1=Gaussian, 2=Median, 3=Box, 4=Bilateral
         self.blur_kernel_size = params.add("blur_kernel_size", 1, 100, 1)
 
     def gaussian_blur(self, frame: np.ndarray):
@@ -357,27 +354,28 @@ class Pixels:
             pass
         elif mode == BlurType.GAUSSIAN:
             # TODO: apply snapping to odd kernel size here rather than in the GUI callback, as other blur type *MAY* permit other sizes
-            frame = cv2.GaussianBlur(frame, (self.blur_kernel_size.value, self.blur_kernel_size.value), 0) 
+            frame = cv2.GaussianBlur(
+                frame, (self.blur_kernel_size.value, self.blur_kernel_size.value), 0
+            )
         elif mode == BlurType.MEDIAN:
             frame = cv2.medianBlur(frame, self.blur_kernel_size.value)
         elif mode == BlurType.BOX:
-            frame = cv2.blur(frame,(self.blur_kernel_size.value, self.blur_kernel_size.value))
+            frame = cv2.blur(
+                frame, (self.blur_kernel_size.value, self.blur_kernel_size.value)
+            )
         elif mode == BlurType.BILATERAL:
-            frame = cv2.bilateralFilter(frame,self.blur_kernel_size.value,75,75)
-        
+            frame = cv2.bilateralFilter(frame, self.blur_kernel_size.value, 75, 75)
+
         return frame
-   
 
     def sharpen_frame(self, frame: np.ndarray):
 
         if self.sharpen_intensity.value <= self.sharpen_intensity.min + 0.01:
             return frame
-        
-        sharpening_kernel = np.array([
-            [0, -1, 0],
-            [-1, self.sharpen_intensity.value, -1],
-            [0, -1, 0]
-        ])
+
+        sharpening_kernel = np.array(
+            [[0, -1, 0], [-1, self.sharpen_intensity.value, -1], [0, -1, 0]]
+        )
 
         # Apply the kernel to the frame using cv2.filter2D
         # -1 indicates that the output image will have the same depth (data type) as the input image.
@@ -406,56 +404,59 @@ class Sync:
 
         # X-axis wobble (horizontal shift per row)
         for y in range(height):
-            shift_x = int(self.x_sync_amp.value * np.sin(
-                y / self.x_sync_freq.value + cv2.getTickCount() / (10 ** self.x_sync_speed.value)))
+            shift_x = int(
+                self.x_sync_amp.value
+                * np.sin(
+                    y / self.x_sync_freq.value
+                    + cv2.getTickCount() / (10**self.x_sync_speed.value)
+                )
+            )
             warped[y] = np.roll(frame[y], shift_x, axis=0)
 
         # Y-axis wobble (vertical shift per column)
         warped_y = np.zeros_like(warped)
         for x in range(width):
-            shift_y = int(self.y_sync_amp.value * np.sin(
-                x / self.y_sync_freq.value + cv2.getTickCount() / (10 ** self.y_sync_speed.value)))
+            shift_y = int(
+                self.y_sync_amp.value
+                * np.sin(
+                    x / self.y_sync_freq.value
+                    + cv2.getTickCount() / (10**self.y_sync_speed.value)
+                )
+            )
             warped_y[:, x] = np.roll(warped[:, x], shift_y, axis=0)
 
         warped_y = cv2.cvtColor(warped_y, cv2.COLOR_RGB2BGR)
         return warped_y
 
-
     def create_sliders(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tSync", tag="sync"):
-                
-                x_sync_speed_slider = TrackbarRow2(
-                    "X Sync Speed",
-                    params.get("x_sync_speed"),
-                    TrackbarCallback(params.get("x_sync_speed"), "x_sync_speed").__call__,
-                    default_font_id)
-                
-                x_sync_freq_slider = TrackbarRow2(
-                    "X Sync Freq",
-                    params.get("x_sync_freq"),
-                    TrackbarCallback(params.get("x_sync_freq"), "x_sync_freq").__call__,
-                    default_font_id)
-                
-                x_sync_amp_slider = TrackbarRow2(
-                    "X Sync Amp",
-                    params.get("x_sync_amp"),
-                    TrackbarCallback(params.get("x_sync_amp"), "x_sync_amp").__call__,
-                    default_font_id)
-                x_sync_speed_slider = TrackbarRow2(
-                    "Y Sync Speed",
-                    params.get("y_sync_speed"),
-                    TrackbarCallback(params.get("y_sync_speed"), "y_sync_speed").__call__,
-                    default_font_id)
-                x_sync_freq_slider = TrackbarRow2(
-                    "Y Sync Freq",
-                    params.get("y_sync_freq"),
-                    TrackbarCallback(params.get("y_sync_freq"), "y_sync_freq").__call__,
-                    default_font_id)
-                x_sync_amp_slider = TrackbarRow2(
-                    "Y Sync Amp",
-                    params.get("y_sync_amp"),
-                    TrackbarCallback(params.get("y_sync_amp"), "y_sync_amp").__call__,
-                    default_font_id)
+
+            x_sync_speed_slider = TrackbarRow(
+                "X Sync Speed", params.get("x_sync_speed"), default_font_id
+            )
+
+            x_sync_freq_slider = TrackbarRow(
+                "X Sync Freq", params.get("x_sync_freq"), default_font_id
+            )
+
+            x_sync_amp_slider = TrackbarRow(
+                "X Sync Amp", params.get("x_sync_amp"), default_font_id
+            )
+
+            x_sync_speed_slider = TrackbarRow(
+                "Y Sync Speed", params.get("y_sync_speed"), default_font_id
+            )
+
+            x_sync_freq_slider = TrackbarRow(
+                "Y Sync Freq",
+                params.get("y_sync_freq"),
+                default_font_id,
+            )
+
+            x_sync_amp_slider = TrackbarRow(
+                "Y Sync Amp", params.get("y_sync_amp"), default_font_id
+            )
+
         dpg.bind_item_font("sync", global_font_id)
 
 
@@ -463,7 +464,9 @@ class Warp:
 
     def __init__(self, image_width: int, image_height: int):
 
-        self.warp_type = params.add("warp_type", WarpType.NONE.value, WarpType.WARP0.value, WarpType.NONE.value)
+        self.warp_type = params.add(
+            "warp_type", WarpType.NONE.value, WarpType.WARP0.value, WarpType.NONE.value
+        )
         self.warp_angle_amt = params.add("warp_angle_amt", 0, 360, 30)
         self.warp_radius_amt = params.add("warp_radius_amt", 0, 360, 30)
         self.warp_speed = params.add("warp_speed", 0, 100, 10)
@@ -472,12 +475,11 @@ class Warp:
         self.warp_gain = params.add("warp_gain", 0.0, 1.0, 0.5)
         self.warp_lacunarity = params.add("warp_lacunarity", 1.0, 4.0, 2.0)
         self.x_speed = params.add("x_speed", 0.0, 100.0, 1.0)
-        self.x_size = params.add("x_size", 0.25, 100.0, 20.0) 
+        self.x_size = params.add("x_size", 0.25, 100.0, 20.0)
         self.y_speed = params.add("y_speed", 0.0, 10.0, 1.0)
         self.y_size = params.add("y_size", 0.0, 100.0, 10.0)
-    
-    
-    # TODO: implement        
+
+    # TODO: implement
     def _generate_perlin_flow(self, t, amp_x, amp_y, freq_x, freq_y):
         fx = np.zeros((self.height, self.width), dtype=np.float32)
         fy = np.zeros((self.height, self.width), dtype=np.float32)
@@ -490,7 +492,9 @@ class Warp:
         return fx, fy
 
     # TODO: implement
-    def _generate_fractal_flow(self, t, amp_x, amp_y, freq_x, freq_y, octaves, gain, lacunarity):
+    def _generate_fractal_flow(
+        self, t, amp_x, amp_y, freq_x, freq_y, octaves, gain, lacunarity
+    ):
         fx = np.zeros((self.height, self.width), dtype=np.float32)
         fy = np.zeros((self.height, self.width), dtype=np.float32)
 
@@ -505,8 +509,12 @@ class Warp:
                 frequency = 1.0
 
                 for _ in range(octaves):
-                    noise_x += amplitude * pnoise2(nx * frequency, ny * frequency, base=int(t))
-                    noise_y += amplitude * pnoise2((nx + 1000) * frequency, (ny + 1000) * frequency, base=int(t))
+                    noise_x += amplitude * pnoise2(
+                        nx * frequency, ny * frequency, base=int(t)
+                    )
+                    noise_y += amplitude * pnoise2(
+                        (nx + 1000) * frequency, (ny + 1000) * frequency, base=int(t)
+                    )
                     amplitude *= gain
                     frequency *= lacunarity
 
@@ -531,150 +539,191 @@ class Warp:
         map_x = (r_mod * np.cos(a_mod) + cx).astype(np.float32)
         map_y = (r_mod * np.sin(a_mod) + cy).astype(np.float32)
 
-        return cv2.remap(img, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+        return cv2.remap(
+            img,
+            map_x,
+            map_y,
+            interpolation=cv2.INTER_LINEAR,
+            borderMode=cv2.BORDER_REFLECT,
+        )
 
     def _first_warp(self, frame: np.ndarray):
         self.height, self.width = feedback_frame.shape[:2]
         feedback_frame = cv2.resize(feedback_frame, (self.width, self.height))
 
         # Create meshgrid for warping effect
-        x_indices, y_indices = np.meshgrid(np.arange(self.width), np.arange(self.height))
+        x_indices, y_indices = np.meshgrid(
+            np.arange(self.width), np.arange(self.height)
+        )
 
         # Calculate warped indices using sine function
         time = cv2.getTickCount() / cv2.getTickFrequency()
-        x_warp = x_indices + self.x_size * np.sin(y_indices / 20.0 + time * self.x_speed)
-        y_warp = y_indices + self.y_size * np.sin(x_indices / 20.0 + time * self.y_speed)
+        x_warp = x_indices + self.x_size * np.sin(
+            y_indices / 20.0 + time * self.x_speed
+        )
+        y_warp = y_indices + self.y_size * np.sin(
+            x_indices / 20.0 + time * self.y_speed
+        )
 
         # Bound indices within valid range
         x_warp = np.clip(x_warp, 0, self.width - 1).astype(np.float32)
         y_warp = np.clip(y_warp, 0, self.height - 1).astype(np.float32)
 
         # Remap frame using warped indices
-        feedback_frame = cv2.remap(feedback_frame, x_warp, y_warp, interpolation=cv2.INTER_LINEAR)  
+        feedback_frame = cv2.remap(
+            feedback_frame, x_warp, y_warp, interpolation=cv2.INTER_LINEAR
+        )
 
         return feedback_frame
-    
+
     # TODO: implement
-    def warp(self, img, t, mode, amp_x, amp_y, freq_x, freq_y, angle_amt, radius_amt, speed, use_fractal, octaves, gain, lacunarity):
-        
+    def warp(
+        self,
+        img,
+        t,
+        mode,
+        amp_x,
+        amp_y,
+        freq_x,
+        freq_y,
+        angle_amt,
+        radius_amt,
+        speed,
+        use_fractal,
+        octaves,
+        gain,
+        lacunarity,
+    ):
+
         if mode == WarpType.NONE:  # No warp
             return img
-        elif mode == WarpType.SINE: # Sine warp
+        elif mode == WarpType.SINE:  # Sine warp
             fx = np.sin(np.linspace(0, np.pi * 2, self.width)[None, :] + t) * amp_x
             fy = np.cos(np.linspace(0, np.pi * 2, self.height)[:, None] + t) * amp_y
             map_x, map_y = np.meshgrid(np.arange(self.width), np.arange(self.height))
             map_x = (map_x + fx).astype(np.float32)
             map_y = (map_y + fy).astype(np.float32)
-            return cv2.remap(img, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
-        
+            return cv2.remap(
+                img,
+                map_x,
+                map_y,
+                interpolation=cv2.INTER_LINEAR,
+                borderMode=cv2.BORDER_REFLECT,
+            )
+
         elif mode == WarpType.FRACTAL:
             if use_fractal:
-                fx, fy = self._generate_fractal_flow(t, amp_x, amp_y, freq_x, freq_y, octaves, gain, lacunarity)
+                fx, fy = self._generate_fractal_flow(
+                    t, amp_x, amp_y, freq_x, freq_y, octaves, gain, lacunarity
+                )
             else:
-                fx, fy = self._generate_fractal_flow(t, amp_x, amp_y, freq_x, freq_y, 1, 1.0, 1.0)  # fallback: single octave
+                fx, fy = self._generate_fractal_flow(
+                    t, amp_x, amp_y, freq_x, freq_y, 1, 1.0, 1.0
+                )  # fallback: single octave
             map_x, map_y = np.meshgrid(np.arange(self.width), np.arange(self.height))
             map_x = (map_x + fx).astype(np.float32)
             map_y = (map_y + fy).astype(np.float32)
-            return cv2.remap(img, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+            return cv2.remap(
+                img,
+                map_x,
+                map_y,
+                interpolation=cv2.INTER_LINEAR,
+                borderMode=cv2.BORDER_REFLECT,
+            )
 
         elif mode == WarpType.RADIAL:
             return self.polar_warp(img, t, angle_amt, radius_amt, speed)
-        
+
         elif mode == WarpType.PERLIN:  # Perlin warp
             # Fractal Perlin warp
             fx, fy = self._generate_perlin_flow(t, amp_x, amp_y, freq_x, freq_y)
             map_x, map_y = np.meshgrid(np.arange(self.width), np.arange(self.height))
             map_x = (map_x + fx).astype(np.float32)
             map_y = (map_y + fy).astype(np.float32)
-            return cv2.remap(img, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+            return cv2.remap(
+                img,
+                map_x,
+                map_y,
+                interpolation=cv2.INTER_LINEAR,
+                borderMode=cv2.BORDER_REFLECT,
+            )
         elif mode == WarpType.WARP0:
             return self._first_warp(img)
 
-
     def create_sliders(self, default_font_id=None, global_font_id=None):
+
         with dpg.collapsing_header(label=f"\tWarp", tag="warp"):
-            warp_type_slider = TrackbarRow2(
+
+            warp_type_slider = TrackbarRow(
                 "Warp Type",
                 params.get("warp_type"),
-                TrackbarCallback(params.get("warp_type"), "warp_type").__call__,
-                default_font_id)
-            warp_angle_amt_slider = TrackbarRow2(
-                "Warp Angle Amt",
-                params.get("warp_angle_amt"),
-                TrackbarCallback(params.get("warp_angle_amt"), "warp_angle_amt").__call__,
-                default_font_id)
-            
-            warp_radius_amt_slider = TrackbarRow2(
-                "Warp Radius Amt",
-                params.get("warp_radius_amt"),
-                TrackbarCallback(params.get("warp_radius_amt"), "warp_radius_amt").__call__,
-                default_font_id)
-            
-            warp_speed_slider = TrackbarRow2(
-                "Warp Speed",
-                params.get("warp_speed"),
-                TrackbarCallback(params.get("warp_speed"), "warp_speed").__call__,
-                default_font_id)
-            
-            warp_use_fractal_slider = TrackbarRow2(
-                "Warp Use Fractal",
-                params.get("warp_use_fractal"),
-                TrackbarCallback(params.get("warp_use_fractal"), "warp_use_fractal").__call__,
-                default_font_id)
-            warp_octaves_slider = TrackbarRow2(
-                "Warp Octaves",
-                params.get("warp_octaves"),
-                TrackbarCallback(params.get("warp_octaves"), "warp_octaves").__call__,
-                default_font_id)
-            warp_gain_slider = TrackbarRow2(
-                "Warp Gain",
-                params.get("warp_gain"),
-                TrackbarCallback(params.get("warp_gain"), "warp_gain").__call__,
-                default_font_id)
-            warp_lacunarity_slider = TrackbarRow2(
-                "Warp Lacunarity",
-                params.get("warp_lacunarity"),
-                TrackbarCallback(params.get("warp_lacunarity"), "warp_lacunarity").__call__,
-                default_font_id)
-            x_speed_slider = TrackbarRow2(
-                "X Speed",
-                params.get("x_speed"),
-                TrackbarCallback(params.get("x_speed"), "x_speed").__call__,
-                default_font_id)
-            y_speed_slider = TrackbarRow2(
-                "Y Speed",
-                params.get("y_speed"),
-                TrackbarCallback(params.get("y_speed"), "y_speed").__call__,
-                default_font_id)
-            x_size_slider = TrackbarRow2(
-                "X Size",
-                params.get("x_size"),
-                TrackbarCallback(params.get("x_size"), "x_size").__call__,
-                default_font_id)
-            y_size_slider = TrackbarRow2(
-                "Y Size",
-                params.get("y_size"),
-                TrackbarCallback(params.get("y_size"), "y_size").__call__,
-                default_font_id)
+                default_font_id,
+            )
+
+            warp_angle_amt_slider = TrackbarRow(
+                "Warp Angle Amt", params.get("warp_angle_amt"), default_font_id
+            )
+
+            warp_radius_amt_slider = TrackbarRow(
+                "Warp Radius Amt", params.get("warp_radius_amt"), default_font_id
+            )
+
+            warp_speed_slider = TrackbarRow(
+                "Warp Speed", params.get("warp_speed"), default_font_id
+            )
+
+            warp_use_fractal_slider = TrackbarRow(
+                "Warp Use Fractal", params.get("warp_use_fractal"), default_font_id
+            )
+
+            warp_octaves_slider = TrackbarRow(
+                "Warp Octaves", params.get("warp_octaves"), default_font_id
+            )
+
+            warp_gain_slider = TrackbarRow(
+                "Warp Gain", params.get("warp_gain"), default_font_id
+            )
+
+            warp_lacunarity_slider = TrackbarRow(
+                "Warp Lacunarity", params.get("warp_lacunarity"), default_font_id
+            )
+
+            x_speed_slider = TrackbarRow(
+                "X Speed", params.get("x_speed"), default_font_id
+            )
+
+            y_speed_slider = TrackbarRow(
+                "Y Speed", params.get("y_speed"), default_font_id
+            )
+
+            x_size_slider = TrackbarRow(
+                "X Size", params.get("x_size"), default_font_id
+            )
+
+            y_size_slider = TrackbarRow(
+                "Y Size", params.get("y_size"), default_font_id
+            )
 
 
 class ReflectionMode(Enum):
     """Enumeration for different image reflection modes."""
-    NONE = 0        # No reflection
+
+    NONE = 0  # No reflection
     HORIZONTAL = 1  # Reflect across the Y-axis (flip horizontally)
-    VERTICAL = 2    # Reflect across the X-axis (flip vertically)
-    BOTH = 3       # Reflect across both X and Y axes (flip horizontally and vertically)
+    VERTICAL = 2  # Reflect across the X-axis (flip vertically)
+    BOTH = 3  # Reflect across both X and Y axes (flip horizontally and vertically)
     QUAD_SYMMETRY = 4  # Reflect across both axes with quadrants (not implemented)
-    SPLIT = 5      # Reflect left half onto right half
+    SPLIT = 5  # Reflect left half onto right half
 
     def __str__(self):
-        return self.name.replace('_', ' ').title()
+        return self.name.replace("_", " ").title()
 
 
 class Reflector:
     """
     A class to apply reflection transformations to image frames from a stream.
     """
+
     def __init__(self, mode: ReflectionMode = ReflectionMode.NONE):
         """
         Initializes the StreamReflector with a specified reflection mode.
@@ -684,7 +733,9 @@ class Reflector:
         """
         if not isinstance(mode, ReflectionMode):
             raise ValueError("mode must be an instance of ReflectionMode Enum.")
-        self._mode = params.add("reflection_mode", 0, len(ReflectionMode) - 1, ReflectionMode.NONE.value)
+        self._mode = params.add(
+            "reflection_mode", 0, len(ReflectionMode) - 1, ReflectionMode.NONE.value
+        )
         self.num_axis = 3
         print(f"StreamReflector initialized with mode: {self._mode}")
 
@@ -722,7 +773,9 @@ class Reflector:
             return cv2.flip(frame, -1)
         elif self._mode.value == ReflectionMode.QUAD_SYMMETRY.value:
             return self._apply_quad_symmetry(frame)
-        elif self._mode.value == ReflectionMode.SPLIT.value:  # New mode: reflect left half onto right half
+        elif (
+            self._mode.value == ReflectionMode.SPLIT.value
+        ):  # New mode: reflect left half onto right half
             height, width = frame.shape[:2]
             w_half = width // 2
             output_frame = frame.copy()
@@ -730,10 +783,12 @@ class Reflector:
             # Reflect left half horizontally
             reflected_left = cv2.flip(left_half, 1)
             # Place reflected left half onto right half
-            output_frame[:, w_half:] = reflected_left[:, :width - w_half]
+            output_frame[:, w_half:] = reflected_left[:, : width - w_half]
             return output_frame
         else:
-            print(f"Warning: Unknown reflection mode: {self._mode}. Returning original frame.")
+            print(
+                f"Warning: Unknown reflection mode: {self._mode}. Returning original frame."
+            )
             return frame.copy()
 
     def _apply_quad_symmetry(self, frame: np.ndarray) -> np.ndarray:
@@ -742,7 +797,7 @@ class Reflector:
         It takes the top-left quadrant and reflects it to fill the other three.
         """
         height, width = frame.shape[:2]
-        
+
         # Calculate half dimensions
         h_half = height // 2
         w_half = width // 2
@@ -753,12 +808,16 @@ class Reflector:
             return frame.copy()
 
         # Extract the top-left quadrant
-        top_left_quadrant = frame[0:h_half, 0:w_half].copy() # .copy() is important to avoid modifying original
+        top_left_quadrant = frame[
+            0:h_half, 0:w_half
+        ].copy()  # .copy() is important to avoid modifying original
 
         # Create reflected versions
         top_right_quadrant = cv2.flip(top_left_quadrant, 1)  # Flip horizontally
-        bottom_left_quadrant = cv2.flip(top_left_quadrant, 0) # Flip vertically
-        bottom_right_quadrant = cv2.flip(top_left_quadrant, -1) # Flip both horizontally and vertically
+        bottom_left_quadrant = cv2.flip(top_left_quadrant, 0)  # Flip vertically
+        bottom_right_quadrant = cv2.flip(
+            top_left_quadrant, -1
+        )  # Flip both horizontally and vertically
 
         # Create a new canvas to assemble the reflected parts
         # Ensure the output frame matches the original dimensions, even if they were odd
@@ -774,17 +833,16 @@ class Reflector:
 
     def create_sliders(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tReflector", tag="reflector"):
-            reflection_mode_slider = TrackbarRow2(
-                "Reflection Mode",
-                params.get("reflection_mode"),
-                TrackbarCallback(params.get("reflection_mode"), "reflection_mode").__call__,
-                default_font_id)
-            # reflection_strength_slider = TrackbarRow2(
+
+            reflection_mode_slider = TrackbarRow(
+                "Reflection Mode", params.get("reflection_mode"), default_font_id
+            )
+
+            # reflection_strength_slider = TrackbarRow(
             #     "Reflection Strength",
             #     params.get("reflection_strength"),
-            #     TrackbarCallback(params.get("reflection_strength"), "reflection_strength").__call__,
-            #     self.reset_slider_callback,
             #     default_font_id)
+
         dpg.bind_item_font("reflector", global_font_id)
 
 
@@ -793,15 +851,18 @@ class PTZ:
 
         self.height = image_height
         self.width = image_width
-        self.x_shift = params.add("x_shift", -image_width, image_width, 0, family="Pan") # min/max depends on image size
-        self.y_shift = params.add("y_shift", -image_height, image_height, 0, family="Pan") # min/max depends on image size
+        self.x_shift = params.add(
+            "x_shift", -image_width, image_width, 0, family="Pan"
+        )  # min/max depends on image size
+        self.y_shift = params.add(
+            "y_shift", -image_height, image_height, 0, family="Pan"
+        )  # min/max depends on image size
         self.zoom = params.add("zoom", 0.75, 3, 1.0, family="Pan")
         self.r_shift = params.add("r_shift", -360, 360, 0.0, family="Pan")
 
-        self.polar_x = params.add("polar_x", -image_width//2, image_width//2, 0)
-        self.polar_y = params.add("polar_y", -image_height//2, image_height//2, 0)
+        self.polar_x = params.add("polar_x", -image_width // 2, image_width // 2, 0)
+        self.polar_y = params.add("polar_y", -image_height // 2, image_height // 2, 0)
         self.polar_radius = params.add("polar_radius", 0.1, 100, 1.0)
-
 
     def shift_frame(self, frame: np.ndarray):
         """
@@ -832,13 +893,14 @@ class PTZ:
         shifted_frame = frame[y_map[:, np.newaxis], x_map]
 
         # Use cv2.getRotationMatrix2D to get the rotation matrix
-        M = cv2.getRotationMatrix2D(center, self.r_shift.value, self.zoom.value)  # 1.0 is the scale
+        M = cv2.getRotationMatrix2D(
+            center, self.r_shift.value, self.zoom.value
+        )  # 1.0 is the scale
 
         # Perform the rotation using cv2.warpAffine
         rotated_frame = cv2.warpAffine(shifted_frame, M, (width, height))
 
         return rotated_frame
-
 
     def polar_transform(self, frame: np.ndarray):
         """
@@ -847,7 +909,9 @@ class PTZ:
         """
         height, width = frame.shape[:2]
         center = (width // 2 + self.polar_x, height // 2 + self.polar_y.value)
-        max_radius = np.sqrt((width // self.polar_radius)**2 + (height // self.polar_radius.value)**2)
+        max_radius = np.sqrt(
+            (width // self.polar_radius) ** 2 + (height // self.polar_radius.value) ** 2
+        )
 
         #    The flags parameter is important:
         #    cv2.INTER_LINEAR:  Bilinear interpolation (good quality)
@@ -858,7 +922,7 @@ class PTZ:
             (width, height),  # Output size (can be different from input)
             center,
             max_radius,
-            flags=cv2.INTER_LINEAR + cv2.WARP_FILL_OUTLIERS # or +WARP_POLAR_LOG
+            flags=cv2.INTER_LINEAR + cv2.WARP_FILL_OUTLIERS,  # or +WARP_POLAR_LOG
         )
 
     def on_button_click(self, sender, app_data, user_data):
@@ -869,53 +933,44 @@ class PTZ:
         else:
             enable_polar_transform = True
 
-    def create_sliders(self, default_font_id=None, global_font_id=None, width=550, height=600):
+    def create_sliders(
+        self, default_font_id=None, global_font_id=None, width=550, height=600
+    ):
         with dpg.collapsing_header(label=f"\tPan", tag="pan"):
-            
-            x_shift_slider = TrackbarRow2(
-                "X Shift", 
-                params.get("x_shift"), 
-                TrackbarCallback(params.get("x_shift"), "x_shift").__call__, 
-                default_font_id)         
 
-            y_shift_slider = TrackbarRow2(
-                "Y Shift", 
-                params.get("y_shift"), 
-                TrackbarCallback(params.get("y_shift"), "y_shift").__call__, 
-                default_font_id)
-            
-            r_shift_slider = TrackbarRow2(
-                "R Shift", 
-                params.get("r_shift"), 
-                TrackbarCallback(params.get("r_shift"), "r_shift").__call__, 
-                default_font_id)
-            
-            zoom_slider = TrackbarRow2(
-                "Zoom",
-                params.get("zoom"),
-                TrackbarCallback(params.get("zoom"), "zoom").__call__,
-                default_font_id)
+            x_shift_slider = TrackbarRow(
+                "X Shift", params.get("x_shift"), default_font_id
+            )
+            y_shift_slider = TrackbarRow(
+                "Y Shift", params.get("y_shift"), default_font_id
+            )
+            r_shift_slider = TrackbarRow(
+                "R Shift", params.get("r_shift"), default_font_id
+            )
+            zoom_slider = TrackbarRow("Zoom", params.get("zoom"), default_font_id)
 
-            enable_polar_transform_button = Button("Enable Polar Transform", "enable_polar_transform")
-            dpg.add_button(label=enable_polar_transform_button.label, tag="enable_polar_transform", callback=self.on_button_click, user_data=enable_polar_transform_button.tag, width=width)
+            enable_polar_transform_button = Button(
+                "Enable Polar Transform", "enable_polar_transform"
+            )
+            dpg.add_button(
+                label=enable_polar_transform_button.label,
+                tag="enable_polar_transform",
+                callback=self.on_button_click,
+                user_data=enable_polar_transform_button.tag,
+                width=width,
+            )
             dpg.bind_item_font(enable_polar_transform_button.tag, default_font_id)
-            polar_x_slider = TrackbarRow2(
-                "Polar Center X", 
-                params.get("polar_x"), 
-                TrackbarCallback(params.get("polar_x"), "polar_x").__call__, 
-                default_font_id)
-            
-            polar_y_slider = TrackbarRow2(
-                "Polar Center Y", 
-                params.get("polar_y"), 
-                TrackbarCallback(params.get("polar_y"), "polar_y").__call__, 
-                default_font_id)
-            
-            polar_radius_slider = TrackbarRow2(
-                "Polar radius", 
-                params.get("polar_radius"), 
-                TrackbarCallback(params.get("polar_radius"), "polar_radius").__call__, 
-                default_font_id)
+
+            polar_x_slider = TrackbarRow(
+                "Polar Center X", params.get("polar_x"), default_font_id
+            )
+            polar_y_slider = TrackbarRow(
+                "Polar Center Y", params.get("polar_y"), default_font_id
+            )
+            polar_radius_slider = TrackbarRow(
+                "Polar radius", params.get("polar_radius"), default_font_id
+            )
+
         dpg.bind_item_font("pan", global_font_id)
 
 
@@ -936,7 +991,9 @@ class Effects:
         self.alpha = params.add("alpha", 0.0, 1.0, 0.0)
         self.temporal_filter = params.add("temporal_filter", 0, 1.0, 1.0)
         self.feedback_luma_threshold = params.add("feedback_luma_threshold", 0, 255, 0)
-        self.luma_select_mode = params.add("luma_select_mode", 0, len(LumaMode)-1, LumaMode.NONE.value)
+        self.luma_select_mode = params.add(
+            "luma_select_mode", 0, len(LumaMode) - 1, LumaMode.NONE.value
+        )
 
         # TODO: implement
         self.sequence = params.add("sequence", 0, 100, 0)
@@ -951,7 +1008,6 @@ class Effects:
         self.buffer_size = params.add("buffer_size", 0, self.max_buffer_size, 5)
         # this should probably be initialized in reset() to avoid issues with reloading config
         self.frame_buffer = deque(maxlen=self.max_buffer_size)
-
 
     def avg_frame_buffer(self, frame):
 
@@ -975,7 +1031,6 @@ class Effects:
         # Convert the averaged frame back to the correct data type (uint8)
         return np.clip(avg_frame, 0, 255).astype(np.uint8)
 
-    
     def apply_temporal_filter(self, prev_frame, cur_frame):
         """
         Applies a temporal filter (exponential moving average) to reduce noise and flicker in a video stream.
@@ -997,41 +1052,51 @@ class Effects:
         # filtered_frame = alpha * current_frame_float + (1 - alpha) * filtered_frame
         # This formula directly updates the filtered_frame based on the new current_frame.
         # It's a low-pass filter in the time domain.
-        filtered_frame = cv2.addWeighted(current_frame_float, self.temporal_filter.value, filtered_frame, 1 - self.temporal_filter.value, 0)
+        filtered_frame = cv2.addWeighted(
+            current_frame_float,
+            self.temporal_filter.value,
+            filtered_frame,
+            1 - self.temporal_filter.value,
+            0,
+        )
 
         # Convert back to uint8 for display
         return cv2.convertScaleAbs(filtered_frame)
 
-
     def apply_luma_feedback(self, prev_frame, cur_frame):
         # The mask will determine which parts of the current frame are kept
         gray = cv2.cvtColor(cur_frame, cv2.COLOR_BGR2GRAY)
-        
+
         if self.luma_select_mode.value == LumaMode.NONE.value:
             return cur_frame
         elif self.luma_select_mode.value == LumaMode.BLACK.value:
             # Use THRESH_BINARY_INV to key out DARK areas (Luma is low)
             # Pixels with Luma < threshold become white (255) in the mask, meaning they are KEPT
-            ret, mask = cv2.threshold(gray, self.feedback_luma_threshold.value, 255, cv2.THRESH_BINARY_INV) 
+            ret, mask = cv2.threshold(
+                gray, self.feedback_luma_threshold.value, 255, cv2.THRESH_BINARY_INV
+            )
         elif self.luma_select_mode.value == LumaMode.WHITE.value:
-            ret, mask = cv2.threshold(gray, self.feedback_luma_threshold.value, 255, cv2.THRESH_BINARY) 
+            ret, mask = cv2.threshold(
+                gray, self.feedback_luma_threshold.value, 255, cv2.THRESH_BINARY
+            )
 
         # Keep the keyed-out (bright) parts of the current frame
         fg = cv2.bitwise_and(cur_frame, cur_frame, mask=mask)
-        
+
         # Invert the mask to find the areas *not* keyed out (the dark areas)
         mask_inv = cv2.bitwise_not(mask)
-        
+
         # Use the inverted mask to "cut a hole" in the previous frame
         bg = cv2.bitwise_and(prev_frame, prev_frame, mask=mask_inv)
 
         # Combine the new foreground (fg) with the previous frame's background (bg)
         return cv2.add(fg, bg)
 
-
     # TODO: implement
-    def apply_perlin_noise(self, frame, perlin_noise, amplitude=1.0, frequency=1.0, octaves=1):
-        """ 
+    def apply_perlin_noise(
+        self, frame, perlin_noise, amplitude=1.0, frequency=1.0, octaves=1
+    ):
+        """
         Applies Perlin noise to a frame to create a textured effect.
         Args:
             frame (numpy.ndarray): The input frame as a NumPy array (H, W, 3) in BGR format.
@@ -1047,7 +1112,10 @@ class Effects:
 
         for y in range(height):
             for x in range(width):
-                noise[y, x] = perlin_noise([x / frequency, y / frequency], octaves=octaves) * amplitude
+                noise[y, x] = (
+                    perlin_noise([x / frequency, y / frequency], octaves=octaves)
+                    * amplitude
+                )
 
         # Normalize the noise to [0, 255]
         noise = cv2.normalize(noise, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
@@ -1057,117 +1125,103 @@ class Effects:
 
         # Blend the original frame with the noise
         noisy_frame = cv2.addWeighted(frame, 1.0, noise_colored, 0.5, 0)
-        
+
         return noisy_frame
 
-    # TODO: make this more engaging   
+    # TODO: make this more engaging
     def lissajous_pattern(self, frame, t):
         center_x, center_y = self.width // 2, self.height // 2
         for i in range(1000):
-            x = int(center_x + self.lissajous_A.value * math.sin(self.lissajous_a.value * t + i * 0.01 + self.lissajous_delta.value * math.pi / 180))
-            y = int(center_y + self.lissajous_B.value * math.sin(self.lissajous_b.value* t + i * 0.01))
+            x = int(
+                center_x
+                + self.lissajous_A.value
+                * math.sin(
+                    self.lissajous_a.value * t
+                    + i * 0.01
+                    + self.lissajous_delta.value * math.pi / 180
+                )
+            )
+            y = int(
+                center_y
+                + self.lissajous_B.value
+                * math.sin(self.lissajous_b.value * t + i * 0.01)
+            )
             cv2.circle(frame, (x, y), 1, (255, 255, 255), -1)
 
         return frame
 
-
     def create_sliders(self, default_font_id=None, global_font_id=None):
-    
+
         with dpg.collapsing_header(label=f"\tEffects", tag="effects"):
 
-            temporal_filter_slider = TrackbarRow2(
-                "Temporal Filter", 
-                params.get("temporal_filter"), 
-                TrackbarCallback(params.get("temporal_filter"), "temporal_filter").__call__, 
-                default_font_id)
-        
-            alpha_slider = TrackbarRow2(
-                "Feedback", 
-                params.get("alpha"), 
-                TrackbarCallback(params.get("alpha"), "alpha").__call__, 
-                default_font_id)
-            
-            luma_slider = TrackbarRow2(
-                "Luma Feedback Threshold",
-                params.get("feedback_luma_threshold"),
-                TrackbarCallback(params.get("feedback_luma_threshold"), "feedback_luma_threshold").__call__,
-                default_font_id
+            temporal_filter_slider = TrackbarRow(
+                "Temporal Filter", params.get("temporal_filter"), default_font_id
             )
 
-            luma_mode = TrackbarRow2(
-                "Luma Mode",
-                params.get("luma_select_mode"),
-                TrackbarCallback(params.get("luma_select_mode"), "luma_select_mode").__call__,
-                default_font_id
+            alpha_slider = TrackbarRow(
+                "Feedback", params.get("alpha"), default_font_id
             )
-            
-            frame_buffer_size_slider = TrackbarRow2(
-                "Frame Buffer Size",
-                params.get("buffer_size"),
-                TrackbarCallback(params.get("buffer_size"), "buffer_size").__call__,
-                default_font_id)
-            
-            frame_skip_slider = TrackbarRow2(
-                "Frame Skip",
-                params.get("frame_skip"),
-                TrackbarCallback(params.get("frame_skip"), "frame_skip").__call__,
-                default_font_id)
-            
-            blur_kernel_slider = TrackbarRow2(
-                "Blur Kernel", 
-                params.get("blur_kernel_size"), 
-                TrackbarCallback(params.get("blur_kernel_size"), "blur_kernel_size").__call__, 
-                default_font_id)
-            
-            blur_type_slider = TrackbarRow2(
-                "Blur Type",
-                params.get("blur_type"),
-                TrackbarCallback(params.get("blur_type"), "blur_type").__call__,
-                default_font_id)
-            
-            sharpen_slider = TrackbarRow2(
-                "Sharpen Amount",
-                params.get("sharpen_intensity"),
-                TrackbarCallback(params.get("sharpen_intensity"), "sharpen_intensity").__call__,
-                default_font_id)
-            
-            num_hues_slider = TrackbarRow2(
-                "Num Hues",
-                params.get("num_hues"),
-                TrackbarCallback(params.get("num_hues"), "num_hues").__call__,
-                default_font_id)
+
+            luma_slider = TrackbarRow(
+                "Luma Feedback Threshold",
+                params.get("feedback_luma_threshold"),
+                default_font_id,
+            )
+
+            luma_mode = TrackbarRow(
+                "Luma Mode", params.get("luma_select_mode"), default_font_id
+            )
+
+            frame_buffer_size_slider = TrackbarRow(
+                "Frame Buffer Size", params.get("buffer_size"), default_font_id
+            )
+
+            frame_skip_slider = TrackbarRow(
+                "Frame Skip", params.get("frame_skip"), default_font_id
+            )
+
+            blur_kernel_slider = TrackbarRow(
+                "Blur Kernel", params.get("blur_kernel_size"), default_font_id
+            )
+
+            blur_type_slider = TrackbarRow(
+                "Blur Type", params.get("blur_type"), default_font_id
+            )
+
+            sharpen_slider = TrackbarRow(
+                "Sharpen Amount", params.get("sharpen_intensity"), default_font_id
+            )
+
+            num_hues_slider = TrackbarRow(
+                "Num Hues", params.get("num_hues"), default_font_id
+            )
 
         dpg.bind_item_font("effects", global_font_id)
 
-    
     def temp_create_sliders(self, default_font_id=None, global_font_id=None):
-            with dpg.collapsing_header(label=f"\tLissajous", tag="Lissajous"):
-                lissajous_A_slider = TrackbarRow2(
-                    "Lissajous A",
-                    params.get("lissajous_A"),
-                    TrackbarCallback(params.get("lissajous_A"), "lissajous_A").__call__,
-                        default_font_id)
-                lissajous_B_slider = TrackbarRow2(
-                    "Lissajous B",
-                    params.get("lissajous_B"),
-                    TrackbarCallback(params.get("lissajous_B"), "lissajous_B").__call__,
-                        default_font_id)
-                lissajous_a_slider = TrackbarRow2(
-                    "Lissajous a",
-                    params.get("lissajous_a"),
-                    TrackbarCallback(params.get("lissajous_a"), "lissajous_a").__call__,
-                        default_font_id)
-                lissajous_b_slider = TrackbarRow2(
-                    "Lissajous b",
-                    params.get("lissajous_b"),
-                    TrackbarCallback(params.get("lissajous_b"), "lissajous_b").__call__,
-                        default_font_id)
-                lissajous_delta_slider = TrackbarRow2(
-                    "Lissajous Delta",
-                    params.get("lissajous_delta"),
-                    TrackbarCallback(params.get("lissajous_delta"), "lissajous_delta").__call__,
-                        default_font_id)
-            dpg.bind_item_font("Lissajous", global_font_id)
+        with dpg.collapsing_header(label=f"\tLissajous", tag="Lissajous"):
+
+            lissajous_A_slider = TrackbarRow(
+                "Lissajous A", params.get("lissajous_A"), default_font_id
+            )
+
+            lissajous_B_slider = TrackbarRow(
+                "Lissajous B", params.get("lissajous_B"), default_font_id
+            )
+
+            lissajous_a_slider = TrackbarRow(
+                "Lissajous a", params.get("lissajous_a"), default_font_id
+            )
+
+            lissajous_b_slider = TrackbarRow(
+                "Lissajous b", params.get("lissajous_b"), default_font_id
+            )
+
+            lissajous_delta_slider = TrackbarRow(
+                "Lissajous Delta", params.get("lissajous_delta"), default_font_id
+            )
+
+        dpg.bind_item_font("Lissajous", global_font_id)
 
 
 class NoiseType(IntEnum):
@@ -1182,7 +1236,9 @@ class NoiseType(IntEnum):
 
 class ImageNoiser:
 
-    def __init__(self, noise_type: NoiseType = NoiseType.NONE, noise_intensity: float = 0.1):
+    def __init__(
+        self, noise_type: NoiseType = NoiseType.NONE, noise_intensity: float = 0.1
+    ):
         """
         Initializes the ImageNoiser with a default noise type and intensity.
 
@@ -1198,9 +1254,13 @@ class ImageNoiser:
 
         # self._noise_type = noise_type
         # self._noise_intensity = noise_intensity
-        self._noise_type = params.add("noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, noise_type.value)
+        self._noise_type = params.add(
+            "noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, noise_type.value
+        )
         self._noise_intensity = params.add("noise_intensity", 0.0, 1.0, noise_intensity)
-        print(f"ImageNoiser initialized with type: {self._noise_type.value}, intensity: {self._noise_intensity}")
+        print(
+            f"ImageNoiser initialized with type: {self._noise_type.value}, intensity: {self._noise_intensity}"
+        )
 
     @property
     def noise_type(self) -> NoiseType:
@@ -1261,8 +1321,10 @@ class ImageNoiser:
         elif self._noise_type.value == NoiseType.RANDOM.value:
             return self._apply_random_noise(noisy_image)
         else:
-            print(f"Unknown noise type: {self._noise_type.value}. Returning original image.")
-            return image.copy() # Return original if type is unknown
+            print(
+                f"Unknown noise type: {self._noise_type.value}. Returning original image."
+            )
+            return image.copy()  # Return original if type is unknown
 
     def _apply_none_noise(self, image: np.ndarray) -> np.ndarray:
         """Returns the image without applying any noise."""
@@ -1289,9 +1351,15 @@ class ImageNoiser:
         Intensity controls the scaling factor for the Poisson distribution.
         """
         # Scale to a range suitable for Poisson (e.g., 0-100), Then add noise and scale back
-        scaled_image = image / 255.0 * 100.0 # Scale to 0-100 for better Poisson distribution
-        poisson_noise = np.random.poisson(scaled_image * self._noise_intensity.value * 2).astype(np.float32)
-        noisy_image = image + (poisson_noise / 100.0 * 255.0) # Scale noise back to 0-255 range
+        scaled_image = (
+            image / 255.0 * 100.0
+        )  # Scale to 0-100 for better Poisson distribution
+        poisson_noise = np.random.poisson(
+            scaled_image * self._noise_intensity.value * 2
+        ).astype(np.float32)
+        noisy_image = image + (
+            poisson_noise / 100.0 * 255.0
+        )  # Scale noise back to 0-255 range
         return np.clip(noisy_image, 0, 255).astype(np.uint8)
 
     def _apply_salt_and_pepper_noise(self, image: np.ndarray) -> np.ndarray:
@@ -1299,8 +1367,8 @@ class ImageNoiser:
         Applies Salt & Pepper noise to the image.
         Intensity controls the proportion of pixels affected.
         """
-        amount = self._noise_intensity # Proportion of pixels to affect
-        s_vs_p = 0.5 # Ratio of salt vs. pepper (0.5 means equal)
+        amount = self._noise_intensity  # Proportion of pixels to affect
+        s_vs_p = 0.5  # Ratio of salt vs. pepper (0.5 means equal)
 
         # Apply salt noise (white pixels)
         num_salt = np.ceil(amount * image.size * s_vs_p).astype(int)
@@ -1320,7 +1388,7 @@ class ImageNoiser:
         Intensity controls the standard deviation of the noise.
         """
         mean = 0
-        std_dev = self._noise_intensity * 0.5 # Scale std_dev for multiplicative noise
+        std_dev = self._noise_intensity * 0.5  # Scale std_dev for multiplicative noise
         speckle_noise = np.random.normal(mean, std_dev, image.shape).astype(np.float32)
         noisy_image = image + image * speckle_noise
         return np.clip(noisy_image, 0, 255).astype(np.uint8)
@@ -1331,9 +1399,11 @@ class ImageNoiser:
         and setting them to a random value within the 0-255 range.
         Intensity controls the proportion of pixels affected.
         """
-        amount = self._noise_intensity # Proportion of pixels to affect
+        amount = self._noise_intensity  # Proportion of pixels to affect
 
-        num_pixels_to_affect = np.ceil(amount * image.size / image.shape[-1] if image.ndim == 3 else image.size).astype(int)
+        num_pixels_to_affect = np.ceil(
+            amount * image.size / image.shape[-1] if image.ndim == 3 else image.size
+        ).astype(int)
 
         # Get image dimensions
         height, width = image.shape[0], image.shape[1]
@@ -1345,13 +1415,13 @@ class ImageNoiser:
         # Apply random values to the selected pixels
         for i in range(num_pixels_to_affect):
             y, x = random_y[i], random_x[i]
-            if image.ndim == 3: # Color image (e.g., BGR)
+            if image.ndim == 3:  # Color image (e.g., BGR)
                 # Assign a list of 3 random values to the (y, x) pixel
                 image[y, x] = [random.randint(0, 255) for _ in range(image.shape[2])]
-            else: # Grayscale image
+            else:  # Grayscale image
                 # Assign a single random value to the (y, x) pixel
                 image[y, x] = random.randint(0, 255)
-                
+
         return image.astype(np.uint8)
 
     def _apply_random_noise(self, image: np.ndarray) -> np.ndarray:
@@ -1361,45 +1431,38 @@ class ImageNoiser:
         """
         # Generate random noise in the range [-intensity*127.5, intensity*127.5]
         # Then add it to the image
-        noise_range = self._noise_intensity * 127.5 # Max deviation from original pixel value
-        random_noise = np.random.uniform(-noise_range, noise_range, image.shape).astype(np.float32)
+        noise_range = (
+            self._noise_intensity * 127.5
+        )  # Max deviation from original pixel value
+        random_noise = np.random.uniform(-noise_range, noise_range, image.shape).astype(
+            np.float32
+        )
         noisy_image = image + random_noise
         return np.clip(noisy_image, 0, 255).astype(np.uint8)
 
-
     def create_sliders(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tNoiser", tag="noiser"):
-            noise_type_slider = TrackbarRow2(
-                "Noise Type", 
-                params.get("noise_type"), 
-                TrackbarCallback(params.get("noise_type"), "noise_type").__call__, 
-                default_font_id)
-            
-            noise_intensity_slider = TrackbarRow2(
-                "Noise Intensity", 
-                params.get("noise_intensity"), 
-                TrackbarCallback(params.get("noise_intensity"), "noise_intensity").__call__, 
-                default_font_id)
-            
-            # noise_speed_slider = TrackbarRow2(
-            #     "Noise Speed", 
-            #     params.get("noise_speed"), 
-            #     TrackbarCallback(params.get("noise_speed"), "noise_speed").__call__, 
-            #     self.reset_slider_callback, 
+            noise_type_slider = TrackbarRow(
+                "Noise Type", params.get("noise_type"), default_font_id
+            )
+
+            noise_intensity_slider = TrackbarRow(
+                "Noise Intensity", params.get("noise_intensity"), default_font_id
+            )
+
+            # noise_speed_slider = TrackbarRow(
+            #     "Noise Speed",
+            #     params.get("noise_speed"),
             #     default_font_id)
-            
-            # noise_freq_x_slider = TrackbarRow2(
-            #     "Noise Freq X", 
-            #     params.get("noise_freq_x"), 
-            #     TrackbarCallback(params.get("noise_freq_x"), "noise_freq_x").__call__, 
-            #     self.reset_slider_callback, 
+
+            # noise_freq_x_slider = TrackbarRow(
+            #     "Noise Freq X",
+            #     params.get("noise_freq_x"),
             #     default_font_id)
-            
-            # noise_freq_y_slider = TrackbarRow2(
-            #     "Noise Freq Y", 
-            #     params.get("noise_freq_y"), 
-            #     TrackbarCallback(params.get("noise_freq_y"), "noise_freq_y").__call__, 
-            #     self.reset_slider_callback, 
+
+            # noise_freq_y_slider = TrackbarRow(
+            #     "Noise Freq Y",
+            #     params.get("noise_freq_y"),
             #     default_font_id)
 
         dpg.bind_item_font("noiser", global_font_id)
@@ -1414,31 +1477,64 @@ class GlitchEffect:
         # State for horizontal scroll freeze glitch
         self.current_fixed_y_end = None
         self.current_growth_duration = None
-        self.last_scroll_glitch_reset_frame = 0 # Marks when the fixed_y_end and growth_duration were last set
+        self.last_scroll_glitch_reset_frame = (
+            0  # Marks when the fixed_y_end and growth_duration were last set
+        )
         self.glitch_phase_start_frame_shift = 0
         self.glitch_phase_start_frame_color = 0
         self.glitch_phase_start_frame_block = 0
 
-        self.enable_pixel_shift = Button("Enable Pixel Shift Glitch", "enable_pixel_shift", False)
-        self.enable_color_split = Button("Enable Color Split Glitch", "enable_color_split", False)
-        self.enable_block_corruption = Button("Enable Block Corruption Glitch", "enable_block_corruption", False)
-        self.enable_random_rectangles = Button("Enable Random Rectangles Glitch", "enable_random_rectangles", False)
-        self.enable_horizontal_scroll_freeze = Button("Enable Horizontal Scroll Freeze Glitch", "enable_horizontal_scroll_freeze", False)
+        self.enable_pixel_shift = Button(
+            "Enable Pixel Shift Glitch", "enable_pixel_shift", False
+        )
+        self.enable_color_split = Button(
+            "Enable Color Split Glitch", "enable_color_split", False
+        )
+        self.enable_block_corruption = Button(
+            "Enable Block Corruption Glitch", "enable_block_corruption", False
+        )
+        self.enable_random_rectangles = Button(
+            "Enable Random Rectangles Glitch", "enable_random_rectangles", False
+        )
+        self.enable_horizontal_scroll_freeze = Button(
+            "Enable Horizontal Scroll Freeze Glitch",
+            "enable_horizontal_scroll_freeze",
+            False,
+        )
 
         self.glitch_duration_frames = params.add("glitch_duration_frames", 1, 300, 60)
         self.glitch_intensity_max = params.add("glitch_intensity_max", 0, 100, 50)
         self.glitch_block_size_max = params.add("glitch_block_size_max", 0, 200, 60)
-        self.band_div = params.add("glitch_band_div", 1, 10, 5) 
+        self.band_div = params.add("glitch_band_div", 1, 10, 5)
         self.num_glitches = params.add("num_glitches", 0, 100, 0)
         self.glitch_size = params.add("glitch_size", 1, 100, 0)
 
     def create_buttons(self, gui):
-        dpg.add_button(label=self.enable_pixel_shift.label, callback=self.enable_pixel_shift.toggle, parent=gui)
-        dpg.add_button(label=self.enable_color_split.label, callback=self.enable_color_split.toggle, parent=gui)
-        dpg.add_button(label=self.enable_block_corruption.label, callback=self.enable_block_corruption.toggle, parent=gui)
-        dpg.add_button(label=self.enable_random_rectangles.label, callback=self.enable_random_rectangles.toggle, parent=gui)
-        dpg.add_button(label=self.enable_horizontal_scroll_freeze.label, callback=self.enable_horizontal_scroll_freeze.toggle, parent=gui)
-
+        dpg.add_button(
+            label=self.enable_pixel_shift.label,
+            callback=self.enable_pixel_shift.toggle,
+            parent=gui,
+        )
+        dpg.add_button(
+            label=self.enable_color_split.label,
+            callback=self.enable_color_split.toggle,
+            parent=gui,
+        )
+        dpg.add_button(
+            label=self.enable_block_corruption.label,
+            callback=self.enable_block_corruption.toggle,
+            parent=gui,
+        )
+        dpg.add_button(
+            label=self.enable_random_rectangles.label,
+            callback=self.enable_random_rectangles.toggle,
+            parent=gui,
+        )
+        dpg.add_button(
+            label=self.enable_horizontal_scroll_freeze.label,
+            callback=self.enable_horizontal_scroll_freeze.toggle,
+            parent=gui,
+        )
 
     def reset(self):
         self.glitch_phase_start_frame = 0
@@ -1473,13 +1569,19 @@ class GlitchEffect:
 
     def apply_evolving_pixel_shift(self, frame, frame_num, glitch_phase_start_frame):
         height, width, _ = frame.shape
-        current_phase_frame = (frame_num - glitch_phase_start_frame) % self.glitch_duration_frames.value
+        current_phase_frame = (
+            frame_num - glitch_phase_start_frame
+        ) % self.glitch_duration_frames.value
 
         # Calculate shift amount and direction based on current_phase_frame
         # Use a sinusoidal or linear progression for smooth evolution
         progress = current_phase_frame / self.glitch_duration_frames.value
-        shift_amount_x = int(self.glitch_intensity_max.value * np.sin(progress * np.pi * 2)) # oscillates
-        shift_amount_y = int(self.glitch_intensity_max.value * np.cos(progress * np.pi * 2)) 
+        shift_amount_x = int(
+            self.glitch_intensity_max.value * np.sin(progress * np.pi * 2)
+        )  # oscillates
+        shift_amount_y = int(
+            self.glitch_intensity_max.value * np.cos(progress * np.pi * 2)
+        )
 
         glitched_frame = np.copy(frame)
 
@@ -1490,11 +1592,11 @@ class GlitchEffect:
         for i in range(self.band_div.value):
             y_start = i * band_height
             y_end = min((i + 1) * band_height, height)
-            
+
             # Shift horizontal bands
-            if i % 2 == 0: # Even bands shift right
+            if i % 2 == 0:  # Even bands shift right
                 shifted_band = np.roll(frame[y_start:y_end, :], shift_amount_x, axis=1)
-            else: # Odd bands shift left
+            else:  # Odd bands shift left
                 shifted_band = np.roll(frame[y_start:y_end, :], -shift_amount_x, axis=1)
             glitched_frame[y_start:y_end, :] = shifted_band
 
@@ -1503,10 +1605,14 @@ class GlitchEffect:
             x_end = min((i + 1) * band_width, width)
 
             # Shift vertical bands
-            if i % 2 == 0: # Even bands shift down
-                shifted_band = np.roll(glitched_frame[:, x_start:x_end], shift_amount_y, axis=0)
-            else: # Odd bands shift up
-                shifted_band = np.roll(glitched_frame[:, x_start:x_end], -shift_amount_y, axis=0)
+            if i % 2 == 0:  # Even bands shift down
+                shifted_band = np.roll(
+                    glitched_frame[:, x_start:x_end], shift_amount_y, axis=0
+                )
+            else:  # Odd bands shift up
+                shifted_band = np.roll(
+                    glitched_frame[:, x_start:x_end], -shift_amount_y, axis=0
+                )
             glitched_frame[:, x_start:x_end] = shifted_band
 
         return glitched_frame
@@ -1517,25 +1623,31 @@ class GlitchEffect:
         Optimized: Uses cv2.split and np.roll which are fast matrix operations.
         """
         height, width, _ = frame.shape
-        current_phase_frame = (frame_num - glitch_phase_start_frame) % self.glitch_duration_frames.value
+        current_phase_frame = (
+            frame_num - glitch_phase_start_frame
+        ) % self.glitch_duration_frames.value
 
         # Calculate separation amount
         # Increases then decreases over the phase
         progress = current_phase_frame / self.glitch_duration_frames.value
-        separation_amount = int(self.glitch_intensity_max.value * np.sin(progress * np.pi)) # Peaks at mid-phase
+        separation_amount = int(
+            self.glitch_intensity_max.value * np.sin(progress * np.pi)
+        )  # Peaks at mid-phase
 
         b, g, r = cv2.split(frame)
         glitched_frame = np.zeros_like(frame)
 
         # Shift channels independently
         # Red channel shifts right, Green stays, Blue channel shifts left
-        glitched_frame[:, :, 2] = np.roll(r, separation_amount, axis=1) # Red
-        glitched_frame[:, :, 1] = g # Green (no shift)
-        glitched_frame[:, :, 0] = np.roll(b, -separation_amount, axis=1) # Blue
+        glitched_frame[:, :, 2] = np.roll(r, separation_amount, axis=1)  # Red
+        glitched_frame[:, :, 1] = g  # Green (no shift)
+        glitched_frame[:, :, 0] = np.roll(b, -separation_amount, axis=1)  # Blue
 
         return glitched_frame
 
-    def apply_morphing_block_corruption(self, frame, frame_num, glitch_phase_start_frame):
+    def apply_morphing_block_corruption(
+        self, frame, frame_num, glitch_phase_start_frame
+    ):
         """
         Corrupts random blocks, with the size and number of corrupted blocks
         morphing over time.
@@ -1543,7 +1655,9 @@ class GlitchEffect:
         applying effects to multiple distinct random blocks.
         """
         height, width, _ = frame.shape
-        current_phase_frame = (frame_num - glitch_phase_start_frame) % self.glitch_duration_frames.value
+        current_phase_frame = (
+            frame_num - glitch_phase_start_frame
+        ) % self.glitch_duration_frames.value
 
         glitched_frame = np.copy(frame)
 
@@ -1552,8 +1666,10 @@ class GlitchEffect:
         # Intensity: starts low, peaks, then goes low again
         corruption_intensity = int(255 * np.sin(progress * np.pi))
         # Block size: starts small, grows, then shrinks
-        current_block_size = int(self.glitch_block_size_max.value * np.sin(progress * np.pi))
-        if current_block_size < 10: # Ensure minimum block size
+        current_block_size = int(
+            self.glitch_block_size_max.value * np.sin(progress * np.pi)
+        )
+        if current_block_size < 10:  # Ensure minimum block size
             current_block_size = 10
 
         # Number of blocks to corrupt: more blocks when intensity is high
@@ -1569,48 +1685,66 @@ class GlitchEffect:
             # Ensure slice does not go out of bounds
             x_end = min(x + current_block_size, width)
             y_end = min(y + current_block_size, height)
-            
+
             # Only proceed if the block has valid dimensions
             if x_end > x and y_end > y:
                 roi = glitched_frame[y:y_end, x:x_end]
 
                 # Apply different corruption methods based on a random choice
-                corruption_type = random.choice(['solid_color', 'noise', 'pixelate'])
+                corruption_type = random.choice(["solid_color", "noise", "pixelate"])
 
-                if corruption_type == 'solid_color':
+                if corruption_type == "solid_color":
                     # Fill with a random color based on intensity
-                    color = [random.randint(0, corruption_intensity),
-                            random.randint(0, corruption_intensity),
-                            random.randint(0, corruption_intensity)]
+                    color = [
+                        random.randint(0, corruption_intensity),
+                        random.randint(0, corruption_intensity),
+                        random.randint(0, corruption_intensity),
+                    ]
                     roi[:, :] = color
-                elif corruption_type == 'noise':
+                elif corruption_type == "noise":
                     # Add random noise. Ensure noise shape matches ROI.
                     # Ensure the 'high' value for randint is always greater than 'low'.
                     # If corruption_intensity // 2 is 0, make the upper bound 1 to avoid ValueError.
                     low_bound = -corruption_intensity // 2
                     high_bound = corruption_intensity // 2
-                    if high_bound <= low_bound: # This happens if corruption_intensity is 0 or 1
-                        high_bound = low_bound + 1 # Ensure high > low
+                    if (
+                        high_bound <= low_bound
+                    ):  # This happens if corruption_intensity is 0 or 1
+                        high_bound = low_bound + 1  # Ensure high > low
 
-                    noise = np.random.randint(low_bound, high_bound, roi.shape, dtype=np.int16)
+                    noise = np.random.randint(
+                        low_bound, high_bound, roi.shape, dtype=np.int16
+                    )
                     # Apply noise and clip values to 0-255 range
-                    roi_with_noise = np.clip(roi.astype(np.int16) + noise, 0, 255).astype(np.uint8)
+                    roi_with_noise = np.clip(
+                        roi.astype(np.int16) + noise, 0, 255
+                    ).astype(np.uint8)
                     glitched_frame[y:y_end, x:x_end] = roi_with_noise
-                elif corruption_type == 'pixelate':
+                elif corruption_type == "pixelate":
                     # Simple pixelation by resizing down and up
                     # Ensure current_block_size is large enough for pixelation
                     if current_block_size > 5:
                         # Calculate new dimensions for pixelation (e.g., divide by 5)
                         pixel_width = max(1, (x_end - x) // 5)
                         pixel_height = max(1, (y_end - y) // 5)
-                        
-                        small_roi = cv2.resize(roi, (pixel_width, pixel_height), interpolation=cv2.INTER_LINEAR)
-                        pixelated_roi = cv2.resize(small_roi, (x_end - x, y_end - y), interpolation=cv2.INTER_NEAREST)
+
+                        small_roi = cv2.resize(
+                            roi,
+                            (pixel_width, pixel_height),
+                            interpolation=cv2.INTER_LINEAR,
+                        )
+                        pixelated_roi = cv2.resize(
+                            small_roi,
+                            (x_end - x, y_end - y),
+                            interpolation=cv2.INTER_NEAREST,
+                        )
                         glitched_frame[y:y_end, x:x_end] = pixelated_roi
 
         return glitched_frame
 
-    def apply_horizontal_scroll_freeze_glitch(self, frame, frame_num, glitch_cycle_start_frame, fixed_y_end, growth_duration):
+    def apply_horizontal_scroll_freeze_glitch(
+        self, frame, frame_num, glitch_cycle_start_frame, fixed_y_end, growth_duration
+    ):
         """
         Applies a horizontal scrolling glitch effect that freezes and distorts a band.
         The bottom of the bar is fixed, and the top grows for a random duration.
@@ -1621,14 +1755,16 @@ class GlitchEffect:
 
         # Calculate current progress within the growth cycle
         current_frame_in_cycle = frame_num - glitch_cycle_start_frame
-        
+
         # Growth progress, clamped to 1.0
         growth_progress = min(1.0, current_frame_in_cycle / growth_duration)
 
         # Determine the glitch band height based on growth progress
         # Starts small (e.g., 10 pixels) and grows up to self.glitch_block_size_max.value (60)
-        glitch_band_height = int(10 + (self.glitch_block_size_max.value - 10) * growth_progress)
-        glitch_band_height = max(1, glitch_band_height) # Ensure minimum height of 1
+        glitch_band_height = int(
+            10 + (self.glitch_block_size_max.value - 10) * growth_progress
+        )
+        glitch_band_height = max(1, glitch_band_height)  # Ensure minimum height of 1
 
         # The bottom of the bar is fixed at fixed_y_end
         y_end = fixed_y_end
@@ -1638,8 +1774,10 @@ class GlitchEffect:
         # Ensure y_start and y_end are valid indices
         y_start = min(y_start, height - 1)
         y_end = min(y_end, height)
-        if y_start >= y_end: # Handle cases where band becomes invalid (e.g., too small or out of bounds)
-            return glitched_frame # Return original if band is invalid
+        if (
+            y_start >= y_end
+        ):  # Handle cases where band becomes invalid (e.g., too small or out of bounds)
+            return glitched_frame  # Return original if band is invalid
 
         # Get the ROI from the original frame (or glitched_frame if applying sequentially)
         roi = glitched_frame[y_start:y_end, :]
@@ -1647,27 +1785,35 @@ class GlitchEffect:
         # Apply random horizontal shift to each row within the band
         # The maximum random shift scales with growth progress
         max_row_shift = int(self.glitch_intensity_max.value * growth_progress)
-        if max_row_shift < 1: # Ensure a minimum shift range
+        if max_row_shift < 1:  # Ensure a minimum shift range
             max_row_shift = 1
 
         randomly_shifted_roi = np.copy(roi)
-        for r_idx in range(roi.shape[0]): # Iterate through each row in the ROI
+        for r_idx in range(roi.shape[0]):  # Iterate through each row in the ROI
             row_shift = random.randint(-max_row_shift, max_row_shift)
-            randomly_shifted_roi[r_idx, :] = np.roll(roi[r_idx, :], row_shift, axis=0) # axis=0 for 1D array roll
+            randomly_shifted_roi[r_idx, :] = np.roll(
+                roi[r_idx, :], row_shift, axis=0
+            )  # axis=0 for 1D array roll
 
         # Now, use this randomly_shifted_roi for further processing (noise, etc.)
         shifted_roi = randomly_shifted_roi
 
         # Add some random noise to the shifted band for more distortion
-        noise_intensity = int(100 * np.sin(growth_progress * np.pi)) # Noise intensity varies
-        
+        noise_intensity = int(
+            100 * np.sin(growth_progress * np.pi)
+        )  # Noise intensity varies
+
         low_bound_noise = -noise_intensity // 2
         high_bound_noise = noise_intensity // 2
         if high_bound_noise <= low_bound_noise:
             high_bound_noise = low_bound_noise + 1
 
-        noise = np.random.randint(low_bound_noise, high_bound_noise, shifted_roi.shape, dtype=np.int16)
-        corrupted_roi = np.clip(shifted_roi.astype(np.int16) + noise, 0, 255).astype(np.uint8)
+        noise = np.random.randint(
+            low_bound_noise, high_bound_noise, shifted_roi.shape, dtype=np.int16
+        )
+        corrupted_roi = np.clip(shifted_roi.astype(np.int16) + noise, 0, 255).astype(
+            np.uint8
+        )
 
         # Replace the band in the glitched frame with the corrupted ROI
         glitched_frame[y_start:y_end, :] = corrupted_roi
@@ -1675,45 +1821,62 @@ class GlitchEffect:
         return glitched_frame
 
     def scanline_distortion(self, frame, frame_num):
-        pass # TODO: implement scanline distortion effect
+        pass  # TODO: implement scanline distortion effect
 
     def apply_glitch_effects(self, frame, frame_count):
-      
+
         # Get frame dimensions for dynamic calculations
         height, width, _ = frame.shape
 
         # Reset phase start frame if a new phase begins for existing effects
         if frame_count % self.glitch_duration_frames.value == 0:
             self.glitch_phase_start_frame_shift = frame_count
-        if frame_count % (self.glitch_duration_frames.value * 1.5) == 0: # Slightly different cycle for color
+        if (
+            frame_count % (self.glitch_duration_frames.value * 1.5) == 0
+        ):  # Slightly different cycle for color
             self.glitch_phase_start_frame_color = frame_count
-        if frame_count % (self.glitch_duration_frames.value * 0.75) == 0: # Faster cycle for blocks
+        if (
+            frame_count % (self.glitch_duration_frames.value * 0.75) == 0
+        ):  # Faster cycle for blocks
             self.glitch_phase_start_frame_blocks = frame_count
 
         # Check if it's time to reset the horizontal scroll glitch state
         # This will happen on the very first frame or when the current growth duration is over
-        if frame_count == 0 or (frame_count - self.last_scroll_glitch_reset_frame) >= self.current_growth_duration:
+        if (
+            frame_count == 0
+            or (frame_count - self.last_scroll_glitch_reset_frame)
+            >= self.current_growth_duration
+        ):
             self.last_scroll_glitch_reset_frame = frame_count
             self.current_fixed_y_end = random.randint(height // 4, height)
             # Choose a random duration for the growth phase
-            self.current_growth_duration = random.randint(self.glitch_duration_frames.value // 2, self.glitch_duration_frames.value * 2) # Random period for growth
+            self.current_growth_duration = random.randint(
+                self.glitch_duration_frames.value // 2,
+                self.glitch_duration_frames.value * 2,
+            )  # Random period for growth
 
         # Apply effects to the current frame
         if self.enable_random_rectangles.value:
             frame = self.glitch_image(frame)
         if self.enable_pixel_shift.value:
-            frame = self.apply_evolving_pixel_shift(frame, frame_count, self.glitch_phase_start_frame_shift)
+            frame = self.apply_evolving_pixel_shift(
+                frame, frame_count, self.glitch_phase_start_frame_shift
+            )
         if self.enable_color_split.value:
-            frame = self.apply_gradual_color_split(frame, frame_count, self.glitch_phase_start_frame_color)
+            frame = self.apply_gradual_color_split(
+                frame, frame_count, self.glitch_phase_start_frame_color
+            )
         if self.enable_block_corruption.value:
-            frame = self.apply_morphing_block_corruption(frame, frame_count, self.glitch_phase_start_frame_blocks)
-        if self.enable_horizontal_scroll_freeze.value:        
+            frame = self.apply_morphing_block_corruption(
+                frame, frame_count, self.glitch_phase_start_frame_blocks
+            )
+        if self.enable_horizontal_scroll_freeze.value:
             frame = self.apply_horizontal_scroll_freeze_glitch(
                 frame,
                 frame_count,
                 self.last_scroll_glitch_reset_frame,
                 self.current_fixed_y_end,
-                self.current_growth_duration
+                self.current_growth_duration,
             )
 
         frame_count += 1
@@ -1721,42 +1884,32 @@ class GlitchEffect:
 
     def create_sliders(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tGlitch", tag="glitch"):
-            glitch_intensity_slider = TrackbarRow2(
-                "Glitch Intensity",
-                params.get("glitch_intensity_max"),
-                TrackbarCallback(params.get("glitch_intensity_max"), "glitch_intensity_max").__call__,
-                default_font_id)
-            
-            glitch_duration_slider = TrackbarRow2(
-                "Glitch Duration",
-                params.get("glitch_duration_frames"),
-                TrackbarCallback(params.get("glitch_duration_frames"), "glitch_duration_frames").__call__,
-                default_font_id)
-            
-            glitch_block_size_slider = TrackbarRow2(
+            glitch_intensity_slider = TrackbarRow(
+                "Glitch Intensity", params.get("glitch_intensity_max"), default_font_id
+            )
+
+            glitch_duration_slider = TrackbarRow(
+                "Glitch Duration", params.get("glitch_duration_frames"), default_font_id
+            )
+
+            glitch_block_size_slider = TrackbarRow(
                 "Glitch Block Size",
                 params.get("glitch_block_size_max"),
-                TrackbarCallback(params.get("glitch_block_size_max"), "glitch_block_size_max").__call__,
-                default_font_id)
-            
-            glitch_band_div_slider = TrackbarRow2(
-                "Glitch Band Divisor",
-                params.get("glitch_band_div"),
-                TrackbarCallback(params.get("glitch_band_div"), "glitch_band_div").__call__,
-                default_font_id)            
+                default_font_id,
+            )
 
-            num_glitches_slider = TrackbarRow2(
-                "Glitch Qty", 
-                params.get("num_glitches"), 
-                TrackbarCallback(params.get("num_glitches"), "num_glitches").__call__, 
-                default_font_id)
-            
-            glitch_size_slider = TrackbarRow2(
-                "Glitch Size", 
-                params.get("glitch_size"), 
-                TrackbarCallback(params.get("glitch_size"), "glitch_size").__call__, 
-                default_font_id)
-            
+            glitch_band_div_slider = TrackbarRow(
+                "Glitch Band Divisor", params.get("glitch_band_div"), default_font_id
+            )
+
+            num_glitches_slider = TrackbarRow(
+                "Glitch Qty", params.get("num_glitches"), default_font_id
+            )
+
+            glitch_size_slider = TrackbarRow(
+                "Glitch Size", params.get("glitch_size"), default_font_id
+            )
+
             self.create_buttons("glitch")
-            
+
         dpg.bind_item_font("glitch", global_font_id)
