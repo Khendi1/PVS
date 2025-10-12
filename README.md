@@ -13,8 +13,30 @@ This suite plays well with lots of other tools and hardware, so take a look at t
 - packages from ```requirements.txt```
 - webcam
 
-## Setup
-Clone this repository, create a virtual environment, and install packages from requirements.txt.
+## Software Setup
+1. Clone this repository
+
+2. from the top level directory, create a virtual environment:
+
+    - ```python -m venv <YOUR-VENV-NAME>```
+
+3. activate your virtual environment
+
+    - Windows: ```<YOUR-VENV_NAME>/Scripts/activate```
+
+    - Linux: ```source <YOUR-VENV_NAME>/bin/activate```
+
+4. install packages from requirements.txt.
+
+    - ```pip install -r requirements.txt```
+
+5. *OPTIONAL*: configure hardware; plug in MIDI devices and capture devices, adjust MixSource enum in mix.py accordingly. See [Hardware Setup](#hardware-setup) for additional details.
+
+6. still from the top level, launch the program:
+
+    - ```python video_synth```
+
+## Hardware setup
 
 Configuring your MIDI hardware, cameras, and capture devices is currently a weak point, and will be revisted for overhaul (using vidgear package???). 
 

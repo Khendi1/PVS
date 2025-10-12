@@ -5,9 +5,9 @@ class TrackbarRow:
 
     def __init__(self, label, param, font):
 
-        self.label = label #TODO: method to get label from param name
+        self.label = label
         self.tag = param.name
-        self.callback = TrackbarCallback(param, param.name)
+        self.callback = TrackbarCallback(param, param.name).__call__
         self.slider = None
         self.button = None
         self.value = param.default_val

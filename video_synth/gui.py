@@ -320,10 +320,7 @@ class Interface:
 
     def create_trackbars(self, width, height, mixer):
 
-        with dpg.font_registry():
-            global_font_id = dpg.add_font("C:/Windows/Fonts/arial.ttf", 18) # Larger font size for the header
-            default_font_id = dpg.add_font("C:/Windows/Fonts/arial.ttf", 14) # Default font size for other items
-        dpg.bind_font(default_font_id)
+        default_font_id, global_font_id = None, None
 
         self.test_sliders(default_font_id, global_font_id)
         self.mix_panel(mixer)
@@ -335,9 +332,9 @@ class Interface:
         fx[FX.REFLECTOR].create_sliders(default_font_id, global_font_id)
         fx[FX.PTZ].create_sliders(default_font_id, global_font_id)
         fx[FX.SYNC].create_sliders(default_font_id, global_font_id)
-        fx[FX.PATTERNS].create_sliders(default_font_id, global_font_id)
+        # fx[FX.PATTERNS].create_sliders(default_font_id, global_font_id)
         fx[FX.NOISE].create_sliders(default_font_id, global_font_id)
-        fx[FX.WARP].create_sliders(default_font_id, global_font_id)
+        # fx[FX.WARP].create_sliders(default_font_id, global_font_id)
         # fx[FX.PIXELS].create_sliders(default_font_id, global_font_id)
         fx[FX.SHAPES].create_sliders(default_font_id, global_font_id)
         # TODO: fix temp sliders
