@@ -335,13 +335,13 @@ class ReactionDiffusionSimulator(Animation):
         dpg.bind_item_font("reaction_diffusion", global_font_id)
 
 
-class LavaLampSynth(Animation):
+class Metaballs(Animation):
     # BUG: find bug; when increasing num_metaballs, their sizes seem to get smaller
     # TODO: add parameters to control metaball colors, blending modes, and feedback intensity
     # BUG: find bug: when reducing metaball size then returning to original/larger sizes, they get smaller each time
     def __init__(self, width=800, height=600):
         """
-        Initializes the LavaLampSynth with given dimensions.
+        Initializes the Metaballs with given dimensions.
         """
         self.width = width if width else 800
         self.height = height if height else 600

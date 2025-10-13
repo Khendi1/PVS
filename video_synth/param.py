@@ -161,7 +161,7 @@ class Param:
             # For other types (like bool), directly assign
             self._value = clamped_value
 
-        # 3. Apply specific logic for "blur_kernel_size"
+        # Apply specific logic for params
         # Ensures blur kernel size is odd and at least 1
         if self.name == "blur_kernel_size":
             self._value = max(1, int(self._value) | 1) # Bitwise OR with 1 ensures it's odd

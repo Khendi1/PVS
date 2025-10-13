@@ -13,7 +13,7 @@ gui panels within
 mixer = Mixer()
 
 class FX(StrEnum):
-    BASIC = auto()
+    FEEDBACK = auto()
     COLOR = auto()
     PIXELS = auto()
     NOISE = auto()
@@ -27,7 +27,7 @@ class FX(StrEnum):
     LISSAJOUS = auto()
 
 # Initialize effects classes; these contain Params to be modified by the generators
-basic = None
+feedback = None
 color = None
 pixels = None
 noise = None
@@ -43,10 +43,10 @@ ptz = None
 fx = {}
 
 def init_shared_objects(width, height):
-    global basic, color, pixels, noise, shapes, patterns
+    global feedback, color, pixels, noise, shapes, patterns
     global reflector, sync, warp, glitch
 
-    basic = Effects(width, height)
+    feedback = Feedback(width, height)
     color = Color()
     pixels = Pixels(width, height)
     noise = ImageNoiser(NoiseType.NONE)
@@ -61,7 +61,7 @@ def init_shared_objects(width, height):
     # Convenient dictionary of effects to be passed to the apply_effects function
     fx.clear() # Clear any previous state
     fx.update({
-        FX.BASIC: basic,
+        FX.FEEDBACK: feedback,
         FX.COLOR: color,
         FX.PIXELS: pixels,
         FX.NOISE: noise,

@@ -980,7 +980,7 @@ class LumaMode(IntEnum):
     BLACK = auto()
 
 
-class Effects:
+class Feedback:
 
     def __init__(self, image_width: int, image_height: int):
 
@@ -994,20 +994,70 @@ class Effects:
         self.luma_select_mode = params.add(
             "luma_select_mode", 0, len(LumaMode) - 1, LumaMode.NONE.value
         )
+        self.buffer_select = params.add("buffer_frame_select", 0, 20, 0)
+        self.buffer_frame_blend = params.add("buffer_frame_blend", 0.0, 1.0, 0.0)
+
+        self.prev_frame_scale = params.add("prev_frame_scale", 90, 110, 100)
 
         # TODO: implement
         self.sequence = params.add("sequence", 0, 100, 0)
-
-        self.lissajous_A = params.add("lissajous_A", 0, 100, 50)
-        self.lissajous_B = params.add("lissajous_B", 0, 100, 50)
-        self.lissajous_a = params.add("lissajous_a", 0, 100, 50)
-        self.lissajous_b = params.add("lissajous_b", 0, 100, 50)
-        self.lissajous_delta = params.add("lissajous_delta", 0, 360, 0)
 
         self.max_buffer_size = 30
         self.buffer_size = params.add("buffer_size", 0, self.max_buffer_size, 5)
         # this should probably be initialized in reset() to avoid issues with reloading config
         self.frame_buffer = deque(maxlen=self.max_buffer_size)
+
+
+    def scale_frame(self, frame):
+
+        target_height, target_width, _ = frame.shape
+        resized_frame = cv2.resize(frame, None, fx=self.prev_frame_scale.value, fy=self.prev_frame_scale.value)
+
+        # Calculate the padding needed to center the resized frame
+        res_h, res_w, _ = resized_frame.shape
+        pad_h = (target_height - res_h) // 2
+        pad_w = (target_width - res_w) // 2
+        
+        # Handle any potential remaining pixel due to integer division
+        pad_h_extra = target_height - (res_h + 2 * pad_h)
+        pad_w_extra = target_width - (res_w + 2 * pad_w)
+        
+        if res_h > target_height or res_w > target_width:
+            return resized_frame[:target_height, :target_width]
+
+        # Use the target dimensions for the canvas size
+        padded_frame = np.zeros((target_height, target_width, 3), dtype=frame.dtype)
+        
+        # Place the resized frame into the center of the padded canvas
+        padded_frame[pad_h : pad_h + res_h, 
+                    pad_w : pad_w + res_w] = resized_frame
+                    
+        # Apply single extra pixel padding if necessary
+        if pad_h_extra > 0:
+            padded_frame = padded_frame[pad_h_extra//2 : target_height - (pad_h_extra - pad_h_extra//2), :]
+        if pad_w_extra > 0:
+            padded_frame = padded_frame[:, pad_w_extra//2 : target_width - (pad_w_extra - pad_w_extra//2)]
+
+        return padded_frame
+
+
+    def nth_frame_feedback(self, frame):
+
+        nth_frame = self.frame_buffer[self.buffer_select.value]
+
+        if nth_frame is None:
+            return frame
+        
+        frame = cv2.addWeighted(
+            frame.astype(np.float32),
+            self.buffer_frame_blend.value,
+            nth_frame.astype(np.float32),
+            1 - self.buffer_frame_blend.value,
+            0,
+        )       
+
+        return cv2.convertScaleAbs(frame)
+
 
     def avg_frame_buffer(self, frame):
 
@@ -1030,6 +1080,7 @@ class Effects:
 
         # Convert the averaged frame back to the correct data type (uint8)
         return np.clip(avg_frame, 0, 255).astype(np.uint8)
+
 
     def apply_temporal_filter(self, prev_frame, cur_frame):
         """
@@ -1062,6 +1113,7 @@ class Effects:
 
         # Convert back to uint8 for display
         return cv2.convertScaleAbs(filtered_frame)
+
 
     def apply_luma_feedback(self, prev_frame, cur_frame):
         # The mask will determine which parts of the current frame are kept
@@ -1128,6 +1180,71 @@ class Effects:
 
         return noisy_frame
 
+
+    def create_sliders(self, default_font_id=None, global_font_id=None):
+
+        with dpg.collapsing_header(label=f"\tEffects", tag="effects"):
+
+            temporal_filter_slider = TrackbarRow(
+                "Temporal Filter", params.get("temporal_filter"), default_font_id
+            )
+
+            alpha_slider = TrackbarRow(
+                "Feedback", self.alpha, default_font_id
+            )
+
+            luma_slider = TrackbarRow(
+                "Luma Feedback Threshold",
+                self.feedback_luma_threshold,
+                default_font_id,
+            )
+
+            luma_mode = TrackbarRow(
+                "Luma Mode", self.luma_select_mode, default_font_id
+            )
+
+            frame_buffer_size_slider = TrackbarRow(
+                "Frame Buffer Size", self.buffer_size, default_font_id
+            )
+
+            frame_buffer_select_slider = TrackbarRow(
+                "Frame Buffer Frame Select", self.buffer_select, default_font_id
+            )
+
+            frame_select_feedback_slider = TrackbarRow(
+                "Frame Select Feedback", self.buffer_frame_blend, default_font_id
+            )
+
+            frame_skip_slider = TrackbarRow(
+                "Frame Skip", self.frame_skip, default_font_id
+            )
+
+            blur_kernel_slider = TrackbarRow(
+                "Blur Kernel", params.get("blur_kernel_size"), default_font_id
+            )
+
+            blur_type_slider = TrackbarRow(
+                "Blur Type", params.get("blur_type"), default_font_id
+            )
+
+            sharpen_slider = TrackbarRow(
+                "Sharpen Amount", params.get("sharpen_intensity"), default_font_id
+            )
+
+            num_hues_slider = TrackbarRow(
+                "Num Hues", params.get("num_hues"), default_font_id
+            )
+
+        dpg.bind_item_font("effects", global_font_id)
+
+class Lissajous:
+    def __init__(self):
+        self.lissajous_A = params.add("lissajous_A", 0, 100, 50)
+        self.lissajous_B = params.add("lissajous_B", 0, 100, 50)
+        self.lissajous_a = params.add("lissajous_a", 0, 100, 50)
+        self.lissajous_b = params.add("lissajous_b", 0, 100, 50)
+        self.lissajous_delta = params.add("lissajous_delta", 0, 360, 0)
+    
     # TODO: make this more engaging
     def lissajous_pattern(self, frame, t):
         center_x, center_y = self.width // 2, self.height // 2
@@ -1149,55 +1266,7 @@ class Effects:
             cv2.circle(frame, (x, y), 1, (255, 255, 255), -1)
 
         return frame
-
-    def create_sliders(self, default_font_id=None, global_font_id=None):
-
-        with dpg.collapsing_header(label=f"\tEffects", tag="effects"):
-
-            temporal_filter_slider = TrackbarRow(
-                "Temporal Filter", params.get("temporal_filter"), default_font_id
-            )
-
-            alpha_slider = TrackbarRow(
-                "Feedback", params.get("alpha"), default_font_id
-            )
-
-            luma_slider = TrackbarRow(
-                "Luma Feedback Threshold",
-                params.get("feedback_luma_threshold"),
-                default_font_id,
-            )
-
-            luma_mode = TrackbarRow(
-                "Luma Mode", params.get("luma_select_mode"), default_font_id
-            )
-
-            frame_buffer_size_slider = TrackbarRow(
-                "Frame Buffer Size", params.get("buffer_size"), default_font_id
-            )
-
-            frame_skip_slider = TrackbarRow(
-                "Frame Skip", params.get("frame_skip"), default_font_id
-            )
-
-            blur_kernel_slider = TrackbarRow(
-                "Blur Kernel", params.get("blur_kernel_size"), default_font_id
-            )
-
-            blur_type_slider = TrackbarRow(
-                "Blur Type", params.get("blur_type"), default_font_id
-            )
-
-            sharpen_slider = TrackbarRow(
-                "Sharpen Amount", params.get("sharpen_intensity"), default_font_id
-            )
-
-            num_hues_slider = TrackbarRow(
-                "Num Hues", params.get("num_hues"), default_font_id
-            )
-
-        dpg.bind_item_font("effects", global_font_id)
-
+    
     def temp_create_sliders(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tLissajous", tag="Lissajous"):
 

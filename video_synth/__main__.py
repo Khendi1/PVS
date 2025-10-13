@@ -32,7 +32,7 @@ from patterns3 import Patterns
 
 image_height, image_width = None, None
 
-def apply_effects(frame, frame_count, patterns: Patterns, basic: Effects, color: Color, 
+def apply_effects(frame, frame_count, patterns: Patterns, feedback: Feedback, color: Color, 
                   pixels: Pixels, noise: ImageNoiser, reflector: Reflector, 
                   sync: Sync, warp: Warp, shapes: ShapeGenerator, glitch: GlitchEffect,
                   ptz: PTZ):
@@ -98,6 +98,7 @@ def main():
     frame_count = 0
 
     # Initialize effects classes with image dimensions
+    # The mixer and all objects from fx.py are stored here
     init_shared_objects(width=image_width, height=image_height)
 
     cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
@@ -110,8 +111,8 @@ def main():
     
 
     # TODO: This assumes both controllers are always connected in a specific order; improve this
-    # BUG: fix initialization of MIDI controllers in midi_input.py
     # test_ports()
+
     # Initialize the midi input controller before creating the GUI
     controller1 = MidiInputController(controller=MidiMix())
     controller2 = MidiInputController(controller=SMC_Mixer())
@@ -135,7 +136,7 @@ def main():
                 print("Skipping frame due to source read failure...")
                 continue
 
-            # update osc values
+            # update osc values if linked to params
             osc_vals = [osc.get_next_value() for osc in osc_bank if osc.linked_param is not None]
             
             # relevant section
@@ -147,11 +148,13 @@ def main():
                 feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
                 feedback_frame = apply_effects(feedback_frame, frame_count, **fx) 
 
-            # Apply temporal filtering and frame buffer averaging to the resulting feedback frame
-            feedback_frame = fx[FX.BASIC].apply_temporal_filter(prev_frame, feedback_frame)
-            feedback_frame = fx[FX.BASIC].avg_frame_buffer(feedback_frame)
-            feedback_frame = fx[FX.BASIC].apply_luma_feedback(prev_frame, feedback_frame)
-            prev_frame = feedback_frame.copy()
+            # Apply feedback effects
+            feedback_frame = fx[FX.FEEDBACK].apply_temporal_filter(prev_frame, feedback_frame)
+            feedback_frame = fx[FX.FEEDBACK].avg_frame_buffer(feedback_frame)
+            feedback_frame = fx[FX.FEEDBACK].nth_frame_feedback(feedback_frame)
+            feedback_frame = fx[FX.FEEDBACK].apply_luma_feedback(prev_frame, feedback_frame)
+            # prev_frame = fx[FX.FEEDBACK].scale_frame(feedback_frame)
+            prev_frame = feedback_frame
 
             # Display the resulting frame and control panel
             cv2.imshow('Modified Frame', feedback_frame)

@@ -136,12 +136,13 @@ class Interface:
     def mix_panel(self, mixer):
         with dpg.collapsing_header(label=f"\tMixer", tag="mixer"):
             dpg.add_text("Video Source 1")
-            dpg.add_combo(list(MixSources.__members__.keys()), default_value="INTERNAL_WEBCAM", tag="source_1", callback=mixer.select_source1_callback)
+
+            dpg.add_combo(list(mixer.sources.keys()), default_value="INTERNAL_WEBCAM", tag="source_1", callback=mixer.select_source1_callback)
             # Initially hide the input text for file path 1 as webcam is default
             dpg.add_input_text(label="Video File Path 1", tag="file_path_source_1", default_value=mixer.default_video_file_path, show=False)
             
             dpg.add_text("Video Source 2")
-            dpg.add_combo(list(MixSources.__members__.keys()), default_value="METABALLS", tag="source_2", callback=mixer.select_source2_callback)
+            dpg.add_combo(list(mixer.sources.keys()), default_value="METABALLS", tag="source_2", callback=mixer.select_source2_callback)
             dpg.add_input_text(label="Video File Path 2", tag="file_path_source_2", default_value=mixer.default_video_file_path)
             dpg.add_spacer(height=10)
 
@@ -327,18 +328,17 @@ class Interface:
 
         # TODO: initialize using for loop over dict keys
         fx[FX.COLOR].create_sliders(default_font_id, global_font_id)
-        fx[FX.BASIC].create_sliders(default_font_id, global_font_id)
+        fx[FX.FEEDBACK].create_sliders(default_font_id, global_font_id)
         fx[FX.GLITCH].create_sliders(default_font_id, global_font_id)
         fx[FX.REFLECTOR].create_sliders(default_font_id, global_font_id)
         fx[FX.PTZ].create_sliders(default_font_id, global_font_id)
         fx[FX.SYNC].create_sliders(default_font_id, global_font_id)
-        # fx[FX.PATTERNS].create_sliders(default_font_id, global_font_id)
         fx[FX.NOISE].create_sliders(default_font_id, global_font_id)
+        fx[FX.SHAPES].create_sliders(default_font_id, global_font_id)
+        # fx[FX.PATTERNS].create_sliders(default_font_id, global_font_id)
         # fx[FX.WARP].create_sliders(default_font_id, global_font_id)
         # fx[FX.PIXELS].create_sliders(default_font_id, global_font_id)
-        fx[FX.SHAPES].create_sliders(default_font_id, global_font_id)
-        # TODO: fix temp sliders
-        fx[FX.BASIC].temp_create_sliders(default_font_id, global_font_id)
+        # fx[FX.LISSAJOUS].create_sliders(default_font_id, global_font_id)
 
         self.create_panels_from_list(mixer.animation_sources.values())
         self.osc_sliders(default_font_id, global_font_id)
