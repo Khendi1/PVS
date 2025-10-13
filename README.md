@@ -38,11 +38,12 @@ This suite plays well with lots of other tools and hardware, so take a look at t
 
 ## Hardware setup
 
-Configuring your MIDI hardware, cameras, and capture devices is currently a weak point, and will be revisted for overhaul (using vidgear package???). 
+Configuring your MIDI hardware, cameras, and capture devices is currently a weak point, and will be revisted for overhaul. 
 
-To access a video device, OpenCV needs its USB enumeration value. This enumeraton is determined by the order in which devices are plugged in. For example, if you're using a laptop, the webcam will likely be device 0. 
+Cv2 camera/capture devices are identified upon program execution, but MIDI devices are not.
 
-To configure your set of devices, you must find the ```MixSources``` enum class in ```mix.py```. For each device you wish to use, assign its corresponding USB enumeration value.
+See the [Control](#control) section for guidance on configuring your MIDI device.
+
 
 ## Features and Parameters:
 - Locally save and recall patches
@@ -155,7 +156,8 @@ These are custom PCBs that I have built and utilize. They may be available fully
 ## Control
 The app can be controlled through a (crappy) GUI or midi controller. The program is currently configured to use a cheap AKAI MIDI Mix or MVAVE SMC Mixer, but there are provisions to configure a new controller with relative ease. To implement a new controller, see the required functions you must expose in the example ```SMC_Mixer()``` or ```MidiMix()``` classes in ```midi.py```. Most work involves the mapping.
 
-The current configuration will be superceded by a class/subclass structure.
+Note that the order that the controllers are initialized is extremely important. In ```main.py```, the order that you initialize your controllers must reflect the order in which the controllers are plugged into your PC. For example, if the ```SMC_Mixer()``` is plugged in first, but initialized second, controller identification will fail.
+
 
 ## My Current Configuration
 * TODO: include VGA capture device in sources
