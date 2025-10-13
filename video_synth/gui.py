@@ -131,74 +131,7 @@ class Interface:
     def create_panels_from_list(self, source_obj_list):
         for obj in source_obj_list:
             panel = obj.create_sliders()
-
-
-    def mix_panel(self, mixer):
-        with dpg.collapsing_header(label=f"\tMixer", tag="mixer"):
-            dpg.add_text("Video Source 1")
-
-            dpg.add_combo(list(mixer.sources.keys()), default_value="INTERNAL_WEBCAM", tag="source_1", callback=mixer.select_source1_callback)
-            # Initially hide the input text for file path 1 as webcam is default
-            dpg.add_input_text(label="Video File Path 1", tag="file_path_source_1", default_value=mixer.default_video_file_path, show=False)
-            
-            dpg.add_text("Video Source 2")
-            dpg.add_combo(list(mixer.sources.keys()), default_value="METABALLS", tag="source_2", callback=mixer.select_source2_callback)
-            dpg.add_input_text(label="Video File Path 2", tag="file_path_source_2", default_value=mixer.default_video_file_path)
-            dpg.add_spacer(height=10)
-
-            dpg.add_text("Mixer")
-            # dpg.add_slider_float(label="Blending", default_value=alpha, min_value=0.0, max_value=1.0, callback=alpha_callback, format="%.2f")
-            
-            blend_mode_slider = TrackbarRow(
-                "Blend Mode",
-                params.get("blend_mode"),
-                None) # fix defulat font_id=None
-            
-            frame_blend_slider = TrackbarRow(
-                "Frame Blend",
-                params.get("frame_blend"),
-                None) # fix defulat font_id=None
-            
-            upper_hue_key_slider = TrackbarRow(
-                "Upper Hue Key",
-                params.get("upper_hue"),
-                None) # fix defulat font_id=None
-            
-            lower_hue_key_slider = TrackbarRow(
-                "Lower Hue Key",
-                params.get("lower_hue"),
-                None) # fix defulat font_id=None
-            
-            upper_sat_slider = TrackbarRow(
-                "Upper Sat Key",
-                params.get("upper_sat"),
-                None) # fix defulat font_id=None
-            
-            lower_sat_slider = TrackbarRow(
-                "Lower Sat Key",
-                params.get("lower_sat"),
-                None) # fix defulat font_id=None
-            
-            upper_val_slider = TrackbarRow(
-                "Upper Val Key",
-                params.get("upper_val"),
-                None) # fix defulat font_id=None
-            
-            lower_val_slider = TrackbarRow(
-                "Lower Val Key",
-                params.get("lower_val"),
-                None) # fix defulat font_id=None
-            
-            luma_threshold_slider = TrackbarRow(
-                "Luma Threshold",
-                params.get("luma_threshold"),
-                None) # fix defulat font_id=None
-            
-            luma_selection_slider = TrackbarRow(
-                "Luma Selection",
-                params.get("luma_selection"),
-                None) # fix defulat font_id=None
-        
+     
 
     def perlin_generator_sliders(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tNoise Generator", tag="noise_generator"):
@@ -324,7 +257,7 @@ class Interface:
         default_font_id, global_font_id = None, None
 
         self.test_sliders(default_font_id, global_font_id)
-        self.mix_panel(mixer)
+        mixer.mix_panel()
 
         # TODO: initialize using for loop over dict keys
         fx[FX.COLOR].create_sliders(default_font_id, global_font_id)

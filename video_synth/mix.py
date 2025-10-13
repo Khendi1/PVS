@@ -37,6 +37,7 @@ ANIMATED_SOURCES = [
 
 
 class Mixer:
+
     def __init__(self):
 
         # cap variables to store video capture objects or animation instances
@@ -51,6 +52,7 @@ class Mixer:
         self.skip1 = False
         self.skip2 = False
 
+        # --- Configure sources ---
         # dict for storing device/animation name and index
         self.sources = {}
 
@@ -70,15 +72,6 @@ class Mixer:
             i+=1
             self.sources[src.name] = self.cv2_max_devices+i
 
-        # default file paths for video and image files. The actual path can be changed in the GUI
-        self.default_video_file_path = str(
-            self.find_samples_dir("Big_Buck_Bunny_1080_10s_2MB.mp4")
-        )
-        self.default_image_file_path = "test_image.jpg"
-
-        self.video_file_name = self.default_video_file_path
-        self.image_file_name = self.default_image_file_path
-
         # Dictionary of available animation sources. These differ from captured sources
         # in that they generate frames algorithmically rather than capturing from a device or file.
         self.animation_sources = {
@@ -87,12 +80,24 @@ class Mixer:
             MixSources.REACTION_DIFFUSION.name: ReactionDiffusionSimulator(640, 480),
         }
 
-
         self.device_sources = [k for k,v in self.sources.items() if v <= self.cv2_max_devices-2]
         self.file_sources = [self.sources[MixSources.VIDEO_FILE.name], self.sources[MixSources.IMAGE_FILE.name]]
 
+        # --- Configure file sources ---
+        self.video_samples = os.listdir(self.find_dir("samples"))
+        self.images = os.listdir(self.find_dir("images"))
 
+        # default file paths for video and image files. The actual path can be changed in the GUI
+        self.default_video_file_path = self.video_samples[0] if len(self.video_samples) > 0 else None
+        self.default_image_file_path = self.images[0] if len(self.images) > 0 else None
 
+        self.video_file_name1 = self.default_video_file_path
+        self.video_file_name2 = self.default_video_file_path
+
+        self.image_file_name1 = self.default_image_file_path
+        self.image_file_name2 = self.default_image_file_path
+
+        # --- Source Params ---
         self.selected_source1 = params.add(
             "source1", 0, max(self.sources.values()) - 1, self.sources[self.device_sources[0]]
         )
@@ -102,17 +107,11 @@ class Mixer:
 
         # --- Parameters for blending and keying ---
 
-        self.blend_mode = params.add(
-            "blend_mode", 0, 2, 0
-        )  # 0: blend, 1: luma key, 2: chroma key
+        self.blend_mode = params.add("blend_mode", 0, 2, 0)
 
         # Luma keying threshold and selection mode
-        self.luma_threshold = params.add(
-            "luma_threshold", 0, 255, 128
-        )  # Threshold for luma keying
-        self.luma_selection = params.add(
-            "luma_selection", 0, 1, 1
-        )  # 0 for black, 1 for white
+        self.luma_threshold = params.add("luma_threshold", 0, 255, 128)
+        self.luma_selection = params.add("luma_selection", 0, 1, 1)
 
         # Chroma key upper and lower HSV bounds
         self.upper_hue = params.add("upper_hue", 0, 179, 80)
@@ -130,17 +129,19 @@ class Mixer:
         self.start_video(self.selected_source1.value, 1)
         self.start_video(self.selected_source2.value, 2)
 
-    def find_samples_dir(self, file_name: str = None):
+
+    def find_dir(self, dir_name: str, file_name: str = None):
 
         script_dir = Path(__file__).parent
 
         video_path_object = (
-            script_dir / ".." / "samples" / file_name
+            script_dir / ".." / dir_name / file_name
             if file_name is not None
-            else script_dir / ".." / "samples"
+            else script_dir / ".." / dir_name
         )
 
         return str(video_path_object.resolve().as_posix())
+
 
     def detect_devices(self, max_index):
         for index in range(max_index):
@@ -153,31 +154,30 @@ class Mixer:
                     self.sources[f'{MixSources.DEVICE.name}_{index}'] = index
                 cap.release()
 
-    def list_sample_files(self):
-        # TODO: list files in sample dir
-        pass
 
     def failback_camera(self):
         # TODO: implement a fallback camera source if the selected source fails, move to mixer class
         pass
 
-    def open_cv2_capture(self, cap, source):
+
+    def open_cv2_capture(self, cap, source, index):
         # Release previous capture if it exists and is not an animation
         if cap and isinstance(cap, cv2.VideoCapture):
             cap.release()
 
         # Initialize new capture
         if source == self.sources[MixSources.VIDEO_FILE.name]:
-            source = self.video_file_name  # video file name should be set in callback
+            if index == 1:
+                source = self.find_dir("samples", self.video_file_name1)
+            else:
+                source = self.find_dir("samples", self.video_file_name2)
         elif source == self.sources[MixSources.IMAGE_FILE.name]:
-            source = self.image_file_name
-        
+            if index == 1:
+                source = self.find_dir("images", self.image_file_name1)
+            else:
+                source = self.find_dir("images", self.image_file_name2)
+
         cap = cv2.VideoCapture(source)
-
-        # if not os.path.exists(source):
-        #     print(f"File not found: {source}")
-        #     return
-
 
         # Add to list of live captures for proper release on exit
         self.live_caps.append(cap)
@@ -186,17 +186,20 @@ class Mixer:
         self.skip1 = True
 
         if not cap.isOpened():
-            print("Error: Could not open live video source for source 1.")
-            # TODO: Handle error as needed (e.g., fallback to default source)
+            print("Error: Could not open live video source.")
+            cap = self.failback_camera()
 
         return cap
 
+
     def open_animation(self, cap, source_val):
+
         # Release previous capture if it exists and is not an animation
         if cap and isinstance(cap, cv2.VideoCapture):
             cap.release()
         
         source = None
+        # get key using value since all values are unique
         for k,v in self.sources.items():
             if source_val == v:
                 return self.animation_sources[k]
@@ -214,14 +217,15 @@ class Mixer:
         # handle live sources (webcams, capture cards, files)
         if source <= self.cv2_max_devices:
             if index == 1:
-                self.cap1 = self.open_cv2_capture(self.cap1, source)
+                self.cap1 = self.open_cv2_capture(self.cap1, source, 1)
             elif index == 2:
-                self.cap2 = self.open_cv2_capture(self.cap2, source)
+                self.cap2 = self.open_cv2_capture(self.cap2, source, 1)
         else:  # handle animation sources
             if index == 1:
                 self.cap1 = self.open_animation(self.cap1, source)
             if index == 2:
                 self.cap2 = self.open_animation(self.cap2, source)
+
 
     def select_source1_callback(self, sender, app_data):
 
@@ -240,14 +244,9 @@ class Mixer:
             return
 
         self.selected_source1.value = source_index
-
-        # Show/hide file path input based on selection
-        if app_data == MixSources.VIDEO_FILE.name:
-            dpg.show_item("file_path_source_1")
-        else:
-            dpg.hide_item("file_path_source_1")
         
         self.start_video(self.selected_source1.value, 1)
+
 
     def select_source2_callback(self, sender, app_data):
         
@@ -257,7 +256,6 @@ class Mixer:
         )
 
         source_index = self.sources[app_data]
-        print("source index", source_index)
     
         # Abort if the same source is selected
         if (
@@ -267,18 +265,14 @@ class Mixer:
             return
 
         self.selected_source2.value = source_index
-
-        # Show/hide file path input based on selection
-        if app_data == MixSources.VIDEO_FILE.name:
-            dpg.show_item("file_path_source_2")
-        else:
-            dpg.hide_item("file_path_source_2")
         
         self.start_video(self.selected_source2.value, 2)
+
 
     def blend(self, frame1, frame2):
         alpha = self.frame_blend.value
         return cv2.addWeighted(frame1, alpha, frame2, 1 - alpha, 0)
+
 
     def luma_key(self, frame1, frame2, threshold=128, white=True):
         """Mixes two frames using luma keying (brightness threshold)."""
@@ -295,6 +289,7 @@ class Mixer:
             result = np.where(mask == 0, frame2, frame1)
         return result
 
+
     def chroma_key(self, frame1, frame2, lower=(0, 100, 0), upper=(80, 255, 80)):
         """Placeholder for chroma keying (green screen)."""
         hsv = cv2.cvtColor(frame1, cv2.COLOR_BGR2HSV)
@@ -302,6 +297,7 @@ class Mixer:
         mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
         result = np.where(mask == 255, frame2, frame1)
         return result
+
 
     def mix_sources(self):
         ret1, frame1 = False, None
@@ -366,9 +362,79 @@ class Mixer:
                 return self.blend(frame1, frame2)
         else:
             print("Error: Could not retrieve frames from both sources.")
-            # print(
-            #     f"Source 1 {MixSources(self.selected_source1.value).name} ret: {ret1},\n"
-            #     f"Source 2 {MixSources(self.selected_source2.value).name} ret: {ret2}"
-            # )
-            # TODO: implement fallback source or error handling
             return None
+
+
+    def mix_panel(self):
+        with dpg.collapsing_header(label=f"\tMixer", tag="mixer"):
+            dpg.add_text("Video Source 1")
+
+            dpg.add_combo(list(self.sources.keys()), default_value="INTERNAL_WEBCAM", tag="source_1", callback=self.select_source1_callback)
+            # Initially hide the input text for file path 1 as webcam is default
+            dpg.add_combo(self.video_samples+self.images, default_value=self.default_video_file_path, tag="source_1_file", callback=self.select_source1_file)
+            # dpg.add_input_text(label="Video File Path 1", tag="file_path_source_1", default_value=mixer.default_video_file_path)
+            
+            dpg.add_text("Video Source 2")
+            dpg.add_combo(list(self.sources.keys()), default_value="METABALLS", tag="source_2", callback=self.select_source2_callback)
+            # dpg.add_input_text(label="Video File Path 2", tag="file_path_source_2", default_value=mixer.default_video_file_path)
+            dpg.add_combo(self.video_samples+self.images, default_value=self.default_video_file_path, tag="source_2_file", callback=self.select_source2_file)
+            dpg.add_spacer(height=10)
+
+            dpg.add_text("Mixer")
+            # dpg.add_slider_float(label="Blending", default_value=alpha, min_value=0.0, max_value=1.0, callback=alpha_callback, format="%.2f")
+            
+            blend_mode_slider = TrackbarRow(
+                "Blend Mode",
+                params.get("blend_mode"),
+                None) # fix defulat font_id=None
+            
+            frame_blend_slider = TrackbarRow(
+                "Frame Blend",
+                params.get("frame_blend"),
+                None) # fix defulat font_id=None
+            
+            upper_hue_key_slider = TrackbarRow(
+                "Upper Hue Key",
+                params.get("upper_hue"),
+                None) # fix defulat font_id=None
+            
+            lower_hue_key_slider = TrackbarRow(
+                "Lower Hue Key",
+                params.get("lower_hue"),
+                None) # fix defulat font_id=None
+            
+            upper_sat_slider = TrackbarRow(
+                "Upper Sat Key",
+                params.get("upper_sat"),
+                None) # fix defulat font_id=None
+            
+            lower_sat_slider = TrackbarRow(
+                "Lower Sat Key",
+                params.get("lower_sat"),
+                None) # fix defulat font_id=None
+            
+            upper_val_slider = TrackbarRow(
+                "Upper Val Key",
+                params.get("upper_val"),
+                None) # fix defulat font_id=None
+            
+            lower_val_slider = TrackbarRow(
+                "Lower Val Key",
+                params.get("lower_val"),
+                None) # fix defulat font_id=None
+            
+            luma_threshold_slider = TrackbarRow(
+                "Luma Threshold",
+                params.get("luma_threshold"),
+                None) # fix defulat font_id=None
+            
+            luma_selection_slider = TrackbarRow(
+                "Luma Selection",
+                params.get("luma_selection"),
+                None) # fix defulat font_id=None
+            
+    def select_source1_file(self, sender, app_data):
+        self.video_file_name1 = app_data
+
+    def select_source2_file(self, sender, app_data):
+        self.video_file_name2 = app_data
