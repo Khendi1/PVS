@@ -13,28 +13,30 @@ class MixModes(IntEnum):
     LUMA_KEY = 1
     CHROMA_KEY = 2
 
+""" 
+The MixSources Enum class is used to standardize stings 
 
+For cv2 sources (devices, images, video files), there is an A and B enum
+so that different they can be used on source 1 and source 2 simultaneously
+
+Note that if you want to mix two video files, the sources must be set to 
+"""
 class MixSources(Enum):
-    DEVICE = 0
-    VIDEO_FILE = auto()
-    IMAGE_FILE = auto()
-    METABALLS = auto()
-    PLASMA = auto()
-    REACTION_DIFFUSION = auto()
-    MOIRE = auto()
-    SHADER = auto()
+    DEVICE_1 = 0
+    DEVICE_2 = auto()
+    VIDEO_FILE_1 = auto()
+    VIDEO_FILE_2 = auto()
+    IMAGE_FILE_1 = auto()
+    IMAGE_FILE_2 = auto()
+    METABALLS_ANIM = auto()
+    PLASMA_ANIM = auto()
+    REACTION_DIFFUSION_ANIM = auto()
+    MOIRE_ANIM = auto()
+    SHADER_ANIM = auto()
 
-
-FILE_SOURCES = [MixSources.VIDEO_FILE, MixSources.IMAGE_FILE]
-
-ANIMATED_SOURCES = [
-    MixSources.METABALLS,
-    MixSources.PLASMA,
-    MixSources.REACTION_DIFFUSION,
-    MixSources.MOIRE,
-    MixSources.SHADER,
-]
-
+DEVICE_SOURCE_NAMES = [member for member in MixSources if "DEVICE" in member.name]
+FILE_SOURCE_NAMES = [member for member in MixSources if "FILE" in member.name]
+ANIMATED_SOURCE_NAMES = [member for member in MixSources if "ANIM" in member.name]
 
 class Mixer:
 
@@ -53,35 +55,35 @@ class Mixer:
         self.skip2 = False
 
         # --- Configure sources ---
-        # dict for storing device/animation name and index
-        self.sources = {}
+        self.sources = {}   # dict for storing device/animation name and index
 
         # add valid cv2 video device indicies to source dict
         self.cv2_max_devices = 10
         self.detect_devices(max_index=self.cv2_max_devices)
 
         # file source indicies begin at cv2_max_devices+1
-        self.cv2_max_devices+=1
-        self.sources[MixSources.VIDEO_FILE.name] = self.cv2_max_devices
-        self.cv2_max_devices+=1
-        self.sources[MixSources.IMAGE_FILE.name] = self.cv2_max_devices
+        for src in FILE_SOURCE_NAMES:
+            self.cv2_max_devices += 1
+            self.sources[src.name] = self.cv2_max_devices
 
-        # animation source indicies begin at cv2_max_devices+1
+        # animation source indicies begin at cv2_max_devices+4
         i = 0
-        for src in ANIMATED_SOURCES:
+        for src in ANIMATED_SOURCE_NAMES:
             i+=1
             self.sources[src.name] = self.cv2_max_devices+i
+
+        print(self.sources)
 
         # Dictionary of available animation sources. These differ from captured sources
         # in that they generate frames algorithmically rather than capturing from a device or file.
         self.animation_sources = {
-            MixSources.METABALLS.name: Metaballs(width=640, height=480),
-            MixSources.PLASMA.name: Plasma(width=640, height=480),
-            MixSources.REACTION_DIFFUSION.name: ReactionDiffusionSimulator(640, 480),
+            MixSources.METABALLS_ANIM.name: Metaballs(width=640, height=480),
+            MixSources.PLASMA_ANIM.name: Plasma(width=640, height=480),
+            MixSources.REACTION_DIFFUSION_ANIM.name: ReactionDiffusionSimulator(640, 480),
         }
 
-        self.device_sources = [k for k,v in self.sources.items() if v <= self.cv2_max_devices-2]
-        self.file_sources = [self.sources[MixSources.VIDEO_FILE.name], self.sources[MixSources.IMAGE_FILE.name]]
+        self.device_sources = [k for k,v in self.sources.items() if v <= self.cv2_max_devices-(len(FILE_SOURCE_NAMES)-1)]
+        # self.file_sources = 
 
         # --- Configure file sources ---
         self.video_samples = os.listdir(self.find_dir("samples"))
@@ -102,7 +104,7 @@ class Mixer:
             "source1", 0, max(self.sources.values()) - 1, self.sources[self.device_sources[0]]
         )
         self.selected_source2 = params.add(
-            "source2", 0, max(self.sources.values()) - 1, self.sources[MixSources.METABALLS.name]
+            "source2", 0, max(self.sources.values()) - 1, self.sources[MixSources.METABALLS_ANIM.name]
         )
 
         # --- Parameters for blending and keying ---
@@ -151,7 +153,7 @@ class Mixer:
             if cap.isOpened():
                 ret, _ = cap.read()
                 if ret:
-                    self.sources[f'{MixSources.DEVICE.name}_{index}'] = index
+                    self.sources[f'{MixSources.DEVICE_1.name}_{index}'] = index
                 cap.release()
 
 
@@ -166,12 +168,12 @@ class Mixer:
             cap.release()
 
         # Initialize new capture
-        if source == self.sources[MixSources.VIDEO_FILE.name]:
+        if source == self.sources[MixSources.VIDEO_FILE_1.name] or source == self.sources[MixSources.VIDEO_FILE_2.name]:
             if index == 1:
                 source = self.find_dir("samples", self.video_file_name1)
             else:
                 source = self.find_dir("samples", self.video_file_name2)
-        elif source == self.sources[MixSources.IMAGE_FILE.name]:
+        elif source == self.sources[MixSources.IMAGE_FILE_1.name] or source == self.sources[MixSources.IMAGE_FILE_2.name]:
             if index == 1:
                 source = self.find_dir("images", self.image_file_name1)
             else:
@@ -367,15 +369,15 @@ class Mixer:
 
     def mix_panel(self):
         with dpg.collapsing_header(label=f"\tMixer", tag="mixer"):
+            sources = [src for src in self.sources.keys() if '2' not in src]
             dpg.add_text("Video Source 1")
-
-            dpg.add_combo(list(self.sources.keys()), default_value="INTERNAL_WEBCAM", tag="source_1", callback=self.select_source1_callback)
-            # Initially hide the input text for file path 1 as webcam is default
+            dpg.add_combo(sources, default_value="DEVICE_1_0", tag="source_1", callback=self.select_source1_callback)
             dpg.add_combo(self.video_samples+self.images, default_value=self.default_video_file_path, tag="source_1_file", callback=self.select_source1_file)
             # dpg.add_input_text(label="Video File Path 1", tag="file_path_source_1", default_value=mixer.default_video_file_path)
             
+            sources = [src for src in self.sources.keys() if '1' not in src]
             dpg.add_text("Video Source 2")
-            dpg.add_combo(list(self.sources.keys()), default_value="METABALLS", tag="source_2", callback=self.select_source2_callback)
+            dpg.add_combo(sources, default_value="METABALLS_ANIM", tag="source_2", callback=self.select_source2_callback)
             # dpg.add_input_text(label="Video File Path 2", tag="file_path_source_2", default_value=mixer.default_video_file_path)
             dpg.add_combo(self.video_samples+self.images, default_value=self.default_video_file_path, tag="source_2_file", callback=self.select_source2_file)
             dpg.add_spacer(height=10)
