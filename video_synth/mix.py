@@ -191,7 +191,7 @@ class Mixer:
 
         if not cap.isOpened():
             print("Error: Could not open live video source.")
-            cap = self.failback_camera()
+            cap = self.failback_camera
 
         return cap
 
@@ -213,7 +213,6 @@ class Mixer:
         """
         Initializes a video capture object based on the source value.
         """
-
 
         # handle live sources (webcams, capture cards, files)
         if source <= self.cv2_max_devices:
@@ -316,12 +315,13 @@ class Mixer:
             ret1 = True
         else:
             ret1, frame1 = self.cap1.read()
-            if not ret1:  # If reading fails, release and try to re-open
+            # TODO: retry a couple times to let devices connect before changing src
+            if not ret1:
                 print(
                     f"Error: Source 1 '{self.selected_source1.value}' read failed"
                 )
-                self.cap1.release()
-                self.cap1 = self.failback_camera()
+                # self.cap1.release()
+                # self.cap1 = self.failback_camera()
 
         # Read from source 2
         if not isinstance(self.cap2, cv2.VideoCapture):
@@ -333,8 +333,8 @@ class Mixer:
                 print(
                     f"Error: Source 2 '{self.selected_source2.value}' read failed, attempting to reopen."
                 )
-                self.cap2.release()
-                self.cap2 = self.failback_camera()
+                # self.cap2.release()
+                # self.cap2 = self.failback_camera()
 
         # Process and display frames
         if ret1 and ret2:
