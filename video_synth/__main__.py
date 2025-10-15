@@ -53,17 +53,14 @@ def apply_effects(frame, frame_count, patterns: Patterns, feedback: Feedback, co
         frame = ptz.shift_frame(frame)
         frame = sync.sync(frame)
         frame = reflector.apply_reflection(frame)
+        frame = color.polarize_frame_hsv(frame)
         frame = color.modify_hsv(frame)
         frame = color.adjust_brightness_contrast(frame)
-        # frame = pixels.glitch_image(frame)
         frame = noise.apply_noise(frame)
-        frame = color.polarize_frame_hsv(frame)
         frame = color.solarize_image(frame)
         frame = color.posterize(frame)
         frame = pixels.gaussian_blur(frame)
         frame = pixels.sharpen_frame(frame)
-
-        #TODO: implement glitch effect class functions
         frame = glitch.apply_glitch_effects(frame, frame_count)
 
         # TODO: test these effects, test ordering
@@ -98,8 +95,8 @@ def main():
     frame_count = 0
 
     # Initialize effects classes with image dimensions
-    # The mixer and all objects from fx.py are stored here
-    init_shared_objects(width=image_width, height=image_height)
+    # The mixer and all objects from fx.py are stored here so they may be used by both main and the gui
+    init_effects(width=image_width, height=image_height)
 
     cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Modified Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)

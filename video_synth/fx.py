@@ -10,6 +10,7 @@ import time
 from buttons import Button
 import dearpygui.dearpygui as dpg
 from sliders import *
+from itertools import islice
 
 
 class WarpType(IntEnum):
@@ -989,12 +990,12 @@ class Feedback:
 
         self.frame_skip = params.add("frame_skip", 0, 10, 0)
         self.alpha = params.add("alpha", 0.0, 1.0, 0.0)
-        self.temporal_filter = params.add("temporal_filter", 0, 1.0, 1.0)
+        self.temporal_filter = params.add("temporal_filter", 0, 1.0, 0.0)
         self.feedback_luma_threshold = params.add("feedback_luma_threshold", 0, 255, 0)
         self.luma_select_mode = params.add(
             "luma_select_mode", 0, len(LumaMode) - 1, LumaMode.NONE.value
         )
-        self.buffer_select = params.add("buffer_frame_select", 0, 20, 0)
+        self.buffer_select = params.add("buffer_frame_select", -1, 20, -1)
         self.buffer_frame_blend = params.add("buffer_frame_blend", 0.0, 1.0, 0.0)
 
         self.prev_frame_scale = params.add("prev_frame_scale", 90, 110, 100)
@@ -1003,7 +1004,7 @@ class Feedback:
         self.sequence = params.add("sequence", 0, 100, 0)
 
         self.max_buffer_size = 30
-        self.buffer_size = params.add("buffer_size", 0, self.max_buffer_size, 5)
+        self.buffer_size = params.add("buffer_size", 0, self.max_buffer_size, 0)
         # this should probably be initialized in reset() to avoid issues with reloading config
         self.frame_buffer = deque(maxlen=self.max_buffer_size)
 
@@ -1043,16 +1044,17 @@ class Feedback:
 
     def nth_frame_feedback(self, frame):
 
-        nth_frame = self.frame_buffer[self.buffer_select.value]
 
-        if nth_frame is None:
+        if self.buffer_select.value == -1 or len(self.frame_buffer) < self.buffer_select.value:
             return frame
+                
+        nth_frame = self.frame_buffer[self.buffer_select.value]
         
         frame = cv2.addWeighted(
             frame.astype(np.float32),
-            self.buffer_frame_blend.value,
-            nth_frame.astype(np.float32),
             1 - self.buffer_frame_blend.value,
+            nth_frame.astype(np.float32),
+            self.buffer_frame_blend.value,
             0,
         )       
 
@@ -1061,22 +1063,23 @@ class Feedback:
 
     def avg_frame_buffer(self, frame):
 
-        if self.buffer_size.value <= 1:
-            return frame
-
+        # important: update buffer even if we aren't doing anything with it
         self.frame_buffer.append(frame.astype(np.float32))
 
-        while len(self.frame_buffer) > self.buffer_size.value:
-            del self.frame_buffer[0]
-            # print(f"Removing oldest frame from buffer, size now {len(self.frame_buffer)}")
+        # averaging with single previous frame already accomplished, so return
+        if self.buffer_size.value <= 1:
+            return frame
 
         # If the buffer is not yet full, return the original frame.
         if len(self.frame_buffer) < self.buffer_size.value:
             # print(f"Buffering frames: {len(self.frame_buffer)}/{self.buffer_size.value}")
-            return frame.copy()
+            return frame
 
-        # Calculate the average of all frames in the buffer
-        avg_frame = np.mean(self.frame_buffer, axis=0)
+        sliced_deque = np.array(self.frame_buffer)[:self.buffer_size.value]
+        print(len(sliced_deque))
+        
+        avg_frame = np.mean(sliced_deque, axis=0)
+
 
         # Convert the averaged frame back to the correct data type (uint8)
         return np.clip(avg_frame, 0, 255).astype(np.uint8)
@@ -1105,9 +1108,9 @@ class Feedback:
         # It's a low-pass filter in the time domain.
         filtered_frame = cv2.addWeighted(
             current_frame_float,
-            self.temporal_filter.value,
-            filtered_frame,
             1 - self.temporal_filter.value,
+            filtered_frame,
+            self.temporal_filter.value,
             0,
         )
 
@@ -1143,6 +1146,7 @@ class Feedback:
 
         # Combine the new foreground (fg) with the previous frame's background (bg)
         return cv2.add(fg, bg)
+
 
     # TODO: implement
     def apply_perlin_noise(

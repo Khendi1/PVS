@@ -72,8 +72,6 @@ class Mixer:
             i+=1
             self.sources[src.name] = self.cv2_max_devices+i
 
-        print(self.sources)
-
         # Dictionary of available animation sources. These differ from captured sources
         # in that they generate frames algorithmically rather than capturing from a device or file.
         self.animation_sources = {
@@ -100,9 +98,12 @@ class Mixer:
         self.image_file_name2 = self.default_image_file_path
 
         # --- Source Params ---
+
+        # initialize source 1 to use the first hardware device available (probably webcam if on laptop)
         self.selected_source1 = params.add(
             "source1", 0, max(self.sources.values()) - 1, self.sources[self.device_sources[0]]
         )
+        # init source 2 to metaballs
         self.selected_source2 = params.add(
             "source2", 0, max(self.sources.values()) - 1, self.sources[MixSources.METABALLS_ANIM.name]
         )
@@ -154,6 +155,7 @@ class Mixer:
                 ret, _ = cap.read()
                 if ret:
                     self.sources[f'{MixSources.DEVICE_1.name}_{index}'] = index
+                    self.sources[f'{MixSources.DEVICE_2.name}_{index}'] = index
                 cap.release()
 
 
@@ -201,7 +203,7 @@ class Mixer:
             cap.release()
         
         source = None
-        # get key using value since all values are unique
+        # get key using value since all animation values are unique
         for k,v in self.sources.items():
             if source_val == v:
                 return self.animation_sources[k]
@@ -212,17 +214,20 @@ class Mixer:
         Initializes a video capture object based on the source value.
         """
 
-        print(
-            f"Starting source {index}: source value: {source}"
-        )
 
         # handle live sources (webcams, capture cards, files)
         if source <= self.cv2_max_devices:
+            print(
+                f"Starting mixer source {index}: with cv2 source value: {source}"
+            )
             if index == 1:
                 self.cap1 = self.open_cv2_capture(self.cap1, source, 1)
             elif index == 2:
-                self.cap2 = self.open_cv2_capture(self.cap2, source, 1)
+                self.cap2 = self.open_cv2_capture(self.cap2, source, 2)
         else:  # handle animation sources
+            print(
+                f"Starting mixer source {index}: with animation source value: {source}"
+            )
             if index == 1:
                 self.cap1 = self.open_animation(self.cap1, source)
             if index == 2:
@@ -313,7 +318,7 @@ class Mixer:
             ret1, frame1 = self.cap1.read()
             if not ret1:  # If reading fails, release and try to re-open
                 print(
-                    f"Error: Source 1 '{self.selected_source1.value}' read failed, attempting to reopen."
+                    f"Error: Source 1 '{self.selected_source1.value}' read failed"
                 )
                 self.cap1.release()
                 self.cap1 = self.failback_camera()
@@ -336,8 +341,6 @@ class Mixer:
             # Ensure frames are the same size for mixing
             height, width, _ = frame1.shape
             frame2 = cv2.resize(frame2, (width, height))
-
-            # print(f"mode: {mode}, luma_threshold: {self.luma_threshold.value}, luma_selection: {self.luma_selection.value}")
 
             # For luma_key, you can pass threshold as needed
             if self.blend_mode.value == MixModes.LUMA_KEY.value:
@@ -369,26 +372,28 @@ class Mixer:
 
     def mix_panel(self):
         with dpg.collapsing_header(label=f"\tMixer", tag="mixer"):
-            sources = [src for src in self.sources.keys() if '2' not in src]
+
+            # Get list of srcs without DEVICE_2, X_FILE_2
+            sources = [src for src in self.sources.keys() if 'E_2' not in src]
+            
             dpg.add_text("Video Source 1")
             dpg.add_combo(sources, default_value="DEVICE_1_0", tag="source_1", callback=self.select_source1_callback)
             dpg.add_combo(self.video_samples+self.images, default_value=self.default_video_file_path, tag="source_1_file", callback=self.select_source1_file)
             # dpg.add_input_text(label="Video File Path 1", tag="file_path_source_1", default_value=mixer.default_video_file_path)
             
-            sources = [src for src in self.sources.keys() if '1' not in src]
+            sources = [src for src in self.sources.keys() if 'E_1' not in src]
+
             dpg.add_text("Video Source 2")
             dpg.add_combo(sources, default_value="METABALLS_ANIM", tag="source_2", callback=self.select_source2_callback)
             # dpg.add_input_text(label="Video File Path 2", tag="file_path_source_2", default_value=mixer.default_video_file_path)
             dpg.add_combo(self.video_samples+self.images, default_value=self.default_video_file_path, tag="source_2_file", callback=self.select_source2_file)
+            
             dpg.add_spacer(height=10)
 
             dpg.add_text("Mixer")
             # dpg.add_slider_float(label="Blending", default_value=alpha, min_value=0.0, max_value=1.0, callback=alpha_callback, format="%.2f")
             
-            blend_mode_slider = TrackbarRow(
-                "Blend Mode",
-                params.get("blend_mode"),
-                None) # fix defulat font_id=None
+            blend_mode_slider = TrackbarRow("Blend Mode", params.get("blend_mode"), None)
             
             frame_blend_slider = TrackbarRow(
                 "Frame Blend",

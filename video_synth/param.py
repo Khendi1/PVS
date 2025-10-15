@@ -151,8 +151,7 @@ class Param:
         else:
             clamped_value = new_value
         
-        # 2. Type cast the clamped_value to match the default_val's type
-        # This ensures consistency (e.g., if default_val is int, value remains int)
+        # Type cast the clamped_value to match the default_val's type
         if isinstance(self.default_val, float):
             self._value = float(clamped_value)
         elif isinstance(self.default_val, int):
@@ -161,7 +160,7 @@ class Param:
             # For other types (like bool), directly assign
             self._value = clamped_value
 
-        # Apply specific logic for params
+        # Apply specific logic for certain params
         # Ensures blur kernel size is odd and at least 1
         if self.name == "blur_kernel_size":
             self._value = max(1, int(self._value) | 1) # Bitwise OR with 1 ensures it's odd

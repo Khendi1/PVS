@@ -42,7 +42,7 @@ ptz = None
 # Convenient dictionary of effects to be passed to the apply_effects function
 fx = {}
 
-def init_shared_objects(width, height):
+def init_effects(width, height):
     global feedback, color, pixels, noise, shapes, patterns
     global reflector, sync, warp, glitch
 
