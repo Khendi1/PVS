@@ -1,4 +1,4 @@
-from config import params
+# from config import params
 import dearpygui.dearpygui as dpg
 
 class TrackbarRow:

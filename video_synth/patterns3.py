@@ -5,7 +5,7 @@ from enum import Enum
 import random
 import noise # For Perlin noise generation
 from param import ParamTable, Param
-from config import params
+# from config import params
 from generators import Oscillator
 from sliders import TrackbarCallback, TrackbarRow
 import dearpygui.dearpygui as dpg
@@ -44,7 +44,7 @@ class Patterns:
     Generates various animated patterns using OpenCV and modulates them
     with a bank of Oscillators.
     """
-    def __init__(self, width, height):
+    def __init__(self, params, width, height):
         """
         Initializes the PatternGenerator.
         Args:
@@ -128,7 +128,7 @@ class Patterns:
 
         self.posc_bank = [] # List to hold Oscillator instances
         for i in range(4):
-            self.posc_bank.append(Oscillator(name=f"posc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=0)) 
+            self.posc_bank.append(Oscillator(params, name=f"posc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=0)) 
 
 
         self.prev = None

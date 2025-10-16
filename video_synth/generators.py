@@ -3,7 +3,7 @@ import random
 import math
 from enum import Enum
 import numpy as np
-from config import params
+# from config import params
 import noise
 from param import Param
 
@@ -56,7 +56,7 @@ class OscillatorShape(Enum):
         return cls(value)
 
 class Oscillator:
-    def __init__(self, name, frequency, amplitude, phase, shape, seed=0, linked_param_name=None, max_amplitude=100, min_amplitude=-100):
+    def __init__(self, params, name, frequency, amplitude, phase, shape, seed=0, linked_param_name=None, max_amplitude=100, min_amplitude=-100):
         self.name = name
         self.param_max = max_amplitude
         self.param_min = min_amplitude

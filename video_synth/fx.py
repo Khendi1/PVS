@@ -1,16 +1,14 @@
-import numpy as np
+import math
+import random
+from collections import deque
 from enum import IntEnum, Enum, auto
 import cv2
-from config import *
-import random
-import math
-from noise import pnoise2
-from collections import deque
-import time
-from buttons import Button
+import numpy as np
 import dearpygui.dearpygui as dpg
-from sliders import *
-from itertools import islice
+# from config import params
+from noise import pnoise2
+from buttons import Button
+from sliders import TrackbarRow
 
 
 class WarpType(IntEnum):
@@ -21,13 +19,7 @@ class WarpType(IntEnum):
     PERLIN = 4
     WARP0 = 5  # this is a placeholder for the old warp_frame method; yet to be tested
 
-
-class HSV(IntEnum):
-    H = 0
-    S = 1
-    V = 2
-
-
+"""Enumeration of blur modes"""
 class BlurType(IntEnum):
     NONE = 0
     GAUSSIAN = 1
@@ -35,16 +27,23 @@ class BlurType(IntEnum):
     BOX = 3
     BILATERAL = 4
 
-
+"""Enumeration of sharpening modes"""
 class SharpenType(IntEnum):
     NONE = 0
     SHARPEN = 1
     UNSHARP_MASK = 2
 
+"""Enum to access hsv tuple indicies"""
+class HSV(IntEnum):
+    H = 0
+    S = 1
+    V = 2
+
 
 class Color:
 
-    def __init__(self):
+    def __init__(self, params):
+        self.params = params
 
         self.hue_shift = params.add("hue_shift", 0, 180, 0)
         self.sat_shift = params.add("sat_shift", 0, 255, 0)
@@ -283,48 +282,48 @@ class Color:
 
         with dpg.collapsing_header(label=f"\tColor", tag="color"):
 
-            hue_slider = TrackbarRow("Hue Shift", params["hue_shift"], default_font_id)
+            hue_slider = TrackbarRow("Hue Shift", self.params["hue_shift"], default_font_id)
 
             sat_slider = TrackbarRow(
-                "Sat Shift", params.get("sat_shift"), default_font_id
+                "Sat Shift", self.params.get("sat_shift"), default_font_id
             )
 
             val_slider = TrackbarRow(
-                "Val Shift", params.get("val_shift"), default_font_id
+                "Val Shift", self.params.get("val_shift"), default_font_id
             )
 
             contrast_slider = TrackbarRow(
-                "Contrast", params.get("contrast"), default_font_id
+                "Contrast", self.params.get("contrast"), default_font_id
             )
 
             brightness_slider = TrackbarRow(
-                "Brighness", params.get("brightness"), default_font_id
+                "Brighness", self.params.get("brightness"), default_font_id
             )
 
             val_threshold_slider = TrackbarRow(
-                "Val Threshold", params.get("val_threshold"), default_font_id
+                "Val Threshold", self.params.get("val_threshold"), default_font_id
             )
 
             val_hue_shift_slider = TrackbarRow(
-                "Hue Shift for Val", params.get("val_hue_shift"), default_font_id
+                "Hue Shift for Val", self.params.get("val_hue_shift"), default_font_id
             )
 
             hue_invert_angle_slider = TrackbarRow(
-                "Hue Invert Angle", params.get("hue_invert_angle"), default_font_id
+                "Hue Invert Angle", self.params.get("hue_invert_angle"), default_font_id
             )
 
             hue_invert_strength_slider = TrackbarRow(
                 "Hue Invert Strength",
-                params.get("hue_invert_strength"),
+                self.params.get("hue_invert_strength"),
                 default_font_id,
             )
 
             posterize_slider = TrackbarRow(
-                "Posterize Levels", params.get("posterize_levels"), default_font_id
+                "Posterize Levels", self.params.get("posterize_levels"), default_font_id
             )
 
             solarize_slider = TrackbarRow(
-                "Solarize Threshold", params.get("solarize_threshold"), default_font_id
+                "Solarize Threshold", self.params.get("solarize_threshold"), default_font_id
             )
 
         dpg.bind_item_font("color", global_font_id)
@@ -332,7 +331,8 @@ class Color:
 
 class Pixels:
 
-    def __init__(self, image_width: int, image_height: int):
+    def __init__(self, params, image_width: int, image_height: int):
+        self.params = params
         self.image_width = image_width
         self.image_height = image_height
 
@@ -387,7 +387,8 @@ class Pixels:
 
 class Sync:
 
-    def __init__(self):
+    def __init__(self, params):
+        self.params = params
         self.x_sync_freq = params.add("x_sync_freq", 0.1, 100.0, 1.0)
         self.x_sync_amp = params.add("x_sync_amp", -200, 200, 0.0)
         self.x_sync_speed = params.add("x_sync_speed", 5.0, 10.0, 9.0)
@@ -433,29 +434,29 @@ class Sync:
         with dpg.collapsing_header(label=f"\tSync", tag="sync"):
 
             x_sync_speed_slider = TrackbarRow(
-                "X Sync Speed", params.get("x_sync_speed"), default_font_id
+                "X Sync Speed", self.params.get("x_sync_speed"), default_font_id
             )
 
             x_sync_freq_slider = TrackbarRow(
-                "X Sync Freq", params.get("x_sync_freq"), default_font_id
+                "X Sync Freq", self.params.get("x_sync_freq"), default_font_id
             )
 
             x_sync_amp_slider = TrackbarRow(
-                "X Sync Amp", params.get("x_sync_amp"), default_font_id
+                "X Sync Amp", self.params.get("x_sync_amp"), default_font_id
             )
 
             x_sync_speed_slider = TrackbarRow(
-                "Y Sync Speed", params.get("y_sync_speed"), default_font_id
+                "Y Sync Speed", self.params.get("y_sync_speed"), default_font_id
             )
 
             x_sync_freq_slider = TrackbarRow(
                 "Y Sync Freq",
-                params.get("y_sync_freq"),
+                self.params.get("y_sync_freq"),
                 default_font_id,
             )
 
             x_sync_amp_slider = TrackbarRow(
-                "Y Sync Amp", params.get("y_sync_amp"), default_font_id
+                "Y Sync Amp", self.params.get("y_sync_amp"), default_font_id
             )
 
         dpg.bind_item_font("sync", global_font_id)
@@ -463,8 +464,8 @@ class Sync:
 
 class Warp:
 
-    def __init__(self, image_width: int, image_height: int):
-
+    def __init__(self, params, image_width: int, image_height: int):
+        self.params = params
         self.warp_type = params.add(
             "warp_type", WarpType.NONE.value, WarpType.WARP0.value, WarpType.NONE.value
         )
@@ -657,52 +658,52 @@ class Warp:
 
             warp_type_slider = TrackbarRow(
                 "Warp Type",
-                params.get("warp_type"),
+                self.params.get("warp_type"),
                 default_font_id,
             )
 
             warp_angle_amt_slider = TrackbarRow(
-                "Warp Angle Amt", params.get("warp_angle_amt"), default_font_id
+                "Warp Angle Amt", self.params.get("warp_angle_amt"), default_font_id
             )
 
             warp_radius_amt_slider = TrackbarRow(
-                "Warp Radius Amt", params.get("warp_radius_amt"), default_font_id
+                "Warp Radius Amt", self.params.get("warp_radius_amt"), default_font_id
             )
 
             warp_speed_slider = TrackbarRow(
-                "Warp Speed", params.get("warp_speed"), default_font_id
+                "Warp Speed", self.params.get("warp_speed"), default_font_id
             )
 
             warp_use_fractal_slider = TrackbarRow(
-                "Warp Use Fractal", params.get("warp_use_fractal"), default_font_id
+                "Warp Use Fractal", self.params.get("warp_use_fractal"), default_font_id
             )
 
             warp_octaves_slider = TrackbarRow(
-                "Warp Octaves", params.get("warp_octaves"), default_font_id
+                "Warp Octaves", self.params.get("warp_octaves"), default_font_id
             )
 
             warp_gain_slider = TrackbarRow(
-                "Warp Gain", params.get("warp_gain"), default_font_id
+                "Warp Gain", self.params.get("warp_gain"), default_font_id
             )
 
             warp_lacunarity_slider = TrackbarRow(
-                "Warp Lacunarity", params.get("warp_lacunarity"), default_font_id
+                "Warp Lacunarity", self.params.get("warp_lacunarity"), default_font_id
             )
 
             x_speed_slider = TrackbarRow(
-                "X Speed", params.get("x_speed"), default_font_id
+                "X Speed", self.params.get("x_speed"), default_font_id
             )
 
             y_speed_slider = TrackbarRow(
-                "Y Speed", params.get("y_speed"), default_font_id
+                "Y Speed", self.params.get("y_speed"), default_font_id
             )
 
             x_size_slider = TrackbarRow(
-                "X Size", params.get("x_size"), default_font_id
+                "X Size", self.params.get("x_size"), default_font_id
             )
 
             y_size_slider = TrackbarRow(
-                "Y Size", params.get("y_size"), default_font_id
+                "Y Size", self.params.get("y_size"), default_font_id
             )
 
 
@@ -725,13 +726,14 @@ class Reflector:
     A class to apply reflection transformations to image frames from a stream.
     """
 
-    def __init__(self, mode: ReflectionMode = ReflectionMode.NONE):
+    def __init__(self, params, mode: ReflectionMode = ReflectionMode.NONE):
         """
         Initializes the StreamReflector with a specified reflection mode.
 
         Args:
             mode (ReflectionMode): The reflection mode to apply. Defaults to NONE.
         """
+        self.params = params
         if not isinstance(mode, ReflectionMode):
             raise ValueError("mode must be an instance of ReflectionMode Enum.")
         self._mode = params.add(
@@ -836,20 +838,20 @@ class Reflector:
         with dpg.collapsing_header(label=f"\tReflector", tag="reflector"):
 
             reflection_mode_slider = TrackbarRow(
-                "Reflection Mode", params.get("reflection_mode"), default_font_id
+                "Reflection Mode", self.params.get("reflection_mode"), default_font_id
             )
 
             # reflection_strength_slider = TrackbarRow(
             #     "Reflection Strength",
-            #     params.get("reflection_strength"),
+            #     self.params.get("reflection_strength"),
             #     default_font_id)
 
         dpg.bind_item_font("reflector", global_font_id)
 
 
 class PTZ:
-    def __init__(self, image_width: int, image_height: int):
-
+    def __init__(self, params, image_width: int, image_height: int):
+        self.params = params
         self.height = image_height
         self.width = image_width
         self.x_shift = params.add(
@@ -940,15 +942,15 @@ class PTZ:
         with dpg.collapsing_header(label=f"\tPan", tag="pan"):
 
             x_shift_slider = TrackbarRow(
-                "X Shift", params.get("x_shift"), default_font_id
+                "X Shift", self.params.get("x_shift"), default_font_id
             )
             y_shift_slider = TrackbarRow(
-                "Y Shift", params.get("y_shift"), default_font_id
+                "Y Shift", self.params.get("y_shift"), default_font_id
             )
             r_shift_slider = TrackbarRow(
-                "R Shift", params.get("r_shift"), default_font_id
+                "R Shift", self.params.get("r_shift"), default_font_id
             )
-            zoom_slider = TrackbarRow("Zoom", params.get("zoom"), default_font_id)
+            zoom_slider = TrackbarRow("Zoom", self.params.get("zoom"), default_font_id)
 
             enable_polar_transform_button = Button(
                 "Enable Polar Transform", "enable_polar_transform"
@@ -963,13 +965,13 @@ class PTZ:
             dpg.bind_item_font(enable_polar_transform_button.tag, default_font_id)
 
             polar_x_slider = TrackbarRow(
-                "Polar Center X", params.get("polar_x"), default_font_id
+                "Polar Center X", self.params.get("polar_x"), default_font_id
             )
             polar_y_slider = TrackbarRow(
-                "Polar Center Y", params.get("polar_y"), default_font_id
+                "Polar Center Y", self.params.get("polar_y"), default_font_id
             )
             polar_radius_slider = TrackbarRow(
-                "Polar radius", params.get("polar_radius"), default_font_id
+                "Polar radius", self.params.get("polar_radius"), default_font_id
             )
 
         dpg.bind_item_font("pan", global_font_id)
@@ -983,8 +985,8 @@ class LumaMode(IntEnum):
 
 class Feedback:
 
-    def __init__(self, image_width: int, image_height: int):
-
+    def __init__(self, params, image_width: int, image_height: int):
+        self.params = params
         self.height = image_height
         self.width = image_width
 
@@ -1077,7 +1079,7 @@ class Feedback:
 
         sliced_deque = np.array(self.frame_buffer)[:self.buffer_size.value]
         print(len(sliced_deque))
-        
+
         avg_frame = np.mean(sliced_deque, axis=0)
 
 
@@ -1190,7 +1192,7 @@ class Feedback:
         with dpg.collapsing_header(label=f"\tEffects", tag="effects"):
 
             temporal_filter_slider = TrackbarRow(
-                "Temporal Filter", params.get("temporal_filter"), default_font_id
+                "Temporal Filter", self.params.get("temporal_filter"), default_font_id
             )
 
             alpha_slider = TrackbarRow(
@@ -1224,25 +1226,26 @@ class Feedback:
             )
 
             blur_kernel_slider = TrackbarRow(
-                "Blur Kernel", params.get("blur_kernel_size"), default_font_id
+                "Blur Kernel", self.params.get("blur_kernel_size"), default_font_id
             )
 
             blur_type_slider = TrackbarRow(
-                "Blur Type", params.get("blur_type"), default_font_id
+                "Blur Type", self.params.get("blur_type"), default_font_id
             )
 
             sharpen_slider = TrackbarRow(
-                "Sharpen Amount", params.get("sharpen_intensity"), default_font_id
+                "Sharpen Amount", self.params.get("sharpen_intensity"), default_font_id
             )
 
             num_hues_slider = TrackbarRow(
-                "Num Hues", params.get("num_hues"), default_font_id
+                "Num Hues", self.params.get("num_hues"), default_font_id
             )
 
         dpg.bind_item_font("effects", global_font_id)
 
 class Lissajous:
-    def __init__(self):
+    def __init__(self, params):
+        self.params = params
         self.lissajous_A = params.add("lissajous_A", 0, 100, 50)
         self.lissajous_B = params.add("lissajous_B", 0, 100, 50)
         self.lissajous_a = params.add("lissajous_a", 0, 100, 50)
@@ -1275,23 +1278,23 @@ class Lissajous:
         with dpg.collapsing_header(label=f"\tLissajous", tag="Lissajous"):
 
             lissajous_A_slider = TrackbarRow(
-                "Lissajous A", params.get("lissajous_A"), default_font_id
+                "Lissajous A", self.params.get("lissajous_A"), default_font_id
             )
 
             lissajous_B_slider = TrackbarRow(
-                "Lissajous B", params.get("lissajous_B"), default_font_id
+                "Lissajous B", self.params.get("lissajous_B"), default_font_id
             )
 
             lissajous_a_slider = TrackbarRow(
-                "Lissajous a", params.get("lissajous_a"), default_font_id
+                "Lissajous a", self.params.get("lissajous_a"), default_font_id
             )
 
             lissajous_b_slider = TrackbarRow(
-                "Lissajous b", params.get("lissajous_b"), default_font_id
+                "Lissajous b", self.params.get("lissajous_b"), default_font_id
             )
 
             lissajous_delta_slider = TrackbarRow(
-                "Lissajous Delta", params.get("lissajous_delta"), default_font_id
+                "Lissajous Delta", self.params.get("lissajous_delta"), default_font_id
             )
 
         dpg.bind_item_font("Lissajous", global_font_id)
@@ -1310,7 +1313,7 @@ class NoiseType(IntEnum):
 class ImageNoiser:
 
     def __init__(
-        self, noise_type: NoiseType = NoiseType.NONE, noise_intensity: float = 0.1
+        self, params, noise_type: NoiseType = NoiseType.NONE, noise_intensity: float = 0.1
     ):
         """
         Initializes the ImageNoiser with a default noise type and intensity.
@@ -1320,6 +1323,8 @@ class ImageNoiser:
             noise_intensity (float): The intensity of the noise, typically between 0.0 and 1.0.
                                      Its interpretation varies by noise type. Defaults to 0.1.
         """
+        self.params = params
+
         if not isinstance(noise_type, NoiseType):
             raise ValueError("noise_type must be an instance of NoiseType Enum.")
         if not (0.0 <= noise_intensity <= 1.0):
@@ -1516,26 +1521,26 @@ class ImageNoiser:
     def create_sliders(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tNoiser", tag="noiser"):
             noise_type_slider = TrackbarRow(
-                "Noise Type", params.get("noise_type"), default_font_id
+                "Noise Type", self.params.get("noise_type"), default_font_id
             )
 
             noise_intensity_slider = TrackbarRow(
-                "Noise Intensity", params.get("noise_intensity"), default_font_id
+                "Noise Intensity", self.params.get("noise_intensity"), default_font_id
             )
 
             # noise_speed_slider = TrackbarRow(
             #     "Noise Speed",
-            #     params.get("noise_speed"),
+            #     self.params.get("noise_speed"),
             #     default_font_id)
 
             # noise_freq_x_slider = TrackbarRow(
             #     "Noise Freq X",
-            #     params.get("noise_freq_x"),
+            #     self.params.get("noise_freq_x"),
             #     default_font_id)
 
             # noise_freq_y_slider = TrackbarRow(
             #     "Noise Freq Y",
-            #     params.get("noise_freq_y"),
+            #     self.params.get("noise_freq_y"),
             #     default_font_id)
 
         dpg.bind_item_font("noiser", global_font_id)
@@ -1543,7 +1548,8 @@ class ImageNoiser:
 
 class GlitchEffect:
 
-    def __init__(self):
+    def __init__(self, params):
+        self.params = params
         self.glitch_phase_start_frame = 0
         self.glitch_cycle_start_frame = 0
 
@@ -1958,31 +1964,377 @@ class GlitchEffect:
     def create_sliders(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tGlitch", tag="glitch"):
             glitch_intensity_slider = TrackbarRow(
-                "Glitch Intensity", params.get("glitch_intensity_max"), default_font_id
+                "Glitch Intensity", self.params.get("glitch_intensity_max"), default_font_id
             )
 
             glitch_duration_slider = TrackbarRow(
-                "Glitch Duration", params.get("glitch_duration_frames"), default_font_id
+                "Glitch Duration", self.params.get("glitch_duration_frames"), default_font_id
             )
 
             glitch_block_size_slider = TrackbarRow(
                 "Glitch Block Size",
-                params.get("glitch_block_size_max"),
+                self.params.get("glitch_block_size_max"),
                 default_font_id,
             )
 
             glitch_band_div_slider = TrackbarRow(
-                "Glitch Band Divisor", params.get("glitch_band_div"), default_font_id
+                "Glitch Band Divisor", self.params.get("glitch_band_div"), default_font_id
             )
 
             num_glitches_slider = TrackbarRow(
-                "Glitch Qty", params.get("num_glitches"), default_font_id
+                "Glitch Qty", self.params.get("num_glitches"), default_font_id
             )
 
             glitch_size_slider = TrackbarRow(
-                "Glitch Size", params.get("glitch_size"), default_font_id
+                "Glitch Size", self.params.get("glitch_size"), default_font_id
             )
 
             self.create_buttons("glitch")
 
         dpg.bind_item_font("glitch", global_font_id)
+
+
+class Shape(IntEnum):
+
+    RECTANGLE = 0
+    CIRCLE = 1
+    TRIANGLE = 2
+    LINE = 3
+    DIAMOND = 4
+    NONE = 5
+
+
+class ShapeGenerator:
+
+    def __init__(self, params, width, height, shape_x_shift=0, shape_y_shift=0):
+        self.params = params
+        self.shape_x_shift = params.add("shape_x_shift", -width, width, shape_x_shift)  # Allow negative shifts
+        self.shape_y_shift = params.add("shape_y_shift", -height, height, shape_y_shift)
+        self.center_x = width // 2
+        self.center_y = height // 2
+        
+        self.shape_type = params.add("shape_type", 0, len(Shape)-1, Shape.RECTANGLE)
+        
+        self.line_h = params.add("line_hue", 0, 179, 0)  # Hue range for OpenCV is 0-
+        self.line_s = params.add("line_sat", 0, 255, 255)  # Saturation range
+        self.line_v = params.add("line_val", 0, 255, 255)  # Value range
+        self.line_hsv = [params.val("line_hue"), params.val("line_val"), params.val("line_sat")]  # H, S, V (Red) - will be converted to BGR
+        self.line_weight = params.add("line_weight", 1, 20, 2)  # Thickness of the shape outline, must be integer
+        self.line_opacity = params.add("line_opacity", 0.0, 1.0, 0.66)  # Opacity of the shape outline
+        
+        self.size_multiplier = params.add("size_multiplier", 0.1, 10.0, 0.9)  # Scale factor for shape size
+        self.aspect_ratio = params.add("aspect_ratio", 0.1, 10.0, 1.0)  # Scale factor for shape size
+        self.rotation_angle = params.add("rotation_angle", 0, 360, 0)  # Rotation angle in degrees
+        
+        self.multiply_grid_x = params.add("multiply_grid_x", 1, 10, 2)  # Number of shapes in X direction
+        self.multiply_grid_y = params.add("multiply_grid_y", 1, 10, 2)  # Number of shapes in Y direction
+        self.grid_pitch_x = params.add("grid_pitch_x", min=0, max=width, default_val=100)  # Distance between shapes in X direction
+        self.grid_pitch_y = params.add("grid_pitch_y", min=0, max=height, default_val=100)  # Distance between shapes in Y direction
+        
+        self.fill_enabled = True  # Toggle fill on/off
+        self.fill_h = params.add("fill_hue", 0, 179, 120)  # Hue for fill color
+        self.fill_s = params.add("fill_sat", 0, 255, 100)  # Saturation for fill color
+        self.fill_v = params.add("fill_val", 0, 255, 255)  # Value for fill color
+        self.fill_hsv = [self.fill_h.val(), self.fill_s.val(), self.fill_v.val()]  # H, S, V (Blue) - will be converted to BGR
+        self.fill_opacity = params.add("fill_opacity", 0.0, 1.0, 0.25)
+        self.fill_color = self.hsv_to_bgr(self.fill_hsv)
+        self.line_color = self.hsv_to_bgr(self.line_hsv)
+
+        self.convas_rotation = params.add("canvas_rotation", 0, 360, 0)  # Rotation angle in degrees
+        
+        
+
+    def draw_rectangle(self, canvas, center_x, center_y,):
+        """ Draw a rotated rectangle on the canvas """
+
+        rect_width = int(50 * self.size_multiplier.val() * self.aspect_ratio.val())
+        rect_height = int(50 * self.size_multiplier.val())
+
+        # Create a rotation matrix
+        M = cv2.getRotationMatrix2D((center_x, center_y), self.rotation_angle.val(), 1)
+
+        # Define the rectangle's corners before rotation
+        pts = np.array([
+            [center_x - rect_width // 2, center_y - rect_height // 2],
+            [center_x + rect_width // 2, center_y - rect_height // 2],
+            [center_x + rect_width // 2, center_y + rect_height // 2],
+            [center_x - rect_width // 2, center_y + rect_height // 2]
+        ], dtype=np.float32).reshape(-1, 1, 2)
+
+        # Apply the rotation
+        rotated_pts = cv2.transform(pts, M)
+        rotated_pts_int = np.int32(rotated_pts)
+
+        if self.fill_enabled:
+            cv2.fillPoly(canvas, [rotated_pts_int], self.fill_color)
+        cv2.polylines(canvas, [rotated_pts_int], True, self.line_color, self.line_weight.val())
+        
+        return canvas
+
+    def draw_circle(self, canvas, center_x, center_y):
+        """ Draw a circle on the canvas """
+
+        radius = int(30 * self.size_multiplier.val())
+        if self.fill_enabled:
+            cv2.circle(canvas, (center_x, center_y), radius, self.fill_color, -1) # -1 for fill
+        cv2.circle(canvas, (center_x, center_y), radius, self.line_color, self.line_weight.val())
+
+        return canvas
+    
+    def draw_triangle(self, canvas, center_x, center_y):
+        """ Draw a rotated triangle on the canvas """
+
+        side_length = int(60 * self.size_multiplier.val())
+
+        # Vertices for an equilateral triangle centered at (0,0)
+        p1_x = 0
+        p1_y = -side_length // 2
+        p2_x = -int(side_length * np.sqrt(3) / 4)
+        p2_y = side_length // 4
+        p3_x = int(side_length * np.sqrt(3) / 4)
+        p3_y = side_length // 4
+
+        pts = np.array([[p1_x, p1_y], [p2_x, p2_y], [p3_x, p3_y]], dtype=np.float32)
+
+        # Translate to the current center
+        pts[:, 0] += center_x
+        pts[:, 1] += center_y
+
+        # Apply rotation
+        M = cv2.getRotationMatrix2D((center_x, center_y), self.rotation_angle.val(), 1)
+        rotated_pts = cv2.transform(pts.reshape(-1, 1, 2), M)
+        rotated_pts_int = np.int32(rotated_pts)
+
+        if self.fill_enabled:
+            cv2.fillPoly(canvas, [rotated_pts_int], self.fill_color)
+        cv2.polylines(canvas, [rotated_pts_int], True, self.line_color, self.line_weight.val())
+
+        return canvas
+    
+    def draw_line(self, canvas, center_x, center_y):
+        length = int(50 * self.size_multiplier.val())
+        start_point = (center_x - length // 2, center_y)
+        end_point = (center_x + length // 2, center_y)
+
+        if self.fill_enabled:
+            cv2.line(canvas, start_point, end_point, self.fill_color, self.line_weight.val())
+        cv2.line(canvas, start_point, end_point, self.line_color, self.line_weight.val())
+
+        return canvas
+
+    def draw_shape_on_canvas(self, canvas, center_x, center_y):
+        """ Draw the selected shape on the canvas at the specified center coordinates """
+
+        # Ensure coordinates are within bounds to prevent errors
+        # Note: These checks are for safety but may clip shapes if they go way off screen
+        center_x = max(0, min(canvas.shape[1], center_x))
+        center_y = max(0, min(canvas.shape[0], center_y))
+
+        if self.shape_type.val() == Shape.NONE:
+            pass
+        elif self.shape_type.val() == Shape.RECTANGLE:
+            canvas = self.draw_rectangle(canvas, center_x, center_y)
+        elif self.shape_type.val() == Shape.CIRCLE:
+            canvas = self.draw_circle(canvas, center_x, center_y)
+        elif self.shape_type.val() == Shape.TRIANGLE:
+            canvas = self.draw_triangle(canvas, center_x, center_y)
+        elif self.shape_type.val() == Shape.LINE:
+            canvas = self.draw_line(canvas, center_x, center_y)
+        elif self.shape_type.val() == Shape.DIAMOND:
+            pass
+        else:
+            raise ValueError(f"Invalid shape type: {self.shape_type.val()}. Must be 'rectangle', 'circle', 'triangle', or 'line'.")
+        
+        return canvas
+
+    def blend_rgba_overlay(self, background, overlay_rgba):
+        """
+        Blend a 4-channel BGRA overlay onto a 3-channel BGR background using the alpha channel.
+        Args:
+            background (np.ndarray): 3-channel BGR background image.
+            overlay_rgba (np.ndarray): 4-channel BGRA overlay image.
+        Returns:
+            np.ndarray: Blended 3-channel BGR image.
+        """
+        # Ensure background is float for calculation, then convert back to uint8
+        background_float = background.astype(np.float32)
+
+        # Normalize alpha channel (0-255 to 0.0-1.0)
+        alpha = overlay_rgba[:, :, 3] / 255.0
+        alpha_rgb = np.stack([alpha, alpha, alpha], axis=2) # Convert alpha to 3 channels for element-wise multiplication
+
+        # Blend calculation: (foreground * alpha) + (background * (1 - alpha))
+        # Note: overlay_rgba[:,:,:3] extracts the BGR channels of the overlay
+        blended_image = (overlay_rgba[:,:,:3].astype(np.float32) * alpha_rgb) + \
+                        (background_float * (1.0 - alpha_rgb))
+
+        # Clip values to 0-255 and convert back to uint8
+        return np.clip(blended_image, 0, 255).astype(np.uint8)
+
+    # TODO: create a common HSV to BGR conversion function
+    def hsv_to_bgr(self, hsv):
+        """ Convert HSV color to BGR color for OpenCV drawing functions """
+
+        hsv_np = np.uint8([[hsv]])
+        bgr = cv2.cvtColor(hsv_np, cv2.COLOR_HSV2BGR)[0][0]
+
+        return (int(bgr[0]), int(bgr[1]), int(bgr[2]))
+    
+    def draw_shapes_on_frame(self, frame, width, height):
+        """ Draw shapes on the given frame based on current parameters """
+
+        base_center_x, base_center_y = width // 2 + self.shape_x_shift.val(), height // 2 + self.shape_y_shift.val()
+
+        # Create separate 3-channel (BGR) canvases for lines and fills
+        temp_line_canvas = np.zeros((height, width, 3), dtype=np.uint8)
+        temp_fill_canvas = np.zeros((height, width, 3), dtype=np.uint8)
+
+        self.line_color = self.hsv_to_bgr([self.line_h.val(), self.line_s.val(), self.line_v.val()])
+        self.fill_color = self.hsv_to_bgr([self.fill_h.val(), self.fill_s.val(), self.fill_v.val()])
+
+        # Grid Multiplication Mode
+        for row in range(self.multiply_grid_y.val()):
+            for col in range(self.multiply_grid_x.val()):
+                # Calculate center for each shape in the grid
+                current_center_x = base_center_x + col * self.grid_pitch_x.val() - (self.multiply_grid_x.val() - 1) * self.grid_pitch_x.val() // 2
+                current_center_y = base_center_y + row * self.grid_pitch_y.val() - (self.multiply_grid_y.val() - 1) * self.grid_pitch_y.val() // 2
+
+                self.draw_shape_on_canvas(temp_line_canvas, current_center_x, current_center_y)
+
+            # If fill is enabled, apply its opacity in a separate blend
+            if self.fill_enabled:
+                self.draw_shape_on_canvas(temp_fill_canvas, current_center_x, current_center_y)
+
+        # Line Overlay (BGRA)
+        line_overlay_rgba = np.zeros((height, width, 4), dtype=np.uint8)
+        line_overlay_rgba[:,:,:3] = temp_line_canvas # Copy BGR data
+        # Create an alpha mask: pixels are opaque (255) where sum of BGR is > 0 (not black)
+        # Then scale by line_opacity
+        line_alpha_mask = (temp_line_canvas.sum(axis=2) > 0).astype(np.uint8) * int(self.line_opacity * 255)
+        line_overlay_rgba[:,:,3] = line_alpha_mask
+
+        # Fill Overlay (BGRA)
+        if self.fill_enabled:
+            fill_overlay_rgba = np.zeros((height, width, 4), dtype=np.uint8)
+            fill_overlay_rgba[:,:,:3] = temp_fill_canvas # Copy BGR data
+            # Create an alpha mask for fills
+            fill_alpha_mask = (temp_fill_canvas.sum(axis=2) > 0).astype(np.uint8) * int(self.fill_opacity * 255)
+            fill_overlay_rgba[:,:,3] = fill_alpha_mask
+
+        # blend the layers using our custom self.blend_rgba_overlay method
+        if self.fill_enabled:
+            frame = self.blend_rgba_overlay(frame, fill_overlay_rgba)
+
+        frame = self.blend_rgba_overlay(frame, line_overlay_rgba)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+        return frame
+    
+
+    def create_sliders(self, default_font_id=None, global_font_id=None):
+        with dpg.collapsing_header(label=f"\tShape Generator", tag="shape_generator"):
+            shape_slider = TrackbarRow(
+                "Shape Type",
+                self.params.get("shape_type"),
+                default_font_id)
+            
+            canvas_rotation_slider = TrackbarRow(
+                "Canvas Rotation", 
+                self.params.get("canvas_rotation"), 
+                default_font_id)
+
+            size_multiplier_slider = TrackbarRow(
+                "Size Multiplier", 
+                self.params.get("size_multiplier"), 
+                default_font_id)
+            
+            aspect_ratio_slider = TrackbarRow(
+                "Aspect Ratio", 
+                self.params.get("aspect_ratio"), 
+                default_font_id)
+            
+            rotation_slider = TrackbarRow(
+                "Rotation", 
+                self.params.get("rotation_angle"), 
+                default_font_id)
+            
+            multiply_grid_x_slider = TrackbarRow(
+                "Multiply Grid X", 
+                self.params.get("multiply_grid_x"), 
+                default_font_id)
+            
+            multiply_grid_y_slider = TrackbarRow(
+                "Multiply Grid Y", 
+                self.params.get("multiply_grid_y"), 
+                default_font_id)
+            
+            grid_pitch_x_slider = TrackbarRow(
+                "Grid Pitch X", 
+                self.params.get("grid_pitch_x"), 
+                default_font_id)
+            
+            grid_pitch_y_slider = TrackbarRow(
+                "Grid Pitch Y", 
+                self.params.get("grid_pitch_y"), 
+                default_font_id)
+            
+            shape_y_shift_slider = TrackbarRow(
+                "Shape Y Shift", 
+                self.params.get("shape_y_shift"), 
+                default_font_id)
+            
+            shape_x_shift_slider = TrackbarRow(
+                "Shape X Shift", 
+                self.params.get("shape_x_shift"), 
+                default_font_id)
+
+            with dpg.collapsing_header(label=f"\Line Generator", tag="line_generator"):
+
+                line_hue_slider = TrackbarRow(
+                    "Line Hue", 
+                    self.params.get("line_hue"), 
+                    default_font_id)
+                
+                line_sat_slider = TrackbarRow(
+                    "Line Sat", 
+                    self.params.get("line_sat"), 
+                        default_font_id)
+                
+                line_val_slider = TrackbarRow(
+                    "Line Val", 
+                    self.params.get("line_val"), 
+                        default_font_id)
+                
+                line_weight_slider = TrackbarRow(
+                    "Line Width", 
+                    self.params.get("line_weight"), 
+                        default_font_id)
+                
+                line_opacity_slider = TrackbarRow(
+                    "Line Opacity", 
+                    self.params.get("line_opacity"), 
+                        default_font_id)
+            dpg.bind_item_font("line_generator", global_font_id)
+
+            with dpg.collapsing_header(label=f"\tFill Generator", tag="fill_generator"):
+                fill_hue_slider = TrackbarRow(
+                    "Fill Hue", 
+                    self.params.get("fill_hue"), 
+                        default_font_id)
+                
+                fill_sat_slider = TrackbarRow(
+                    "Fill Sat", 
+                    self.params.get("fill_sat"), 
+                        default_font_id)
+                
+                fill_val_slider = TrackbarRow(
+                    "Fill Val", 
+                    self.params.get("fill_val"), 
+                        default_font_id)
+                
+                fill_opacity_slider = TrackbarRow(
+                    "Fill Opacity", 
+                    self.params.get("fill_opacity"), 
+                        default_font_id)
+            dpg.bind_item_font("fill_generator", global_font_id)
+        dpg.bind_item_font("shape_generator", global_font_id)

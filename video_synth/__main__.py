@@ -20,17 +20,17 @@ Author: Kyle Henderson
 
 import cv2
 import dearpygui.dearpygui as dpg 
-from config import *
-from shared_objects import *
+from config import toggles, osc_bank, NUM_OSCILLATORS
+from shared_objects import fx_dict, FX, init_effects
 from gui import Interface
 from generators import Oscillator
-from midi_input import *
-from mix import *
+from midi_input import MidiInputController, MidiMix, SMC_Mixer
 from fx import *
-from shapes import ShapeGenerator
 from patterns3 import Patterns
+from param import ParamTable
+from mix import Mixer
 
-image_height, image_width = None, None
+params = None
 
 def apply_effects(frame, frame_count, patterns: Patterns, feedback: Feedback, color: Color, 
                   pixels: Pixels, noise: ImageNoiser, reflector: Reflector, 
@@ -78,32 +78,36 @@ def apply_effects(frame, frame_count, patterns: Patterns, feedback: Feedback, co
 
     return frame
 
-
 def main():
-    global image_height, image_width, cap1, cap2
-    global fx
+    global fx_dict, params, osc_bank, mixer
     
     print("Initializing video synthesizer...")
 
+    # all user modifiable parameters are stored here
+    params = ParamTable()
+
     # Initialize mixer video sources and retreive frame
-    frame = mixer.mix_sources()  
+    mixer = Mixer(params)
+    frame = mixer.get_frame()  
 
     # Create a copy of the frame for feedback and get its dimensions
     feedback_frame = frame.copy()
     prev_frame = frame.copy()
+
     image_height, image_width = frame.shape[:2]
+
     frame_count = 0
 
     # Initialize effects classes with image dimensions
     # The mixer and all objects from fx.py are stored here so they may be used by both main and the gui
-    init_effects(width=image_width, height=image_height)
+    init_effects(params=params, width=image_width, height=image_height)
 
     cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Modified Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     # Initialize the general purpose oscillator bank
     for i in range(NUM_OSCILLATORS):
-        osc_bank.append(Oscillator(name=f"osc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=i%4))
+        osc_bank.append(Oscillator(params=params, name=f"osc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=i%4))
     print(f"Oscillator bank initialized with {len(osc_bank)} oscillators.")
     
 
@@ -111,12 +115,12 @@ def main():
     # test_ports()
 
     # Initialize the midi input controller before creating the GUI
-    controller1 = MidiInputController(controller=MidiMix())
-    controller2 = MidiInputController(controller=SMC_Mixer())
+    controller1 = MidiInputController(controller=MidiMix(params))
+    controller2 = MidiInputController(controller=SMC_Mixer(params))
 
     # Create control panel after initializing objects that will be used in the GUI
-    gui = Interface()
-    gui.create_control_window(mixer=mixer)
+    gui = Interface(params)
+    gui.create_control_window(params, mixer=mixer)
 
     # list all available params 
     # for k, v in params.params.items():
@@ -127,7 +131,7 @@ def main():
     try:
         while True:
             # retreive and mix frames from the selected sources
-            frame = mixer.mix_sources()
+            frame = mixer.get_frame()
             if mixer.skip1 or frame is None:
                 mixer.skip1 = False
                 print("Skipping frame due to source read failure...")
@@ -138,19 +142,19 @@ def main():
             
             # relevant section
             if toggles.val("effects_first") == True:         
-                feedback_frame = apply_effects(feedback_frame, frame_count, **fx)
+                feedback_frame = apply_effects(feedback_frame, frame_count, **fx_dict)
                 # Blend the current dry frame with the previous wet frame using the alpha param
                 feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
             else:
                 feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
-                feedback_frame = apply_effects(feedback_frame, frame_count, **fx) 
+                feedback_frame = apply_effects(feedback_frame, frame_count, **fx_dict) 
 
             # Apply feedback effects
-            feedback_frame = fx[FX.FEEDBACK].apply_temporal_filter(prev_frame, feedback_frame)
-            feedback_frame = fx[FX.FEEDBACK].avg_frame_buffer(feedback_frame)
-            feedback_frame = fx[FX.FEEDBACK].nth_frame_feedback(feedback_frame)
-            feedback_frame = fx[FX.FEEDBACK].apply_luma_feedback(prev_frame, feedback_frame)
-            # prev_frame = fx[FX.FEEDBACK].scale_frame(feedback_frame)
+            feedback_frame = fx_dict[FX.FEEDBACK].apply_temporal_filter(prev_frame, feedback_frame)
+            feedback_frame = fx_dict[FX.FEEDBACK].avg_frame_buffer(feedback_frame)
+            feedback_frame = fx_dict[FX.FEEDBACK].nth_frame_feedback(feedback_frame)
+            feedback_frame = fx_dict[FX.FEEDBACK].apply_luma_feedback(prev_frame, feedback_frame)
+            # prev_frame = fx_dict[FX.FEEDBACK].scale_frame(feedback_frame)
             prev_frame = feedback_frame
 
             # Display the resulting frame and control panel

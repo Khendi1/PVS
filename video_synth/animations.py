@@ -4,7 +4,7 @@ import time
 import noise
 import random
 from generators import Oscillator
-from config import params
+# from config import params
 from abc import ABC, abstractmethod
 import dearpygui.dearpygui as dpg
 from shared_objects import *
@@ -26,7 +26,8 @@ class Animation(ABC):
 
 
 class Plasma(Animation):
-    def __init__(self, width=800, height=600):
+    def __init__(self, params, width=800, height=600):
+        self.params = params
         self.width = width
         self.height = height
 
@@ -42,7 +43,7 @@ class Plasma(Animation):
             "plasma_flow_speed",
         ]
 
-        self.oscillators = [Oscillator(name=f"{self.plasma_params[i]}", frequency=0.5, amplitude=1.0, phase=0.0, shape=1) for i in range(4)]
+        self.oscillators = [Oscillator(params, name=f"{self.plasma_params[i]}", frequency=0.5, amplitude=1.0, phase=0.0, shape=1) for i in range(4)]
 
         self.oscillators[0].link_param(self.plasma_speed)
         self.oscillators[1].link_param(self.plasma_distance)
@@ -123,7 +124,7 @@ class Plasma(Animation):
 
         return plasma_pattern
 
-    def get_frame(self):
+    def get_frame(self, frame):
         return self.generate_plasma_effect()
 
 
@@ -144,27 +145,27 @@ class Plasma(Animation):
                 with dpg.collapsing_header(label=f"\t{plasma_params[i]}", tag=f"{plasma_params[i]}"):
                     plasma_shape_sliders.append(TrackbarRow(
                         f"{plasma_params[i]} Shape", 
-                        params.get(f"{plasma_params[i]}_shape"), 
+                         self.params.get(f"{plasma_params[i]}_shape"), 
                         default_font_id))
                     
                     plasma_freq_sliders.append(TrackbarRow(
                         f"{plasma_params[i]} Freq", 
-                        params.get(f"{plasma_params[i]}_frequency"), 
+                         self.params.get(f"{plasma_params[i]}_frequency"), 
                         default_font_id))
                     
                     plasma_amp_sliders.append(TrackbarRow(
                         f"{plasma_params[i]} Amp", 
-                        params.get(f"{plasma_params[i]}_amplitude"),
+                         self.params.get(f"{plasma_params[i]}_amplitude"),
                         default_font_id))
                     
                     plasma_phase_sliders.append(TrackbarRow(
                         f"{plasma_params[i]} Phase", 
-                        params.get(f"{plasma_params[i]}_phase"),
+                         self.params.get(f"{plasma_params[i]}_phase"),
                         default_font_id))
                     
                     plasma_seed_sliders.append(TrackbarRow(
                         f"{plasma_params[i]} Seed", 
-                        params.get(f"{plasma_params[i]}_seed"),
+                         self.params.get(f"{plasma_params[i]}_seed"),
                         default_font_id))
                 dpg.bind_item_font(f"{plasma_params[i]}", global_font_id)
         dpg.bind_item_font("plasma_oscillator", global_font_id)
@@ -172,7 +173,8 @@ class Plasma(Animation):
 
 class ReactionDiffusionSimulator(Animation):
 
-    def __init__(self, width=500, height=500, da=1.0, db=0.5, feed=0.055, kill=0.062, randomize_seed=False, max_seed_size=50, num_seeds=15):
+    def __init__(self, params, width=500, height=500, da=1.0, db=0.5, feed=0.055, kill=0.062, randomize_seed=False, max_seed_size=50, num_seeds=15):
+        self.params = params
         self.width = width
         self.height = height
         self.da = params.add("da", 0, 2.0, da)
@@ -303,7 +305,7 @@ class ReactionDiffusionSimulator(Animation):
         
         return cv2.cvtColor(hsv_image, cv2.COLOR_HSV2BGR)
 
-    def get_frame(self):
+    def get_frame(self, frame):
         """
         Public method to get the next frame of the simulation.
         """
@@ -314,22 +316,22 @@ class ReactionDiffusionSimulator(Animation):
         with dpg.collapsing_header(label=f"\tReaction Diffusion", tag="reaction_diffusion"):
             rd_diffusion_rate_a_slider = TrackbarRow(
                 "Diffusion Rate A",
-                params.get("da"),
+                 self.params.get("da"),
                 default_font_id)
             
             rd_diffusion_rate_b_slider = TrackbarRow(
                 "Diffusion Rate B",
-                params.get("db"),
+                 self.params.get("db"),
                 default_font_id)
             
             rd_feed_rate_slider = TrackbarRow(
                 "Feed Rate",
-                params.get("feed"),
+                self.params.get("feed"),
                 default_font_id)
             
             rd_kill_rate_slider = TrackbarRow(
                 "Kill Rate",
-                params.get("kill"),
+                self.params.get("kill"),
                 default_font_id)
         
         dpg.bind_item_font("reaction_diffusion", global_font_id)
@@ -339,10 +341,11 @@ class Metaballs(Animation):
     # BUG: find bug; when increasing num_metaballs, their sizes seem to get smaller
     # TODO: add parameters to control metaball colors, blending modes, and feedback intensity
     # BUG: find bug: when reducing metaball size then returning to original/larger sizes, they get smaller each time
-    def __init__(self, width=800, height=600):
+    def __init__(self, params, width=800, height=600):
         """
         Initializes the Metaballs with given dimensions.
         """
+        self.params = params
         self.width = width if width else 800
         self.height = height if height else 600
         self.metaballs = []
@@ -556,37 +559,125 @@ class Metaballs(Animation):
         with dpg.collapsing_header(label=f"\tMetaballs", tag="metaballs"):
             num_metaballs_slider = TrackbarRow(
                 "Num Metaballs",
-                params.get("num_metaballs"),
+                self.params.get("num_metaballs"),
                 default_font_id)
             
             min_radius_slider = TrackbarRow(
                 "Min Radius",
-                params.get("min_radius"),
+                 self.params.get("min_radius"),
                 default_font_id)
             
             max_radius_slider = TrackbarRow(
                 "Max Radius",
-                params.get("max_radius"),
+                 self.params.get("max_radius"),
                 default_font_id)
             
             max_speed_slider = TrackbarRow(
                 "Max Speed",
-                params.get("max_speed"),
+                 self.params.get("max_speed"),
                 default_font_id)
             
             threshold_slider = TrackbarRow(
                 "Threshold",
-                params.get("threshold"),
+                 self.params.get("threshold"),
                 default_font_id)
             
             smooth_coloring_max_field_slider = TrackbarRow(
                 "Smooth Coloring Max Field",
-                params.get("smooth_coloring_max_field"),
+                 self.params.get("smooth_coloring_max_field"),
                 default_font_id)
             
             feedback_alpha_slider = TrackbarRow(
                 "Feedback Alpha",
-                params.get("metaballs_feedback"),
+                 self.params.get("metaballs_feedback"),
                 default_font_id)
 
         dpg.bind_item_font("metaballs", global_font_id)
+
+
+class MoireType(IntEnum):
+    ROTATIONAL = 0
+    TRANSLATIONAL = auto()
+    CIRCULAR = auto()
+
+class Moire(Animation):
+    def __init__(self, params):
+        self.params = params
+        self.mode = params.add("moire_mode", 0, max(MoireType.values()), 0)
+        self.freq = params.add("spatial_freq_1", 0,)
+
+    def create_moire_pattern(size=512, f1=20, f2=20, angle1_deg=0, angle2_deg=5, zoom1=1.0, zoom2=1.0, mode='rotational'):
+        """
+        Generates a Moiré pattern based on the specified mode and parameters,
+        including independent zoom factors for each grating.
+
+        Args:
+            size (int): The width and height of the square image in pixels.
+            f1 (float): Spatial frequency/pitch for the first grating.
+            f2 (float): Spatial frequency/pitch for the second grating.
+            angle1_deg (float): Rotation angle for the first grating in degrees.
+            angle2_deg (float): Rotation angle for the second grating in degrees.
+            zoom1 (float): Zoom factor for the first grating (scales the pattern).
+            zoom2 (float): Zoom factor for the second grating.
+            mode (str): 'rotational', 'translational', or 'circular'.
+
+        Returns:
+            np.ndarray: The resulting Moiré pattern image (grayscale, 0-255).
+        """
+        
+        #C reate coordinate grids (from -1 to 1, centered at 0)
+        coords = np.linspace(-1, 1, size)
+        x, y = np.meshgrid(coords, coords)
+        
+        # Initialize gratings
+        grating1 = np.zeros_like(x)
+        grating2 = np.zeros_like(x)
+
+        if mode == MoireType.ROTATIONAL.value:
+
+            angle1_rad = np.radians(angle1_deg)
+            angle2_rad = np.radians(angle2_deg)
+
+            # Grating 1
+            x_rotated1 = x * np.cos(angle1_rad) + y * np.sin(angle1_rad)
+            x_scaled1 = x_rotated1 / zoom1 #
+            grating1 = 0.5 + 0.5 * np.cos(2 * np.pi * f1 * x_scaled1)
+
+            # Grating 2
+            x_rotated2 = x * np.cos(angle2_rad) + y * np.sin(angle2_rad)
+            x_scaled2 = x_rotated2 / zoom2
+            grating2 = 0.5 + 0.5 * np.cos(2 * np.pi * f2 * x_scaled2)
+
+        elif mode == MoireType.TRANSLATIONAL.value:
+
+            x_scaled1 = x / zoom1
+            x_scaled2 = x / zoom2
+            
+            grating1 = 0.5 + 0.5 * np.cos(2 * np.pi * f1 * x_scaled1)
+            grating2 = 0.5 + 0.5 * np.cos(2 * np.pi * f2 * x_scaled2)
+
+        elif mode == MoireType.CIRCULAR.value:
+
+            r = np.sqrt(x**2 + y**2)
+
+            # Grating 1 (
+            r_scaled1 = r / zoom1
+            grating1 = 0.5 + 0.5 * np.cos(2 * np.pi * f1 * r_scaled1)
+
+            # Grating 2 
+            r_scaled2 = r / zoom2
+            grating2 = 0.5 + 0.5 * np.cos(2 * np.pi * f2 * r_scaled2)
+
+        else:
+            # Fallback or unrecognized mode
+            print(f"Error: Unrecognized Moiré mode: {mode}. Defaulting to empty image.")
+            return np.zeros((size, size), dtype=np.uint8)
+
+
+        # 2. Combine the Gratings (Multiplication is the common method for Moiré)
+        moire_float = grating1 * grating2
+
+        # 3. Convert to 8-bit unsigned integer (0-255) for OpenCV display
+        moire_uint8 = (moire_float * 255).astype(np.uint8)
+
+        return moire_uint8

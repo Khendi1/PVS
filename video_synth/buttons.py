@@ -21,7 +21,7 @@ class Button:
     def create(self):
         dpg.add_button(label=self.label, tag=self.tag, callback=self.on_toggle_button_click, user_data=self.tag)
     
-class Buttons:
+class ButtonsTable:
     """
     A singleton class to create and store Button instances
     """

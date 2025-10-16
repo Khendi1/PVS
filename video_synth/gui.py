@@ -1,14 +1,14 @@
-from config import *
+from config import osc_bank, NUM_OSCILLATORS, toggles
 import dearpygui.dearpygui as dpg
 from save import SaveController
-from buttons import Buttons, Button
+from buttons import ButtonsTable, Button
 from mix import *
-from shared_objects import fx, FX
+from shared_objects import fx_dict, FX
 from sliders import TrackbarRow
 
 class Interface:
 
-    def __init__(self, panel_width=550, panel_height=420):
+    def __init__(self, params, panel_width=550, panel_height=420):
         self.sliders = []
         self.buttons = []
         self.panel_width = panel_width
@@ -16,6 +16,7 @@ class Interface:
         self.slider_dict = None
         self.default_font_id = None
         self.global_font_id = None
+        self.params=params
         # TODO: debug automatically building params sliders
         # only creates last param in list
         # self.panels = self.build_panels_dict(params.all())
@@ -111,14 +112,14 @@ class Interface:
                         break
 
 
-    def create_control_window(self, width=550, height=600, mixer=None):
+    def create_control_window(self, params, width=550, height=600, mixer=None):
 
         dpg.create_context()
 
         with dpg.window(tag="Controls", label="Controls", width=width, height=height):
             self.create_trackbars(width, height, mixer)
             # self.create_trackbar_panels_for_param()
-            self.saver = SaveController(width, height).create_save_buttons()
+            self.saver = SaveController(params, width, height).create_save_buttons()
             self.create_buttons(width, height)
             # dpg.set_viewport_resize_callback(resize_buttons)
 
@@ -222,7 +223,7 @@ class Interface:
                     default_font_id))
                 
                 # Create a list of items for the listbox
-                items = list(params.keys())
+                items = list(self.params.keys())
 
                 # Create the listbox
                 dpg.add_combo(items=items,
@@ -260,18 +261,18 @@ class Interface:
         mixer.mix_panel()
 
         # TODO: initialize using for loop over dict keys
-        fx[FX.COLOR].create_sliders(default_font_id, global_font_id)
-        fx[FX.FEEDBACK].create_sliders(default_font_id, global_font_id)
-        fx[FX.GLITCH].create_sliders(default_font_id, global_font_id)
-        fx[FX.REFLECTOR].create_sliders(default_font_id, global_font_id)
-        fx[FX.PTZ].create_sliders(default_font_id, global_font_id)
-        fx[FX.SYNC].create_sliders(default_font_id, global_font_id)
-        fx[FX.NOISE].create_sliders(default_font_id, global_font_id)
-        fx[FX.SHAPES].create_sliders(default_font_id, global_font_id)
-        # fx[FX.PATTERNS].create_sliders(default_font_id, global_font_id)
-        # fx[FX.WARP].create_sliders(default_font_id, global_font_id)
-        # fx[FX.PIXELS].create_sliders(default_font_id, global_font_id)
-        # fx[FX.LISSAJOUS].create_sliders(default_font_id, global_font_id)
+        fx_dict[FX.COLOR].create_sliders(default_font_id, global_font_id)
+        fx_dict[FX.FEEDBACK].create_sliders(default_font_id, global_font_id)
+        fx_dict[FX.GLITCH].create_sliders(default_font_id, global_font_id)
+        fx_dict[FX.REFLECTOR].create_sliders(default_font_id, global_font_id)
+        fx_dict[FX.PTZ].create_sliders(default_font_id, global_font_id)
+        fx_dict[FX.SYNC].create_sliders(default_font_id, global_font_id)
+        fx_dict[FX.NOISE].create_sliders(default_font_id, global_font_id)
+        fx_dict[FX.SHAPES].create_sliders(default_font_id, global_font_id)
+        # fx_dict[FX.PATTERNS].create_sliders(default_font_id, global_font_id)
+        # fx_dict[FX.WARP].create_sliders(default_font_id, global_font_id)
+        # fx_dict[FX.PIXELS].create_sliders(default_font_id, global_font_id)
+        # fx_dict[FX.LISSAJOUS].create_sliders(default_font_id, global_font_id)
 
         self.create_panels_from_list(mixer.animation_sources.values())
         self.osc_sliders(default_font_id, global_font_id)

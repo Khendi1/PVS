@@ -1,7 +1,7 @@
 import cv2
 import dearpygui.dearpygui as dpg
 import numpy as np
-from config import *
+# from config import params
 from enum import IntEnum, Enum, auto
 from animations import *
 import os
@@ -40,7 +40,9 @@ ANIMATED_SOURCE_NAMES = [member for member in MixSources if "ANIM" in member.nam
 
 class Mixer:
 
-    def __init__(self):
+    def __init__(self, params):
+
+        self.params = params
 
         # cap variables to store video capture objects or animation instances
         # e.g. self.cap1 can be a cv2.VideoCapture or Metaballs instance
@@ -75,9 +77,9 @@ class Mixer:
         # Dictionary of available animation sources. These differ from captured sources
         # in that they generate frames algorithmically rather than capturing from a device or file.
         self.animation_sources = {
-            MixSources.METABALLS_ANIM.name: Metaballs(width=640, height=480),
-            MixSources.PLASMA_ANIM.name: Plasma(width=640, height=480),
-            MixSources.REACTION_DIFFUSION_ANIM.name: ReactionDiffusionSimulator(640, 480),
+            MixSources.METABALLS_ANIM.name: Metaballs(params, width=640, height=480),
+            MixSources.PLASMA_ANIM.name: Plasma(params, width=640, height=480),
+            MixSources.REACTION_DIFFUSION_ANIM.name: ReactionDiffusionSimulator(params, 640, 480),
         }
 
         self.device_sources = [k for k,v in self.sources.items() if v <= self.cv2_max_devices-(len(FILE_SOURCE_NAMES)-1)]
@@ -305,7 +307,7 @@ class Mixer:
         return result
 
 
-    def mix_sources(self):
+    def get_frame(self):
         ret1, frame1 = False, None
         ret2, frame2 = False, None
 
@@ -393,51 +395,51 @@ class Mixer:
             dpg.add_text("Mixer")
             # dpg.add_slider_float(label="Blending", default_value=alpha, min_value=0.0, max_value=1.0, callback=alpha_callback, format="%.2f")
             
-            blend_mode_slider = TrackbarRow("Blend Mode", params.get("blend_mode"), None)
+            blend_mode_slider = TrackbarRow("Blend Mode", self.params.get("blend_mode"), None)
             
             frame_blend_slider = TrackbarRow(
                 "Frame Blend",
-                params.get("frame_blend"),
+                self.params.get("frame_blend"),
                 None) # fix defulat font_id=None
             
             upper_hue_key_slider = TrackbarRow(
                 "Upper Hue Key",
-                params.get("upper_hue"),
+                self.params.get("upper_hue"),
                 None) # fix defulat font_id=None
             
             lower_hue_key_slider = TrackbarRow(
                 "Lower Hue Key",
-                params.get("lower_hue"),
+                self.params.get("lower_hue"),
                 None) # fix defulat font_id=None
             
             upper_sat_slider = TrackbarRow(
                 "Upper Sat Key",
-                params.get("upper_sat"),
+                self.params.get("upper_sat"),
                 None) # fix defulat font_id=None
             
             lower_sat_slider = TrackbarRow(
                 "Lower Sat Key",
-                params.get("lower_sat"),
+                self.params.get("lower_sat"),
                 None) # fix defulat font_id=None
             
             upper_val_slider = TrackbarRow(
                 "Upper Val Key",
-                params.get("upper_val"),
+                self.params.get("upper_val"),
                 None) # fix defulat font_id=None
             
             lower_val_slider = TrackbarRow(
                 "Lower Val Key",
-                params.get("lower_val"),
+                self.params.get("lower_val"),
                 None) # fix defulat font_id=None
             
             luma_threshold_slider = TrackbarRow(
                 "Luma Threshold",
-                params.get("luma_threshold"),
+                self.params.get("luma_threshold"),
                 None) # fix defulat font_id=None
             
             luma_selection_slider = TrackbarRow(
                 "Luma Selection",
-                params.get("luma_selection"),
+                self.params.get("luma_selection"),
                 None) # fix defulat font_id=None
             
     def select_source1_file(self, sender, app_data):

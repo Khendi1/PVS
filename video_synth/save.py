@@ -1,5 +1,5 @@
 import dearpygui.dearpygui as dpg
-from config import params
+# from config import params
 from datetime import datetime
 import yaml
 import os
@@ -13,10 +13,10 @@ class SaveController:
     It provides methods to save current parameter values, load next/previous values,
     and randomize parameter values.
     """
-    def __init__(self, width, height, 
+    def __init__(self, params, width, height, 
                 yaml_filename: str = 'saved_values.yaml',
                 save_dir_name: str = 'save'):
-
+        self.params = params
         self.index = 0
         self.width = width
         self.height = height

@@ -1,6 +1,6 @@
 import mido
 import time
-from config import params
+# from config import params
 import mido
 import threading
 import time
@@ -252,13 +252,15 @@ class SMC_Mixer:
     right 62
 
     """
-    def __init__(self):
+    def __init__(self, params):
         """
         Initializes the SMC_Mixer instance.
         """
                 
         self.MIN = 0
         self.MAX = 127
+
+        self.params = params
 
         self.port_name = "SMC-Mixer 0"
         self.processor = MidiProcessor(min_midi=self.MIN, max_midi=self.MAX,
@@ -304,7 +306,7 @@ class SMC_Mixer:
         """
         
         index = control % 10 
-        param = params.get(self.fader_config[index])
+        param = self.params.get(self.fader_config[index])
 
         if param is None:
             print(f"Warning: No parameter found for control {control} in fader_config.")
@@ -313,7 +315,7 @@ class SMC_Mixer:
         min, max = param.min_max()
         value = self.processor.process_message(control, value, min, max)
 
-        params.set(self.fader_config[index], value)
+        self.params.set(self.fader_config[index], value)
 
         print(f"{self.fader_config[index]}: {value} (MIDI value: {value})")
 
@@ -323,7 +325,7 @@ class SMC_Mixer:
         This function is a placeholder for actual mapping logic.
         """
         index = control % 10
-        param = params.get(self.encoder_config[index])
+        param = self.params.get(self.encoder_config[index])
 
         if param is None:
             print(f"Warning: No parameter found for channel {control} in encoder_config.")
@@ -331,7 +333,7 @@ class SMC_Mixer:
         
         min, max = param.min_max()
         value = self.processor.process_message(control, value, min, max)
-        params.set(self.encoder_config[index], value)
+        self.params.set(self.encoder_config[index], value)
 
         print(f"{self.encoder_config[index]}: {value} (MIDI value: {value})")
 
@@ -345,11 +347,11 @@ class SMC_Mixer:
 
 class MidiMix:
 
-    def __init__(self):
+    def __init__(self, params):
         """
         Initializes the SMC_Mixer instance.
         """
-                
+        self.params = params
         self.MIN = 0
         self.MAX = 127
 
@@ -400,7 +402,7 @@ class MidiMix:
         
         index = self.fader_controls.index(control)
 
-        param = params.get(self.fader_config[index])
+        param = self.params.get(self.fader_config[index])
 
         if param is None:
             print(f"Warning: No parameter found for control {control} in fader_config.")
@@ -409,7 +411,7 @@ class MidiMix:
         min, max = param.min_max()
         value = self.processor.process_message(control, value, min, max)
 
-        params.set(self.fader_config[index], value)
+        self.params.set(self.fader_config[index], value)
 
         print(f"{self.fader_config[index]}: {value} (MIDI value: {value})")
 
@@ -420,7 +422,7 @@ class MidiMix:
         """
         index = self.pot_controls.index(control) # get the index of the control in the pot_controls list
 
-        param = params.get(self.encoder_config[index]) # get the parameter by name using the index
+        param = self.params.get(self.encoder_config[index]) # get the parameter by name using the index
 
         if param is None:
             print(f"Warning: No parameter found for channel {control} in encoder_config.")
@@ -428,7 +430,7 @@ class MidiMix:
         
         min, max = param.min_max()
         value = self.processor.process_message(control, value, min, max)
-        params.set(self.encoder_config[index], value)
+        self.params.set(self.encoder_config[index], value)
 
         print(f"{self.encoder_config[index]}: {value} (MIDI value: {value})")
 

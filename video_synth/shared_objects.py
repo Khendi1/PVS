@@ -1,8 +1,8 @@
 from fx import *
-from shapes import ShapeGenerator
 from patterns3 import Patterns    
 from enum import StrEnum, auto
 from mix import Mixer
+from config import *
 
 """
 This module initializes shared objects used across the application.
@@ -10,7 +10,10 @@ Now classes with modifyable params are expected to define a create_sliders funct
 gui panels within
 """
 
-mixer = Mixer()
+global params
+
+# Convenient dictionary of effects to be passed to the apply_effects function
+fx_dict = {}
 
 class FX(StrEnum):
     FEEDBACK = auto()
@@ -26,41 +29,26 @@ class FX(StrEnum):
     GLITCH = auto()
     LISSAJOUS = auto()
 
-# Initialize effects classes; these contain Params to be modified by the generators
-feedback = None
-color = None
-pixels = None
-noise = None
-shapes = None
-patterns = None
-reflector = None
-sync = None
-warp = None
-glitch = None
-ptz = None
-
-# Convenient dictionary of effects to be passed to the apply_effects function
-fx = {}
-
-def init_effects(width, height):
+def init_effects(params, width, height):
+    global fx_dict
     global feedback, color, pixels, noise, shapes, patterns
     global reflector, sync, warp, glitch
 
-    feedback = Feedback(width, height)
-    color = Color()
-    pixels = Pixels(width, height)
-    noise = ImageNoiser(NoiseType.NONE)
-    shapes = ShapeGenerator(width, height)
-    patterns = Patterns(width, height)
-    reflector = Reflector()                    
-    sync = Sync() 
-    warp = Warp(width, height)
-    glitch = GlitchEffect()
-    ptz = PTZ(width, height)
+    feedback = Feedback(params, width, height)
+    color = Color(params)
+    pixels = Pixels(params, width, height)
+    noise = ImageNoiser(params, NoiseType.NONE)
+    shapes = ShapeGenerator(params, width, height)
+    patterns = Patterns(params, width, height)
+    reflector = Reflector(params, )                    
+    sync = Sync(params) 
+    warp = Warp(params, width, height)
+    glitch = GlitchEffect(params)
+    ptz = PTZ(params, width, height)
 
     # Convenient dictionary of effects to be passed to the apply_effects function
-    fx.clear() # Clear any previous state
-    fx.update({
+    fx_dict.clear() # Clear any previous state
+    fx_dict.update({
         FX.FEEDBACK: feedback,
         FX.COLOR: color,
         FX.PIXELS: pixels,
