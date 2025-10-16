@@ -5,7 +5,7 @@ from enum import IntEnum, Enum, auto
 from animations import *
 import os
 from pathlib import Path
-from sliders import TrackbarRow
+from gui_elements import TrackbarRow
 
 
 class MixModes(IntEnum):

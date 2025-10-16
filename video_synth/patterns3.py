@@ -6,7 +6,7 @@ import random
 import noise # For Perlin noise generation
 from param import ParamTable, Param
 from generators import Oscillator
-from sliders import TrackbarCallback, TrackbarRow
+from gui_elements import TrackbarCallback, TrackbarRow
 import dearpygui.dearpygui as dpg
 
 posc_bank = []  

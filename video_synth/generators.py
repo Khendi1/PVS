@@ -190,3 +190,41 @@ class Oscillator:
     # def value(self):
     #     """Returns the current calculated value of the oscillator."""
     #     return self._current_value
+
+class OscBank():
+    def __init__(self, params, num_osc):
+        self.len = num_osc
+        self.osc_bank = []
+        temp = [self.osc_bank.append(Oscillator(params=params, name=f"osc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=i%4)) \
+                         for i in range(num_osc)]        
+        print(f"Oscillator bank initialized with {len(self.osc_bank)} oscillators.")
+
+    def update(self):
+        for osc in self.osc_bank:
+            if osc.linked_param is not None:
+                osc.get_next_value()
+
+    def __getitem__(self, index):
+        """
+        This method allows accessing elements using square bracket notation.
+        It delegates the actual access to the internal list.
+        """
+        return self.osc_bank[index]
+
+    def __len__(self):
+        """
+        This method allows using len() on the object.
+        """
+        return len(self.osc_bank)
+
+    def __setitem__(self, index, value):
+        """
+        This method allows modifying elements using square bracket notation.
+        """
+        self.osc_bank[index] = value
+
+    def __delitem__(self, index):
+        """
+        This method allows deleting elements using the del keyword.
+        """
+        del self.osc_bank[index]

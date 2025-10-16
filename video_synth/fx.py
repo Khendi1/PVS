@@ -6,8 +6,7 @@ import cv2
 import numpy as np
 import dearpygui.dearpygui as dpg
 from noise import pnoise2
-from buttons import Button
-from sliders import TrackbarRow
+from gui_elements import TrackbarRow, Button
 
 
 class WarpType(IntEnum):

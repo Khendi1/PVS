@@ -6,9 +6,9 @@ import random
 from generators import Oscillator
 from abc import ABC, abstractmethod
 import dearpygui.dearpygui as dpg
-from shared_objects import *
+from globals import *
 from enum import IntEnum, auto
-from sliders import TrackbarRow
+from gui_elements import TrackbarRow
 
 
 class Animation(ABC):

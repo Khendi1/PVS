@@ -1,14 +1,12 @@
-from config import osc_bank, NUM_OSCILLATORS, toggles
 import dearpygui.dearpygui as dpg
 from save import SaveController
-from buttons import ButtonsTable, Button
 from mix import *
-from shared_objects import fx_dict, FX
-from sliders import TrackbarRow
+from globals import fx_dict, FX
+from gui_elements import TrackbarRow, ButtonsTable, Button
 
 class Interface:
 
-    def __init__(self, params, panel_width=550, panel_height=420):
+    def __init__(self, params, osc_bank, toggles, panel_width=550, panel_height=420):
         self.sliders = []
         self.buttons = []
         self.panel_width = panel_width
@@ -16,14 +14,16 @@ class Interface:
         self.slider_dict = None
         self.default_font_id = None
         self.global_font_id = None
-        self.params=params
+        self.params = params
+        self.osc_bank = osc_bank
+        self.toggles = toggles
         # TODO: debug automatically building params sliders
         # only creates last param in list
         # self.panels = self.build_panels_dict(params.all())
 
     # TODO: this has been moved to the trackbar class; remove after moving all create slider functions to their respective classes
     def reset_slider_callback(self, sender, app_data, user_data):
-        param = params.get(str(user_data))
+        param = self.params.get(str(user_data))
         if param is None:
             print(f"Slider or param not found for {user_data}")
             return
@@ -34,10 +34,10 @@ class Interface:
 
     def on_toggle_button_click(self, sender, app_data, user_data):
         print(f"test: {user_data}")
-        for tag, button in toggles.items():
+        for tag, button in self.toggles.items():
             if user_data == tag:
                 print("test2")
-                toggles.toggle(tag)
+                self.toggles.toggle(tag)
 
 
     def on_button_click(self, sender, app_data, user_data):
@@ -58,13 +58,13 @@ class Interface:
 
 
     def reset_values(self):
-        for param in params.params:
+        for param in self.params.params:
             param.set(param.default_val)
             dpg.set_value(param.name, param.value)
 
 
     def randomize_values(self):
-        for param in params.all():
+        for param in self.params.all():
             param.randomize()
             dpg.set_value(param.name, param.value)
 
@@ -78,8 +78,8 @@ class Interface:
         with dpg.group(horizontal=True):
             dpg.add_button(label=reset_button.label, callback=self.on_button_click, user_data=reset_button.tag, width=width//3)
             dpg.add_button(label=random_button.label, tag=random_button.tag, callback=self.on_button_click, user_data=random_button.tag, width=width//3)
-            toggles["effects_first"].create()
-            # toggles["save"].create()
+            self.toggles["effects_first"].create()
+            # self.toggles["save"].create()
             dpg.add_button(label="Save", tag="save", callback=self.on_button_click, user_data="save", width=width//3)
 
 
@@ -103,12 +103,12 @@ class Interface:
         """
         print("Sender:", sender)
         print("App Data:", app_data)
-        for i in range(NUM_OSCILLATORS):
+        for i in range(self.osc_bank.len):
             if f"osc{i}" in sender:
                 param = None
-                for tag, param in params.items():
+                for tag, param in self.params.items():
                     if tag == app_data:
-                        osc_bank[i].linked_param = param
+                        self.osc_bank[i].linked_param = param
                         break
 
 
@@ -119,7 +119,7 @@ class Interface:
         with dpg.window(tag="Controls", label="Controls", width=width, height=height):
             self.create_trackbars(width, height, mixer)
             # self.create_trackbar_panels_for_param()
-            self.saver = SaveController(params, width, height).create_save_buttons()
+            self.saver = SaveController(self.params, width, height).create_save_buttons()
             self.create_buttons(width, height)
             # dpg.set_viewport_resize_callback(resize_buttons)
 
@@ -139,17 +139,17 @@ class Interface:
             
             perlin_amplitude_slider = TrackbarRow(
                 "Perlin Amplitude", 
-                params.get("perlin_amplitude"), 
+                self.params.get("perlin_amplitude"), 
                 default_font_id)
             
             perlin_frequency_slider = TrackbarRow(
                 "Perlin Frequency", 
-                params.get("perlin_frequency"), 
+                self.params.get("perlin_frequency"), 
                 default_font_id)
             
             perlin_octaves_slider = TrackbarRow(
                 "Perlin Octaves", 
-                params.get("perlin_octaves"), 
+                self.params.get("perlin_octaves"), 
                 default_font_id)
             
         dpg.bind_item_font("noise_generator", global_font_id)
@@ -168,58 +168,58 @@ class Interface:
         osc_noise_repeat = []
         osc_noise_base = []
 
-        for i in range(NUM_OSCILLATORS):
+        for i in range(self.osc_bank.len):
             print(f"Creating sliders for oscillator {i}")
             
             with dpg.collapsing_header(label=f"\tOscillator {i}", tag=f"osc{i}"):
                 osc_shape_sliders.append(TrackbarRow(
                     f"Osc {i} Shape", 
-                    osc_bank[i].shape, 
+                    self.osc_bank[i].shape, 
                     default_font_id))
                 
                 osc_freq_sliders.append(TrackbarRow(
                     f"Osc {i} Freq", 
-                    osc_bank[i].frequency, 
+                    self.osc_bank[i].frequency, 
                     default_font_id))
                 
                 osc_amp_sliders.append(TrackbarRow(
                     f"Osc {i} Amp", 
-                    osc_bank[i].amplitude, 
+                    self.osc_bank[i].amplitude, 
                     default_font_id))
                 
                 osc_phase_sliders.append(TrackbarRow(
                     f"Osc {i} Phase", 
-                    osc_bank[i].phase,
+                    self.osc_bank[i].phase,
                     default_font_id))
                 
                 osc_seed_sliders.append(TrackbarRow(
                     f"Osc {i} Seed", 
-                    osc_bank[i].seed, 
+                    self.osc_bank[i].seed, 
                     default_font_id))
                 
                 osc_noise_octaves.append(TrackbarRow(
                     f"Osc {i} Noise Octaves",
-                    osc_bank[i].noise_octaves,
+                    self.osc_bank[i].noise_octaves,
                     default_font_id))
                 
                 osc_noise_persistence.append(TrackbarRow(
                     f"Osc {i} Noise Persistence",
-                    osc_bank[i].noise_persistence,
+                    self.osc_bank[i].noise_persistence,
                     default_font_id))
                 
                 osc_noise_lacunarity.append(TrackbarRow(
                     f"Osc {i} Noise Lacunarity",
-                    osc_bank[i].noise_lacunarity,
+                    self.osc_bank[i].noise_lacunarity,
                     default_font_id))
                 
                 osc_noise_repeat.append(TrackbarRow(
                     f"Osc {i} Noise Repeat",
-                    osc_bank[i].noise_repeat,
+                    self.osc_bank[i].noise_repeat,
                     default_font_id))
                 
                 osc_noise_base.append(TrackbarRow(
                     f"Osc {i} Noise Base",
-                    osc_bank[i].noise_base,
+                    self.osc_bank[i].noise_base,
                     default_font_id))
                 
                 # Create a list of items for the listbox
@@ -283,7 +283,7 @@ class Interface:
     # under test; not currently used
     def build_panels_dict(self, params):
         panels = {}
-        for p in params.values():
+        for p in self.params.values():
             if p.name not in panels.keys():
                 panels[str(p.family)] = []
             panels[str(p.family)].append(p.name)
@@ -304,7 +304,7 @@ class Interface:
                 for p in panel_params:
                     li.append(TrackbarRow(
                     p, 
-                    params.get(p), 
+                    self.params.get(p), 
                     default_font_id))
                 
             dpg.bind_item_font(panel_name, global_font_id)

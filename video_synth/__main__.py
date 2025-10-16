@@ -13,25 +13,44 @@ Existing classes expose a create_sliders function which is called in gui.py
 Parameter values can be modified via the GUI or linked to MIDI controllers.
 See how sample controllers are mapped in midi.py
 
-See mix.py to configure your video sources.
 
 Author: Kyle Henderson
 """
 
+import argparse
+import logging
 import cv2
 import dearpygui.dearpygui as dpg 
-from config import toggles, osc_bank, NUM_OSCILLATORS
-from shared_objects import fx_dict, FX
+from globals import fx_dict, FX
 from gui import Interface
-from generators import Oscillator
+from generators import OscBank
 from midi_input import MidiInputController, MidiMix, SMC_Mixer
 from fx import *
 from patterns3 import Patterns
 from param import ParamTable
 from mix import Mixer
+from gui_elements import ButtonsTable
 
-# all user modifiable parameters are stored here
-params = ParamTable()
+
+NUM_OSC = 4 
+LOG_LEVEL = 1
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Video Synthesizer initialization arguments')
+    parser.add_argument(
+        '--osc', 
+        type=int, 
+        default=NUM_OSC, 
+        help='Number of general purpose oscillators')
+    parser.add_argument(
+        "--log-level",
+        default="INFO",  # Default log level
+        choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'],
+        help="Set the logging level (CRITICAL, ERROR, WARNING, INFO, DEBUG)"
+    )
+    return parser.parse_args()
+
 
 def init_effects(params, width, height):
 
@@ -66,7 +85,7 @@ def init_effects(params, width, height):
     })
 
 
-def apply_effects(frame, frame_count, patterns: Patterns, feedback: Feedback, color: Color, 
+def apply_effects(frame, frame_count, frame_skip, patterns: Patterns, feedback: Feedback, color: Color, 
                   pixels: Pixels, noise: ImageNoiser, reflector: Reflector, 
                   sync: Sync, warp: Warp, shapes: ShapeGenerator, glitch: GlitchEffect,
                   ptz: PTZ):
@@ -82,7 +101,7 @@ def apply_effects(frame, frame_count, patterns: Patterns, feedback: Feedback, co
 
     # TODO: implement effect sequencer
     # TODO: use frame skip slider to control frame skip
-    if frame_count % (params.val("frame_skip") + 1) == 0: 
+    if frame_count % frame_skip == 0: 
         frame = patterns.generate_pattern_frame(frame)
         frame = ptz.shift_frame(frame)
         frame = sync.sync(frame)
@@ -113,10 +132,38 @@ def apply_effects(frame, frame_count, patterns: Patterns, feedback: Feedback, co
     return frame
 
 
-def main():
-    global fx_dict, params, osc_bank
+def apply_feedback(frame, feedback_frame, prev_frame, frame_count, frame_skip, params, toggles, fx_dict):
+# relevant section
+    if toggles.val("effects_first") == True:         
+        feedback_frame = apply_effects(feedback_frame, frame_count, frame_skip, **fx_dict)
+        # Blend the current dry frame with the previous wet frame using the alpha param
+        feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
+    else:
+        feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
+        feedback_frame = apply_effects(feedback_frame, frame_count, frame_skip, **fx_dict) 
+
+    # Apply feedback effects
+    feedback_frame = fx_dict[FX.FEEDBACK].apply_temporal_filter(prev_frame, feedback_frame)
+    feedback_frame = fx_dict[FX.FEEDBACK].avg_frame_buffer(feedback_frame)
+    feedback_frame = fx_dict[FX.FEEDBACK].nth_frame_feedback(feedback_frame)
+    feedback_frame = fx_dict[FX.FEEDBACK].apply_luma_feedback(prev_frame, feedback_frame)
+    # prev_frame = fx_dict[FX.FEEDBACK].scale_frame(feedback_frame)
+    prev_frame = feedback_frame
+
+    return prev_frame, feedback_frame
+
+
+def main(num_osc, log_level):
+    global fx_dict
     
     print("Initializing video synthesizer...")
+
+    # all user modifiable parameters are stored here
+    params = ParamTable()       # params have a min and max value
+    toggles = ButtonsTable()    # toggles are binary
+
+    # initialize general purpose oscillators for linking to params
+    osc_bank = OscBank(params, num_osc)
 
     # Initialize mixer video sources and retreive frame
     mixer = Mixer(params)
@@ -137,12 +184,6 @@ def main():
     cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Modified Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
-    # Initialize the general purpose oscillator bank
-    for i in range(NUM_OSCILLATORS):
-        osc_bank.append(Oscillator(params=params, name=f"osc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=i%4))
-    print(f"Oscillator bank initialized with {len(osc_bank)} oscillators.")
-    
-
     # TODO: This assumes both controllers are always connected in a specific order; improve this
     # test_ports()
 
@@ -151,10 +192,9 @@ def main():
     controller2 = MidiInputController(controller=SMC_Mixer(params))
 
     # Create control panel after initializing objects that will be used in the GUI
-    gui = Interface(params)
+    gui = Interface(params, osc_bank, toggles)
     gui.create_control_window(params, mixer=mixer)
 
-    # list all available params 
     # for k, v in params.params.items():
     #     print(f'{k}: {v.min}-{v.max}, {v.value}')
 
@@ -170,24 +210,19 @@ def main():
                 continue
 
             # update osc values if linked to params
-            osc_vals = [osc.get_next_value() for osc in osc_bank if osc.linked_param is not None]
-            
-            # relevant section
-            if toggles.val("effects_first") == True:         
-                feedback_frame = apply_effects(feedback_frame, frame_count, **fx_dict)
-                # Blend the current dry frame with the previous wet frame using the alpha param
-                feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
-            else:
-                feedback_frame = cv2.addWeighted(frame, 1 - params.val("alpha"), feedback_frame, params.val("alpha"), 0)
-                feedback_frame = apply_effects(feedback_frame, frame_count, **fx_dict) 
+            osc_bank.update()
 
-            # Apply feedback effects
-            feedback_frame = fx_dict[FX.FEEDBACK].apply_temporal_filter(prev_frame, feedback_frame)
-            feedback_frame = fx_dict[FX.FEEDBACK].avg_frame_buffer(feedback_frame)
-            feedback_frame = fx_dict[FX.FEEDBACK].nth_frame_feedback(feedback_frame)
-            feedback_frame = fx_dict[FX.FEEDBACK].apply_luma_feedback(prev_frame, feedback_frame)
-            # prev_frame = fx_dict[FX.FEEDBACK].scale_frame(feedback_frame)
-            prev_frame = feedback_frame
+
+            prev_frame, feedback_frame = apply_feedback(
+                frame, 
+                feedback_frame,
+                prev_frame, 
+                frame_count,
+                (params.val("frame_skip") + 1), 
+                params, 
+                toggles, 
+                fx_dict
+            )
 
             # Display the resulting frame and control panel
             cv2.imshow('Modified Frame', feedback_frame)
@@ -203,8 +238,7 @@ def main():
 
     except KeyboardInterrupt:
         print("\nCtrl+C detected. Signaling MIDI thread to stop...")
-        controller1.thread_stop = True
-        controller2.thread_stop = True
+        controller1.thread_stop, controller2.thread_stop = True, True
         # Wait for the MIDI thread to finish, with a timeout
         controller1.thread.join(timeout=5)
         controller2.thread.join(timeout=5)
@@ -223,4 +257,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(args.osc, args.log_level)

@@ -4,7 +4,7 @@ import yaml
 import os
 import numpy as np
 import random
-from buttons import Button
+from gui_elements import Button
 
 class SaveController:
     """
