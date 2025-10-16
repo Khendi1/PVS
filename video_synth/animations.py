@@ -4,10 +4,12 @@ import time
 import noise
 import random
 from generators import Oscillator
-# from config import params
 from abc import ABC, abstractmethod
 import dearpygui.dearpygui as dpg
 from shared_objects import *
+from enum import IntEnum, auto
+from sliders import TrackbarRow
+
 
 class Animation(ABC):
     """

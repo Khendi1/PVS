@@ -1,11 +1,11 @@
 import cv2
 import dearpygui.dearpygui as dpg
 import numpy as np
-# from config import params
 from enum import IntEnum, Enum, auto
 from animations import *
 import os
 from pathlib import Path
+from sliders import TrackbarRow
 
 
 class MixModes(IntEnum):

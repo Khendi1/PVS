@@ -5,7 +5,6 @@ from enum import IntEnum, Enum, auto
 import cv2
 import numpy as np
 import dearpygui.dearpygui as dpg
-# from config import params
 from noise import pnoise2
 from buttons import Button
 from sliders import TrackbarRow

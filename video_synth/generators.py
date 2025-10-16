@@ -3,7 +3,6 @@ import random
 import math
 from enum import Enum
 import numpy as np
-# from config import params
 import noise
 from param import Param
 

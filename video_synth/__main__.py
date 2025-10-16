@@ -21,7 +21,7 @@ Author: Kyle Henderson
 import cv2
 import dearpygui.dearpygui as dpg 
 from config import toggles, osc_bank, NUM_OSCILLATORS
-from shared_objects import fx_dict, FX, init_effects
+from shared_objects import fx_dict, FX
 from gui import Interface
 from generators import Oscillator
 from midi_input import MidiInputController, MidiMix, SMC_Mixer
@@ -30,7 +30,41 @@ from patterns3 import Patterns
 from param import ParamTable
 from mix import Mixer
 
-params = None
+# all user modifiable parameters are stored here
+params = ParamTable()
+
+def init_effects(params, width, height):
+
+    global fx_dict
+
+    feedback = Feedback(params, width, height)
+    color = Color(params)
+    pixels = Pixels(params, width, height)
+    noise = ImageNoiser(params, NoiseType.NONE)
+    shapes = ShapeGenerator(params, width, height)
+    patterns = Patterns(params, width, height)
+    reflector = Reflector(params, )                    
+    sync = Sync(params) 
+    warp = Warp(params, width, height)
+    glitch = GlitchEffect(params)
+    ptz = PTZ(params, width, height)
+
+    # Convenient dictionary of effects to be passed to the apply_effects function
+    fx_dict.clear() # Clear any previous state
+    fx_dict.update({
+        FX.FEEDBACK: feedback,
+        FX.COLOR: color,
+        FX.PIXELS: pixels,
+        FX.NOISE: noise,
+        FX.SHAPES: shapes,
+        FX.PATTERNS: patterns,
+        FX.REFLECTOR: reflector,
+        FX.SYNC: sync,
+        FX.WARP: warp,
+        FX.GLITCH: glitch,
+        FX.PTZ: ptz
+    })
+
 
 def apply_effects(frame, frame_count, patterns: Patterns, feedback: Feedback, color: Color, 
                   pixels: Pixels, noise: ImageNoiser, reflector: Reflector, 
@@ -78,13 +112,11 @@ def apply_effects(frame, frame_count, patterns: Patterns, feedback: Feedback, co
 
     return frame
 
+
 def main():
-    global fx_dict, params, osc_bank, mixer
+    global fx_dict, params, osc_bank
     
     print("Initializing video synthesizer...")
-
-    # all user modifiable parameters are stored here
-    params = ParamTable()
 
     # Initialize mixer video sources and retreive frame
     mixer = Mixer(params)
@@ -188,6 +220,7 @@ def main():
             if cap and cap.isOpened():
                 cap.release()
         cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     main()

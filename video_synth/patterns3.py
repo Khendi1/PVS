@@ -5,7 +5,6 @@ from enum import Enum
 import random
 import noise # For Perlin noise generation
 from param import ParamTable, Param
-# from config import params
 from generators import Oscillator
 from sliders import TrackbarCallback, TrackbarRow
 import dearpygui.dearpygui as dpg

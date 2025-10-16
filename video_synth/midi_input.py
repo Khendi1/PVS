@@ -1,6 +1,5 @@
 import mido
 import time
-# from config import params
 import mido
 import threading
 import time
