@@ -26,10 +26,14 @@ class EffectBase:
         return cls._instance
 
     def process(self, frame):
+        """
+        Each effect sub class can have multiple effect methods,
+        so we cant use a single parent function :()
+        """
         pass
 
     def create_panel(self):
-        pass
+        log.info(f"Creating GUI panel for {self.__name__}")
 
 
 class EffectManager:
@@ -85,6 +89,40 @@ class EffectManager:
         ]
 
         self.services = self._all_services
+
+        self.methods = self.get_public_methods()
+        # print(self.methods)
+
+
+    def get_public_methods(self):
+        """
+        Collects all unique public method names from a list of objects.
+        """
+        # Use a set to automatically handle duplicates (e.g., 'process' is inherited by all)
+        all_unique_methods = set()
+
+        for obj in self._all_services:
+            # Get all attributes of the current object
+            all_attributes = dir(obj)
+            
+            # Filter for public methods and add them to the set
+            public_methods_for_obj = [
+                attr for attr in all_attributes 
+                if not attr.startswith('_') and callable(getattr(obj, attr))
+            ]
+            
+            all_unique_methods.update(public_methods_for_obj)
+            
+        # Return the set converted back to a list
+        return list(all_unique_methods)
+
+    def adjust_sequence(self):
+        """
+        Ideas for effect sequencer:
+        get a list of all public effect class methods (does not start with _)
+        add each public method to effects_list
+        iterate over list to call methods
+        """
 
 class WarpType(IntEnum):
     NONE = 0
@@ -1127,7 +1165,6 @@ class Feedback(EffectBase):
 
 
     def nth_frame_feedback(self, frame):
-
 
         if self.buffer_select.value == -1 or len(self.frame_buffer) < self.buffer_select.value:
             return frame
