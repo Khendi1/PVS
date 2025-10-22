@@ -1,8 +1,11 @@
 import dearpygui.dearpygui as dpg
 from save import SaveController
 from mix import *
-from globals import fx_dict, FX
+from globals import effects
 from gui_elements import TrackbarRow, ButtonsTable, Button
+import logging
+
+log = logging.getLogger(__name__)
 
 class Interface:
 
@@ -169,7 +172,6 @@ class Interface:
         osc_noise_base = []
 
         for i in range(self.osc_bank.len):
-            print(f"Creating sliders for oscillator {i}")
             
             with dpg.collapsing_header(label=f"\tOscillator {i}", tag=f"osc{i}"):
                 osc_shape_sliders.append(TrackbarRow(
@@ -260,15 +262,14 @@ class Interface:
         self.test_sliders(default_font_id, global_font_id)
         mixer.mix_panel()
 
-        # TODO: initialize using for loop over dict keys
-        fx_dict[FX.COLOR].create_sliders(default_font_id, global_font_id)
-        fx_dict[FX.FEEDBACK].create_sliders(default_font_id, global_font_id)
-        fx_dict[FX.GLITCH].create_sliders(default_font_id, global_font_id)
-        fx_dict[FX.REFLECTOR].create_sliders(default_font_id, global_font_id)
-        fx_dict[FX.PTZ].create_sliders(default_font_id, global_font_id)
-        fx_dict[FX.SYNC].create_sliders(default_font_id, global_font_id)
-        fx_dict[FX.NOISE].create_sliders(default_font_id, global_font_id)
-        fx_dict[FX.SHAPES].create_sliders(default_font_id, global_font_id)
+        effects.color.create_sliders(default_font_id, global_font_id)
+        effects.feedback.create_sliders(default_font_id,global_font_id)
+        effects.glitch.create_sliders(default_font_id,global_font_id)
+        effects.reflector.create_sliders(default_font_id,global_font_id)
+        effects.ptz.create_sliders(default_font_id,global_font_id)
+        effects.sync.create_sliders(default_font_id,global_font_id)
+        effects.noise.create_sliders(default_font_id,global_font_id)
+        effects.shapes.create_sliders(default_font_id,global_font_id)
         # fx_dict[FX.PATTERNS].create_sliders(default_font_id, global_font_id)
         # fx_dict[FX.WARP].create_sliders(default_font_id, global_font_id)
         # fx_dict[FX.PIXELS].create_sliders(default_font_id, global_font_id)

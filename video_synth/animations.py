@@ -9,7 +9,9 @@ import dearpygui.dearpygui as dpg
 from globals import *
 from enum import IntEnum, auto
 from gui_elements import TrackbarRow
+import logging
 
+log = logging.getLogger(__name__)
 
 class Animation(ABC):
     """

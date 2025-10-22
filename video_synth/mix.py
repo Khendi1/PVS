@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 from gui_elements import TrackbarRow
 
+log = logging.getLogger(__name__)
 
 class MixModes(IntEnum):
     BLEND = 0
@@ -192,7 +193,7 @@ class Mixer:
         self.skip1 = True
 
         if not cap.isOpened():
-            print("Error: Could not open live video source.")
+            log.error(f"Could not open live video source {index}.")
             cap = self.failback_camera
 
         return cap
@@ -218,7 +219,7 @@ class Mixer:
 
         # handle live sources (webcams, capture cards, files)
         if source <= self.cv2_max_devices:
-            print(
+            log.info(
                 f"Starting mixer source {index}: with cv2 source value: {source}"
             )
             if index == 1:
@@ -226,7 +227,7 @@ class Mixer:
             elif index == 2:
                 self.cap2 = self.open_cv2_capture(self.cap2, source, 2)
         else:  # handle animation sources
-            print(
+            log.info(
                 f"Starting mixer source {index}: with animation source value: {source}"
             )
             if index == 1:
@@ -237,7 +238,7 @@ class Mixer:
 
     def select_source1_callback(self, sender, app_data):
 
-        print(
+        log.info(
             f"source1 callback app_data: {app_data}/{self.sources[app_data]}, \
             selected_source1: {self.selected_source1.value}"
         )
@@ -258,7 +259,7 @@ class Mixer:
 
     def select_source2_callback(self, sender, app_data):
         
-        print(
+        log.info(
             f"source2 callback app_data: {app_data}/{self.sources[app_data]}, \
             selected_source2: {self.selected_source2.value}"
         )
@@ -319,8 +320,8 @@ class Mixer:
             ret1, frame1 = self.cap1.read()
             # TODO: retry a couple times to let devices connect before changing src
             if not ret1:
-                print(
-                    f"Error: Source 1 '{self.selected_source1.value}' read failed"
+                log.error(
+                    f"Source 1 '{self.selected_source1.value}' read failed"
                 )
                 # self.cap1.release()
                 # self.cap1 = self.failback_camera()

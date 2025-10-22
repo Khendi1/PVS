@@ -7,7 +7,83 @@ import numpy as np
 import dearpygui.dearpygui as dpg
 from noise import pnoise2
 from gui_elements import TrackbarRow, Button
+import logging
+from patterns3 import Patterns  
 
+log = logging.getLogger(__name__)
+
+""" 
+EffectBase is a base class to give all individual effects 
+classes a common interface in the EffectsManager
+"""
+class EffectBase:
+    _instance = None
+    
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance.name = cls.__name__
+            # cls._instance.is_ready = False
+        return cls._instance
+
+    def process(self, frame):
+        # if not self.is_ready:
+        #     return f"[{self.name}]: ERROR - Not initialized."
+        return f"[{self.name}]: Processed frame"
+
+
+class EffectManager:
+    """
+    A central class to aggregate all singleton effect objects and simplify dependencies, arg len
+    """
+    def __init__(self):
+            
+        self.feedback = None
+        self.color = None
+        self.pixels = None
+        self.noise = None
+        self.shapes = None
+        self.patterns = None
+        self.reflector = None
+        self.sync = None
+        self.warp = None
+        self.glitch = None
+        self.ptz = None
+
+        # Keep track of all services for easy bulk initialization
+        self._all_services = []
+
+        self.services = self._all_services
+
+    def init(self, params, width, height):
+        self.feedback = Feedback(params, width, height)
+        self.color = Color(params)
+        self.pixels = Pixels(params, width, height)
+        self.noise = ImageNoiser(params, NoiseType.NONE)
+        self.shapes = ShapeGenerator(params, width, height)
+        self.patterns = Patterns(params, width, height)
+        self.reflector = Reflector(params, )                    
+        self.sync = Sync(params) 
+        self.warp = Warp(params, width, height)
+        self.glitch = Glitch(params)
+        self.ptz = PTZ(params, width, height)
+
+        # Keep track of all services for easy bulk initialization
+        self._all_services = [
+            self.feedback,
+            self.color,
+            self.pixels,
+            self.noise,
+            self.shapes,
+            self.patterns,
+            self.reflector,
+            self.sync,
+            self.warp,
+            self.glitch,
+            self.ptz,
+        ]
+
+        self.services = self._all_services
 
 class WarpType(IntEnum):
     NONE = 0
@@ -38,7 +114,7 @@ class HSV(IntEnum):
     V = 2
 
 
-class Color:
+class Color(EffectBase):
 
     def __init__(self, params):
         self.params = params
@@ -327,7 +403,7 @@ class Color:
         dpg.bind_item_font("color", global_font_id)
 
 
-class Pixels:
+class Pixels(EffectBase):
 
     def __init__(self, params, image_width: int, image_height: int):
         self.params = params
@@ -383,7 +459,7 @@ class Pixels:
         return sharpened_frame
 
 
-class Sync:
+class Sync(EffectBase):
 
     def __init__(self, params):
         self.params = params
@@ -460,7 +536,7 @@ class Sync:
         dpg.bind_item_font("sync", global_font_id)
 
 
-class Warp:
+class Warp(EffectBase):
 
     def __init__(self, params, image_width: int, image_height: int):
         self.params = params
@@ -719,7 +795,7 @@ class ReflectionMode(Enum):
         return self.name.replace("_", " ").title()
 
 
-class Reflector:
+class Reflector(EffectBase):
     """
     A class to apply reflection transformations to image frames from a stream.
     """
@@ -847,7 +923,11 @@ class Reflector:
         dpg.bind_item_font("reflector", global_font_id)
 
 
-class PTZ:
+    def process(frame):
+        pass    
+
+
+class PTZ(EffectBase):
     def __init__(self, params, image_width: int, image_height: int):
         self.params = params
         self.height = image_height
@@ -974,6 +1054,9 @@ class PTZ:
 
         dpg.bind_item_font("pan", global_font_id)
 
+    def process(self, frame, parameter):
+        return super().process(frame, parameter)
+
 
 class LumaMode(IntEnum):
     NONE = 0
@@ -981,7 +1064,7 @@ class LumaMode(IntEnum):
     BLACK = auto()
 
 
-class Feedback:
+class Feedback(EffectBase):
 
     def __init__(self, params, image_width: int, image_height: int):
         self.params = params
@@ -1241,7 +1324,10 @@ class Feedback:
 
         dpg.bind_item_font("effects", global_font_id)
 
-class Lissajous:
+    def process(self, frame, parameter):
+        return super().process(frame, parameter)
+
+class Lissajous(EffectBase):
     def __init__(self, params):
         self.params = params
         self.lissajous_A = params.add("lissajous_A", 0, 100, 50)
@@ -1297,6 +1383,9 @@ class Lissajous:
 
         dpg.bind_item_font("Lissajous", global_font_id)
 
+    def process(self, frame, parameter):
+        return super().process(frame, parameter)
+
 
 class NoiseType(IntEnum):
     NONE = 0
@@ -1308,7 +1397,7 @@ class NoiseType(IntEnum):
     RANDOM = 6
 
 
-class ImageNoiser:
+class ImageNoiser(EffectBase):
 
     def __init__(
         self, params, noise_type: NoiseType = NoiseType.NONE, noise_intensity: float = 0.1
@@ -1543,8 +1632,10 @@ class ImageNoiser:
 
         dpg.bind_item_font("noiser", global_font_id)
 
+    def process(self, frame, parameter):
+        return super().process(frame, parameter)
 
-class GlitchEffect:
+class Glitch(EffectBase):   
 
     def __init__(self, params):
         self.params = params
@@ -1991,6 +2082,9 @@ class GlitchEffect:
 
         dpg.bind_item_font("glitch", global_font_id)
 
+    def process(self, frame, parameter):
+        return super().process(frame, parameter)
+
 
 class Shape(IntEnum):
 
@@ -2336,3 +2430,6 @@ class ShapeGenerator:
                         default_font_id)
             dpg.bind_item_font("fill_generator", global_font_id)
         dpg.bind_item_font("shape_generator", global_font_id)
+
+    def process(self, frame, parameter):
+        return super().process(frame, parameter)

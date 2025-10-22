@@ -3,6 +3,9 @@ import time
 import mido
 import threading
 import time
+import logging
+
+log = logging.getLogger(__name__)
 
 """
 A class to handle the processing of MIDI messages,
@@ -151,12 +154,12 @@ class MidiInputController:
         input_ports = mido.get_input_names()
 
         if not input_ports:
-            print("No MIDI input ports found. Please ensure your MIDI device is connected and drivers are installed.")
+            log.warning("No MIDI input ports found. Please ensure your MIDI device is connected and drivers are installed.")
             return
 
-        print("\nAvailable MIDI Input Ports:")
+        log.info("Available MIDI Input Ports:")
         for i, port_name in enumerate(input_ports):
-            print(f"{i}: {port_name}")
+            log.info(f"{i}: {port_name}")
 
         # Prompt the user to select a MIDI port from the list
         selected_port_index = -1
@@ -165,12 +168,12 @@ class MidiInputController:
                 choice = input(f"Enter the number of the MIDI input port to use (0-{len(input_ports)-1}): ")
                 selected_port_index = int(choice)
             except ValueError:
-                print("Invalid input. Please enter a number.")
+                log.error("Invalid input. Please enter a number.")
             if selected_port_index < 0 or selected_port_index >= len(input_ports):
-                print("Invalid port number. Please try again.")
+                log.error("Invalid port number. Please try again.")
 
         chosen_port_name = input_ports[selected_port_index]
-        print(f"\nSelected port: {chosen_port_name}")
+        log.info(f"Selected port: {chosen_port_name}")
         return chosen_port_name
 
     def set_values(self, control, value):
@@ -184,7 +187,7 @@ class MidiInputController:
         if self.controller is not None:
             self.controller.set_values(control, value)
         else:
-            print("No controller set to handle MIDI messages.")
+            log.info("No controller set to handle MIDI messages.")
         
     def input_thread_handler(self):
         """
@@ -195,30 +198,30 @@ class MidiInputController:
 
         try:
             with mido.open_input(self.port_name) as inport:
-                print(f"MIDI input thread started for port: {inport.name}")
-                print("Listening for MIDI messages... (Press Ctrl+C in the main terminal to stop)")
+                log.info(f"MIDI input thread started for port: {inport.name}")
+                log.info("Listening for MIDI messages... (Press Ctrl+C in the main terminal to stop)")
 
                 # Continuously listen for messages until the thread_stop flag is set
                 for msg in inport:
                     if self.thread_stop:
-                        print(f"Stopping MIDI input for port: {inport.name}\n")
+                        log.warning(f"Stopping MIDI input for port: {inport.name}\n")
                         break
 
                     # get the control number from the message
                     control = msg.control if hasattr(msg, 'control') else None
                     if control is None:
-                        print(f"Received non-control message: {msg}")
+                        log.info(f"Received non-control message: {msg}")
                         continue
 
                     self.set_values(control, msg.value)
 
         except ValueError as e:
-            print(f"Error: Could not open MIDI port '{self.port_name}'. {e}")
-            print("Please ensure the port name is correct and the device is connected.\n")
+            log.error(f"Could not open MIDI port '{self.port_name}'. {e}")
+            log.info("Ensure the port name is correct and the device is connected ")
         except Exception as e:
-            print(f"An unexpected error occurred in the MIDI thread: {e}\n")
+            log.error(f"An unexpected error occurred in the MIDI thread: {e}")
         finally:
-            print(f"MIDI input thread for '{self.port_name}' has terminated.\n")
+            log.info(f"MIDI input thread for '{self.port_name}' has terminated.")
 
 """
 A class to represent the SMC-Mixer and the 
