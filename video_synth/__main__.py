@@ -72,71 +72,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def apply_effects(frame, frame_count, frame_skip, effects: EffectManager):
-    """ 
-    Applies a sequence of visual effects to the input frame based on current parameters.
-    Each effect is modular and can be enabled/disabled via the GUI.
-    The order of effects can be adjusted to achieve different visual styles.
-    
-    Returns the modified frame.
-    """
-    
-    global image_height, image_width
-
-    # TODO: implement effect sequencer
-    # TODO: use frame skip slider to control frame skip
-    if frame_count % frame_skip == 0: 
-        frame = effects.patterns.generate_pattern_frame(frame)
-        frame = effects.ptz.shift_frame(frame)
-        frame = effects.sync.sync(frame)
-        frame = effects.reflector.apply_reflection(frame)
-        frame = effects.color.polarize_frame_hsv(frame)
-        frame = effects.color.modify_hsv(frame)
-        frame = effects.color.adjust_brightness_contrast(frame)
-        frame = effects.noise.apply_noise(frame)
-        frame = effects.color.solarize_image(frame)
-        frame = effects.color.posterize(frame)
-        frame = effects.pixels.gaussian_blur(frame)
-        frame = effects.pixels.sharpen_frame(frame)
-        frame = effects.glitch.apply_glitch_effects(frame, frame_count)
-
-        # TODO: test these effects, test ordering
-        # frame = color limit_hues_kmeans(frame)
-        # frame = fx.polar_transform(frame, params.get("polar_x"), params.get("polar_y"), params.get("polar_radius"))
-        # frame = fx.apply_perlin_noise
-        # warp_frame = fx.warp_frame(frame)
-
-        # BUG: does lissajous need to be on black background to work properly?
-        # frame = np.zeros((height, width, 3), dtype=np.uint8)
-        # frame = fx.lissajous_pattern(frame, t)
-
-        # TODO: fix bug where shape hue affects the entire frame hue
-        # frame = s.draw_shapes_on_frame(frame, c.image_width, c.image_height)
-
-    return frame
-
-
-def apply_feedback(dry_frame, wet_frame, prev_frame, frame_count, params, toggles, effects):
-
-    if toggles.val("effects_first") == True:         
-        wet_frame = apply_effects(wet_frame, frame_count, params.val("frame_skip")-1, effects)
-        # Blend the current dry frame with the previous wet frame using the alpha param
-        wet_frame = cv2.addWeighted(dry_frame, 1 - params.val("alpha"), wet_frame, params.val("alpha"), 0)
-    else:
-        wet_frame = cv2.addWeighted(dry_frame, 1 - params.val("alpha"), wet_frame, params.val("alpha"), 0)
-        wet_frame = apply_effects(wet_frame, frame_count, params.val("frame_skip")-1, effects) 
-
-    # Apply feedback effects
-    wet_frame = effects.feedback.apply_temporal_filter(prev_frame, wet_frame)
-    wet_frame = effects.feedback.avg_frame_buffer(wet_frame)
-    wet_frame = effects.feedback.nth_frame_feedback(wet_frame)
-    wet_frame = effects.feedback.apply_luma_feedback(prev_frame, wet_frame)
-    # prev_frame = effects.feedback.scale_frame(wet_frame)
-    prev_frame = wet_frame
-
-    return prev_frame, wet_frame
-
-
 def main(num_osc, log_level):
     global fx_dict
     
@@ -160,7 +95,7 @@ def main(num_osc, log_level):
     frame_count = 0
 
     # Initialize effects classes with image dimensions
-    effects.init(params, image_width, image_height)
+    effects.init(params, toggles, image_width, image_height)
 
     cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Modified Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
@@ -193,14 +128,11 @@ def main(num_osc, log_level):
             # update osc values if linked to params
             osc_bank.update()
 
-            prev_frame, wet_frame = apply_feedback(
+            prev_frame, wet_frame = effects.get_modified_frames(
                 dry_frame, 
                 wet_frame,
                 prev_frame, 
-                frame_count,
-                params, 
-                toggles, 
-                effects
+                frame_count
             )
 
             # Display the resulting frame and control panel

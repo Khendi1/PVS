@@ -25,14 +25,7 @@ class EffectBase:
             cls._instance.name = cls.__name__
         return cls._instance
 
-    def process(self, frame):
-        """
-        Each effect sub class can have multiple effect methods,
-        so we cant use a single parent function :()
-        """
-        pass
-
-    def create_panel(self):
+    def create_gui_panel(self):
         log.info(f"Creating GUI panel for {self.__name__}")
 
 
@@ -59,8 +52,11 @@ class EffectManager:
 
         self.services = self._all_services
 
-    def init(self, params, width, height):
+    def init(self, params, toggles, width, height):
         """ This method is separate so the params and frame dims may be initialized"""
+        self.params = params
+        self.toggles = toggles
+        
         self.feedback = Feedback(params, width, height)
         self.color = Color(params)
         self.pixels = Pixels(params, width, height)
@@ -88,41 +84,105 @@ class EffectManager:
             self.ptz,
         ]
 
-        self.services = self._all_services
+        self.class_methods = self.get_effect_methods()
+        # print(self.class_methods)
+        self.sequence = [item for sublist in self.class_methods.values() for item in sublist]
+        # print(self.sequence)
 
-        self.methods = self.get_public_methods()
-        # print(self.methods)
 
-
-    def get_public_methods(self):
+    def get_effect_methods(self):
         """
         Collects all unique public method names from a list of objects.
         """
-        # Use a set to automatically handle duplicates (e.g., 'process' is inherited by all)
-        all_unique_methods = set()
+
+        class_methods = {}
 
         for obj in self._all_services:
             # Get all attributes of the current object
             all_attributes = dir(obj)
             
             # Filter for public methods and add them to the set
-            public_methods_for_obj = [
+            public_methods = [
                 attr for attr in all_attributes 
-                if not attr.startswith('_') and callable(getattr(obj, attr))
+                if not attr.startswith('_') and 'create_gui_panel' not in attr and callable(getattr(obj, attr))
             ]
             
-            all_unique_methods.update(public_methods_for_obj)
-            
-        # Return the set converted back to a list
-        return list(all_unique_methods)
+            class_methods[type(obj).__name__] = public_methods
+        
+        del class_methods['Feedback']
+
+        return class_methods
+
 
     def adjust_sequence(self):
+        pass
+
+
+    def apply_effects(self, frame, frame_count):
+        """ 
+        Applies a sequence of visual effects to the input frame based on current parameters.
+        Each effect is modular and can be enabled/disabled via the GUI.
+        The order of effects can be adjusted to achieve different visual styles.
+        
+        Returns the modified frame.
         """
-        Ideas for effect sequencer:
-        get a list of all public effect class methods (does not start with _)
-        add each public method to effects_list
-        iterate over list to call methods
-        """
+        
+        # TODO: implement effect sequencer
+        # TODO: use frame skip slider to control frame skip
+        if frame_count % (self.params.val('frame_skip')+1) == 0: 
+            frame = self.patterns.generate_pattern_frame(frame)
+            frame = self.ptz.shift_frame(frame)
+            frame = self.sync.sync(frame)
+            frame = self.reflector.apply_reflection(frame)
+            frame = self.color.polarize_frame_hsv(frame)
+            frame = self.color.modify_hsv(frame)
+            frame = self.color.adjust_brightness_contrast(frame)
+            frame = self.noise.apply_noise(frame)
+            frame = self.color.solarize_image(frame)
+            frame = self.color.posterize(frame)
+            frame = self.pixels.gaussian_blur(frame)
+            frame = self.pixels.sharpen_frame(frame)
+            frame = self.glitch.apply_glitch_effects(frame, frame_count)
+
+            # TODO: test these effects, test ordering
+            # frame = color limit_hues_kmeans(frame)
+            # frame = fx.polar_transform(frame, params.get("polar_x"), params.get("polar_y"), params.get("polar_radius"))
+            # frame = fx.apply_perlin_noise
+            # warp_frame = fx.warp_frame(frame)
+
+            # BUG: does lissajous need to be on black background to work properly?
+            # frame = np.zeros((height, width, 3), dtype=np.uint8)
+            # frame = fx.lissajous_pattern(frame, t)
+
+            # TODO: fix bug where shape hue affects the entire frame hue
+            # frame = s.draw_shapes_on_frame(frame, c.image_width, c.image_height)
+
+        return frame
+
+
+    def apply_feedback(self, dry_frame, wet_frame, prev_frame, frame_count):
+
+        if self.toggles.val("effects_first") == True:         
+            wet_frame = self.apply_effects(wet_frame, frame_count)
+            # Blend the current dry frame with the previous wet frame using the alpha param
+            wet_frame = cv2.addWeighted(dry_frame, 1 - self.params.val("alpha"), wet_frame, self.params.val("alpha"), 0)
+        else:
+            wet_frame = cv2.addWeighted(dry_frame, 1 - self.params.val("alpha"), wet_frame, self.params.val("alpha"), 0)
+            wet_frame = self.apply_effects(wet_frame, frame_count) 
+
+        # Apply feedback effects
+        wet_frame = self.feedback.apply_temporal_filter(prev_frame, wet_frame)
+        wet_frame = self.feedback.avg_frame_buffer(wet_frame)
+        wet_frame = self.feedback.nth_frame_feedback(wet_frame)
+        wet_frame = self.feedback.apply_luma_feedback(prev_frame, wet_frame)
+        # prev_frame = effects.feedback.scale_frame(wet_frame)
+        prev_frame = wet_frame
+
+        return prev_frame, wet_frame
+    
+    def get_modified_frames(self, dry_frame, wet_frame, prev_frame, frame_count):
+        return self.apply_feedback(dry_frame, wet_frame, prev_frame, frame_count)
+
 
 class WarpType(IntEnum):
     NONE = 0
