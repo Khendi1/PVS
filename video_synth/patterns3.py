@@ -580,7 +580,7 @@ class Patterns:
         return pattern
     
 
-    def create_sliders(self, default_font_id=None, global_font_id=None):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tPattern Generator", tag="pattern_generator"):
             pattern_type_slider = TrackbarRow(
                 "Pattern Type",

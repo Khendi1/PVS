@@ -134,7 +134,7 @@ class Interface:
 
     def create_panels_from_list(self, source_obj_list):
         for obj in source_obj_list:
-            panel = obj.create_sliders()
+            panel = obj.create_gui_panel()
      
 
     def perlin_generator_sliders(self, default_font_id=None, global_font_id=None):
@@ -262,18 +262,18 @@ class Interface:
         self.test_sliders(default_font_id, global_font_id)
         mixer.mix_panel()
 
-        effects.color.create_sliders(default_font_id, global_font_id)
-        effects.feedback.create_sliders(default_font_id,global_font_id)
-        effects.glitch.create_sliders(default_font_id,global_font_id)
-        effects.reflector.create_sliders(default_font_id,global_font_id)
-        effects.ptz.create_sliders(default_font_id,global_font_id)
-        effects.sync.create_sliders(default_font_id,global_font_id)
-        effects.noise.create_sliders(default_font_id,global_font_id)
-        effects.shapes.create_sliders(default_font_id,global_font_id)
-        # fx_dict[FX.PATTERNS].create_sliders(default_font_id, global_font_id)
-        # fx_dict[FX.WARP].create_sliders(default_font_id, global_font_id)
-        # fx_dict[FX.PIXELS].create_sliders(default_font_id, global_font_id)
-        # fx_dict[FX.LISSAJOUS].create_sliders(default_font_id, global_font_id)
+        effects.color.create_gui_panel(default_font_id, global_font_id)
+        effects.feedback.create_gui_panel(default_font_id,global_font_id)
+        effects.glitch.create_gui_panel(default_font_id,global_font_id)
+        effects.reflector.create_gui_panel(default_font_id,global_font_id)
+        effects.ptz.create_gui_panel(default_font_id,global_font_id)
+        effects.sync.create_gui_panel(default_font_id,global_font_id)
+        effects.noise.create_gui_panel(default_font_id,global_font_id)
+        effects.shapes.create_gui_panel(default_font_id,global_font_id)
+        # fx_dict[FX.PATTERNS].create_gui_panel(default_font_id, global_font_id)
+        # fx_dict[FX.WARP].create_gui_panel(default_font_id, global_font_id)
+        # fx_dict[FX.PIXELS].create_gui_panel(default_font_id, global_font_id)
+        # fx_dict[FX.LISSAJOUS].create_gui_panel(default_font_id, global_font_id)
 
         self.create_panels_from_list(mixer.animation_sources.values())
         self.osc_sliders(default_font_id, global_font_id)

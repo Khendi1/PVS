@@ -9,7 +9,7 @@ you must first create a param and add it to the ParamTable.
 This is often done in class init functions.
 Then you must create a trackbar for it manually (for now).
 
-Existing classes expose a create_sliders function which are called in gui.py
+Existing classes expose a create_gui_panel function which are called in gui.py
 
 Parameter values can be modified via the GUI or linked to MIDI controllers.
 See how sample controllers are mapped in midi.py

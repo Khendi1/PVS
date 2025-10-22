@@ -23,13 +23,13 @@ class EffectBase:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance.name = cls.__name__
-            # cls._instance.is_ready = False
         return cls._instance
 
     def process(self, frame):
-        # if not self.is_ready:
-        #     return f"[{self.name}]: ERROR - Not initialized."
-        return f"[{self.name}]: Processed frame"
+        pass
+
+    def create_panel(self):
+        pass
 
 
 class EffectManager:
@@ -56,6 +56,7 @@ class EffectManager:
         self.services = self._all_services
 
     def init(self, params, width, height):
+        """ This method is separate so the params and frame dims may be initialized"""
         self.feedback = Feedback(params, width, height)
         self.color = Color(params)
         self.pixels = Pixels(params, width, height)
@@ -352,7 +353,7 @@ class Color(EffectBase):
         polarized_frame = cv2.cvtColor(hsv_frame.astype(np.uint8), cv2.COLOR_HSV2BGR)
         return polarized_frame
 
-    def create_sliders(self, default_font_id=None, global_font_id=None):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None):
 
         with dpg.collapsing_header(label=f"\tColor", tag="color"):
 
@@ -504,7 +505,7 @@ class Sync(EffectBase):
         warped_y = cv2.cvtColor(warped_y, cv2.COLOR_RGB2BGR)
         return warped_y
 
-    def create_sliders(self, default_font_id=None, global_font_id=None):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tSync", tag="sync"):
 
             x_sync_speed_slider = TrackbarRow(
@@ -726,7 +727,7 @@ class Warp(EffectBase):
         elif mode == WarpType.WARP0:
             return self._first_warp(img)
 
-    def create_sliders(self, default_font_id=None, global_font_id=None):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None):
 
         with dpg.collapsing_header(label=f"\tWarp", tag="warp"):
 
@@ -908,7 +909,7 @@ class Reflector(EffectBase):
 
         return output_frame
 
-    def create_sliders(self, default_font_id=None, global_font_id=None):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tReflector", tag="reflector"):
 
             reflection_mode_slider = TrackbarRow(
@@ -1014,7 +1015,7 @@ class PTZ(EffectBase):
         else:
             enable_polar_transform = True
 
-    def create_sliders(
+    def create_gui_panel(
         self, default_font_id=None, global_font_id=None, width=550, height=600
     ):
         with dpg.collapsing_header(label=f"\tPan", tag="pan"):
@@ -1268,7 +1269,7 @@ class Feedback(EffectBase):
         return noisy_frame
 
 
-    def create_sliders(self, default_font_id=None, global_font_id=None):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None):
 
         with dpg.collapsing_header(label=f"\tEffects", tag="effects"):
 
@@ -1358,7 +1359,7 @@ class Lissajous(EffectBase):
 
         return frame
     
-    def temp_create_sliders(self, default_font_id=None, global_font_id=None):
+    def temp_create_gui_panel(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tLissajous", tag="Lissajous"):
 
             lissajous_A_slider = TrackbarRow(
@@ -1605,7 +1606,7 @@ class ImageNoiser(EffectBase):
         noisy_image = image + random_noise
         return np.clip(noisy_image, 0, 255).astype(np.uint8)
 
-    def create_sliders(self, default_font_id=None, global_font_id=None):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tNoiser", tag="noiser"):
             noise_type_slider = TrackbarRow(
                 "Noise Type", self.params.get("noise_type"), default_font_id
@@ -2050,7 +2051,7 @@ class Glitch(EffectBase):
         frame_count += 1
         return frame
 
-    def create_sliders(self, default_font_id=None, global_font_id=None):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tGlitch", tag="glitch"):
             glitch_intensity_slider = TrackbarRow(
                 "Glitch Intensity", self.params.get("glitch_intensity_max"), default_font_id
@@ -2323,7 +2324,7 @@ class ShapeGenerator:
         return frame
     
 
-    def create_sliders(self, default_font_id=None, global_font_id=None):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tShape Generator", tag="shape_generator"):
             shape_slider = TrackbarRow(
                 "Shape Type",

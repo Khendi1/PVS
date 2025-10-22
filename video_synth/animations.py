@@ -132,7 +132,7 @@ class Plasma(Animation):
         return self.generate_plasma_effect()
 
 
-    def create_sliders(self, default_font_id=None, global_font_id=None):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None):
         plasma_freq_sliders = []
         plasma_amp_sliders = []
         plasma_phase_sliders = []
@@ -316,7 +316,7 @@ class ReactionDiffusionSimulator(Animation):
         return self.run()
 
 
-    def create_sliders(self, default_font_id=None, global_font_id=None):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tReaction Diffusion", tag="reaction_diffusion"):
             rd_diffusion_rate_a_slider = TrackbarRow(
                 "Diffusion Rate A",
@@ -559,7 +559,7 @@ class Metaballs(Animation):
         return self.do_metaballs(frame)
 
 
-    def create_sliders(self, default_font_id=None, global_font_id=None):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tMetaballs", tag="metaballs"):
             num_metaballs_slider = TrackbarRow(
                 "Num Metaballs",
