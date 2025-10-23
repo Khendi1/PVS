@@ -150,11 +150,9 @@ class EffectManager:
         # frame = fx.apply_perlin_noise
         # warp_frame = fx.warp_frame(frame)
 
-        # BUG: does lissajous need to be on black background to work properly?
         # frame = np.zeros((height, width, 3), dtype=np.uint8)
         # frame = fx.lissajous_pattern(frame, t)
 
-        # TODO: fix bug where shape hue affects the entire frame hue
         # frame = s.draw_shapes_on_frame(frame, c.image_width, c.image_height)
 
         return frame
@@ -2377,6 +2375,7 @@ class ShapeGenerator:
         return (int(bgr[0]), int(bgr[1]), int(bgr[2]))
     
     # TODO: make public for testing or after fix
+    # TODO: fix bug where shape hue affects the entire frame hue
     def _draw_shapes_on_frame(self, frame):
         """ Draw shapes on the given frame based on current parameters """
 
