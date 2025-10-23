@@ -175,7 +175,7 @@ class Oscillator:
         Args:
             param (Param): The parameter object to link to.
         """
-        log.info(f"Linking {self.name} to {param.name}")
+        log.debug(f"Linking {self.name} to {param.name}")
         self.linked_param = param
         self.amplitude.max =  param.max
         self.amplitude.min =  param.min

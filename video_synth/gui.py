@@ -61,9 +61,11 @@ class Interface:
 
 
     def reset_values(self):
-        for k,v in self.params.params.items():
-            v.value = v.default_val
-            # dpg.set_value(v.name, v.value)
+        print(self.params)
+        for param in self.params.params.values():
+            print(param.name)
+            param.reset()
+            dpg.set_value(param.name, param.value)
 
 
     def randomize_values(self):

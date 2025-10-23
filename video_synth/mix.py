@@ -150,6 +150,8 @@ class Mixer:
 
 
     def detect_devices(self, max_index):
+
+        log.info(f"Attempting to find video capture sources ({max_index})")
         for index in range(max_index):
             cap = cv2.VideoCapture(index, cv2.CAP_ANY)
 
@@ -157,6 +159,7 @@ class Mixer:
             if cap.isOpened():
                 ret, _ = cap.read()
                 if ret:
+                    log.info(f"Found video capture device at index {index}")
                     self.sources[f'{MixSources.DEVICE_1.name}_{index}'] = index
                     self.sources[f'{MixSources.DEVICE_2.name}_{index}'] = index
                 cap.release()

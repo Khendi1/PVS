@@ -1,3 +1,4 @@
+from enum import IntEnum, Enum, auto
 
 class LumaMode(IntEnum):
     NONE = 0
@@ -64,3 +65,9 @@ class Shape(IntEnum):
     LINE = 3
     DIAMOND = 4
     NONE = 5
+
+
+class MoireType(IntEnum):
+    ROTATIONAL = 0
+    TRANSLATIONAL = auto()
+    CIRCULAR = auto()

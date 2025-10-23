@@ -216,12 +216,12 @@ class MidiInputController:
                     self.set_values(control, msg.value)
 
         except ValueError as e:
-            log.error(f"Could not open MIDI port '{self.port_name}'. {e}")
+            log.warning(f"Could not open MIDI port '{self.port_name}'. {e}")
             log.info("Ensure the port name is correct and the device is connected ")
         except Exception as e:
-            log.error(f"An unexpected error occurred in the MIDI thread: {e}")
+            log.warning(f"An unexpected error occurred in the MIDI thread: {e}")
         finally:
-            log.info(f"MIDI input thread for '{self.port_name}' has terminated.")
+            log.warning(f"MIDI input thread for '{self.port_name}' has terminated.")
 
 """
 A class to represent the SMC-Mixer and the 

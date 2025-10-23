@@ -112,6 +112,27 @@ See the [Control](#control) section for guidance on configuring your MIDI device
 
 This project is meant to be a fun, relaxing, creative exploration, not a demonstration of proper project management techniques. Instead of tying up precious creative time with Github issue tracking, task tags (i.e. TODO, BUG, etc.) are instead stored inline. The VSCode TODO Tree extension is useful for displaying these tags using various views.
 
+## Program Archetecture 
+
+#### Control Objects
+To enable user control, the program uses custom Control Objects:
+- ```Parameters``` are numerical data in a range (>2) of minimum and maximum values. Think of these like faders or potentiometers. Hue (0-179) and Saturation (0-254) are examples.
+- ```Toggles``` are boolean. Think of these as toggle buttons or flags. Example: Enable Polar Transform, 
+
+These are primarily used by the effects classes, but are also used in the mixer and oscillator bank. Essentially any single value that a user can alter should be a Control Object.
+
+#### Control Structures
+The ```Param``` and ```Toggle``` Control Objects are managed by ```ParamsTable``` and ```ButtonsTable```  Control Structures respectively.
+
+These structures must be passed to each class that wishes to permit user control, oscillator linking, gui sliders/buttons, effect sequencing, etc.
+
+#### Effects Classes and Effects Manager
+For effect modularity and gui simplicity, each related set of effects are placed into an Effects Class.
+Each effect class is derived from the ```EffectBase``` parent class.
+Each effect class should take the ```ParamsTable``` and ```ButtonsTable``` as arugments, add its own params, and implement its own ```create_gui_panel``` method. Until this is automated, the ```create_gui_panel``` must be manually called in ```gui.py/create_interface()```***.
+
+All effects classes are stored, initialized and managed by the ```EffectsManager``` facade class. This simplifies dependencies, arguments, and effect sequencing. Feedback is currently ommitted from effect sequencing until further experimentation. 
+
 ## Background and Inspiration
 
 My journey into video art was inspired by [this video](https://www.youtube.com/watch?v=D3eHKI0nvKA), which was graciously provided by the algorithm. In describing his kinetic video feedback synthesizer masterpeice, Dave Blair explains why his machine must use an expensive field-monitor commonly used in movie production, as it offers analog knobs to manipulate image properties. While this requirement makes sense for his application, I was inspired to explore a purely code-based solution, with the original intention to solder up an HID-capable MCU + encoders and interface it to a basic openCV program.

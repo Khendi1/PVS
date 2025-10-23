@@ -9,6 +9,7 @@ import dearpygui.dearpygui as dpg
 from enum import IntEnum, auto
 from gui_elements import TrackbarRow
 import logging
+from custom_types import MoireType
 
 log = logging.getLogger(__name__)
 
@@ -504,7 +505,6 @@ class Metaballs(Animation):
         """
         Updates metaball positions and generates the current frame, applying feedback.
         """
-        # Update metaball positions for the next frame
 
         if self.num_metaballs.value != len(self.metaballs):
             self.setup_metaballs()
@@ -540,11 +540,9 @@ class Metaballs(Animation):
         
         # Apply feedback effect
         if self.previous_frame is None:
-            # If it's the first frame, just use the current frame
             self.previous_frame = current_frame
         else:
             # Blend the current frame with the previous frame
-            # alpha * current_frame + beta * previous_frame + gamma
             current_frame = cv2.addWeighted(current_frame, 1-self.feedback_alpha.value, 
                                             self.previous_frame, self.feedback_alpha.value, 0)
             self.previous_frame = current_frame # Store this blended frame for the next iteration
@@ -597,11 +595,6 @@ class Metaballs(Animation):
 
         dpg.bind_item_font("metaballs", global_font_id)
 
-
-class MoireType(IntEnum):
-    ROTATIONAL = 0
-    TRANSLATIONAL = auto()
-    CIRCULAR = auto()
 
 class Moire(Animation):
     def __init__(self, params):

@@ -34,7 +34,9 @@ from midi_input import MidiInputController, MidiMix, SMC_Mixer
 from param import ParamTable
 from mix import Mixer
 from gui_elements import ButtonsTable
+import os
 
+os.environ["OPENCV_LOG_LEVEL"] = "INFO"
 
 # default argparse&log values
 DEFAULT_NUM_OSC = 4 
@@ -49,7 +51,6 @@ logging.basicConfig(
     datefmt='%H:%M:%S'
 )
 log = logging.getLogger(__name__)
-
 
 
 def parse_args():
@@ -121,7 +122,7 @@ def main(num_osc, log_level):
     # for k, v in params.params.items():
     #     log.info(f'{k}: {v.min}-{v.max}, {v.value}')
 
-    log.info(f'Enjoy {len(params.keys())} tunable parameters!')
+    log.info(f'Starting program with {len(params.keys())} tunable parameters')
 
     try:
         while True:
@@ -153,7 +154,7 @@ def main(num_osc, log_level):
                 break
 
     except KeyboardInterrupt:
-        log.exception("Quit command detected, signaling MIDI thread to stop...")
+        log.warning("Quit command detected, signaling MIDI thread to stop...")
         
         controller1.thread_stop, controller2.thread_stop = True, True
        
