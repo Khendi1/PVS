@@ -146,7 +146,7 @@ class Plasma(Animation):
         ]
         with dpg.collapsing_header(label=f"\plasma Oscillator", tag="plasma_oscillator"):
             for i in range(len(plasma_params)):
-                with dpg.collapsing_header(label=f"\t{plasma_params[i]}", tag=f"{plasma_params[i]}"):
+                with dpg.collapsing_header(label=f"\t{plasma_params[i]} panel", tag=f"{plasma_params[i]}"):
                     plasma_shape_sliders.append(TrackbarRow(
                         f"{plasma_params[i]} Shape", 
                          self.params.get(f"{plasma_params[i]}_shape"), 
@@ -557,41 +557,68 @@ class Metaballs(Animation):
 
 
     def create_gui_panel(self, default_font_id=None, global_font_id=None):
+
         with dpg.collapsing_header(label=f"\tMetaballs", tag="metaballs"):
+
             num_metaballs_slider = TrackbarRow(
-                "Num Metaballs",
-                self.params.get("num_metaballs"),
-                default_font_id)
+                "Num Metaballs", self.num_metaballs, default_font_id
+            )
             
             min_radius_slider = TrackbarRow(
-                "Min Radius",
-                 self.params.get("min_radius"),
-                default_font_id)
+                "Min Radius", self.min_radius, default_font_id
+            )
             
             max_radius_slider = TrackbarRow(
-                "Max Radius",
-                 self.params.get("max_radius"),
-                default_font_id)
+                "Max Radius", self.max_radius, default_font_id
+            )
+            
+            radius_multiplier = TrackbarRow(
+                "Radius Multiplier", self.radius_multplier, default_font_id
+            )
             
             max_speed_slider = TrackbarRow(
-                "Max Speed",
-                 self.params.get("max_speed"),
-                default_font_id)
+                "Max Speed", self.max_speed, default_font_id
+            )
+
+            speed_multiplier = TrackbarRow(
+                "Speed Multiplier", self.speed_multiplier, default_font_id
+            )
             
             threshold_slider = TrackbarRow(
-                "Threshold",
-                 self.params.get("threshold"),
-                default_font_id)
+                "Threshold", self.threshold, default_font_id
+            )
             
             smooth_coloring_max_field_slider = TrackbarRow(
-                "Smooth Coloring Max Field",
-                 self.params.get("smooth_coloring_max_field"),
-                default_font_id)
+                "Smooth Coloring Max Field", self.smooth_coloring_max_field, default_font_id
+            )
             
             feedback_alpha_slider = TrackbarRow(
-                "Feedback Alpha",
-                 self.params.get("metaballs_feedback"),
-                default_font_id)
+                "Feedback Alpha", self.feedback_alpha, default_font_id
+            )
+
+            skew_angle = TrackbarRow(
+                "Skew Angle", self.skew_angle, default_font_id
+            )
+
+            skew_intensity = TrackbarRow(
+                "Skew Instensity", self.skew_intensity, default_font_id
+            )
+
+            zoom = TrackbarRow(
+                "Zoom", self.zoom, default_font_id
+            )
+
+            hue = TrackbarRow(
+                "Hue", self.hue, default_font_id
+            )
+
+            sat = TrackbarRow(
+                "Sat", self.saturation, default_font_id
+            )
+
+            val = TrackbarRow(
+                "Val", self.value, default_font_id
+            )
 
         dpg.bind_item_font("metaballs", global_font_id)
 

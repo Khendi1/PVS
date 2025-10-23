@@ -61,11 +61,36 @@ class Interface:
 
 
     def reset_values(self):
-        print(self.params)
-        for param in self.params.params.values():
-            print(param.name)
+        for param in self.params.values():
             param.reset()
-            dpg.set_value(param.name, param.value)
+
+            if dpg.does_item_exist(param.name):
+                try:
+                    # Get the item's command/type (checkbox, slider, etc)
+                    info = dpg.get_item_info(param.name).get('command')
+                    final_val = param.default_val
+                    
+                    if info == 'add_checkbox' or info == 'add_radio_button':
+                        # Checkboxes/radio buttons require a Python bool
+                        final_val = bool(param.name)
+                        
+                    elif info == 'add_input_int':
+                        # Input int requires an integer
+                        final_val = int(param.name)
+                        
+                    elif info == 'add_input_float' or info == 'add_slider_float':
+                        # Float widgets require a float
+                        final_val = float(param.name)
+                        
+                    # set the converted value
+                    dpg.set_value(param.name, final_val)
+                    
+                except ValueError as e:
+                    # Catches internal Python conversion errors (e.g., float("abc"))
+                    log.error(f"Type Conversion Error for {param.name}: {e}")
+                except Exception as e:
+                    # Catches the DPG exception [1008] and allows the loop to continue
+                    log.error(f"dpg.set_value failed for {param.name}: {e}")
 
 
     def randomize_values(self):

@@ -90,10 +90,8 @@ def main(num_osc, log_level):
     # initialize general purpose oscillators for linking to params
     osc_bank = OscBank(params, num_osc)
 
-    # Initialize mixer video sources
+    # Initialize video mixer, get a frame, create copies for feedback
     mixer = Mixer(params)
-
-    # Create a copy of the frame for feedback and get its dimensions
     dry_frame = mixer.get_frame()  
     wet_frame = dry_frame.copy()
     prev_frame = dry_frame.copy()
@@ -119,15 +117,18 @@ def main(num_osc, log_level):
     cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Modified Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
-    # for k, v in params.params.items():
-    #     log.info(f'{k}: {v.min}-{v.max}, {v.value}')
 
     log.info(f'Starting program with {len(params.keys())} tunable parameters')
+    # for p in params.values():
+    #     log.info(f'{p.name}: {p.min}-{p.max}, {p.value}')
 
     try:
         while True:
+
             # retreive and mix frames from the selected sources
             dry_frame = mixer.get_frame()
+
+            # frame retrieval may fail when changing sources; skip
             if mixer.skip1 or dry_frame is None:
                 mixer.skip1 = False
                 log.warning("Skipping frame due to source read failure")
@@ -145,7 +146,6 @@ def main(num_osc, log_level):
             # Display the resulting frame and control panel
             cv2.imshow('Modified Frame', wet_frame)
             dpg.render_dearpygui_frame()
-
 
             # Break the loop if 'q' is pressed
             key = cv2.waitKey(1) & 0xFF
