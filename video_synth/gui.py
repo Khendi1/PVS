@@ -2,7 +2,7 @@ import dearpygui.dearpygui as dpg
 from save import SaveController
 from mix import *
 from globals import effects
-from gui_elements import TrackbarRow, ButtonsTable, Button
+from gui_elements import TrackbarRow, ButtonsTable, Toggle
 import logging
 
 log = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ class Interface:
 
 
     def on_button_click(self, sender, app_data, user_data):
-        print(f"Button clicked: {user_data}, {app_data}, {sender}")
+        print(f"Toggle clicked: {user_data}, {app_data}, {sender}")
         # Perform action based on button click
         # TODO: I don't like this, but it works for now
         if user_data == "save":
@@ -73,8 +73,8 @@ class Interface:
 
 
     def create_buttons(self, width, height):
-        reset_button = Button("Reset all", 'reset_all')
-        random_button = Button("Random", 'random')
+        reset_button = Toggle("Reset all", 'reset_all')
+        random_button = Toggle("Random", 'random')
 
         width -= 20
 

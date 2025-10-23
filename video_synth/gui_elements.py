@@ -32,7 +32,7 @@ class TrackbarRow:
             dpg.bind_item_font(self.tag + "_reset", self.font)
 
     def reset_slider_callback(self, sender, app_data, user_data):
-        param = params.get(str(user_data))
+        param = self.param
         if param is None:
             print(f"Slider or param not found for {user_data}")
             return
@@ -43,18 +43,19 @@ class TrackbarRow:
 class TrackbarCallback:
     """
     A callable class instance used as a callback for Dear PyGui trackbars.
+    This prevents having to write a callback for each individual trackbar
     It updates a specified Param object's value and an associated text item.
     """
-    def __init__(self, target_param_obj, display_text_tag=None):
+    def __init__(self, param_obj, display_text_tag=None):
         """
         Initializes the callback instance.
         Args:
-            target_param_obj (Param): The Param object whose 'value' attribute
+            param_obj (Param): The Param object whose 'value' attribute
                                       this trackbar will control.
             display_text_tag (str, optional): The tag of a dpg.add_text item
                                             to update with the current value.
         """
-        self.target_param = target_param_obj
+        self.param = param_obj
         self.display_text_tag = display_text_tag
 
     def __call__(self, sender, app_data):
@@ -65,14 +66,12 @@ class TrackbarCallback:
             app_data: The new value of the trackbar.
         """
         # Update the Param object's value
-        params.set(self.target_param.name, app_data)
+        self.param.value = app_data
         dpg.set_value(sender, app_data)
 
 
 
-import dearpygui.dearpygui as dpg
-
-class Button:
+class Toggle:
     def __init__(self, label, tag, default_val=False, font=None):
         self.label = label
         self.tag = tag
@@ -94,12 +93,12 @@ class Button:
     
 class ButtonsTable:
     """
-    A singleton class to create and store Button instances
+    A singleton class to create and store Toggle instances
     """
     def __init__(self):
         self.buttons = {
-            "effects_first": Button("Effects First", "effects_first", default_val=False),
-            "shapes": Button("Shapes", "shapes", default_val=False)
+            "effects_first": Toggle("Effects First", "effects_first", default_val=False),
+            "shapes": Toggle("Shapes", "shapes", default_val=False)
         }
 
     def __getitem__(self, key):
@@ -119,13 +118,13 @@ class ButtonsTable:
             raise TypeError("Key must be a string or an integer")
 
     def add_button(self, label, tag, default_val=False):
-        self.buttons[tag] = Button(label=label, tag=tag, default_val=default_val)
+        self.buttons[tag] = Toggle(label=label, tag=tag, default_val=default_val)
         
     def val(self, tag):
         if tag in self.buttons:
             return self.buttons[tag].val
         else:
-            print(f"Button with tag '{tag}' not found.")
+            print(f"Toggle with tag '{tag}' not found.")
         return None
     
     def get(self, tag):

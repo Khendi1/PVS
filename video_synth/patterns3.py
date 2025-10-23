@@ -55,6 +55,8 @@ class Patterns:
         self.width = width
         self.height = height
 
+        self.params = params
+
         # Create coordinate grids for vectorized operations (much faster than loops)
         # These are pre-calculated as they don't change per frame
         self.x_coords = np.linspace(0, self.width - 1, self.width, dtype=np.float32)
@@ -159,37 +161,39 @@ class Patterns:
             self.prev = norm_vals.copy()
         return tuple(norm_vals)
 
-    def set_osc_params(self):
+    def _set_osc_params(self):
         if self._pattern_type.value != self.prev_pattern_type:
             print(f"Pattern type changed from {self.prev_pattern_type} to {self._pattern_type.value}.")
             self.prev_pattern_type = self._pattern_type.value
             if self._pattern_type.value == PatternType.BARS.value:
-                print("PatternType is set to BARS; Linking bar frequency to osc 0.")
+                # print("PatternType is set to BARS; Linking bar frequency to osc 0.")
                 self.posc_bank[0].link_param(self.bar_x_offset)
             elif self._pattern_type.value == PatternType.WAVES.value:
-                print("PatternType is set to WAVES; Linking wave frequencies to osc 0, 1.")
+                # print("PatternType is set to WAVES; Linking wave frequencies to osc 0, 1.")
                 self.posc_bank[0].link_param(self.wave_freq_x)
                 self.posc_bank[1].link_param(self.wave_freq_y)
             elif self._pattern_type.value == PatternType.CHECKERS.value:
-                print("PatternType is set to CHECKERS; Linking grid size to osc 0.")
+                # print("PatternType is set to CHECKERS; Linking grid size to osc 0.")
                 self.posc_bank[0].link_param(self.grid_size)
                 self.posc_bank[1].link_param(self.color_shift)
                 self.posc_bank[2].link_param(self.color_blend)
             elif self._pattern_type.value == PatternType.RADIAL.value:
-                print("PatternType is set to RADIAL; Linking radial parameters to osc 0.")
+                pass
+                # print("PatternType is set to RADIAL; Linking radial parameters to osc 0.")
                 # self.posc_bank[0].link_param(self.radial_freq)
                 # self.posc_bank[1].link_param(self.angular_freq)
                 # self.posc_bank[2].link_param(self.radial_mod)
                 # self.posc_bank[3].link_param(self.angle_mod)
             elif self._pattern_type.value == PatternType.PERLIN_BLOBS.value:
-                print("PatternType is set to PERLIN BLOBS; Linking Perlin noise parameters to oscillators.")
+                pass
+                # print("PatternType is set to PERLIN BLOBS; Linking Perlin noise parameters to oscillators.")
                 # Link Perlin noise parameters to oscillators if needed
             elif self._pattern_type.value == PatternType.FRACTAL_SINE.value:
-                print("PatternType is set to FRACTAL SINE; Linking fractal sine parameters to oscillators.")
+                # print("PatternType is set to FRACTAL SINE; Linking fractal sine parameters to oscillators.")
                 self.posc_bank[0].link_param(self.bar_x_offset)
                 self.posc_bank[1].link_param(self.bar_y_offset)
             elif self._pattern_type.value == PatternType.XY_BARS.value:
-                print("PatternType is set to XY_BARS; Linking XY bar parameters to oscillators.")
+                # print("PatternType is set to XY_BARS; Linking XY bar parameters to oscillators.")
                 # self.posc_bank[0].link_param(self.bar_x_freq)
                 # self.posc_bank[1].link_param(self.bar_y_freq)
                 self.posc_bank[0].link_param(self.bar_x_offset)
@@ -207,7 +211,7 @@ class Patterns:
         # Initialize a black image
         pattern = np.zeros((self.height, self.width, 3), dtype=np.uint8)
 
-        self.set_osc_params()
+        self._set_osc_params()
         posc_vals = [osc.get_next_value() for osc in self.posc_bank if osc.linked_param is not None]
 
         # Dispatch to the appropriate pattern generation function

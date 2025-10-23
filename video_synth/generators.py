@@ -5,6 +5,10 @@ from enum import Enum
 import numpy as np
 import noise
 from param import Param
+import logging
+
+log = logging.getLogger(__name__)
+
 
 def map_value(value, from_min, from_max, to_min, to_max, round_down=True):
   """
@@ -171,7 +175,7 @@ class Oscillator:
         Args:
             param (Param): The parameter object to link to.
         """
-        print(f"Linking {self.name} to {param.name}")
+        log.info(f"Linking {self.name} to {param.name}")
         self.linked_param = param
         self.amplitude.max =  param.max
         self.amplitude.min =  param.min
@@ -197,7 +201,7 @@ class OscBank():
         self.osc_bank = []
         temp = [self.osc_bank.append(Oscillator(params=params, name=f"osc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=i%4)) \
                          for i in range(num_osc)]        
-        print(f"Oscillator bank initialized with {len(self.osc_bank)} oscillators.")
+        log.info(f"Oscillator bank initialized with {len(self.osc_bank)} oscillators.")
 
     def update(self):
         for osc in self.osc_bank:

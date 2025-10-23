@@ -6,7 +6,6 @@ import random
 from generators import Oscillator
 from abc import ABC, abstractmethod
 import dearpygui.dearpygui as dpg
-from globals import *
 from enum import IntEnum, auto
 from gui_elements import TrackbarRow
 import logging

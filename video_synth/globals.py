@@ -1,4 +1,3 @@
-from enum import StrEnum, auto
 from effects import EffectManager
 
 """

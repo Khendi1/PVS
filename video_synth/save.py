@@ -4,7 +4,7 @@ import yaml
 import os
 import numpy as np
 import random
-from gui_elements import Button
+from gui_elements import Toggle
 
 class SaveController:
     """
@@ -21,10 +21,10 @@ class SaveController:
         self.height = height
         self.save_dir_path = self.init_save_dir(save_dir_name, yaml_filename)
         self.yaml_file_path = os.path.join(self.save_dir_path, yaml_filename)
-        self.save = Button("Save", "save")
-        self.fwd = Button("Load Next", "load_next")
-        self.prev = Button("Load Prev", "load_prev")
-        self.rand = Button("Load Random", "load_rand")
+        self.save = Toggle("Save", "save")
+        self.fwd = Toggle("Load Next", "load_next")
+        self.prev = Toggle("Load Prev", "load_prev")
+        self.rand = Toggle("Load Random", "load_rand")
 
 
     def init_save_dir(self, save_dir_name: str, yaml_filename: str):
