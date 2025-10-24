@@ -1,5 +1,7 @@
 from enum import IntEnum, Enum, auto
 
+"""This module stores all custom enum classes"""
+
 class LumaMode(IntEnum):
     NONE = 0
     WHITE = auto()

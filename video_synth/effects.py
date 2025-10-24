@@ -10,6 +10,7 @@ from gui_elements import TrackbarRow, Toggle
 import logging
 from patterns3 import Patterns  
 from custom_types import *
+from param import ParamTable, Param
 
 log = logging.getLogger(__name__)
 
@@ -196,8 +197,9 @@ class EffectManager:
         wet_frame = self.feedback.avg_frame_buffer(wet_frame)
         wet_frame = self.feedback.nth_frame_feedback(wet_frame)
         wet_frame = self.feedback.apply_luma_feedback(prev_frame, wet_frame)
-        # prev_frame = effects.feedback.scale_frame(wet_frame)
         prev_frame = wet_frame
+        prev_frame = self.ptz._shift_prev_frame(prev_frame)
+        # prev_frame = effects.feedback.scale_frame(wet_frame)
 
         return prev_frame, wet_frame
 
@@ -1000,6 +1002,7 @@ class PTZ(EffectBase):
         self.params = params
         self.height = image_height
         self.width = image_width
+
         self.x_shift = params.add(
             "x_shift", -image_width, image_width, 0, family="Pan"
         )  # min/max depends on image size
@@ -1008,7 +1011,23 @@ class PTZ(EffectBase):
         )  # min/max depends on image size
         self.zoom = params.add("zoom", 0.75, 3, 1.0, family="Pan")
         self.r_shift = params.add("r_shift", -360, 360, 0.0, family="Pan")
+        
+        
+        self.prev_x_shift = params.add(
+            "prev_x_shift", -image_width, image_width, 0, family="Pan"
+        )  # min/max depends on image size
+        self.prev_y_shift = params.add(
+            "prev_y_shift", -image_height, image_height, 0, family="Pan"
+        )  # min/max depends on image size
+        self.prev_zoom = params.add("prev_zoom", 0.75, 3, 1.0, family="Pan")
+        self.prev_r_shift = params.add("prev_r_shift", -360, 360, 0.0, family="Pan")
 
+        self.prev_cx = params.add(
+            "prev_cx", -image_width/2, image_width/2, 0, family="Pan"
+        )
+        self.prev_cy = params.add(
+            "prev_cy", -image_height/2, image_height/2, 0, family="Pan"
+        )
         self.polar_x = params.add("polar_x", -image_width // 2, image_width // 2, 0)
         self.polar_y = params.add("polar_y", -image_height // 2, image_height // 2, 0)
         self.polar_radius = params.add("polar_radius", 0.1, 100, 1.0)
@@ -1050,6 +1069,32 @@ class PTZ(EffectBase):
         rotated_frame = cv2.warpAffine(shifted_frame, M, (self.width, self.height))
 
         return rotated_frame
+    
+    def _shift_prev_frame(self, frame: np.ndarray):
+        '''DUPLICATE CODE :('''
+        # (height, width) = frame.shape[:2]
+        center = (self.width / 2 +self.prev_cx.value, self.height / 2+self.prev_cy.value)
+
+        # Create a new array with the same shape and data type as the original frame
+        shifted_frame = np.zeros_like(frame)
+
+        # Create the mapping arrays for the indices.
+        x_map = (np.arange(self.width) - self.prev_x_shift.value) % self.width
+        y_map = (np.arange(self.height) - self.prev_y_shift.value) % self.height
+
+        # Use advanced indexing to shift the entire image at once
+        shifted_frame = frame[y_map[:, np.newaxis], x_map]
+
+        # Use cv2.getRotationMatrix2D to get the rotation matrix
+        M = cv2.getRotationMatrix2D(
+            center, self.prev_r_shift.value, self.prev_zoom.value
+        )  # 1.0 is the scale
+
+        # Perform the rotation using cv2.warpAffine
+        rotated_frame = cv2.warpAffine(shifted_frame, M, (self.width, self.height))
+
+        return rotated_frame
+
 
     def _polar_transform(self, frame: np.ndarray):
         """
@@ -1098,6 +1143,20 @@ class PTZ(EffectBase):
             )
             zoom = TrackbarRow("Zoom", self.params.get("zoom"), default_font_id)
 
+            prev_x_shift = TrackbarRow(
+                "Prev X Shift", self.prev_x_shift, default_font_id
+            )
+            y_shift = TrackbarRow(
+                "Prev Y Shift", self.prev_y_shift, default_font_id
+            )
+            r_shift = TrackbarRow(
+                "Prev R Shift", self.prev_r_shift, default_font_id
+            )
+            zoom = TrackbarRow("Prev Zoom", self.prev_zoom, default_font_id)
+            prev_center_x = TrackbarRow("prev_center_x", self.prev_cx, default_font_id)
+            prev_center_y = TrackbarRow("prev_center_y", self.prev_cy, default_font_id)
+
+    
             enable_polar_transform_button = Toggle(
                 "Enable Polar Transform", "enable_polar_transform"
             )
@@ -1125,28 +1184,30 @@ class PTZ(EffectBase):
 
 class Feedback(EffectBase):
 
-    def __init__(self, params, image_width: int, image_height: int):
+    def __init__(self, params: ParamTable, image_width: int, image_height: int):
         self.params = params
         self.height = image_height
         self.width = image_width
 
-        self.frame_skip = params.add("frame_skip", 0, 10, 0)
-        self.alpha = params.add("alpha", 0.0, 1.0, 0.0)
-        self.temporal_filter = params.add("temporal_filter", 0, 1.0, 0.0)
-        self.feedback_luma_threshold = params.add("feedback_luma_threshold", 0, 255, 0)
-        self.luma_select_mode = params.add(
-            "luma_select_mode", 0, len(LumaMode) - 1, LumaMode.NONE.value
-        )
-        self.buffer_select = params.add("buffer_frame_select", -1, 20, -1)
-        self.buffer_frame_blend = params.add("buffer_frame_blend", 0.0, 1.0, 0.0)
+        family = self.__class__.__name__
 
-        self.prev_frame_scale = params.add("prev_frame_scale", 90, 110, 100)
+        self.frame_skip = params.add("frame_skip", 0, 10, 0, family)
+        self.alpha = params.add("alpha", 0.0, 1.0, 0.0, family)
+        self.temporal_filter = params.add("temporal_filter", 0, 1.0, 0.0, family)
+        self.feedback_luma_threshold = params.add("feedback_luma_threshold", 0, 255, 0, family)
+        self.luma_select_mode = params.add(
+            "luma_select_mode", 0, len(LumaMode) - 1, LumaMode.NONE.value, family
+        )
+        self.buffer_select = params.add("buffer_frame_select", -1, 20, -1, family)
+        self.buffer_frame_blend = params.add("buffer_frame_blend", 0.0, 1.0, 0.0, family)
+
+        self.prev_frame_scale = params.add("prev_frame_scale", 90, 110, 100, family)
 
         # TODO: implement
-        self.sequence = params.add("sequence", 0, 100, 0)
+        self.sequence = params.add("sequence", 0, 100, 0, family)
 
         self.max_buffer_size = 30
-        self.buffer_size = params.add("buffer_size", 0, self.max_buffer_size, 0)
+        self.buffer_size = params.add("buffer_size", 0, self.max_buffer_size, 0, family)
         # this should probably be initialized in reset() to avoid issues with reloading config
         self.frame_buffer = deque(maxlen=self.max_buffer_size)
 
@@ -1383,7 +1444,6 @@ class Feedback(EffectBase):
         dpg.bind_item_font("effects", global_font_id)
 
 
-
 class Lissajous(EffectBase):
     def __init__(self, params):
         self.params = params
@@ -1439,7 +1499,6 @@ class Lissajous(EffectBase):
             )
 
         dpg.bind_item_font("Lissajous", global_font_id)
-
 
 
 class ImageNoiser(EffectBase):
@@ -1673,7 +1732,6 @@ class ImageNoiser(EffectBase):
             #     default_font_id)
 
         dpg.bind_item_font("noiser", global_font_id)
-
 
 
 class Glitch(EffectBase):   
