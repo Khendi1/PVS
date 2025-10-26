@@ -287,7 +287,7 @@ class Interface:
         default_font_id, global_font_id = None, None
 
         self.test_sliders(default_font_id, global_font_id)
-        mixer.mix_panel()
+        mixer.create_gui_panel()
 
         effects.color.create_gui_panel(default_font_id, global_font_id)
         effects.feedback.create_gui_panel(default_font_id,global_font_id)

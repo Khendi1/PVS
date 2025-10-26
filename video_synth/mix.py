@@ -1,3 +1,8 @@
+"""
+The Mixer object is used for managing and mixing video sources into a single frame
+A single mixed frame is retrieved every iteration of the main loop.
+"""
+
 import cv2
 import dearpygui.dearpygui as dpg
 import numpy as np
@@ -6,34 +11,9 @@ from animations import *
 import os
 from pathlib import Path
 from gui_elements import TrackbarRow
+from custom_types import *
 
 log = logging.getLogger(__name__)
-
-class MixModes(IntEnum):
-    BLEND = 0
-    LUMA_KEY = 1
-    CHROMA_KEY = 2
-
-""" 
-The MixSources Enum class is used to standardize stings 
-
-For cv2 sources (devices, images, video files), there is an A and B enum
-so that different they can be used on source 1 and source 2 simultaneously
-
-Note that if you want to mix two video files, the sources must be set to 
-"""
-class MixSources(Enum):
-    DEVICE_1 = 0
-    DEVICE_2 = auto()
-    VIDEO_FILE_1 = auto()
-    VIDEO_FILE_2 = auto()
-    IMAGE_FILE_1 = auto()
-    IMAGE_FILE_2 = auto()
-    METABALLS_ANIM = auto()
-    PLASMA_ANIM = auto()
-    REACTION_DIFFUSION_ANIM = auto()
-    MOIRE_ANIM = auto()
-    SHADER_ANIM = auto()
 
 DEVICE_SOURCE_NAMES = [member for member in MixSources if "DEVICE" in member.name]
 FILE_SOURCE_NAMES = [member for member in MixSources if "FILE" in member.name]
@@ -303,7 +283,6 @@ class Mixer:
 
 
     def chroma_key(self, frame1, frame2, lower=(0, 100, 0), upper=(80, 255, 80)):
-        """Placeholder for chroma keying (green screen)."""
         hsv = cv2.cvtColor(frame1, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
         mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
@@ -375,66 +354,140 @@ class Mixer:
             print("Error: Could not retrieve frames from both sources.")
             return None
 
+    def get_hsv_for_cv2(self, dpg_rgba_value):
+        """Converts Dear PyGui's [R, G, B, A] (0.0-1.0) to OpenCV's [H, S, V] (0-180, 0-255, 0-255)."""
+        
+        r, g, b, a = dpg_rgba_value
+        bgr_float = np.array([b, g, r])
+        bgr_255 = (bgr_float * 255).astype(np.uint8)
+        bgr_image = bgr_255.reshape(1, 1, 3)
+        hsv_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2HSV)
+        h, s, v = hsv_image[0, 0]
 
-    def mix_panel(self):
+        return h, s, v
+
+    def color_picker_callback(self, sender, app_data, user_data):
+        """Callback to read RGBA from the color picker and convert it to cv2-compatible HSV."""
+        rgba = dpg.get_value(sender)
+
+        # Convert DPG's RGBA to cv2's HSV
+        h, s, v = self.get_hsv_for_cv2(rgba)
+
+        log.info(f"Color Picker: {user_data}: H={h}, S={s}, V={v}")
+        if 'upper' in user_data:
+            self.upper_hue.value = h
+            self.upper_saturation.value = s
+            self.upper_value.value = v
+        elif 'lower' in user_data:
+            self.lower_hue.value = h
+            self.lower_saturation.value = s
+            self.lower_value.value = v
+
+    def _blend_mode_select_callback(self, sender, app_data, user_data):
+        print(app_data, dpg.get_value(sender))
+        if "Alpha" in app_data:
+            self.blend_mode.value = 0
+        elif "Luma" in app_data:
+            self.blend_mode.value = 1
+        elif "Chroma" in app_data:
+            self.blend_mode.value = 2
+    
+
+    import os
+
+    def _file_select_callback(self, sender, app_data, user_data):
+        # print(app_data['file_path_name'])
+        file_name, file_extension = os.path.splitext(app_data['file_path_name'])
+
+
+        if "1" in user_data:
+            self.video_file_name1 = file_name
+            if ".mp4" in file_extension:
+                pass
+            else:
+                pass
+        elif "2" in user_data:
+            self.video_file_name2 = file_name
+            if ".mp4" in file_extension:
+                pass
+            else:
+                pass
+
+    def create_gui_panel(self):
         with dpg.collapsing_header(label=f"\tMixer", tag="mixer"):
-
+            
             # Get list of srcs without DEVICE_2, X_FILE_2
             sources = [src for src in self.sources.keys() if 'E_2' not in src]
             
-            dpg.add_text("Video Source 1")
-            dpg.add_combo(sources, default_value="DEVICE_1_0", tag="source_1", callback=self.select_source1_callback)
-            dpg.add_combo(self.video_samples+self.images, default_value=self.default_video_file_path, tag="source_1_file", callback=self.select_source1_file)
+            with dpg.group(horizontal=True):
+                dpg.add_text("Source 1")
+                dpg.add_combo(sources, default_value="DEVICE_1_0", tag="source_1", callback=self.select_source1_callback)
+                with dpg.file_dialog(label="Source File Dialog 1", width=300, height=400, show=False, callback=lambda s, a, u : print(s, a, u), tag="filedialog1", user_data="filedialog1"):
+                    # dpg.add_file_extension(".*", color=(255, 255, 255, 255))
+                    dpg.add_file_extension(".mp4", color=(255, 255, 0, 255))
+                    dpg.add_file_extension(".jpeg", color=(255, 255, 0, 255))
+                    dpg.add_file_extension(".jpg", color=(255, 255, 0, 255))
+
+                dpg.add_button(label="File 1", user_data=dpg.last_container(), callback=lambda s, a, u: dpg.configure_item(u, show=True))
+
+            # dpg.add_combo(self.video_samples+self.images, default_value=self.default_video_file_path, tag="source_1_file", callback=self.select_source1_file)
             # dpg.add_input_text(label="Video File Path 1", tag="file_path_source_1", default_value=mixer.default_video_file_path)
             
+            #get only sources for source 2; hacky shortcut to avoid selecting 'device_1' and 'x_file_1'
             sources = [src for src in self.sources.keys() if 'E_1' not in src]
 
-            dpg.add_text("Video Source 2")
-            dpg.add_combo(sources, default_value="METABALLS_ANIM", tag="source_2", callback=self.select_source2_callback)
-            # dpg.add_input_text(label="Video File Path 2", tag="file_path_source_2", default_value=mixer.default_video_file_path)
-            dpg.add_combo(self.video_samples+self.images, default_value=self.default_video_file_path, tag="source_2_file", callback=self.select_source2_file)
-            
-            dpg.add_spacer(height=10)
+            with dpg.group(horizontal=True):
+                dpg.add_text("Source 2")
+                dpg.add_combo(sources, default_value="METABALLS_ANIM", tag="source_2", callback=self.select_source2_callback)
+                with dpg.file_dialog(label="Source File Dialog 2", width=300, height=400, show=False, callback=lambda s, a, u : print(s, a, u), tag="filedialog2", user_data="filedialog2"):
+                    # dpg.add_file_extension(".*", color=(255, 255, 255, 255))
+                    dpg.add_file_extension(".mp4", color=(255, 255, 0, 255))
+                    dpg.add_file_extension(".jpeg", color=(255, 255, 0, 255))
+                    dpg.add_file_extension(".jpg", color=(255, 255, 0, 255))
 
-            dpg.add_text("Mixer")
+                dpg.add_button(label="File 2", user_data=dpg.last_container(), callback=lambda s, a, u: dpg.configure_item(u, show=True))
+
+            # dpg.add_spacer(height=10)
+            dpg.add_radio_button(
+                ("Alpha Blend", "Lumakey", "Chromakey"), 
+                callback=self._blend_mode_select_callback, 
+                horizontal=True,
+                user_data="blend_mode"
+            )
+
+            # dpg.add_text("Mixer")
             # dpg.add_slider_float(label="Blending", default_value=alpha, min_value=0.0, max_value=1.0, callback=alpha_callback, format="%.2f")
             
-            blend_mode_slider = TrackbarRow("Blend Mode", self.params.get("blend_mode"), None)
+            # blend_mode_slider = TrackbarRow("Blend Mode", self.params.get("blend_mode"), None)
             
             frame_blend_slider = TrackbarRow(
                 "Frame Blend",
                 self.params.get("frame_blend"),
                 None) # fix defulat font_id=None
             
-            upper_hue_key_slider = TrackbarRow(
-                "Upper Hue Key",
-                self.params.get("upper_hue"),
-                None) # fix defulat font_id=None
-            
-            lower_hue_key_slider = TrackbarRow(
-                "Lower Hue Key",
-                self.params.get("lower_hue"),
-                None) # fix defulat font_id=None
-            
-            upper_sat_slider = TrackbarRow(
-                "Upper Sat Key",
-                self.params.get("upper_sat"),
-                None) # fix defulat font_id=None
-            
-            lower_sat_slider = TrackbarRow(
-                "Lower Sat Key",
-                self.params.get("lower_sat"),
-                None) # fix defulat font_id=None
-            
-            upper_val_slider = TrackbarRow(
-                "Upper Val Key",
-                self.params.get("upper_val"),
-                None) # fix defulat font_id=None
-            
-            lower_val_slider = TrackbarRow(
-                "Lower Val Key",
-                self.params.get("lower_val"),
-                None) # fix defulat font_id=None
+            with dpg.group(horizontal=True):
+                dpg.add_color_picker(
+                    (255, 0, 255, 200), 
+                    label="Upper Chroma", 
+                    width=200, 
+                    tag='upper_chroma', 
+                    user_data='upper_chroma', 
+                    callback=self.color_picker_callback, 
+                    display_hex=False, 
+                    display_rgb=False, 
+                    display_hsv=True
+                )
+                dpg.add_color_picker(
+                    (255, 0, 255, 200), 
+                    label="Lower Chroma", 
+                    width=200, 
+                    tag='lower_chroma', 
+                    user_data='lower_chroma', 
+                    callback=self.color_picker_callback, 
+                    display_hex=False, 
+                    display_rgb=False, 
+                    display_hsv=True
+                )
             
             luma_threshold_slider = TrackbarRow(
                 "Luma Threshold",
