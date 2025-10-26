@@ -142,7 +142,7 @@ class Interface:
                         break
 
 
-    def create_control_window(self, params, width=550, height=600, mixer=None):
+    def create_control_window(self, params, width=600, height=700, mixer=None):
 
         dpg.create_context()
 
@@ -286,15 +286,16 @@ class Interface:
 
         default_font_id, global_font_id = None, None
 
-        self.test_sliders(default_font_id, global_font_id)
+        # self.test_sliders(default_font_id, global_font_id)
         mixer.create_gui_panel()
 
+        effects.reflector.create_gui_panel(default_font_id,global_font_id)
         effects.color.create_gui_panel(default_font_id, global_font_id)
         effects.feedback.create_gui_panel(default_font_id,global_font_id)
-        effects.glitch.create_gui_panel(default_font_id,global_font_id)
-        effects.reflector.create_gui_panel(default_font_id,global_font_id)
+        effects.pixels.create_gui_panel(default_font_id)
         effects.ptz.create_gui_panel(default_font_id,global_font_id)
         effects.sync.create_gui_panel(default_font_id,global_font_id)
+        effects.glitch.create_gui_panel(default_font_id,global_font_id)
         effects.noise.create_gui_panel(default_font_id,global_font_id)
         effects.shapes.create_gui_panel(default_font_id,global_font_id)
         # fx_dict[FX.PATTERNS].create_gui_panel(default_font_id, global_font_id)

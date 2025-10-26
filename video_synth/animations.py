@@ -144,7 +144,7 @@ class Plasma(Animation):
             "plasma_color_speed",
             "plasma_flow_speed",
         ]
-        with dpg.collapsing_header(label=f"\plasma Oscillator", tag="plasma_oscillator"):
+        with dpg.collapsing_header(label=f"\tPlasma Oscillator", tag="plasma_oscillator"):
             for i in range(len(plasma_params)):
                 with dpg.collapsing_header(label=f"\t{plasma_params[i]} panel", tag=f"{plasma_params[i]}"):
                     plasma_shape_sliders.append(TrackbarRow(

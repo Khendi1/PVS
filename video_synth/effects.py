@@ -546,6 +546,20 @@ class Pixels(EffectBase):
         sharpened_frame = cv2.filter2D(frame, -1, sharpening_kernel)
 
         return sharpened_frame
+    
+    def create_gui_panel(self, default_font_id):
+        with dpg.collapsing_header(label=f"\tPixels", tag="pixels"):
+            blur_kernel = TrackbarRow(
+                "Blur Kernel", self.params.get("blur_kernel_size"), default_font_id
+            )
+
+            blur_type = TrackbarRow(
+                "Blur Type", self.params.get("blur_type"), default_font_id
+            )
+
+            sharpen = TrackbarRow(
+                "Sharpen Amount", self.params.get("sharpen_intensity"), default_font_id
+            )
 
 
 class Sync(EffectBase):
@@ -1389,7 +1403,7 @@ class Feedback(EffectBase):
 
     def create_gui_panel(self, default_font_id=None, global_font_id=None):
 
-        with dpg.collapsing_header(label=f"\tEffects", tag="effects"):
+        with dpg.collapsing_header(label=f"\tFeedback", tag="effects"):
 
             temporal_filter = TrackbarRow(
                 "Temporal Filter", self.params.get("temporal_filter"), default_font_id
@@ -1423,18 +1437,6 @@ class Feedback(EffectBase):
 
             frame_skip = TrackbarRow(
                 "Frame Skip", self.frame_skip, default_font_id
-            )
-
-            blur_kernel = TrackbarRow(
-                "Blur Kernel", self.params.get("blur_kernel_size"), default_font_id
-            )
-
-            blur_type = TrackbarRow(
-                "Blur Type", self.params.get("blur_type"), default_font_id
-            )
-
-            sharpen = TrackbarRow(
-                "Sharpen Amount", self.params.get("sharpen_intensity"), default_font_id
             )
 
             num_hues = TrackbarRow(
