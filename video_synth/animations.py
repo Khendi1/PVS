@@ -151,7 +151,7 @@ class Plasma(Animation):
         ]
         with dpg.collapsing_header(label=f"\tPlasma Oscillator", tag="plasma_oscillator"):
             for i in range(len(plasma_params)):
-                with dpg.collapsing_header(label=f"\t{plasma_params[i]} panel", tag=f"{plasma_params[i]}"):
+                with dpg.collapsing_header(label=f"\t{plasma_params[i]} panel", tag=f"{plasma_params[i]}_panel"):
                     plasma_shape_sliders.append(TrackbarRow(
                         f"{plasma_params[i]} Shape", 
                          self.params.get(f"{plasma_params[i]}_shape"), 
@@ -176,7 +176,7 @@ class Plasma(Animation):
                         f"{plasma_params[i]} Seed", 
                          self.params.get(f"{plasma_params[i]}_seed"),
                         default_font_id))
-                dpg.bind_item_font(f"{plasma_params[i]}", global_font_id)
+                dpg.bind_item_font(f"{plasma_params[i]}_panel", global_font_id)
         dpg.bind_item_font("plasma_oscillator", global_font_id)
 
 

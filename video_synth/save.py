@@ -81,12 +81,14 @@ class SaveController:
                 with open(self.yaml_file_path, 'r') as f:
                     saved_values = list(yaml.safe_load_all(f))
 
+                print(f"beofre {self.index}, len {len(saved_values[0]['entries'])}")
                 if user_data == self.fwd.tag:
-                    self.index = (self.index + 1) % len(saved_values)
+                    self.index = (self.index + 1) % len(saved_values[0]['entries'])
                 elif user_data == self.prev.tag:
-                    self.index = (self.index - 1) % len(saved_values)
+                    self.index = (self.index - 1) % len(saved_values[0]['entries'])
                 else:
-                    self.index = random.randint(0, len(saved_values[0]) - 1)
+                    self.index = random.randint(0, len(saved_values[0]['entries']) - 1)
+                print(f"after {self.index}")
 
                 parsed_values = saved_values[0]['entries'][self.index]
                 self.load_param_vals(parsed_values)
@@ -108,10 +110,17 @@ class SaveController:
             for tag in parsed_param_dict.keys():
                 if tag == param_name:
                     self.params[param_name].value = parsed_param_dict[tag]
-                    # dpg.set_value(param_name, parsed_param_dict[tag])
-
+                    if dpg.does_item_exist(tag):
+                        # item_type = dpg.get_item_info(tag)['type']
+                        # log.debug(item_type)
+                        # log.debug(f"found {tag}, setting to {parsed_param_dict[tag]}, type:{type(parsed_param_dict[tag])}")
+                        dpg.set_value(tag, parsed_param_dict[tag])
+                    else:
+                        # log.warning(f"{tag} widget does not exists")
+                        pass
 
     def get_values(self):
+        """ Parse values from ParamTable Param objects, return as dict of param names and values"""
         new_data = {}
         for param_name, param_obj in self.params.items():
             if isinstance(param_obj, Param):
@@ -135,7 +144,7 @@ class SaveController:
         with dpg.group(horizontal=True):
             dpg.add_button(label=self.rand.label, callback=self.load_button_callback, user_data=self.rand.tag, width=width//3)
 
-
+""" Goal: store changes to paramters to support undo/redo buttons """
 class Timeline:
     def __init__(self, sliders):
         self.labels = [s.labels for s in sliders]
