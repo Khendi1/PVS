@@ -484,13 +484,9 @@ class Mixer:
                 user_data="blend_mode"
             )
 
-            # dpg.add_text("Mixer")
-            # dpg.add_slider_float(label="Blending", default_value=alpha, min_value=0.0, max_value=1.0, callback=alpha_callback, format="%.2f")
-            
-            # blend_mode_slider = TrackbarRow("Blend Mode", self.params.get("blend_mode"), None)
-            
+
             frame_blend_slider = TrackbarRow(
-                "Frame Blend",
+                "Alpha Blend",
                 self.params.get("frame_blend"),
                 None) # fix defulat font_id=None
             

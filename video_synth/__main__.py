@@ -1,26 +1,14 @@
 """
 Main module for the video synthesizer application.
-This module initializes the video mixer, applies effects, and manages the main loop.
+This module initializes the gui and video mixer, applies effects, and manages the main loop.
 
-All effects classes use Parameters and Toggles for control.
-- Parameters are numerical data in a range (>2) of minimum and maximum values.
-- Toggles are boolean.
-These are managed by the ParamsTable and ButtonsTable respectively.
-These structures must be passed to each effect class that wishes to permit user-
-control, oscillator linking, gui sliders/buttons, effect sequencing, etc.
+All effects classes are initialized, sequenced and applied by the EffectsManager.
+The Effects manager is stored in globals.py for easy sharing with the GUI, but is initialized in main.
 
-All effects classes are managed by the EffectsManager (init'd in globals.py for easy sharing with the GUI)
+See the Program Architecture section in README.md for in-depth explainations
+of module function and interation.
 
-To create new effects with user controlable parameters and their corresponding 
-sliders, you must first create a Param and add it to the ParamTable.
-This is typically done in class __init__ functions.
-Then you must create a panel/trackbar for it manually (for now).
-Existing classes expose a create_gui_panel function which are called in gui.py
-
-Parameter values can be modified via the GUI or linked to MIDI controllers.
-See how sample controllers are mapped in midi.py
-
-Author: Kyle Hendersons
+Author: Kyle Henderson
 """
 
 import argparse
@@ -34,6 +22,8 @@ from midi_input import MidiInputController, MidiMix, SMC_Mixer
 from param import ParamTable
 from mix import Mixer
 from gui_elements import ButtonsTable
+from usbmonitor import USBMonitor
+from usbmonitor.attributes import *
 
 
 # default argparse values
@@ -41,7 +31,7 @@ DEFAULT_NUM_OSC = 4
 DEFAULT_LOG_LEVEL = logging.INFO
 DEFAULT_PATCH_INDEX = 0
 DEFAULT_SAVE_FILE = "saved_values.yaml"
-
+DEFAULT_CONFIG_HELPER = False
 
 # Global logging module config 
 logging.basicConfig(
@@ -51,11 +41,8 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-
+"""Creates ArgumentParser, configures arguments, returns parser"""
 def parse_args():
-    """
-    Create ArgumentParser, configure arguments, return parser
-    """
     parser = argparse.ArgumentParser(description='Video Synthesizer initialization arguments')
     parser.add_argument(
         '--osc', 
@@ -82,6 +69,60 @@ def parse_args():
     )
     return parser.parse_args()
 
+""" Find and initialize USB MIDI controllers, return list of controllers """
+def id_midi_devices(controllers, params):
+
+    monitor = USBMonitor()
+    devices_dict = monitor.get_available_devices()
+
+    log.info("--- Currently Connected USB Devices ---")
+    if not devices_dict:
+        log.warning("No USB devices found.")
+    else:
+        count = 0
+        for device_id, device_info in devices_dict.items():
+            
+            # filter by device class 0103 (Class 01, Subclass 03).
+            midi_usb_interface = "DevClass_01&SubClass_03"
+
+            if midi_usb_interface in device_id:
+                # The device_id is usually a system path or identifier
+                model = device_info.get(ID_MODEL, 'N/A')
+                model_id = device_info.get(ID_MODEL_ID, 'N/A')
+                vendor_id = device_info.get(ID_VENDOR_ID, 'N/A')
+                vendor_name = device_info.get(ID_VENDOR_FROM_DATABASE, 'N/A')
+                interfaces = device_info.get(ID_USB_INTERFACES, 'N/A')
+                device_name = device_info.get(DEVNAME, 'N/A')
+                device_type = device_info.get(DEVTYPE, 'N/A')
+
+                print(f"Device ID: {device_id}")
+                print(f"  Model: {model}")
+                print(f"  VID: {vendor_id}, PID: {model_id}")
+                print(f"  INTERFACES: {interfaces}")
+                print(f"  DEVICE NAME: {device_name}")
+                print(f"  DEVICE TYPE: {device_type}")
+                print(f"  VENDOR NAME: {vendor_name}")
+                print("-" * 35)
+
+                # initialize a controller in controller list 
+                # by using some attribute to ID which type of device and
+                # pass its corresponding controller interface class as arg
+                if <id-attribute> in <list of known midi device attribute>:
+                    
+                    if <id-attribute> == <known midi device attribute>:
+                        controllers[count] = MidiInputController(controller=MidiMix(params))
+                    if <id-attribute> == <known midi device attribute>:
+                        MidiInputController(controller=SMC_Mixer(params))
+                    
+                    count+=1
+
+            else:
+                log.warning("Found USB device without available MIDI or Video interface, skipping")
+
+""" IDs USB devices, prompts user on whether to save device to config file for future use.
+The user must still implement the controller class, map params, and initialize it in id_midi_devices """
+def config_helper(controllers, params):
+    pass
 
 """ Main app setup and loop """
 def main(num_osc, log_level):
@@ -110,8 +151,11 @@ def main(num_osc, log_level):
 
     # TODO: This assumes both controllers are always connected in a specific order; improve this
     # test_ports()
+    controllers = []
+    id_midi_devices(controllers)
 
     # Initialize the midi input controller before creating the GUI
+
     controller1 = MidiInputController(controller=MidiMix(params))
     controller2 = MidiInputController(controller=SMC_Mixer(params))
 
@@ -121,7 +165,6 @@ def main(num_osc, log_level):
 
     cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Modified Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-
 
     log.info(f'Starting program with {len(params.keys())} tunable parameters')
     # for p in params.values():
@@ -142,6 +185,7 @@ def main(num_osc, log_level):
             # update osc values if linked to params
             osc_bank.update()
 
+            # apply effects sequence
             prev_frame, wet_frame = effects.modify_frames(
                 dry_frame, wet_frame, prev_frame, frame_count
             )

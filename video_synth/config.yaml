@@ -1,0 +1,9 @@
+Midi Device:
+  - name: AKAI MIDIMIX
+    vendor: AKAI
+    VID: 1
+    PID: 1
+  - name: MVAVE SMC MIXER
+    vendor: MVAVE
+    VID: 2
+    PID: 2
