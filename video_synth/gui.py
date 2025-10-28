@@ -10,16 +10,16 @@ log = logging.getLogger(__name__)
 class Interface:
 
     def __init__(self, params, osc_bank, toggles, panel_width=550, panel_height=420):
-        self.sliders = []
-        self.buttons = []
-        self.panel_width = panel_width
-        self.panel_height = panel_height
-        self.slider_dict = None
-        self.default_font_id = None
-        self.global_font_id = None
         self.params = params
         self.osc_bank = osc_bank
         self.toggles = toggles
+
+        self.panel_width = panel_width
+        self.panel_height = panel_height
+
+        self.default_font_id = None
+        self.global_font_id = None
+        
         # TODO: debug automatically building params sliders
         # only creates last param in list
         # self.panels = self.build_panels_dict(params.all())
@@ -115,6 +115,8 @@ class Interface:
 
     def resize_buttons(self, sender, app_data):
         # Get the current width of the window
+
+        # TODO: "Controls" should not be hard coded as such
         window_width = dpg.get_item_width("Controls")
         
         # Set each button to half the window width (minus a small padding if you want)
@@ -122,32 +124,12 @@ class Interface:
         dpg.set_item_width(sender, half_width)
 
 
-    def listbox_cb(self, sender, app_data):
-        """
-        Callback function for the listbox.  Prints the selected items.
-
-        Args:
-            sender: The sender of the event (the listbox).
-            app_data: A dictionary containing the selected items.  For a listbox,
-                    it's  { 'items': [index1, index2, ...] }
-        """
-        print("Sender:", sender)
-        print("App Data:", app_data)
-        for i in range(self.osc_bank.len):
-            if f"osc{i}" in sender:
-                param = None
-                for tag, param in self.params.items():
-                    if tag == app_data:
-                        self.osc_bank[i].linked_param = param
-                        break
-
-
-    def create_control_window(self, params, width=600, height=700, mixer=None):
+    def create_control_window(self, params, width=600, height=700, mixer=None, osc_bank=None):
 
         dpg.create_context()
 
         with dpg.window(tag="Controls", label="Controls", width=width, height=height):
-            self.create_trackbars(width, height, mixer)
+            self.create_trackbars(width, height, mixer, osc_bank)
             # self.create_trackbar_panels_for_param()
             self.saver = SaveController(self.params, width, height).create_save_buttons()
             self.create_buttons(width, height)
@@ -185,85 +167,6 @@ class Interface:
         dpg.bind_item_font("noise_generator", global_font_id)
     
     
-    def osc_sliders(self, default_font_id=None, global_font_id=None):
-        
-        osc_freq_sliders = []
-        osc_amp_sliders = []
-        osc_phase_sliders = []
-        osc_seed_sliders = []
-        osc_shape_sliders = []
-        osc_noise_octaves = []
-        osc_noise_persistence = []
-        osc_noise_lacunarity = []
-        osc_noise_repeat = []
-        osc_noise_base = []
-
-        for i in range(self.osc_bank.len):
-            
-            with dpg.collapsing_header(label=f"\tOscillator {i}", tag=f"osc{i}"):
-                osc_shape_sliders.append(TrackbarRow(
-                    f"Osc {i} Shape", 
-                    self.osc_bank[i].shape, 
-                    default_font_id))
-                
-                osc_freq_sliders.append(TrackbarRow(
-                    f"Osc {i} Freq", 
-                    self.osc_bank[i].frequency, 
-                    default_font_id))
-                
-                osc_amp_sliders.append(TrackbarRow(
-                    f"Osc {i} Amp", 
-                    self.osc_bank[i].amplitude, 
-                    default_font_id))
-                
-                osc_phase_sliders.append(TrackbarRow(
-                    f"Osc {i} Phase", 
-                    self.osc_bank[i].phase,
-                    default_font_id))
-                
-                osc_seed_sliders.append(TrackbarRow(
-                    f"Osc {i} Seed", 
-                    self.osc_bank[i].seed, 
-                    default_font_id))
-                
-                osc_noise_octaves.append(TrackbarRow(
-                    f"Osc {i} Noise Octaves",
-                    self.osc_bank[i].noise_octaves,
-                    default_font_id))
-                
-                osc_noise_persistence.append(TrackbarRow(
-                    f"Osc {i} Noise Persistence",
-                    self.osc_bank[i].noise_persistence,
-                    default_font_id))
-                
-                osc_noise_lacunarity.append(TrackbarRow(
-                    f"Osc {i} Noise Lacunarity",
-                    self.osc_bank[i].noise_lacunarity,
-                    default_font_id))
-                
-                osc_noise_repeat.append(TrackbarRow(
-                    f"Osc {i} Noise Repeat",
-                    self.osc_bank[i].noise_repeat,
-                    default_font_id))
-                
-                osc_noise_base.append(TrackbarRow(
-                    f"Osc {i} Noise Base",
-                    self.osc_bank[i].noise_base,
-                    default_font_id))
-                
-                # Create a list of items for the listbox
-                items = list(self.params.keys())
-
-                # Create the listbox
-                dpg.add_combo(items=items,
-                                label="Select Parameter",
-                                tag=f"osc{i}_combobox",
-                                default_value=None,
-                                callback=self.listbox_cb)
-
-            dpg.bind_item_font(f"osc{i}", global_font_id)
-
-
     def moire_sliders(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tMoire", tag="moire"):
             pass
@@ -282,11 +185,10 @@ class Interface:
         dpg.bind_item_font("shader", global_font_id)
 
 
-    def create_trackbars(self, width, height, mixer):
+    def create_trackbars(self, width, height, mixer, osc_bank):
 
         default_font_id, global_font_id = None, None
 
-        # self.test_sliders(default_font_id, global_font_id)
         mixer.create_gui_panel()
 
         effects.reflector.create_gui_panel(default_font_id,global_font_id)
@@ -298,17 +200,13 @@ class Interface:
         effects.glitch.create_gui_panel(default_font_id,global_font_id)
         effects.noise.create_gui_panel(default_font_id,global_font_id)
         effects.shapes.create_gui_panel(default_font_id,global_font_id)
-        # fx_dict[FX.PATTERNS].create_gui_panel(default_font_id, global_font_id)
-        # fx_dict[FX.WARP].create_gui_panel(default_font_id, global_font_id)
-        # fx_dict[FX.PIXELS].create_gui_panel(default_font_id, global_font_id)
-        # fx_dict[FX.LISSAJOUS].create_gui_panel(default_font_id, global_font_id)
-
-        self.create_panels_from_list(mixer.animation_sources.values())
-        self.osc_sliders(default_font_id, global_font_id)
-        
         # self.perlin_generator_sliders(default_font_id, global_font_id)
         # self.lissajous_sliders(default_font_id, global_font_id)
-
+        
+        self.create_panels_from_list(mixer.animation_sources.values())
+        
+        osc_bank.create_gui_panel(default_font_id, global_font_id)
+        
     # under test; not currently used
     def build_panels_dict(self, params):
         panels = {}

@@ -9,9 +9,14 @@ import dearpygui.dearpygui as dpg
 from enum import IntEnum, auto
 from gui_elements import TrackbarRow
 import logging
-from custom_types import MoireType
 
 log = logging.getLogger(__name__)
+
+
+class MoireType(IntEnum):
+    ROTATIONAL = 0
+    TRANSLATIONAL = auto()
+    CIRCULAR = auto()
 
 class Animation(ABC):
     """
@@ -704,3 +709,5 @@ class Moire(Animation):
         moire_uint8 = (moire_float * 255).astype(np.uint8)
 
         return moire_uint8
+    
+    

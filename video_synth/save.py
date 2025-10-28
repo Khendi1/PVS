@@ -5,6 +5,10 @@ import os
 import numpy as np
 import random
 from gui_elements import Toggle
+from param import Param, ParamTable
+import logging
+
+log = logging.getLogger(__name__)
 
 class SaveController:
     """
@@ -44,20 +48,29 @@ class SaveController:
 
         print(f"Forward button clicked!")
 
-        try:
-            with open("saved_values.yaml", "r") as f:
-                saved_values = list(yaml.safe_load_all(f))
+        # Read existing YAML data if the file exists
+        if os.path.exists(self.yaml_file_path):
+            try:
+                with open(self.yaml_file_path, 'r') as f:
+                    saved_values = list(yaml.safe_load_all(f))
+                    print(saved_values)
 
-            self.index = (self.index + 1) % len(saved_values.all())
-            self.load_param_vals(saved_values)
-            
-        except Exception as e:
-            print(f"Error loading values: {e}")
+                self.index = (self.index + 1) % len(saved_values)
+                self.load_param_vals(saved_values)
+                print(f"Successfully loaded existing YAML from: {self.yaml_file_path}")
+            except yaml.YAMLError as e:
+                print(f"Error loading YAML file {self.yaml_file_path}: {e}")
+                return
+            except Exception as e:
+                print(f"An unexpected error occurred while reading {self.yaml_file_path}: {e}")
+                return
+        else:
+            print(f"YAML file not found at {self.yaml_file_path}. A new one will be created.")
 
 
     def on_prev_button_click(self):
 
-        print(f"Prev button clicked!")
+        log.debug(f"Prev button clicked!")
 
         try:
             with open("saved_values.yaml", "r") as f:
@@ -67,11 +80,11 @@ class SaveController:
             self.load_param_vals(saved_values)
 
         except Exception as e:
-            print(f"Error loading values: {e}")
+            log.exception(f"Error loading values: {e}")
 
 
     def on_rand_button_click(self):
-        print(f"Random button clicked!")
+        log.debug(f"Random button clicked!")
     
         # get values from saved_values.yaml
         try:
@@ -88,15 +101,25 @@ class SaveController:
     def load_param_vals(self, saved_values):
         d = saved_values[0][self.index]
         print(f"loaded values at index {self.index}: {d}\n\n")
-        for param_name in params.keys():
+        for param_name in self.params.keys():
             for tag in d.keys():
                 if tag == param_name:
-                    params[param_name].set(d[tag])
+                    self.params[param_name].set(d[tag])
                     dpg.set_value(param_name, d[tag])
 
 
+    def get_values(self):
+        new_data = {}
+        for param_name, param_obj in self.params.items():
+            if isinstance(param_obj, Param):
+                new_data[param_name] = param_obj.value
+            else:
+                log.warning(f"{param_name} is not a Param object, cannot save value")
+        print(new_data)
+        return new_data
+
     def save2(self):
-        
+        ROOT_KEY = 'entries'
         current_yaml_data = {}
 
         # Read existing YAML data if the file exists
@@ -104,22 +127,30 @@ class SaveController:
             try:
                 with open(self.yaml_file_path, 'r') as f:
                     current_yaml_data = yaml.safe_load(f)
-                    if current_yaml_data is None: # Handle empty YAML file
-                        current_yaml_data = {}
-                print(f"Successfully loaded existing YAML from: {self.yaml_file_path}")
-                print(f"Current YAML data: {current_yaml_data}")
+                log.debug(f"Existing data loaded: {current_yaml_data}")
             except yaml.YAMLError as e:
-                print(f"Error loading YAML file {self.yaml_file_path}: {e}")
-                return
-            except Exception as e:
-                print(f"An unexpected error occurred while reading {self.yaml_file_path}: {e}")
-                return
+                log.exception(f"Could not read existing YAML data: {e}. Starting with empty data.")
+                current_yaml_data = {}
         else:
-            print(f"YAML file not found at {self.yaml_file_path}. A new one will be created.")
+            log.warning(f"File {self.yaml_file_path} does not exist. Creating a new file.")
 
+        entries_list = current_yaml_data.get(ROOT_KEY, [])
+        
+        # error check
+        if not isinstance(entries_list, list):
+            entries_list = []
 
-    def on_save_button_click(self, frame: np.ndarray):
-        self.save2(self)
+        new_data = self.get_values()
+        entries_list.append(new_data)
+        current_yaml_data[ROOT_KEY] = entries_list
+
+        with open(self.yaml_file_path, 'w') as file:
+            yaml.dump(current_yaml_data, file, default_flow_style=False, sort_keys=False)
+            
+        return current_yaml_data
+
+    def on_save_button_click(self, appdata, userdata):
+        self.save2()
         
         # TODO: determine best way to grap a frame for saving w/o having to pass into method
         # cv2.imwrite(f"{date_time_str}.jpg", frame)

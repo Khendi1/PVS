@@ -112,7 +112,7 @@ def main(num_osc, log_level):
 
     # Create control panel after initializing objects that will be used in the GUI
     gui = Interface(params, osc_bank, toggles)
-    gui.create_control_window(params, mixer=mixer)
+    gui.create_control_window(params, mixer=mixer, osc_bank=osc_bank)
 
     cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Modified Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)

@@ -8,6 +8,9 @@ class ParamTable:
     def __init__(self):
         """Initializes an empty dictionary to store parameters."""
         self.params = {}
+
+    def __repr__(self):
+        return self.params
     
     def __getitem__(self, key):
         """

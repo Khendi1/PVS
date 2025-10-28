@@ -1,10 +1,10 @@
 # Python Video Synthesizer
 
-Analog video synthesizer modules are expensive, CRTs are bulky and liquid light shows are messy. If you want to play around with live video effects without patch cables, dyes or expensive software, try out the Python Video Synthesizer (PVS).  Or augment your existing setup for as little as $0.00!
+Analog video synth modules are expensive, CRTs are bulky and liquid light shows are messy. If you want to play around with live video effects without patch cables, dyes or expensive software, try out the Python Video Synthesizer (PVS).  Or augment your existing setup for as little as $0.00! 
 
 PVS is designed for use with MIDI controllers. Turning knobs and pushing faders is more engaging than using a mouse, though a (crappy) GUI is provided. 
 
-There are many tunable parameters (~150 at the time of writing). Most parameters can be modulated by oscillators, including the oscillator parameters themselves (i.e. oscillator frequency, amplitude, phase, vertical shift).
+There are many tunable parameters (~250 at the time of writing). Most parameters can be modulated by oscillators, including the oscillator parameters themselves (i.e. oscillator frequency, amplitude, phase, vertical shift).
 
 This suite plays well with lots of other tools and hardware, so take a look at the [Optional Off-The-Shelf Hardware](#optional-off-the-shelf-hardware), [Optional DIY Hardware](#optional-diy-hardware), and [Optional Custom PCBs](#optional-custom-pcbs) sections. Note that the tools in these sections are all **optional!** I have spent hours playing with this toy with nothing but a cheap laptop and its built-in camera.
 
@@ -30,7 +30,7 @@ This suite plays well with lots of other tools and hardware, so take a look at t
 
     - ```pip install -r requirements.txt```
 
-5. *OPTIONAL*: configure hardware; plug in MIDI devices and capture devices, adjust MixSource enum in mix.py accordingly. See [Hardware Setup](#hardware-setup) for additional details.
+5. *OPTIONAL*: configure hardware; plug in MIDI devices and capture devices, See [Hardware Setup](#hardware-setup) for additional details.
 
 6. still from the top level, launch the program:
 
@@ -38,12 +38,9 @@ This suite plays well with lots of other tools and hardware, so take a look at t
 
 ## Hardware setup
 
-Configuring your MIDI hardware, cameras, and capture devices is currently a weak point, and will be revisted for overhaul. 
+Hardware video devices (USB capture devices, webcams, etc.) are identified upon program execution, but MIDI devices are not. Devices are not identified or recovered through program execution (boo), so restart if you  See the [Control](#control) section to configure your MIDI device. 
 
-Cv2 camera/capture devices are identified upon program execution, but MIDI devices are not.
-
-See the [Control](#control) section for guidance on configuring your MIDI device.
-
+Find the 'Mixer' GUI panel to select among different video devices. Currently devices are identified by their USB enumeration value, i.e. the order that they are plugged in.
 
 ## Features and Parameters:
 - Locally save and recall patches
@@ -54,12 +51,12 @@ See the [Control](#control) section for guidance on configuring your MIDI device
     - chroma keying
     - supports live, saved, and animated video sources
 - Live Video Input Sources
-    - supports up to 5 capture devices that openCV can recognize as a webcam. USB webcam and USB HDMI/Composite/VGA capture devices have all tested successfully.
+    - searches for 10 capture devices at boot by default, but you can pass an arg to look for more or less. 
 - Video and Image File Input Source
-    - support for looping video clips or displaying static images
+    - loop video clips or display static images
 - Animated Input Sources:
     - Metaballs
-    - Reaction diffusion simulator
+    - Reaction diffusion
     - Plasma generator
     - Moire pattern generator
     - Shader controller
@@ -112,17 +109,17 @@ See the [Control](#control) section for guidance on configuring your MIDI device
 
 This project is meant to be a fun, relaxing, creative exploration, not a demonstration of proper project management techniques. Instead of tying up precious creative time with Github issue tracking, task tags (i.e. TODO, BUG, etc.) are instead stored inline. The VSCode TODO Tree extension is useful for displaying these tags using various views.
 
-## Program Archetecture 
+## Program Architecture 
 
 #### Control Objects
-To enable user control, the program uses custom Control Objects:
-- ```Parameters``` are numerical data in a range (>2) of minimum and maximum values. Think of these like faders or potentiometers. Hue (0-179) and Saturation (0-254) are examples.
-- ```Toggles``` are boolean. Think of these as toggle buttons or flags. Example: Enable Polar Transform, 
+The program uses two custom Control Objects to enable user control:
+- ```Parameter``` are numerical data in a range (>2) of minimum and maximum values. Think of these like faders or potentiometers. Hue (0-179) and Saturation (0-254) are examples.
+- ```Toggle``` are boolean. Think of these as toggle buttons or flags. Example: Enable Polar Transform, 
 
-These are primarily used by the effects classes, but are also used in the mixer and oscillator bank. Essentially any single value that a user can alter should be a Control Object.
+These Control Objects are primarily used by the effects classes, but are also used in the Mixer and Oscillator bank. Essentially any single value that a user can alter should be a Control Object.
 
 #### Control Structures
-The ```Param``` and ```Toggle``` Control Objects are managed by ```ParamsTable``` and ```ButtonsTable```  Control Structures respectively.
+The ```Parameter``` and ```Toggle``` Control Objects are managed by ```ParamsTable``` and ```ButtonsTable```  Control Structures respectively.
 
 These structures must be passed to each class that wishes to permit user control, oscillator linking, gui sliders/buttons, effect sequencing, etc.
 

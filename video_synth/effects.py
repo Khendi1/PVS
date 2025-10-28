@@ -1,3 +1,13 @@
+"""
+See notes on Program Architecture in README.md
+
+Classes stored here:
+    - enumeration classes for effect modes, etc.
+    - EffectBase singleton class; extended by each Effect subclass (EX: Color, Feedback, etc.)
+    - Effect subclasses; require Control Structures as args, instantiates and adds Control Objects (Parameters, Toggles) to approp structures
+    - EffectManager to init, manage, and sequence Effect subclasses
+"""
+
 import math
 import random
 from collections import deque
@@ -9,10 +19,82 @@ from noise import pnoise2
 from gui_elements import TrackbarRow, Toggle
 import logging
 from patterns3 import Patterns  
-from custom_types import *
-from param import ParamTable, Param
+from param import ParamTable
+from enum import IntEnum, Enum, auto
 
 log = logging.getLogger(__name__)
+
+
+"""This section stores all local custom enum classes"""
+
+class LumaMode(IntEnum):
+    NONE = 0
+    WHITE = auto()
+    BLACK = auto()
+
+class NoiseType(IntEnum):
+    NONE = 0
+    GAUSSIAN = auto()
+    POISSON = auto()
+    SALT_AND_PEPPER = auto()
+    SPECKLE = auto()
+    SPARSE = auto()
+    RANDOM = auto()
+
+class WarpType(IntEnum):
+    NONE = 0
+    SINE = auto()
+    RADIAL = auto()
+    FRACTAL = auto()
+    PERLIN = auto()
+    WARP0 = auto()  # placeholder for old warp_frame method; yet to be tested
+
+"""Enumeration of blur modes"""
+class BlurType(IntEnum):
+    NONE = 0
+    GAUSSIAN = 1
+    MEDIAN = 2
+    BOX = 3
+    BILATERAL = 4
+
+"""Enumeration of sharpening modes"""
+class SharpenType(IntEnum):
+    NONE = 0
+    SHARPEN = 1
+    UNSHARP_MASK = 2
+
+"""Enum to access hsv tuple indicies"""
+class HSV(IntEnum):
+    H = 0
+    S = 1
+    V = 2
+
+class ReflectionMode(Enum):
+    """Enumeration for different image reflection modes."""
+
+    NONE = 0  # No reflection
+    HORIZONTAL = 1  # Reflect across the Y-axis (flip horizontally)
+    VERTICAL = 2  # Reflect across the X-axis (flip vertically)
+    BOTH = 3  # Reflect across both X and Y axes (flip horizontally and vertically)
+    QUAD_SYMMETRY = 4  # Reflect across both axes with quadrants (not implemented)
+    SPLIT = 5  # Reflect left half onto right half
+
+    def __str__(self):
+        return self.name.replace("_", " ").title()
+
+
+class Shape(IntEnum):
+
+    RECTANGLE = 0
+    CIRCLE = 1
+    TRIANGLE = 2
+    LINE = 3
+    DIAMOND = 4
+    NONE = 5
+
+"""
+End Enum classes, begin 
+"""
 
 """ 
 EffectBase is a singleton base class to give all individual effects 
@@ -179,17 +261,13 @@ class EffectManager:
 
     
     def modify_frames(self, dry_frame, wet_frame, prev_frame, frame_count):
-        
-        # while 1:
-        #     print(type(wet_frame))
-            # return prev_frame, wet_frame
 
+        # Blend the current dry frame with the previous wet frame using the alpha param
         if self.toggles.val("effects_first") == True:         
             wet_frame = self.apply_effects(wet_frame, frame_count)
-            # Blend the current dry frame with the previous wet frame using the alpha param
-            wet_frame = cv2.addWeighted(dry_frame, 1 - self.params.val("alpha"), wet_frame, self.params.val("alpha"), 0)
+            wet_frame = cv2.addWeighted(dry_frame, 1 - self.feedback.alpha.value, wet_frame, self.feedback.alpha.value, 0)
         else:
-            wet_frame = cv2.addWeighted(dry_frame, 1 - self.params.val("alpha"), wet_frame, self.params.val("alpha"), 0)
+            wet_frame = cv2.addWeighted(dry_frame, 1 - self.feedback.alpha.value, wet_frame, self.feedback.alpha.value, 0)
             wet_frame = self.apply_effects(wet_frame, frame_count) 
 
         # Apply feedback effects
@@ -347,14 +425,11 @@ class Color(EffectBase):
             print("Warning: Image not in uint8 format. Converting...")
             frame = cv2.convertScaleAbs(frame)
 
-        # Calculate the step size for quantization
-        # Each pixel value will be mapped to one of 'levels_per_channel' distinct values.
+        # Calculate the step size for quantization, round
         step = 256 // self.levels_per_channel.value
-
-        # Calculate the half-step to round to the nearest quantization level
         half_step = step // 2
 
-        # Apply posterization to each color channel (B, G, R)
+        # TODO: switch posterization methods with toggle
 
         # Method 1: Simple quantization (floor division)
         # posterized_frame = (frame // step) * step
@@ -397,8 +472,6 @@ class Color(EffectBase):
 
         Args:
             image: The input image (NumPy array).
-            alpha: Contrast control (1.0-3.0, default=1.0).
-            beta: Brightness control (0-100, default=0).
 
         Returns:
             The adjusted image (NumPy array).
@@ -434,7 +507,7 @@ class Color(EffectBase):
         # Apply the hue shift with strength
         shifted_hue = (
             hue_channel + hue_shift * self.hue_invert_strength.value
-        ) % 180  # Wrap aroundS
+        ) % 180  # Wrap around
         hsv_frame[:, :, 0] = shifted_hue
 
         # Convert back to BGR

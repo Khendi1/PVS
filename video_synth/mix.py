@@ -11,15 +11,44 @@ from animations import *
 import os
 from pathlib import Path
 from gui_elements import TrackbarRow
-from custom_types import *
+
 
 log = logging.getLogger(__name__)
+
+
+class MixModes(IntEnum):
+    BLEND = 0
+    LUMA_KEY = 1
+    CHROMA_KEY = 2
+
+""" 
+The MixSources Enum class is used to standardize strings 
+
+For cv2 sources (devices, images, video files), there is an A and B enum
+so that different they can be used on source 1 and source 2 simultaneously
+
+Note that if you want to mix two video files, the sources must be set to 
+"""
+class MixSources(Enum):
+    DEVICE_1 = 0
+    DEVICE_2 = auto()
+    VIDEO_FILE_1 = auto()
+    VIDEO_FILE_2 = auto()
+    IMAGE_FILE_1 = auto()
+    IMAGE_FILE_2 = auto()
+    METABALLS_ANIM = auto()
+    PLASMA_ANIM = auto()
+    REACTION_DIFFUSION_ANIM = auto()
+    MOIRE_ANIM = auto()
+    SHADER_ANIM = auto()
 
 DEVICE_SOURCE_NAMES = [member for member in MixSources if "DEVICE" in member.name]
 FILE_SOURCE_NAMES = [member for member in MixSources if "FILE" in member.name]
 ANIMATED_SOURCE_NAMES = [member for member in MixSources if "ANIM" in member.name]
 
+"""Mixer is used to init sources, get frames from each, and blend them"""
 class Mixer:
+
 
     def __init__(self, params):
 
