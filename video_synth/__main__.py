@@ -34,14 +34,13 @@ from midi_input import MidiInputController, MidiMix, SMC_Mixer
 from param import ParamTable
 from mix import Mixer
 from gui_elements import ButtonsTable
-import os
 
-os.environ["OPENCV_LOG_LEVEL"] = "INFO"
 
-# default argparse&log values
+# default argparse values
 DEFAULT_NUM_OSC = 4 
 DEFAULT_LOG_LEVEL = logging.INFO
 DEFAULT_PATCH_INDEX = 0
+DEFAULT_SAVE_FILE = "saved_values.yaml"
 
 
 # Global logging module config 
@@ -73,7 +72,13 @@ def parse_args():
         '--patch',
         default=DEFAULT_PATCH_INDEX,
         type=int,
-        help='Initialize program with a saved patch'
+        help='Initialize program with a saved patch. Defaults to using "saved_values.yaml", but can be changed'
+    )
+    parser.add_argument(
+        '--file',
+        default= DEFAULT_SAVE_FILE,
+        type=str,
+        help='Use an alternate save file. Must still be located in the save directory'
     )
     return parser.parse_args()
 

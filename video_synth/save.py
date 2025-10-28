@@ -12,9 +12,10 @@ log = logging.getLogger(__name__)
 
 class SaveController:
     """
-    A class to handle the save, load, and randomize buttons in the GUI.
-    It provides methods to save current parameter values, load next/previous values,
-    and randomize parameter values.
+    A class to handle the enable the saving and loading of patches.
+
+    It provides methods to save the current patch values to a local yaml file,
+    load next/previous patch, and select random saved patches.
     """
     def __init__(self, params, width, height, 
                 yaml_filename: str = 'saved_values.yaml',
@@ -119,6 +120,7 @@ class SaveController:
                         # log.warning(f"{tag} widget does not exists")
                         pass
 
+
     def get_values(self):
         """ Parse values from ParamTable Param objects, return as dict of param names and values"""
         new_data = {}
@@ -129,6 +131,7 @@ class SaveController:
                 log.warning(f"{param_name} is not a Param object, cannot save value")
         print(new_data)
         return new_data
+
 
     def create_save_buttons(self):
         """
@@ -143,6 +146,7 @@ class SaveController:
 
         with dpg.group(horizontal=True):
             dpg.add_button(label=self.rand.label, callback=self.load_button_callback, user_data=self.rand.tag, width=width//3)
+
 
 """ Goal: store changes to paramters to support undo/redo buttons """
 class Timeline:
