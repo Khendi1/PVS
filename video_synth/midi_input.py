@@ -4,8 +4,104 @@ import mido
 import threading
 import time
 import logging
+import yaml
+import os
 
 log = logging.getLogger(__name__)
+
+# Find config file path
+script_dir = os.path.dirname(os.path.abspath(__file__))
+config_filename = 'config.yaml'
+config_file = os.path.join(script_dir, config_filename)
+
+def extract_controller_names():
+    """
+    Parses a YAML string, extracts the 'controllers' list, and returns
+    a list containing only the 'name' of each controller.
+    """
+    data = {}
+    try:
+        # Load the YAML string safely into a Python dictionary
+        if os.path.exists(config_file):
+            try:
+                with open(config_file, 'r') as f:
+                    data = yaml.safe_load(f)
+            except yaml.YAMLError as e:
+                log.exception(f"Could not read existing YAML data: {e}. Starting with empty data.")
+                data = {}
+        else:
+            log.warning(f"File {config_file} does not exist.")
+        # Check if the 'controllers' key exists and is a list
+        if not isinstance(data, dict) or 'controllers' not in data or not isinstance(data['controllers'], list):
+            print("Error: 'controllers' list not found or incorrectly formatted in YAML data.")
+            return []
+
+        controllers_list = data['controllers']
+        
+        # Extract the controller 'name' from each dictionary in the list
+        names = []
+        for controller in controllers_list:
+            if isinstance(controller, dict) and 'name' in controller:
+                names.append(controller['name'])
+            else:
+                # Handle malformed list items just in case
+                print(f"Warning: Skipping malformed controller entry: {controller}")
+        
+        return names
+
+    except yaml.YAMLError as e:
+        print(f"Error parsing YAML: {e}")
+        return []
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return []
+
+def identify_midi_ports(params):
+    
+    # Mido uses a default backend (often python-rtmidi) which handles platform differences.
+    log.info("--- Searching for Accessible MIDI Ports (High-Level) ---")
+    
+    controllers = []
+    ports_found = False
+    
+    try:
+        # List all available MIDI input ports
+        input_ports = mido.get_input_names()
+        if input_ports:
+            log.info("MIDI Input Devices:")
+            for i, port_name in enumerate(input_ports):
+                log.info(f"  [{i+1}] {port_name}")
+                
+                controller_names = extract_controller_names()
+                for name in controller_names:
+                    if name in port_name:
+                        found_controller = MidiInputController(params, name=name, port_name=port_name)
+                        controllers.append(found_controller)
+                        log.info(f"Initialized midi controller: {name}")
+                    
+            ports_found = True
+        
+        # List all available MIDI output ports
+        output_ports = mido.get_output_names()
+        if output_ports:
+            log.info("MIDI Output Devices:")
+            for i, name in enumerate(output_ports):
+                log.info(f"  [{i+1}] {name}")
+            ports_found = True
+            
+    except ImportError:
+        # This occurs if the Mido backend (e.g., python-rtmidi) is missing.
+        print("\nFATAL ERROR: Mido and its backend library (e.g., python-rtmidi) are required.")
+        print("Please run: pip install mido python-rtmidi")
+        return
+    except Exception as e:
+        print(f"\nAn unexpected error occurred during port scan: {e}")
+        return    
+    if not ports_found:
+        print("No MIDI ports found by the operating system.")
+
+    return controllers
+
 
 """
 A class to handle the processing of MIDI messages,
@@ -118,7 +214,7 @@ This class runs in a separate thread to continuously listen for MIDI messages
 from the provided controller. See the SMC_Mixer class for specific mappings.
 """
 class MidiInputController:
-    def __init__(self, port_name=None, controller=None):
+    def __init__(self, params, port_name=None, controller=None, name=None):
         """
         Initializes the MidiController instance.
         
@@ -127,7 +223,7 @@ class MidiInputController:
         """
 
         # Select the MIDI controller to use.
-        self.controller = controller 
+        self.controller = controller if controller else self.get_controller_by_name(name, port_name, params)
 
         # Use the controller's default port name if it exists,
         # otherwise prompt the user to select a port.
@@ -138,6 +234,13 @@ class MidiInputController:
         self.thread = threading.Thread(target=self.input_thread_handler)
         self.thread.daemon = True
         self.thread.start()
+
+    def get_controller_by_name(self, name, port_name, params):
+        if name == SMC_Mixer.name:
+            return SMC_Mixer(params=params, port_name=port_name)
+        elif name == MidiMix.name:
+            return MidiMix(params=params, port_name=port_name)
+        #NOTE: if more
 
     def select_port(self):
         """
@@ -254,7 +357,9 @@ class SMC_Mixer:
     right 62
 
     """
-    def __init__(self, params):
+    name = "SMC-Mixer"
+
+    def __init__(self, port_name, params):
         """
         Initializes the SMC_Mixer instance.
         """
@@ -264,7 +369,7 @@ class SMC_Mixer:
 
         self.params = params
 
-        self.port_name = "SMC-Mixer 0"
+        self.port_name = port_name 
         self.processor = MidiProcessor(min_midi=self.MIN, max_midi=self.MAX,
                                        base_smoothing=0.05, acceleration_factor=0.05)
 
@@ -348,8 +453,9 @@ class SMC_Mixer:
 
 
 class MidiMix:
+    name = "MIDI Mix"
 
-    def __init__(self, params):
+    def __init__(self, params, port_name):
         """
         Initializes the SMC_Mixer instance.
         """
@@ -357,7 +463,7 @@ class MidiMix:
         self.MIN = 0
         self.MAX = 127
 
-        self.port_name = "MIDI Mix 2"
+        self.port_name = port_name
         self.processor = MidiProcessor(min_midi=self.MIN, max_midi=self.MAX,
                                        base_smoothing=0.05, acceleration_factor=0.05)
 
@@ -479,20 +585,6 @@ if __name__ == "__main__":
 import mido
 import time
 
-def test_ports():
-    """
-    Lists available MIDI input devices.
-    """
-    input_ports = mido.get_input_names()
-
-    if not input_ports:
-        print("No MIDI input devices found.")
-        print("Please ensure your MIDI device is connected and recognized by your system.")
-        return
-
-    print("Available MIDI input devices:")
-    for i, port_name in enumerate(input_ports):
-        print(f"  {i}: {port_name}")
 
 def listen_to_midi_device():
     """

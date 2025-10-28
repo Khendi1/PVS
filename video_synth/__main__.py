@@ -18,7 +18,7 @@ import dearpygui.dearpygui as dpg
 from globals import effects
 from gui import Interface
 from generators import OscBank
-from midi_input import MidiInputController, MidiMix, SMC_Mixer
+from midi_input import *
 from param import ParamTable
 from mix import Mixer
 from gui_elements import ButtonsTable
@@ -69,56 +69,6 @@ def parse_args():
     )
     return parser.parse_args()
 
-""" Find and initialize USB MIDI controllers, return list of controllers """
-def id_midi_devices(controllers, params):
-
-    monitor = USBMonitor()
-    devices_dict = monitor.get_available_devices()
-
-    log.info("--- Currently Connected USB Devices ---")
-    if not devices_dict:
-        log.warning("No USB devices found.")
-    else:
-        count = 0
-        for device_id, device_info in devices_dict.items():
-            
-            # filter by device class 0103 (Class 01, Subclass 03).
-            midi_usb_interface = "DevClass_01&SubClass_03"
-
-            if midi_usb_interface in device_id:
-                # The device_id is usually a system path or identifier
-                model = device_info.get(ID_MODEL, 'N/A')
-                model_id = device_info.get(ID_MODEL_ID, 'N/A')
-                vendor_id = device_info.get(ID_VENDOR_ID, 'N/A')
-                vendor_name = device_info.get(ID_VENDOR_FROM_DATABASE, 'N/A')
-                interfaces = device_info.get(ID_USB_INTERFACES, 'N/A')
-                device_name = device_info.get(DEVNAME, 'N/A')
-                device_type = device_info.get(DEVTYPE, 'N/A')
-
-                print(f"Device ID: {device_id}")
-                print(f"  Model: {model}")
-                print(f"  VID: {vendor_id}, PID: {model_id}")
-                print(f"  INTERFACES: {interfaces}")
-                print(f"  DEVICE NAME: {device_name}")
-                print(f"  DEVICE TYPE: {device_type}")
-                print(f"  VENDOR NAME: {vendor_name}")
-                print("-" * 35)
-
-                # initialize a controller in controller list 
-                # by using some attribute to ID which type of device and
-                # pass its corresponding controller interface class as arg
-                if <id-attribute> in <list of known midi device attribute>:
-                    
-                    if <id-attribute> == <known midi device attribute>:
-                        controllers[count] = MidiInputController(controller=MidiMix(params))
-                    if <id-attribute> == <known midi device attribute>:
-                        MidiInputController(controller=SMC_Mixer(params))
-                    
-                    count+=1
-
-            else:
-                log.warning("Found USB device without available MIDI or Video interface, skipping")
-
 """ IDs USB devices, prompts user on whether to save device to config file for future use.
 The user must still implement the controller class, map params, and initialize it in id_midi_devices """
 def config_helper(controllers, params):
@@ -149,15 +99,12 @@ def main(num_osc, log_level):
     # Initialize effects classes with image dimensions
     effects.init(params, toggles, image_width, image_height)
 
-    # TODO: This assumes both controllers are always connected in a specific order; improve this
-    # test_ports()
-    controllers = []
-    id_midi_devices(controllers)
+    controllers = identify_midi_ports(params)
 
     # Initialize the midi input controller before creating the GUI
 
-    controller1 = MidiInputController(controller=MidiMix(params))
-    controller2 = MidiInputController(controller=SMC_Mixer(params))
+    # controller1 = MidiInputController(controller=MidiMix(params))
+    # controller2 = MidiInputController(controller=SMC_Mixer(params))
 
     # Create control panel after initializing objects that will be used in the GUI
     gui = Interface(params, osc_bank, toggles)
@@ -203,18 +150,17 @@ def main(num_osc, log_level):
                 break
 
     except KeyboardInterrupt:
-        log.warning("Quit command detected, signaling MIDI thread to stop...")
+        log.warning("Quit command detected, signaling thread stop...")
         
-        controller1.thread_stop, controller2.thread_stop = True, True
-       
-        # Wait for the MIDI thread to finish, with a timeout
-        controller1.thread.join(timeout=5)
-        controller2.thread.join(timeout=5)
+        for c in controllers:
+            c.thread_stop = True
+            c.thread.join(timeout=5)
 
-        if controller1.thread.is_alive() or controller2.thread.is_alive():
-            log.warning("MIDI thread did not terminate gracefully. Forcing exit.")
-        else:
-            log.info("MIDI thread stopped successfully.")
+        for c in controllers:
+            if c.thread.is_alive():
+                log.warning("MIDI thread did not terminate gracefully. Forcing exit.")
+            else:
+                log.info("MIDI thread stopped successfully.")
 
     finally:
 
