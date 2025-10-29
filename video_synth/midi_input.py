@@ -1,107 +1,13 @@
 import mido
 import time
-import mido
 import threading
 import time
 import logging
-import yaml
-import os
 
 log = logging.getLogger(__name__)
 
-# Find config file path
-script_dir = os.path.dirname(os.path.abspath(__file__))
-config_filename = 'config.yaml'
-config_file = os.path.join(script_dir, config_filename)
-
-def extract_controller_names():
-    """
-    Parses a YAML string, extracts the 'controllers' list, and returns
-    a list containing only the 'name' of each controller.
-    """
-    data = {}
-    try:
-        # Load the YAML string safely into a Python dictionary
-        if os.path.exists(config_file):
-            try:
-                with open(config_file, 'r') as f:
-                    data = yaml.safe_load(f)
-            except yaml.YAMLError as e:
-                log.exception(f"Could not read existing YAML data: {e}. Starting with empty data.")
-                data = {}
-        else:
-            log.warning(f"File {config_file} does not exist.")
-        # Check if the 'controllers' key exists and is a list
-        if not isinstance(data, dict) or 'controllers' not in data or not isinstance(data['controllers'], list):
-            print("Error: 'controllers' list not found or incorrectly formatted in YAML data.")
-            return []
-
-        controllers_list = data['controllers']
-        
-        # Extract the controller 'name' from each dictionary in the list
-        names = []
-        for controller in controllers_list:
-            if isinstance(controller, dict) and 'name' in controller:
-                names.append(controller['name'])
-            else:
-                # Handle malformed list items just in case
-                print(f"Warning: Skipping malformed controller entry: {controller}")
-        
-        return names
-
-    except yaml.YAMLError as e:
-        print(f"Error parsing YAML: {e}")
-        return []
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        return []
-
-def identify_midi_ports(params):
-    
-    # Mido uses a default backend (often python-rtmidi) which handles platform differences.
-    log.info("--- Searching for Accessible MIDI Ports (High-Level) ---")
-    
-    controllers = []
-    ports_found = False
-    
-    try:
-        # List all available MIDI input ports
-        input_ports = mido.get_input_names()
-        if input_ports:
-            log.info("MIDI Input Devices:")
-            for i, port_name in enumerate(input_ports):
-                log.info(f"  [{i+1}] {port_name}")
-                
-                controller_names = extract_controller_names()
-                for name in controller_names:
-                    if name in port_name:
-                        found_controller = MidiInputController(params, name=name, port_name=port_name)
-                        controllers.append(found_controller)
-                        log.info(f"Initialized midi controller: {name}")
-                    
-            ports_found = True
-        
-        # List all available MIDI output ports
-        output_ports = mido.get_output_names()
-        if output_ports:
-            log.info("MIDI Output Devices:")
-            for i, name in enumerate(output_ports):
-                log.info(f"  [{i+1}] {name}")
-            ports_found = True
-            
-    except ImportError:
-        # This occurs if the Mido backend (e.g., python-rtmidi) is missing.
-        print("\nFATAL ERROR: Mido and its backend library (e.g., python-rtmidi) are required.")
-        print("Please run: pip install mido python-rtmidi")
-        return
-    except Exception as e:
-        print(f"\nAn unexpected error occurred during port scan: {e}")
-        return    
-    if not ports_found:
-        print("No MIDI ports found by the operating system.")
-
-    return controllers
-
+MIN = 0
+MAX = 127
 
 """
 A class to handle the processing of MIDI messages,
@@ -127,8 +33,8 @@ class MidiProcessor:
                                          mean more "acceleration" or responsiveness
                                          to rapid movements.
         """
-        self.min_midi = min_midi
-        self.max_midi = max_midi
+        MIN_midi = min_midi
+        MAX_midi = max_midi
 
         self.base_smoothing = base_smoothing
         self.acceleration_factor = acceleration_factor
@@ -154,7 +60,7 @@ class MidiProcessor:
         Returns:
             float: The mapped value in the output range.
         """
-        return (value - self.min_midi) * (out_max - out_min) / (self.max_midi - self.min_midi) + out_min
+        return (value - MIN_midi) * (out_max - out_min) / (MAX_midi - MIN_midi) + out_min
 
 
     def process_message(self, control, value, min_output=-150, max_output=150):
@@ -363,14 +269,10 @@ class SMC_Mixer:
         """
         Initializes the SMC_Mixer instance.
         """
-                
-        self.MIN = 0
-        self.MAX = 127
-
         self.params = params
 
         self.port_name = port_name 
-        self.processor = MidiProcessor(min_midi=self.MIN, max_midi=self.MAX,
+        self.processor = MidiProcessor(min_midi=MIN, max_midi=MAX,
                                        base_smoothing=0.05, acceleration_factor=0.05)
 
         # each dict entry is a page of parameters
@@ -460,13 +362,14 @@ class MidiMix:
         Initializes the SMC_Mixer instance.
         """
         self.params = params
-        self.MIN = 0
-        self.MAX = 127
+        MIN = 0
+        MAX = 127
 
         self.port_name = port_name
-        self.processor = MidiProcessor(min_midi=self.MIN, max_midi=self.MAX,
+        self.processor = MidiProcessor(min_midi=MIN, max_midi=MAX,
                                        base_smoothing=0.05, acceleration_factor=0.05)
 
+        # MIDI CC values
         self.fader_controls = [19, 23, 27, 31, 49, 53, 57, 61, 62] # Faders 1-8
         self.pot_controls = [16, 17, 18, 20, 21, 22, 24, 25, 26, 28,29,30, 46, 47, 48, 50, 51, 52, 54, 55, 56, 58, 59, 60] # Encoders 1-9
         self.button_controls = [1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16, 18, 19,21, 22, 24]
@@ -550,78 +453,45 @@ class MidiMix:
         print("Mapping buttons... (this is a placeholder function)")
 
 
-if __name__ == "__main__":
-    """
-    Main function to list available MIDI input ports, prompt the user to select one,
-    start the MIDI input processing thread, and manage its lifecycle.
-    """
+#NOTE: any new midi controllers must expose a name attribute
+names = [SMC_Mixer.name,  MidiMix.name]
+
+def identify_midi_ports(params):
     
-    controller = MidiInputController(controller=MidiMix)
-
-    print("\nMain program is running. The MIDI thread is listening in the background.")
-    print("Press Ctrl+C to stop the MIDI thread and exit the program.")
+    # Mido uses a default backend (often python-rtmidi) which handles platform differences.
+    log.info("--- Searching for Accessible MIDI Ports (High-Level) ---")
     
-    listen_to_midi_device()
-
+    controllers = []
+    ports_found = False
+    
     try:
-        # Keep the main thread alive indefinitely so the MIDI input thread can run.
-        # It sleeps periodically to prevent busy-waiting.
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("\nCtrl+C detected. Signaling MIDI thread to stop...")
-        controller.thread_stop = True
-        # Wait for the MIDI thread to finish, with a timeout
-        controller.thread.join(timeout=5)
-        if controller.thread.is_alive():
-            print("MIDI thread did not terminate gracefully. Forcing exit.")
-        else:
-            print("MIDI thread stopped successfully.")
-    finally:
-        print("Exiting main program.")
+        # List all available MIDI input ports
+        input_ports = mido.get_input_names()
+        if input_ports:
+            log.info("MIDI Input Devices:")
 
-
-# Import the mido library for MIDI communication
-import mido
-import time
-
-
-def listen_to_midi_device():
-    """
-    Connects to the first available MIDI input device and prints incoming messages.
-    """
-    input_ports = mido.get_input_names()
-
-    if not input_ports:
-        print("No MIDI input devices found.")
-        print("Please ensure your MIDI device is connected and recognized by your system.")
-        return
-
-    print("Available MIDI input devices:")
-    for i, port_name in enumerate(input_ports):
-        print(f"  {i}: {port_name}")
-
-    # Attempt to connect to the first available input port
-    try:
-        # You can modify this to let the user select a port, e.g.,
-        # selected_index = int(input("Enter the number of the device to listen to: "))
-        # port_name_to_open = input_ports[selected_index]
+            for i, port_name in enumerate(input_ports):
+                for name in names:
+                    if name in port_name:
+                        found_controller = MidiInputController(params, name=name, port_name=port_name)
+                        controllers.append(found_controller)
+                        log.info(f"Initialized midi controller: {name}")
+                    
+            ports_found = True
         
-        port_name_to_open = input_ports[0] # Automatically pick the first one
-        
-        print(f"\nAttempting to open MIDI input port: '{port_name_to_open}'")
-        with mido.open_input(port_name_to_open) as inport:
-            print(f"Successfully opened '{inport.name}'. Listening for MIDI messages...")
-            print("Press Ctrl+C to stop listening.")
-
-            # Loop indefinitely to listen for messages
-            for msg in inport:
-                print(f"Received MIDI message: {msg}")
-
-    except IndexError:
-        print("Invalid device selection. Please run the script again and choose a valid number.")
+        # List all available MIDI output ports
+        output_ports = mido.get_output_names()
+        if output_ports:
+            log.info("MIDI Output Devices:")
+            for i, name in enumerate(output_ports):
+                log.info(f"  [{i+1}] {name}")
+            ports_found = True
+            
     except Exception as e:
-        print(f"An error occurred: {e}")
-    finally:
-        print("\nStopped listening to MIDI messages.")
-    
+        log.exception(f"\nAn unexpected error occurred during port scan: {e}")
+        return    
+    if not ports_found:
+        log.warning("No MIDI ports found by the operating system.")
+
+    return controllers
+

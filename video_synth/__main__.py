@@ -25,21 +25,11 @@ from gui_elements import ButtonsTable
 from usbmonitor import USBMonitor
 from usbmonitor.attributes import *
 
-
 # default argparse values
-DEFAULT_NUM_OSC = 4 
+DEFAULT_NUM_OSC = 5 
 DEFAULT_LOG_LEVEL = logging.INFO
 DEFAULT_PATCH_INDEX = 0
 DEFAULT_SAVE_FILE = "saved_values.yaml"
-DEFAULT_CONFIG_HELPER = False
-
-# Global logging module config 
-logging.basicConfig(
-    level=DEFAULT_LOG_LEVEL,
-    format='[%(asctime)s,%(msecs)03d] %(levelname)s: %(message)s',
-    datefmt='%H:%M:%S'
-)
-log = logging.getLogger(__name__)
 
 """Creates ArgumentParser, configures arguments, returns parser"""
 def parse_args():
@@ -69,14 +59,20 @@ def parse_args():
     )
     return parser.parse_args()
 
-""" IDs USB devices, prompts user on whether to save device to config file for future use.
-The user must still implement the controller class, map params, and initialize it in id_midi_devices """
-def config_helper(controllers, params):
-    pass
+""" Global logging module configuration using """
+def config_log(log_level):
+    logging.basicConfig(
+        level=log_level,
+        format='[%(asctime)s,%(msecs)03d] %(levelname)s: %(message)s',
+        datefmt='%H:%M:%S'
+    )
+    log = logging.getLogger(__name__)
+    return log
 
 """ Main app setup and loop """
 def main(num_osc, log_level):
-    
+    global effects
+
     log.info("Initializing video synthesizer...")
 
     # all user modifiable parameters are stored here
@@ -99,12 +95,9 @@ def main(num_osc, log_level):
     # Initialize effects classes with image dimensions
     effects.init(params, toggles, image_width, image_height)
 
+    # Automatically identify and initialize midi input controllers before creating the GUI
+    # The midi controller must have an existing interface class, with its name appended to the names list
     controllers = identify_midi_ports(params)
-
-    # Initialize the midi input controller before creating the GUI
-
-    # controller1 = MidiInputController(controller=MidiMix(params))
-    # controller2 = MidiInputController(controller=SMC_Mixer(params))
 
     # Create control panel after initializing objects that will be used in the GUI
     gui = Interface(params, osc_bank, toggles)
@@ -119,7 +112,6 @@ def main(num_osc, log_level):
 
     try:
         while True:
-
             # retreive and mix frames from the selected sources
             dry_frame = mixer.get_frame()
 
@@ -152,18 +144,17 @@ def main(num_osc, log_level):
     except KeyboardInterrupt:
         log.warning("Quit command detected, signaling thread stop...")
         
-        for c in controllers:
-            c.thread_stop = True
-            c.thread.join(timeout=5)
-
-        for c in controllers:
-            if c.thread.is_alive():
-                log.warning("MIDI thread did not terminate gracefully. Forcing exit.")
-            else:
-                log.info("MIDI thread stopped successfully.")
+        if controllers:
+            for c in controllers:
+                c.thread_stop = True
+                c.thread.join(timeout=5)
+            # for c in controllers:     
+                if c.thread.is_alive():
+                    log.warning("MIDI thread did not terminate gracefully. Forcing exit.")
+                else:
+                    log.info("MIDI thread stopped successfully.")
 
     finally:
-
         # Destroy all windows 
         dpg.destroy_context()
         cv2.destroyAllWindows()
@@ -175,7 +166,7 @@ def main(num_osc, log_level):
         
         log.info("Goodbye!")
 
-
 if __name__ == "__main__":
     args = parse_args()
+    log = config_log(args.log_level)
     main(args.osc, args.log_level)
