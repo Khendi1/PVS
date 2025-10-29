@@ -22,8 +22,6 @@ from midi_input import *
 from param import ParamTable
 from mix import Mixer
 from gui_elements import ButtonsTable
-from usbmonitor import USBMonitor
-from usbmonitor.attributes import *
 
 # default argparse values
 DEFAULT_NUM_OSC = 5 
