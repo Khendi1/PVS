@@ -38,7 +38,9 @@ This suite plays well with lots of other tools and hardware, so take a look at t
 
 ## Hardware setup
 
-Hardware video devices (USB capture devices, webcams, etc.) are identified upon program execution, but MIDI devices are not. Devices are not identified or recovered through program execution (boo), so restart if you  See the [Control](#control) section to configure your MIDI device. 
+Hardware video devices (USB capture devices, webcams, etc.) and MIDI controllers are automatically identified upon program execution. They are not re-identified or recovered through program execution (boo), so restart the program if you ever unplug equipment.
+
+My personal MIDI devices have been mapped, but you will need to do this for your model of controller. See the [Control](#control) section to configure your MIDI device. 
 
 Find the 'Mixer' GUI panel to select among different video devices. Currently devices are identified by their USB enumeration value, i.e. the order that they are plugged in.
 
@@ -172,9 +174,13 @@ These are custom PCBs that I have built and utilize. They may be available fully
 - sync_ope by [cyberboy666](https://github.com/cyberboy666/sync_ope)
 
 ## Control
-The app can be controlled through a (crappy) GUI or midi controller. The program is currently configured to use a cheap AKAI MIDI Mix or MVAVE SMC Mixer, but there are provisions to configure a new controller with relative ease. To implement a new controller, see the required functions you must expose in the example ```SMC_Mixer()``` or ```MidiMix()``` classes in ```midi.py```. Most work involves the mapping.
+The app can be controlled through a (crappy) GUI or midi controller. The program is currently configured to use a cheap AKAI MIDI Mix or MVAVE SMC Mixer, but there are provisions to configure a new controller with relative ease. To implement a new controller, see the required functions you must expose in the example ```SMC_Mixer()``` or ```MidiMix()``` classes in ```midi.py```. Most work involves the mapping of CC values to parameters.
 
-Note that the order that the controllers are initialized is extremely important. In ```main.py```, the order that you initialize your controllers must reflect the order in which the controllers are plugged into your PC. For example, if the ```SMC_Mixer()``` is plugged in first, but initialized second, controller identification will fail.
+Any new midi device must have a name attribute.
+This can be found simply by running the program and finding the detected device name.
+For example, the program may find an input device named "MIDI Mix 1". Remove the port number (resulting in "MIDI Mix"), and assign it to the name attribute.
+Then you must add the name attribute to the name list.
+The program should now ID your device.
 
 
 ## My Current Configuration

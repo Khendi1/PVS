@@ -6,6 +6,16 @@ Classes stored here:
     - EffectBase singleton class; extended by each Effect subclass (EX: Color, Feedback, etc.)
     - Effect subclasses; require Control Structures as args, instantiates and adds Control Objects (Parameters, Toggles) to approp structures
     - EffectManager to init, manage, and sequence Effect subclasses
+
+Contribution guide:
+    - each new effect class should extend the EffectsBase class
+    - each new effect class should be initialized in EffectManager/init()
+    - each new effect class should expose 2 kinds of public functions,
+      and all private classes should be appended with '_'
+        - effect methods: these will be automatically added to the sequencer
+        - gui methods: these will not be automatically added or called by the gui; 
+                       these should have the word 'gui' in the method name for easy filtering
+                       these must be manually called in gui.py/create_trackbars()
 """
 
 import math
