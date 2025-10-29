@@ -194,10 +194,6 @@ class Oscillator:
         """
         self.linked_param = None
 
-    # @property
-    # def value(self):
-    #     """Returns the current calculated value of the oscillator."""
-    #     return self._current_value
 
 class OscBank():
     def __init__(self, params, num_osc):
@@ -329,8 +325,6 @@ class OscBank():
             app_data: A dictionary containing the selected items.  For a listbox,
                     it's  { 'items': [index1, index2, ...] }
         """
-        print("Sender:", sender)
-        print("App Data:", app_data)
         for i in range(self.osc_bank.len):
             if f"osc{i}" in sender:
                 param = None

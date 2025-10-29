@@ -1,7 +1,7 @@
 import dearpygui.dearpygui as dpg
 from save import SaveController
 from mix import *
-from globals import effects
+from config import effects
 from gui_elements import TrackbarRow, ButtonsTable, Toggle
 import logging
 
@@ -24,32 +24,12 @@ class Interface:
         # only creates last param in list
         # self.panels = self.build_panels_dict(params.all())
 
-    # TODO: this has been moved to the trackbar class; remove after moving all create slider functions to their respective classes
-    def reset_slider_callback(self, sender, app_data, user_data):
-        param = self.params.get(str(user_data))
-        if param is None:
-            print(f"Slider or param not found for {user_data}")
-            return
-        print(f"Got reset callback for {user_data}; setting to default value {param.default_val}")
-        param.reset()
-        dpg.set_value(user_data, param.value)
-
-
-    def on_toggle_button_click(self, sender, app_data, user_data):
-        print(f"test: {user_data}")
-        for tag, button in self.toggles.items():
-            if user_data == tag:
-                print("test2")
-                self.toggles.toggle(tag)
-
 
     def on_button_click(self, sender, app_data, user_data):
         print(f"Toggle clicked: {user_data}, {app_data}, {sender}")
         # Perform action based on button click
         # TODO: I don't like this, but it works for now
-        if user_data == "save":
-            self.saver.save2()
-        elif user_data == "reset_all":
+        if user_data == "reset_all":
             self.reset_values()
         elif user_data == "random":
             self.randomize_values()
@@ -109,8 +89,6 @@ class Interface:
             dpg.add_button(label=reset_button.label, callback=self.on_button_click, user_data=reset_button.tag, width=width//3)
             dpg.add_button(label=random_button.label, tag=random_button.tag, callback=self.on_button_click, user_data=random_button.tag, width=width//3)
             self.toggles["effects_first"].create()
-            # self.toggles["save"].create()
-            dpg.add_button(label="Save", tag="save", callback=self.on_button_click, user_data="save", width=width//3)
 
 
     def resize_buttons(self, sender, app_data):
@@ -166,24 +144,6 @@ class Interface:
             
         dpg.bind_item_font("noise_generator", global_font_id)
     
-    
-    def moire_sliders(self, default_font_id=None, global_font_id=None):
-        with dpg.collapsing_header(label=f"\tMoire", tag="moire"):
-            pass
-        dpg.bind_item_font("moire", global_font_id)
-
-
-    def test_sliders(self, default_font_id=None, global_font_id=None):
-        with dpg.collapsing_header(label=f"\tTest", tag="test"):
-            pass
-        dpg.bind_item_font("test", global_font_id)
-
-
-    def shader_sliders(self, default_font_id=None, global_font_id=None):
-        with dpg.collapsing_header(label=f"\tShader", tag="shader"):
-            pass
-        dpg.bind_item_font("shader", global_font_id)
-
 
     def create_trackbars(self, width, height, mixer, osc_bank):
 
@@ -198,8 +158,9 @@ class Interface:
         effects.ptz.create_gui_panel(default_font_id,global_font_id)
         effects.sync.create_gui_panel(default_font_id,global_font_id)
         effects.glitch.create_gui_panel(default_font_id,global_font_id)
-        effects.noise.create_gui_panel(default_font_id,global_font_id)
-        effects.shapes.create_gui_panel(default_font_id,global_font_id)
+        effects.noise.create_gui_panel(default_font_id, global_font_id)
+        effects.shapes.create_gui_panel(default_font_id, global_font_id)
+        effects.warp.create_gui_panel(default_font_id, global_font_id)
         # self.perlin_generator_sliders(default_font_id, global_font_id)
         # self.lissajous_sliders(default_font_id, global_font_id)
         

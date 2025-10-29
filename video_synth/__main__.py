@@ -15,19 +15,13 @@ import argparse
 import logging
 import cv2
 import dearpygui.dearpygui as dpg 
-from globals import effects
+from config import *
 from gui import Interface
 from generators import OscBank
 from midi_input import *
 from param import ParamTable
 from mix import Mixer
 from gui_elements import ButtonsTable
-
-# default argparse values
-DEFAULT_NUM_OSC = 5 
-DEFAULT_LOG_LEVEL = logging.INFO
-DEFAULT_PATCH_INDEX = 0
-DEFAULT_SAVE_FILE = "saved_values.yaml"
 
 """Creates ArgumentParser, configures arguments, returns parser"""
 def parse_args():
@@ -114,8 +108,8 @@ def main(num_osc, log_level):
             dry_frame = mixer.get_frame()
 
             # frame retrieval may fail when changing sources; skip
-            if mixer.skip1 or dry_frame is None:
-                mixer.skip1 = False
+            if mixer.skip or dry_frame is None:
+                mixer.skip = False
                 log.warning("Skipping frame due to source read failure")
                 continue
 

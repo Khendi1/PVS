@@ -63,10 +63,8 @@ class Mixer:
         self.live_caps = []
 
         # flags to skip the first frame after starting a new video source
-        self.skip1 = False
-        self.skip2 = False
+        self.skip = False
 
-        # --- Configure sources ---
         self.sources = {}   # dict for storing device/animation name and index
 
         # add valid cv2 video device indicies to source dict
@@ -144,7 +142,7 @@ class Mixer:
         self.start_video(self.selected_source1.value, 1)
         self.start_video(self.selected_source2.value, 2)
 
-
+    # find dir one level up from current working directory
     def find_dir(self, dir_name: str, file_name: str = None):
 
         script_dir = Path(__file__).parent
@@ -186,15 +184,11 @@ class Mixer:
 
         # Initialize new capture
         if source == self.sources[MixSources.VIDEO_FILE_1.name] or source == self.sources[MixSources.VIDEO_FILE_2.name]:
-            if index == 1:
-                source = self.find_dir("samples", self.video_file_name1)
-            else:
-                source = self.find_dir("samples", self.video_file_name2)
+            file_name = self.video_file_name1 if index == 1 else self.video_file_name2
+            source = self.find_dir("samples", file_name)
         elif source == self.sources[MixSources.IMAGE_FILE_1.name] or source == self.sources[MixSources.IMAGE_FILE_2.name]:
-            if index == 1:
-                source = self.find_dir("images", self.image_file_name1)
-            else:
-                source = self.find_dir("images", self.image_file_name2)
+            file_name = self.image_file_name1 if index == 1 else self.image_file_name2
+            source = self.find_dir("images", file_name)
 
         cap = cv2.VideoCapture(source)
 
@@ -202,7 +196,7 @@ class Mixer:
         self.live_caps.append(cap)
 
         # Skip the first frame to allow camera to adjust
-        self.skip1 = True
+        self.skip = True
 
         if not cap.isOpened():
             log.error(f"Could not open live video source {index}.")

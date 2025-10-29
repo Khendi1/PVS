@@ -118,27 +118,7 @@ class EffectManager:
     A central class to aggregate all singleton effect objects and simplify dependencies, arg len
     """
     def __init__(self):
-        # Placeholders; populated in init()
-        self.feedback = None
-        self.color = None
-        self.pixels = None
-        self.noise = None
-        self.shapes = None
-        self.patterns = None
-        self.reflector = None
-        self.sync = None
-        self.warp = None
-        self.glitch = None
-        self.ptz = None
-
-        self._all_services = []         # a list of all effect objects
-        self.services = self._all_services
-
-        self.class_with_methods = {}    # Key is class name, value is class methods
-        self.all_methods = []           # A list of all methods for sequencer
-
-        self.params = None
-        self.toggles = None
+        pass
 
     def init(self, params, toggles, width, height):
         """ This method is separate so the params and frame dims may be initialized"""
@@ -173,15 +153,11 @@ class EffectManager:
 
         self.class_with_methods, self.all_methods = self.get_effect_methods()
 
-        # class_with_methods is the __name__ of the class with a list of its public methods
-        # print(self.class_with_methods)
-
-        # all_methods is a list of effects methods used for sequencing
-        # print(self.all_methods)
 
     def get_effect_methods(self):
         """
-        Collects all unique public method names from a list of objects.
+        Collects all unique public method names from a list of effect objects.
+        Any public method will be included in the list
         """
 
         class_with_methods = {}
@@ -731,6 +707,8 @@ class Warp(EffectBase):
         self.y_speed = params.add("y_speed", 0.0, 10.0, 1.0)
         self.y_size = params.add("y_size", 0.0, 100.0, 10.0)
 
+        self.t = 0
+
     # TODO: implement
     def _generate_perlin_flow(self, t, amp_x, amp_y, freq_x, freq_y):
         fx = np.zeros((self.height, self.width), dtype=np.float32)
@@ -775,7 +753,7 @@ class Warp(EffectBase):
         return fx, fy
 
     # TODO: implement
-    def _polar_warp(self, img, t, angle_amt, radius_amt, speed):
+    def _polar_warp(self, frame, t, angle_amt, radius_amt, speed):
         cx, cy = self.width / 2, self.height / 2
         y, x = np.indices((self.height, self.width), dtype=np.float32)
         dx = x - cx
@@ -792,7 +770,7 @@ class Warp(EffectBase):
         map_y = (r_mod * np.sin(a_mod) + cy).astype(np.float32)
 
         return cv2.remap(
-            img,
+            frame,
             map_x,
             map_y,
             interpolation=cv2.INTER_LINEAR,
@@ -829,78 +807,61 @@ class Warp(EffectBase):
         return feedback_frame
 
     # TODO: implement
-    def _warp(
-        self,
-        img,
-        t,
-        mode,
-        amp_x,
-        amp_y,
-        freq_x,
-        freq_y,
-        angle_amt,
-        radius_amt,
-        speed,
-        use_fractal,
-        octaves,
-        gain,
-        lacunarity,
-    ):
-
-        if mode == WarpType.NONE:  # No warp
-            return img
-        elif mode == WarpType.SINE:  # Sine warp
-            fx = np.sin(np.linspace(0, np.pi * 2, self.width)[None, :] + t) * amp_x
-            fy = np.cos(np.linspace(0, np.pi * 2, self.height)[:, None] + t) * amp_y
+    def warp(self, frame):
+        if self.warp_type.value == WarpType.NONE:  # No warp
+            return frame
+        elif self.warp_type.value == WarpType.SINE:  # Sine warp
+            fx = np.sin(np.linspace(0, np.pi * 2, self.width)[None, :] + self.t) * self.x_size.value
+            fy = np.cos(np.linspace(0, np.pi * 2, self.height)[:, None] + self.t) * self.y_size.value
             map_x, map_y = np.meshgrid(np.arange(self.width), np.arange(self.height))
             map_x = (map_x + fx).astype(np.float32)
             map_y = (map_y + fy).astype(np.float32)
             return cv2.remap(
-                img,
+                frame,
                 map_x,
                 map_y,
                 interpolation=cv2.INTER_LINEAR,
                 borderMode=cv2.BORDER_REFLECT,
             )
 
-        elif mode == WarpType.FRACTAL:
-            if use_fractal:
+        elif self.warp_type == WarpType.FRACTAL:
+            if self.warp_use_fractal.value > 0: #TODO: CHANGE TO TOGGLE
                 fx, fy = self._generate_fractal_flow(
-                    t, amp_x, amp_y, freq_x, freq_y, octaves, gain, lacunarity
+                    self.t, self.x_size.value, self.y_size.value, self.x_speed.value, self.y_speed.value, octaves, gain, lacunarity
                 )
             else:
                 fx, fy = self._generate_fractal_flow(
-                    t, amp_x, amp_y, freq_x, freq_y, 1, 1.0, 1.0
+                    self.t, self.x_size.value, self.y_size.value, self.x_speed.value, self.y_speed.value, 1, 1.0, 1.0
                 )  # fallback: single octave
             map_x, map_y = np.meshgrid(np.arange(self.width), np.arange(self.height))
             map_x = (map_x + fx).astype(np.float32)
             map_y = (map_y + fy).astype(np.float32)
             return cv2.remap(
-                img,
+                frame,
                 map_x,
                 map_y,
                 interpolation=cv2.INTER_LINEAR,
                 borderMode=cv2.BORDER_REFLECT,
             )
 
-        elif mode == WarpType.RADIAL:
-            return self.polar_warp(img, t, angle_amt, radius_amt, speed)
+        elif self.warp_type == WarpType.RADIAL:
+            return self.polar_warp(frame, self.t, self.warp_angle_amt, self.self.radius_amt, self.warp_speed)
 
-        elif mode == WarpType.PERLIN:  # Perlin warp
+        elif self.warp_type == WarpType.PERLIN:  # Perlin warp
             # Fractal Perlin warp
-            fx, fy = self._generate_perlin_flow(t, amp_x, amp_y, freq_x, freq_y)
+            fx, fy = self._generate_perlin_flow(self.t, self.x_size.value, self.y_size.value, self.x_speed.value, self.y_speed.value)
             map_x, map_y = np.meshgrid(np.arange(self.width), np.arange(self.height))
             map_x = (map_x + fx).astype(np.float32)
             map_y = (map_y + fy).astype(np.float32)
             return cv2.remap(
-                img,
+                frame,
                 map_x,
                 map_y,
                 interpolation=cv2.INTER_LINEAR,
                 borderMode=cv2.BORDER_REFLECT,
             )
-        elif mode == WarpType.WARP0:
-            return self._first_warp(img)
+        elif self.warp_type == WarpType.WARP0:
+            return self._first_warp(frame)
 
     def create_gui_panel(self, default_font_id=None, global_font_id=None):
 
