@@ -156,15 +156,15 @@ These are cheap, readily available components that help with converting and capt
 
 These tools require a combination of off-the-shelf components, discrete component, DIY assembly, and enclosure design
 
-- GBS Video Feedback Synth (instructions by [LofiFuture]())
+- GBS8100 Video Feedback Synth (instructions by [LofiFuture]())
     - more bend points for 74HC identified by [Gleix]()
 - 2-in-1-out passive composite switcher
-- Klompf Dirty Video Mixer
+- Klomp Dirty Video Mixer
 - VC9900 Glitch Box (bend points from the GBS Feedback Synth apply here) w/ [GBSControl]()
 
 ## Optional Custom PCBs
 
-These are custom PCBs that I have built and utilize. They may be available fully assembled in online shops, but they can also be manufactured and assembled DIY style.
+These are custom PCBs that I have built and utilize, but hese creators have several other models worth invesigating for yourself. They may be available fully assembled in online shops, but they can also be manufactured and assembled DIY style.
 
 - CHA/V by [Jonas Bers](https://jonasbers.com/chav/)
 - Archer Experimenter by [lightmusicvisuals](https://github.com/lightmusicvisuals/archer_experimenter)

@@ -1,17 +1,16 @@
 import numpy as np
 import cv2
-import time
 from enum import Enum
-import random
-import noise # For Perlin noise generation
-from param import ParamTable, Param
+import noise 
 from generators import Oscillator
-from gui_elements import TrackbarCallback, TrackbarRow
+from gui_elements import TrackbarRow
 import dearpygui.dearpygui as dpg
+import logging
 
 posc_bank = []  
 
-# --- BarMode Enum ---
+log = logging.getLogger(__name__)
+
 class BarMode(Enum):
     """Enumeration for different bar animation modes."""
     GROWING_SPACING = 0
@@ -21,7 +20,6 @@ class BarMode(Enum):
         return self.name.replace('_', ' ').title()
 
 
-# --- PatternType Enum ---
 class PatternType(Enum):
     """Enumeration for different visual pattern types."""
     NONE = 0
@@ -37,7 +35,6 @@ class PatternType(Enum):
         return self.name.replace('_', ' ').title()
 
 
-# --- PatternGenerator Class ---
 class Patterns:
     """
     Generates various animated patterns using OpenCV and modulates them
@@ -145,17 +142,17 @@ class Patterns:
             # Ensure amplitude is not zero to avoid division by zero
             amp_val = osc.amplitude.value
             if amp_val == 0:
-                print(f"Warning: Oscillator {osc.name} has zero amplitude. Defaulting to mid-range normalization.\n")
+                log.info(f"Warning: Oscillator {osc.name} has zero amplitude. Defaulting to mid-range normalization.\n")
                 norm_vals.append(0.05) # Default to mid-range if amplitude is zero
             else:
                 # Map from [-amp_val, +amp_val] to [0, 1]
                 normalized = (osc.value + amp_val) / (2 * amp_val) + 0.001
                 norm_vals.append(normalized)
-        print(f"normalized: {norm_vals}")
+        log.info(f"normalized: {norm_vals}")
         if self.prev is not None and self.prev == norm_vals:
-            print(f"previous: {self.prev}\n")
+            log.info(f"previous: {self.prev}\n")
             if norm_vals == self.prev:
-                print("No change in normalized values, returning previous values.")
+                log.info("No change in normalized values, returning previous values.")
                 self.prev = [i-.5 for i in self.prev]
                 return self.prev
             self.prev = norm_vals.copy()
@@ -163,39 +160,37 @@ class Patterns:
 
     def _set_osc_params(self):
         if self._pattern_type.value != self.prev_pattern_type:
-            print(f"Pattern type changed from {self.prev_pattern_type} to {self._pattern_type.value}.")
+            log.info(f"Pattern type changed from {self.prev_pattern_type} to {self._pattern_type.value}.")
             self.prev_pattern_type = self._pattern_type.value
             if self._pattern_type.value == PatternType.BARS.value:
-                # print("PatternType is set to BARS; Linking bar frequency to osc 0.")
+                # log.info("PatternType is set to BARS; Linking bar frequency to osc 0.")
                 self.posc_bank[0].link_param(self.bar_x_offset)
             elif self._pattern_type.value == PatternType.WAVES.value:
-                # print("PatternType is set to WAVES; Linking wave frequencies to osc 0, 1.")
+                # log.info("PatternType is set to WAVES; Linking wave frequencies to osc 0, 1.")
                 self.posc_bank[0].link_param(self.wave_freq_x)
                 self.posc_bank[1].link_param(self.wave_freq_y)
             elif self._pattern_type.value == PatternType.CHECKERS.value:
-                # print("PatternType is set to CHECKERS; Linking grid size to osc 0.")
+                # log.info("PatternType is set to CHECKERS; Linking grid size to osc 0.")
                 self.posc_bank[0].link_param(self.grid_size)
                 self.posc_bank[1].link_param(self.color_shift)
                 self.posc_bank[2].link_param(self.color_blend)
             elif self._pattern_type.value == PatternType.RADIAL.value:
                 pass
-                # print("PatternType is set to RADIAL; Linking radial parameters to osc 0.")
+                # log.info("PatternType is set to RADIAL; Linking radial parameters to osc 0.")
                 # self.posc_bank[0].link_param(self.radial_freq)
                 # self.posc_bank[1].link_param(self.angular_freq)
                 # self.posc_bank[2].link_param(self.radial_mod)
                 # self.posc_bank[3].link_param(self.angle_mod)
             elif self._pattern_type.value == PatternType.PERLIN_BLOBS.value:
                 pass
-                # print("PatternType is set to PERLIN BLOBS; Linking Perlin noise parameters to oscillators.")
+                # log.info("PatternType is set to PERLIN BLOBS; Linking Perlin noise parameters to oscillators.")
                 # Link Perlin noise parameters to oscillators if needed
             elif self._pattern_type.value == PatternType.FRACTAL_SINE.value:
-                # print("PatternType is set to FRACTAL SINE; Linking fractal sine parameters to oscillators.")
+                # log.info("PatternType is set to FRACTAL SINE; Linking fractal sine parameters to oscillators.")
                 self.posc_bank[0].link_param(self.bar_x_offset)
                 self.posc_bank[1].link_param(self.bar_y_offset)
             elif self._pattern_type.value == PatternType.XY_BARS.value:
-                # print("PatternType is set to XY_BARS; Linking XY bar parameters to oscillators.")
-                # self.posc_bank[0].link_param(self.bar_x_freq)
-                # self.posc_bank[1].link_param(self.bar_y_freq)
+                # log.info("PatternType is set to XY_BARS; Linking XY bar parameters to oscillators.")
                 self.posc_bank[0].link_param(self.bar_x_offset)
                 self.posc_bank[1].link_param(self.bar_y_offset)
                 
@@ -234,7 +229,7 @@ class Patterns:
         elif self.pattern_type == PatternType.XY_BARS.value:
             pattern = self._generate_xy_bars(pattern, self.X, self.Y)
         else:
-            print(f"Warning: Unknown pattern type {self._pattern_type}. Returning black frame.")
+            log.warning(f"Unknown pattern type {self._pattern_type}. Returning black frame.")
 
         # return pattern
         alpha = 0.5 
@@ -253,7 +248,6 @@ class Patterns:
         """
         Setter for pattern_type to ensure it is a valid PatternType.
         """
-        print("executing setting")
         if isinstance(value, PatternType):
             self._pattern_type.value = value
         elif isinstance(value, int) and 0 <= value < len(PatternType):

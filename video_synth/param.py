@@ -1,4 +1,6 @@
 import random
+import logging
+
 
 class ParamTable:
     """
@@ -102,7 +104,6 @@ class ParamTable:
             self.params[name] = Param(name, min, max, default_val, family=family)
             return self.params[name]
         else:
-            print(self.params) # Debugging print, as in original
             raise ValueError(f"Parameter '{name}' already exists.")
         
 class Param:

@@ -21,15 +21,15 @@ class MixModes(IntEnum):
     LUMA_KEY = 1
     CHROMA_KEY = 2
 
-""" 
-The MixSources Enum class is used to standardize strings 
-
-For cv2 sources (devices, images, video files), there is an A and B enum
-so that different they can be used on source 1 and source 2 simultaneously
-
-Note that if you want to mix two video files, the sources must be set to 
-"""
 class MixSources(Enum):
+    """ 
+    The MixSources Enum class is used to standardize strings 
+
+    For cv2 sources (devices, images, video files), there is an A and B enum
+    so that different they can be used on source 1 and source 2 simultaneously
+
+    Note that if you want to mix two video files, the sources must be set to 
+    """
     DEVICE_1 = 0
     DEVICE_2 = auto()
     VIDEO_FILE_1 = auto()
@@ -46,8 +46,8 @@ DEVICE_SOURCE_NAMES = [member for member in MixSources if "DEVICE" in member.nam
 FILE_SOURCE_NAMES = [member for member in MixSources if "FILE" in member.name]
 ANIMATED_SOURCE_NAMES = [member for member in MixSources if "ANIM" in member.name]
 
-"""Mixer is used to init sources, get frames from each, and blend them"""
 class Mixer:
+    """Mixer is used to init sources, get frames from each, and blend them"""
 
 
     def __init__(self, params):
@@ -338,8 +338,8 @@ class Mixer:
         else:
             ret2, frame2 = self.cap2.read()
             if not ret2:
-                print(
-                    f"Error: Source 2 '{self.selected_source2.value}' read failed, attempting to reopen."
+                log.error(
+                    f"Source 2 '{self.selected_source2.value}' read failed, attempting to reopen."
                 )
                 # self.cap2.release()
                 # self.cap2 = self.failback_camera()
@@ -374,7 +374,7 @@ class Mixer:
             else:
                 return self.blend(frame1, frame2)
         else:
-            print("Error: Could not retrieve frames from both sources.")
+            log.error("Could not retrieve frames from both sources.")
             return None
 
     def get_hsv_for_cv2(self, dpg_rgba_value):
@@ -407,7 +407,6 @@ class Mixer:
             self.lower_value.value = v
 
     def _blend_mode_select_callback(self, sender, app_data, user_data):
-        print(app_data, dpg.get_value(sender))
         if "Alpha" in app_data:
             self.blend_mode.value = 0
         elif "Luma" in app_data:

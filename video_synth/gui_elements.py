@@ -1,4 +1,7 @@
 import dearpygui.dearpygui as dpg
+import logging
+
+log = logging.getLogger(__name__)
 
 class TrackbarRow:
 
@@ -34,9 +37,9 @@ class TrackbarRow:
     def reset_slider_callback(self, sender, app_data, user_data):
         param = self.param
         if param is None:
-            print(f"Slider or param not found for {user_data}")
+            log.warning(f"Slider or param not found for {user_data}")
             return
-        print(f"Got reset callback for {user_data}; setting to default value {param.default_val}")
+        log.info(f"Got reset callback for {user_data}; setting to default value {param.default_val}")
         param.reset()
         dpg.set_value(user_data, param.value)
 
@@ -124,7 +127,7 @@ class ButtonsTable:
         if tag in self.buttons:
             return self.buttons[tag].val
         else:
-            print(f"Toggle with tag '{tag}' not found.")
+            log.info(f"Toggle with tag '{tag}' not found.")
         return None
     
     def get(self, tag):
@@ -133,7 +136,7 @@ class ButtonsTable:
     def toggle(self, tag):
         if tag in self.buttons:
             self.buttons[tag].toggle()
-            print(f'Toggling {tag} to {self.buttons[tag].val}')
+            log.info(f'Toggling {tag} to {self.buttons[tag].val}')
     
     def items(self):
         return self.buttons.items()

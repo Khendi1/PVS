@@ -26,7 +26,7 @@ class Interface:
 
 
     def on_button_click(self, sender, app_data, user_data):
-        print(f"Toggle clicked: {user_data}, {app_data}, {sender}")
+        log.info(f"Toggle clicked: {user_data}, {app_data}, {sender}")
         # Perform action based on button click
         # TODO: I don't like this, but it works for now
         if user_data == "reset_all":

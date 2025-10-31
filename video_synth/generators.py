@@ -168,7 +168,7 @@ class Oscillator:
                     mapped_sample = map_value(sample, self.param_min, self.param_max, self.linked_param.min, self.linked_param.max)
         
                 self.linked_param.value = mapped_sample
-                # print(f'{sample} mapped to {mapped_sample} for linked param {self.linked_param.name}')
+                log.debug(f'{sample} mapped to {mapped_sample} for linked param {self.linked_param.name}')
             yield sample
             t += 1 / self.sample_rate  # Increment time by sample period 
         
@@ -234,6 +234,10 @@ class OscBank():
         """
         del self.osc_bank[index]
 
+    def _shape_callback(self, sender, app_data, user_data):
+        for i in range(len(self.osc_bank)):
+            if str(i) in user_data[:-3]:
+                self.osc_bank[i].shape.value = OscillatorShape[app_data].value
 
     def create_gui_panel(self, default_font_id=None, global_font_id=None):
         
@@ -253,10 +257,21 @@ class OscBank():
             for i in range(self.len):
                 
                 with dpg.collapsing_header(label=f"\t\tOscillator {i}", tag=f"osc{i}"):
-                    osc_shape_sliders.append(TrackbarRow(
-                        f"Osc {i} Shape", 
-                        self.osc_bank[i].shape, 
-                        default_font_id))
+
+                    shapes = (
+                        OscillatorShape.NONE.name, 
+                        OscillatorShape.SINE.name,
+                        OscillatorShape.TRIANGLE.name,
+                        OscillatorShape.SQUARE.name,
+                        OscillatorShape.SAWTOOTH.name,
+                        OscillatorShape.PERLIN.name
+                    )
+                    dpg.add_radio_button(
+                        shapes, 
+                        callback=self._shape_callback, 
+                        horizontal=True,
+                        user_data=f"{self.osc_bank[i].shape}"
+                    )
                     
                     osc_freq_sliders.append(TrackbarRow(
                         f"Osc {i} Freq", 
@@ -325,7 +340,7 @@ class OscBank():
             app_data: A dictionary containing the selected items.  For a listbox,
                     it's  { 'items': [index1, index2, ...] }
         """
-        for i in range(self.osc_bank.len):
+        for i in range(len(self.osc_bank)):
             if f"osc{i}" in sender:
                 param = None
                 for tag, param in self.params.items():

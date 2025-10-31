@@ -408,7 +408,7 @@ class Color(EffectBase):
 
         # Ensure the image is in 8-bit format (0-255)
         if frame.dtype != np.uint8:
-            print("Warning: Image not in uint8 format. Converting...")
+            log.debug("Warning: Image not in uint8 format. Converting...")
             frame = cv2.convertScaleAbs(frame)
 
         # Calculate the step size for quantization, round
@@ -445,7 +445,7 @@ class Color(EffectBase):
 
         # Ensure the image is in 8-bit format (0-255)
         if frame.dtype != np.uint8:
-            print("Warning: Image not in uint8 format. Converting...")
+            log.debug("Warning: Image not in uint8 format. Converting...")
             frame = cv2.convertScaleAbs(frame)  # Converts to uint8, scales if needed
 
         frame = np.where(frame > self.solarize_threshold.value, 255 - frame, frame)
@@ -959,7 +959,6 @@ class Reflector(EffectBase):
         if not isinstance(new_mode, ReflectionMode):
             raise ValueError("new_mode must be an instance of ReflectionMode Enum.")
         self._mode = new_mode
-        print(f"Reflection mode set to: {self._mode}")
 
     def apply_reflection(self, frame: np.ndarray) -> np.ndarray:
         """
@@ -1013,13 +1012,13 @@ class Reflector(EffectBase):
 
         # Ensure dimensions are at least 2x2 for quadrants to exist
         if h_half == 0 or w_half == 0:
-            print("Warning: Image too small for quad symmetry. Returning original.")
+            log.debug("Warning: Image too small for quad symmetry. Returning original.")
             return frame.copy()
 
         # Extract the top-left quadrant
         top_left_quadrant = frame[
             0:h_half, 0:w_half
-        ].copy()  # .copy() is important to avoid modifying original
+        ].copy()
 
         # Create reflected versions
         top_right_quadrant = cv2.flip(top_left_quadrant, 1)  # Flip horizontally
@@ -1029,7 +1028,6 @@ class Reflector(EffectBase):
         )  # Flip both horizontally and vertically
 
         # Create a new canvas to assemble the reflected parts
-        # Ensure the output frame matches the original dimensions, even if they were odd
         output_frame = np.zeros_like(frame)
 
         # Place the quadrants into the output frame
@@ -1332,11 +1330,10 @@ class Feedback(EffectBase):
 
         # If the buffer is not yet full, return the original frame.
         if len(self.frame_buffer) < self.buffer_size.value:
-            # print(f"Buffering frames: {len(self.frame_buffer)}/{self.buffer_size.value}")
+            log.debug(f"Buffering frames: {len(self.frame_buffer)}/{self.buffer_size.value}")
             return frame
 
         sliced_deque = np.array(self.frame_buffer)[:self.buffer_size.value]
-        print(len(sliced_deque))
 
         avg_frame = np.mean(sliced_deque, axis=0)
 
@@ -1550,7 +1547,7 @@ class Lissajous(EffectBase):
 class ImageNoiser(EffectBase):
 
     def __init__(
-        self, params, noise_type: NoiseType = NoiseType.NONE, noise_intensity: float = 0.1
+        self, params, noise_type: NoiseType = NoiseType.NONE
     ):
         """
         Initializes the ImageNoiser with a default noise type and intensity.
@@ -1564,15 +1561,11 @@ class ImageNoiser(EffectBase):
 
         if not isinstance(noise_type, NoiseType):
             raise ValueError("noise_type must be an instance of NoiseType Enum.")
-        if not (0.0 <= noise_intensity <= 1.0):
-            print("Warning: noise_intensity should ideally be between 0.0 and 1.0.")
 
-        # self._noise_type = noise_type
-        # self._noise_intensity = noise_intensity
         self._noise_type = params.add(
             "noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, noise_type.value
         )
-        self._noise_intensity = params.add("noise_intensity", 0.0, 1.0, noise_intensity)
+        self._noise_intensity = params.add("noise_intensity", 0.0, 1.0, 0.1)
 
     @property
     def noise_type(self) -> NoiseType:
@@ -1585,7 +1578,7 @@ class ImageNoiser(EffectBase):
         if not isinstance(new_type, NoiseType):
             raise ValueError("noise_type must be an instance of NoiseType Enum.")
         self._noise_type.value = new_type
-        print(f"Noise type set to: {self._noise_type.val()}")
+        log.debug(f"Noise type set to: {self._noise_type.val()}")
 
     @property
     def noise_intensity(self) -> float:
@@ -1596,9 +1589,9 @@ class ImageNoiser(EffectBase):
     def noise_intensity(self, new_intensity: float):
         """Set the noise intensity."""
         if not (0.0 <= new_intensity <= 1.0):
-            print("Warning: noise_intensity should ideally be between 0.0 and 1.0.")
+            log.warning("Warning: noise_intensity should ideally be between 0.0 and 1.0.")
         self._noise_intensity.value = new_intensity
-        print(f"Noise intensity set to: {self._noise_intensity}")
+        log.debug(f"Noise intensity set to: {self._noise_intensity}")
 
     def apply_noise(self, image: np.ndarray) -> np.ndarray:
         """
@@ -1633,7 +1626,7 @@ class ImageNoiser(EffectBase):
         elif self._noise_type.value == NoiseType.RANDOM.value:
             return self._apply_random_noise(noisy_image)
         else:
-            print(
+            log.warning(
                 f"Unknown noise type: {self._noise_type.value}. Returning original image."
             )
             return image.copy()  # Return original if type is unknown
@@ -2510,7 +2503,7 @@ class ShapeGenerator:
                 self.params.get("shape_x_shift"), 
                 default_font_id)
 
-            with dpg.collapsing_header(label=f"\Line Generator", tag="line_generator"):
+            with dpg.collapsing_header(label=f"\tLine Generator", tag="line_generator"):
 
                 line_hue = TrackbarRow("Line Hue", self.params.get("line_hue"), default_font_id)
                 
