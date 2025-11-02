@@ -10,14 +10,14 @@ from enum import IntEnum, Enum, auto
 from animations import *
 import os
 from pathlib import Path
-from gui_elements import TrackbarRow
+from gui_elements import TrackbarRow, RadioButtonRow
 
 
 log = logging.getLogger(__name__)
 
 
 class MixModes(IntEnum):
-    BLEND = 0
+    ALPHA_BLEND = 0
     LUMA_KEY = 1
     CHROMA_KEY = 2
 
@@ -160,16 +160,19 @@ class Mixer:
 
         log.info(f"Attempting to find video capture sources ({max_index})")
         for index in range(max_index):
-            cap = cv2.VideoCapture(index, cv2.CAP_ANY)
+            try:
+                cap = cv2.VideoCapture(index, cv2.CAP_ANY)
 
-            # Try to read a frame to confirm the device is open and working
-            if cap.isOpened():
-                ret, _ = cap.read()
-                if ret:
-                    log.info(f"Found video capture device at index {index}")
-                    self.sources[f'{MixSources.DEVICE_1.name}_{index}'] = index
-                    self.sources[f'{MixSources.DEVICE_2.name}_{index}'] = index
-                cap.release()
+                # Try to read a frame to confirm the device is open and working
+                if cap.isOpened():
+                    ret, _ = cap.read()
+                    if ret:
+                        log.info(f"Found video capture device at index {index}")
+                        self.sources[f'{MixSources.DEVICE_1.name}_{index}'] = index
+                        self.sources[f'{MixSources.DEVICE_2.name}_{index}'] = index
+                    cap.release()
+            except Exception as e:
+                pass
 
 
     def failback_camera(self):
@@ -469,14 +472,12 @@ class Mixer:
 
                 dpg.add_button(label="File 2", user_data=dpg.last_container(), callback=lambda s, a, u: dpg.configure_item(u, show=True))
 
-            # dpg.add_spacer(height=10)
-            dpg.add_radio_button(
-                ("Alpha Blend", "Lumakey", "Chromakey"), 
-                callback=self._blend_mode_select_callback, 
-                horizontal=True,
-                user_data="blend_mode"
+            RadioButtonRow(
+                "Blend Mode",
+                MixModes,
+                self.blend_mode,
+                None
             )
-
 
             frame_blend_slider = TrackbarRow(
                 "Alpha Blend",

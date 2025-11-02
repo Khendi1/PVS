@@ -153,6 +153,7 @@ class Oscillator:
                     repeat=self.noise_repeat.value, # This ensures the noise repeats after 'noise_repeat' units
                     base=self.noise_base.value
                 )
+                log.debug(sample)
 
             else:
                 raise ValueError(f"Invalid shape value. Must be 0 (sine), 1 (square), 2 (triangle), or 3 (sawtooth). got shape={shape}")

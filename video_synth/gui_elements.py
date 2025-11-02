@@ -1,9 +1,21 @@
 import dearpygui.dearpygui as dpg
 import logging
+from enum import Enum
 
 log = logging.getLogger(__name__)
 
+RESET_BUTTON_WIDTH = 50
+SLIDER_WIDTH = -100
+
+""" A helper method to return a dictionary from an enumeration. Primarily used to pass options arg to RadioButtonRow"""
+def dict_from_enum(cls: Enum):
+    return {member.name: member.value for member in cls}
+
 class TrackbarRow:
+    """
+    A TrackbarRow is a 
+    """
+
 
     def __init__(self, label, param, font):
 
@@ -19,27 +31,40 @@ class TrackbarRow:
         self.create()
 
     def create(self):
+        """Slider and reset buttion creation logic"""
         with dpg.group(horizontal=True):
-            # self.button = dpg.add_button(label="Reset", callback=lambda x: self.reset, width=50)
-            self.button = dpg.add_button(label="Reset", callback=self.reset_slider_callback, width=50, tag=self.tag + "_reset", user_data=self.tag)
+            
+            self.button = dpg.add_button(label="Reset", 
+                                         callback=self.reset_slider_callback, 
+                                         width=50, 
+                                         tag=self.tag + "_reset", 
+                                         user_data=self.tag)
+            
             if self.type == 'float':
                 self.slider = dpg.add_slider_float(label=self.label, tag=self.tag, 
                                                    default_value=self.param.default_val, 
                                                    min_value=self.param.min, 
                                                    max_value=self.param.max, 
                                                    callback=self.callback, 
-                                                   width=-100)
+                                                   width=SLIDER_WIDTH)
             else:
-                self.slider = dpg.add_slider_int(label=self.label, tag=self.tag, default_value=self.param.default_val, min_value=self.param.min, max_value=self.param.max, callback=self.callback, width=-100)
+                self.slider = dpg.add_slider_int(label=self.label, 
+                                                 tag=self.tag, 
+                                                 default_value=self.param.default_val, 
+                                                 min_value=self.param.min, 
+                                                 max_value=self.param.max, 
+                                                 callback=self.callback, 
+                                                 width=SLIDER_WIDTH)
+            
             dpg.bind_item_font(self.tag, self.font)
             dpg.bind_item_font(self.tag + "_reset", self.font)
 
     def reset_slider_callback(self, sender, app_data, user_data):
         param = self.param
+        log.info(f"Got reset callback for {user_data}; setting to default value {param.default_val}")
         if param is None:
             log.warning(f"Slider or param not found for {user_data}")
             return
-        log.info(f"Got reset callback for {user_data}; setting to default value {param.default_val}")
         param.reset()
         dpg.set_value(user_data, param.value)
 
@@ -72,6 +97,33 @@ class TrackbarCallback:
         self.param.value = app_data
         dpg.set_value(sender, app_data)
 
+class RadioButtonRow:
+    """ 
+    This class creates a row of radio buttions. It can be used in a similar way to th TrackbarRow,
+    with the difference being in the labeling of discrete states with a semantic label.
+    
+    Args:
+        options: 
+    """
+    def __init__(self, label: str, options_cls: Enum, param=None, font=None):
+        
+        self.label = label
+        self.options = dict_from_enum(options_cls)
+        self.param = param
+        self.font = font
+        print(list(self.options.keys()))
+
+        dpg.add_radio_button(
+            list(self.options.keys()), 
+            callback=self.callback, 
+            horizontal=True,
+            user_data=self.param.name,
+        )
+    
+
+    def callback(self, sender, app_data, user_data):
+        print(sender,app_data,user_data, self.options[app_data])
+        self.param.value = self.options[app_data]
 
 
 class Toggle:
@@ -93,7 +145,8 @@ class Toggle:
 
     def create(self):
         dpg.add_button(label=self.label, tag=self.tag, callback=self.on_toggle_button_click, user_data=self.tag)
-    
+
+
 class ButtonsTable:
     """
     A singleton class to create and store Toggle instances

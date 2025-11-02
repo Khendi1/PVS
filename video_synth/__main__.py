@@ -65,7 +65,7 @@ def config_log(log_level):
 def main(num_osc, log_level):
     global effects
 
-    log.info("Initializing video synthesizer...")
+    log.info("Initializing video synthesizer... Press 'q' or 'ESC' to quit")
 
     # all user modifiable parameters are stored here
     params = ParamTable()       # params have a min and max value
@@ -129,7 +129,7 @@ def main(num_osc, log_level):
 
             # Break the loop if 'q' is pressed
             key = cv2.waitKey(1) & 0xFF
-            if key == ord('q'):
+            if key == ord('q') or key == 27:
                 log.info(f"Received quit command, begining shutdown")
                 break
 
