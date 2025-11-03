@@ -240,7 +240,7 @@ class OscBank():
             if str(i) in user_data[:-3]:
                 self.osc_bank[i].shape.value = OscillatorShape[app_data].value
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
         
         osc_freq_sliders = []
         osc_amp_sliders = []
@@ -253,11 +253,12 @@ class OscBank():
         osc_noise_repeat = []
         osc_noise_base = []
 
-        with dpg.collapsing_header(label=f"\tOscillator Bank", tag=f"osc_bank"):
-
+        with dpg.collapsing_header(label=f"\tOscillator Bank", tag=f"osc_bank") as h:
+            dpg.bind_item_theme(h, theme)
             for i in range(self.len):
                 
                 with dpg.collapsing_header(label=f"\t\tOscillator {i}", tag=f"osc{i}"):
+                    dpg.bind_item_theme(h, theme)
 
                     shapes = (
                         OscillatorShape.NONE.name, 

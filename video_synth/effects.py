@@ -26,7 +26,7 @@ import cv2
 import numpy as np
 import dearpygui.dearpygui as dpg
 from noise import pnoise2
-from gui_elements import TrackbarRow, Toggle
+from gui_elements import TrackbarRow, Toggle, RadioButtonRow
 import logging
 from patterns3 import Patterns  
 from param import ParamTable
@@ -38,7 +38,6 @@ log = logging.getLogger(__name__)
 """This section stores all local custom enum classes"""
 
 class LumaMode(IntEnum):
-    NONE = 0
     WHITE = auto()
     BLACK = auto()
 
@@ -500,9 +499,10 @@ class Color(EffectBase):
         polarized_frame = cv2.cvtColor(hsv_frame.astype(np.uint8), cv2.COLOR_HSV2BGR)
         return polarized_frame
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
 
-        with dpg.collapsing_header(label=f"\tColor", tag="color"):
+        with dpg.collapsing_header(label=f"\tColor", tag="color") as h:
+            dpg.bind_item_theme(h, theme)
 
             hue = TrackbarRow("Hue Shift", self.params["hue_shift"], default_font_id)
 
@@ -606,18 +606,29 @@ class Pixels(EffectBase):
 
         return sharpened_frame
     
-    def create_gui_panel(self, default_font_id):
-        with dpg.collapsing_header(label=f"\tPixels", tag="pixels"):
-            blur_kernel = TrackbarRow(
-                "Blur Kernel", self.params.get("blur_kernel_size"), default_font_id
+
+    def create_gui_panel(self, default_font_id, theme):
+
+        with dpg.collapsing_header(label=f"\tPixels", tag="pixels") as h:
+            dpg.bind_item_theme(h, theme)
+            
+            TrackbarRow(
+                "Blur Kernel", 
+                self.params.get("blur_kernel_size"), 
+                default_font_id
             )
 
-            blur_type = TrackbarRow(
-                "Blur Type", self.params.get("blur_type"), default_font_id
+            RadioButtonRow(
+                label="Blur Type", 
+                cls=BlurType,
+                param=self.params.get("blur_type"), 
+                font=default_font_id
             )
 
-            sharpen = TrackbarRow(
-                "Sharpen Amount", self.params.get("sharpen_intensity"), default_font_id
+            TrackbarRow(
+                "Sharpen Amount", 
+                self.params.get("sharpen_intensity"), 
+                default_font_id
             )
 
 
@@ -666,8 +677,9 @@ class Sync(EffectBase):
         warped_y = cv2.cvtColor(warped_y, cv2.COLOR_RGB2BGR)
         return warped_y
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None):
-        with dpg.collapsing_header(label=f"\tSync", tag="sync"):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
+        with dpg.collapsing_header(label=f"\tSync", tag="sync") as h:
+            dpg.bind_item_theme(h, theme)
 
             x_sync_speed = TrackbarRow(
                 "X Sync Speed", self.params.get("x_sync_speed"), default_font_id
@@ -873,9 +885,10 @@ class Warp(EffectBase):
         elif self.warp_type == WarpType.WARP0:
             return self._first_warp(frame)
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
 
-        with dpg.collapsing_header(label=f"\tWarp", tag="warp"):
+        with dpg.collapsing_header(label=f"\tWarp", tag="warp") as h:
+            dpg.bind_item_theme(h, theme)
 
             warp_type = TrackbarRow(
                 "Warp Type",
@@ -1038,9 +1051,9 @@ class Reflector(EffectBase):
 
         return output_frame
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None):
-        with dpg.collapsing_header(label=f"\tReflector", tag="reflector"):
-
+    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
+        with dpg.collapsing_header(label=f"\tReflector", tag="reflector") as h:
+            dpg.bind_item_theme(h, theme)
             reflection_mode = TrackbarRow(
                 "Reflection Mode", self.params.get("reflection_mode"), default_font_id
             )
@@ -1184,10 +1197,12 @@ class PTZ(EffectBase):
             enable_polar_transform = True
 
     def create_gui_panel(
-        self, default_font_id=None, global_font_id=None, width=550, height=600
+        self, default_font_id=None, global_font_id=None, theme=None
     ):
-        with dpg.collapsing_header(label=f"\tPan", tag="pan"):
-
+        width=550
+        height=600
+        with dpg.collapsing_header(label=f"\tPan", tag="pan") as h:
+            dpg.bind_item_theme(h, theme)
             x_shift = TrackbarRow(
                 "X Shift", self.params.get("x_shift"), default_font_id
             )
@@ -1252,15 +1267,12 @@ class Feedback(EffectBase):
         self.temporal_filter = params.add("temporal_filter", 0, 1.0, 0.0, family)
         self.feedback_luma_threshold = params.add("feedback_luma_threshold", 0, 255, 0, family)
         self.luma_select_mode = params.add(
-            "luma_select_mode", 0, len(LumaMode) - 1, LumaMode.NONE.value, family
+            "luma_select_mode", LumaMode.WHITE.value, LumaMode.BLACK.value, LumaMode.WHITE.value, family
         )
         self.buffer_select = params.add("buffer_frame_select", -1, 20, -1, family)
         self.buffer_frame_blend = params.add("buffer_frame_blend", 0.0, 1.0, 0.0, family)
 
         self.prev_frame_scale = params.add("prev_frame_scale", 90, 110, 100, family)
-
-        # TODO: implement
-        self.sequence = params.add("sequence", 0, 100, 0, family)
 
         self.max_buffer_size = 30
         self.buffer_size = params.add("buffer_size", 0, self.max_buffer_size, 0, family)
@@ -1379,9 +1391,7 @@ class Feedback(EffectBase):
         # The mask will determine which parts of the current frame are kept
         gray = cv2.cvtColor(cur_frame, cv2.COLOR_BGR2GRAY)
 
-        if self.luma_select_mode.value == LumaMode.NONE.value:
-            return cur_frame
-        elif self.luma_select_mode.value == LumaMode.BLACK.value:
+        if self.luma_select_mode.value == LumaMode.BLACK.value:
             # Use THRESH_BINARY_INV to key out DARK areas (Luma is low)
             # Pixels with Luma < threshold become white (255) in the mask, meaning they are KEPT
             ret, mask = cv2.threshold(
@@ -1442,10 +1452,10 @@ class Feedback(EffectBase):
         return noisy_frame
 
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
 
-        with dpg.collapsing_header(label=f"\tFeedback", tag="effects"):
-
+        with dpg.collapsing_header(label=f"\tFeedback", tag="effects") as h:
+            dpg.bind_item_theme(h, theme)
             temporal_filter = TrackbarRow(
                 "Temporal Filter", self.params.get("temporal_filter"), default_font_id
             )
@@ -1460,8 +1470,8 @@ class Feedback(EffectBase):
                 default_font_id,
             )
 
-            luma_mode = TrackbarRow(
-                "Luma Mode", self.luma_select_mode, default_font_id
+            luma_mode = RadioButtonRow(
+                "Luma Mode", LumaMode, self.luma_select_mode, default_font_id
             )
 
             frame_buffer_size = TrackbarRow(
@@ -1745,10 +1755,12 @@ class ImageNoiser(EffectBase):
         noisy_image = image + random_noise
         return np.clip(noisy_image, 0, 255).astype(np.uint8)
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None):
-        with dpg.collapsing_header(label=f"\tNoiser", tag="noiser"):
-            noise_type = TrackbarRow(
-                "Noise Type", self.params.get("noise_type"), default_font_id
+    def create_gui_panel(self, default_font_id=None, global_font_id=None,theme=None):
+        with dpg.collapsing_header(label=f"\tNoiser", tag="noiser") as h:
+            dpg.bind_item_theme(h, theme)
+
+            noise_type = RadioButtonRow(
+                "Noise Type", NoiseType, self.params.get("noise_type"), default_font_id
             )
 
             noise_intensity = TrackbarRow(
@@ -2190,8 +2202,9 @@ class Glitch(EffectBase):
         self.frame_count += 1
         return frame
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None):
-        with dpg.collapsing_header(label=f"\tGlitch", tag="glitch"):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
+        with dpg.collapsing_header(label=f"\tGlitch", tag="glitch") as h:
+            dpg.bind_item_theme(h, theme)
             glitch_intensity = TrackbarRow(
                 "Glitch Intensity", self.params.get("glitch_intensity_max"), default_font_id
             )
@@ -2455,8 +2468,9 @@ class ShapeGenerator:
         return frame
     
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None):
-        with dpg.collapsing_header(label=f"\tShape Generator", tag="shape_generator"):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
+        with dpg.collapsing_header(label=f"\tShape Generator", tag="shape_generator") as h:
+            dpg.bind_item_theme(h, theme)
             shape = TrackbarRow("Shape Type",self.shape_type, default_font_id)
             
             canvas_rotation = TrackbarRow(

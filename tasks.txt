@@ -1,17 +1,6 @@
-gui_elements:
-- create RadioButtonRow
-
 mixer:
 - button to swap source1 to source2
 - load image
 - loop video automatically
 - luma key mode radio buttons (select white or black)
-
-feedback panel:
-- luma key mode radio buttons
-- remove setting 0 (off), default to 1 (black)
-
-noise:
-- move to pixels?
-- change mode slide to radio buttons
 

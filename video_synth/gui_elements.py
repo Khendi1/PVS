@@ -105,10 +105,10 @@ class RadioButtonRow:
     Args:
         options: 
     """
-    def __init__(self, label: str, options_cls: Enum, param=None, font=None):
+    def __init__(self, label: str = None, cls: Enum = None, param=None, font=None):
         
         self.label = label
-        self.options = dict_from_enum(options_cls)
+        self.options = dict_from_enum(cls)
         self.param = param
         self.font = font
         print(list(self.options.keys()))

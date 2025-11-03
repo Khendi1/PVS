@@ -438,8 +438,9 @@ class Mixer:
             else:
                 pass
 
-    def create_gui_panel(self):
-        with dpg.collapsing_header(label=f"\tMixer", tag="mixer"):
+    def create_gui_panel(self, theme):
+        with dpg.collapsing_header(label=f"\tMixer", tag="mixer") as h:
+            dpg.bind_item_theme(h, theme)
             
             # Get list of srcs without DEVICE_2, X_FILE_2
             sources = [src for src in self.sources.keys() if 'E_2' not in src]

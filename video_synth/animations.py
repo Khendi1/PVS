@@ -137,7 +137,7 @@ class Plasma(Animation):
         return self.generate_plasma_effect()
 
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
         plasma_freq_sliders = []
         plasma_amp_sliders = []
         plasma_phase_sliders = []
@@ -149,7 +149,8 @@ class Plasma(Animation):
             "plasma_color_speed",
             "plasma_flow_speed",
         ]
-        with dpg.collapsing_header(label=f"\tPlasma Oscillator", tag="plasma_oscillator"):
+        with dpg.collapsing_header(label=f"\tPlasma Oscillator", tag="plasma_oscillator") as h:
+            dpg.bind_item_theme(h, theme)
             for i in range(len(plasma_params)):
                 with dpg.collapsing_header(label=f"\t{plasma_params[i]} panel", tag=f"{plasma_params[i]}_panel"):
                     plasma_shape_sliders.append(TrackbarRow(
@@ -321,8 +322,9 @@ class ReactionDiffusionSimulator(Animation):
         return self.run()
 
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None):
-        with dpg.collapsing_header(label=f"\tReaction Diffusion", tag="reaction_diffusion"):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
+        with dpg.collapsing_header(label=f"\tReaction Diffusion", tag="reaction_diffusion") as h:
+            dpg.bind_item_theme(h, theme)
             rd_diffusion_rate_a_slider = TrackbarRow(
                 "Diffusion Rate A",
                  self.params.get("da"),
@@ -561,9 +563,10 @@ class Metaballs(Animation):
         return self.do_metaballs(frame)
 
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
 
-        with dpg.collapsing_header(label=f"\tMetaballs", tag="metaballs"):
+        with dpg.collapsing_header(label=f"\tMetaballs", tag="metaballs") as h:
+            dpg.bind_item_theme(h, theme)
 
             num_metaballs_slider = TrackbarRow(
                 "Num Metaballs", self.num_metaballs, default_font_id

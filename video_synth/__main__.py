@@ -127,9 +127,9 @@ def main(num_osc, log_level):
             cv2.imshow('Modified Frame', wet_frame)
             dpg.render_dearpygui_frame()
 
-            # Break the loop if 'q' is pressed
+            # Break the loop if a quit key is pressed
             key = cv2.waitKey(1) & 0xFF
-            if key == ord('q') or key == 27:
+            if key in ESCAPE_KEYS:
                 log.info(f"Received quit command, begining shutdown")
                 break
 

@@ -15,5 +15,7 @@ VIDEO_OUTPUT_WINDOW_TITLE = "Synthesizer Output"
 WIDTH = None
 HEIGHT = None
 
+ESCAPE_KEYS = [ord('q'), ord('Q'), 27]
+
 effects = EffectManager() # initialized with params in main.py
 

@@ -119,9 +119,9 @@ class Interface:
         dpg.set_primary_window("Controls", True)
 
 
-    def create_panels_from_list(self, source_obj_list):
+    def create_panels_from_list(self, source_obj_list, theme):
         for obj in source_obj_list:
-            panel = obj.create_gui_panel()
+            panel = obj.create_gui_panel(theme=theme)
      
 
     def perlin_generator_sliders(self, default_font_id=None, global_font_id=None):
@@ -145,29 +145,69 @@ class Interface:
         dpg.bind_item_font("noise_generator", global_font_id)
     
 
+    def create_control_theme(self):
+        """Creates and returns a Maroon-colored collapsing header theme."""
+        with dpg.theme() as theme:
+            with dpg.theme_component(dpg.mvCollapsingHeader):
+                # Header Background (Maroon: R=128, G=0, B=0)
+                dpg.add_theme_color(dpg.mvThemeCol_Header, (128, 0, 0, 100))
+                # Header Hovered (Slightly lighter Maroon)
+                dpg.add_theme_color(dpg.mvThemeCol_HeaderHovered, (150, 0, 0, 255))
+                # Header Text (White)
+                dpg.add_theme_color(dpg.mvThemeCol_Text, (255, 255, 255, 255))
+        return theme
+    
+    def create_effect_theme(self):
+        """Creates and returns a Dark Green-colored collapsing header theme."""
+        with dpg.theme() as theme:
+            with dpg.theme_component(dpg.mvCollapsingHeader):
+                # Header Background (Dark Green: R=0, G=100, B=0)
+                dpg.add_theme_color(dpg.mvThemeCol_Header, (0, 100, 0, 100))
+                # Header Hovered (Slightly lighter Green)
+                dpg.add_theme_color(dpg.mvThemeCol_HeaderHovered, (0, 140, 0, 255))
+                # Header Text (White)
+                dpg.add_theme_color(dpg.mvThemeCol_Text, (255, 255, 255, 255))
+        return theme
+
+    def create_animation_theme(self):
+        """Creates and returns a Dark Blue-colored collapsing header theme."""
+        with dpg.theme() as theme:
+            with dpg.theme_component(dpg.mvCollapsingHeader):
+                # Header Background (Dark Blue: R=0, G=0, B=128)
+                dpg.add_theme_color(dpg.mvThemeCol_Header, (0, 0, 128, 100))
+                # Header Hovered (Slightly lighter Blue)
+                dpg.add_theme_color(dpg.mvThemeCol_HeaderHovered, (0, 0, 160, 255))
+                # Header Text (White)
+                dpg.add_theme_color(dpg.mvThemeCol_Text, (255, 255, 255, 255))
+        return theme
+
     def create_trackbars(self, width, height, mixer, osc_bank):
 
         default_font_id, global_font_id = None, None
+        effects_theme = self.create_effect_theme()
+        animation_theme = self.create_animation_theme()
+        control_theme = self.create_control_theme()
 
-        mixer.create_gui_panel()
+        mixer.create_gui_panel(control_theme)
 
-        effects.reflector.create_gui_panel(default_font_id,global_font_id)
-        effects.color.create_gui_panel(default_font_id, global_font_id)
-        effects.feedback.create_gui_panel(default_font_id,global_font_id)
-        effects.pixels.create_gui_panel(default_font_id)
-        effects.ptz.create_gui_panel(default_font_id,global_font_id)
-        effects.sync.create_gui_panel(default_font_id,global_font_id)
-        effects.glitch.create_gui_panel(default_font_id,global_font_id)
-        effects.noise.create_gui_panel(default_font_id, global_font_id)
-        effects.shapes.create_gui_panel(default_font_id, global_font_id)
-        effects.warp.create_gui_panel(default_font_id, global_font_id)
+        effects.reflector.create_gui_panel(default_font_id,global_font_id,effects_theme)
+        effects.color.create_gui_panel(default_font_id, global_font_id,effects_theme)
+        effects.feedback.create_gui_panel(default_font_id,global_font_id,effects_theme)
+        effects.pixels.create_gui_panel(default_font_id,effects_theme)
+        effects.ptz.create_gui_panel(default_font_id,global_font_id,effects_theme)
+        effects.sync.create_gui_panel(default_font_id,global_font_id,effects_theme)
+        effects.glitch.create_gui_panel(default_font_id,global_font_id,effects_theme)
+        effects.noise.create_gui_panel(default_font_id, global_font_id,effects_theme)
+        effects.shapes.create_gui_panel(default_font_id, global_font_id,effects_theme)
+        effects.warp.create_gui_panel(default_font_id, global_font_id,effects_theme)
         # self.perlin_generator_sliders(default_font_id, global_font_id)
         # self.lissajous_sliders(default_font_id, global_font_id)
         
-        self.create_panels_from_list(mixer.animation_sources.values())
+        self.create_panels_from_list(mixer.animation_sources.values(), animation_theme)
         
-        osc_bank.create_gui_panel(default_font_id, global_font_id)
-        
+        osc_bank.create_gui_panel(default_font_id, global_font_id, control_theme)
+    
+
     # under test; not currently used
     def build_panels_dict(self, params):
         panels = {}
