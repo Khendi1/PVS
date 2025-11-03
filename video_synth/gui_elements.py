@@ -111,7 +111,6 @@ class RadioButtonRow:
         self.options = dict_from_enum(cls)
         self.param = param
         self.font = font
-        print(list(self.options.keys()))
 
         dpg.add_radio_button(
             list(self.options.keys()), 
@@ -122,7 +121,6 @@ class RadioButtonRow:
     
 
     def callback(self, sender, app_data, user_data):
-        print(sender,app_data,user_data, self.options[app_data])
         self.param.value = self.options[app_data]
 
 

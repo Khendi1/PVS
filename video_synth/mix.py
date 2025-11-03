@@ -421,7 +421,6 @@ class Mixer:
     import os
 
     def _file_select_callback(self, sender, app_data, user_data):
-        # print(app_data['file_path_name'])
         file_name, file_extension = os.path.splitext(app_data['file_path_name'])
 
 

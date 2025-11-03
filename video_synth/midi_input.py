@@ -468,9 +468,7 @@ names = [SMC_Mixer.name,  MidiMix.name]
 
 def identify_midi_ports(params):
     
-    # Mido uses a default backend (often python-rtmidi) which handles platform differences.
-    log.info("--- Searching for Accessible MIDI Ports (High-Level) ---")
-    
+    # Mido uses a default backend (often python-rtmidi) which handles platform differences.    
     controllers = []
     ports_found = False
     
@@ -478,24 +476,27 @@ def identify_midi_ports(params):
         # List all available MIDI input ports
         input_ports = mido.get_input_names()
         if input_ports:
-            log.info("MIDI Input Devices:")
+            string = "\nFound MIDI Input Devices:"
+
 
             for i, port_name in enumerate(input_ports):
                 for name in names:
                     if name in port_name:
                         found_controller = MidiControllerInterface(params, name=name, port_name=port_name)
                         controllers.append(found_controller)
-                        log.info(f"Initialized midi controller: {name}")
-                    
+                        string += f"\n\tInitialized midi controller: {name}"
+        
+            log.info(string)
             ports_found = True
         
         # List all available MIDI output ports
         output_ports = mido.get_output_names()
         if output_ports:
-            log.info("MIDI Output Devices:")
+            string = "\nFound MIDI Output Devices:"
             for i, name in enumerate(output_ports):
-                log.info(f"  [{i+1}] {name}")
+                string += (f"\n\t[{i+1}] {name}")
             ports_found = True
+            log.info(string)
             
     except Exception as e:
         log.exception(f"\nAn unexpected error occurred during port scan: {e}")

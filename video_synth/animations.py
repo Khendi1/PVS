@@ -321,7 +321,6 @@ class ReactionDiffusionSimulator(Animation):
         """
         return self.run()
 
-
     def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
         with dpg.collapsing_header(label=f"\tReaction Diffusion", tag="reaction_diffusion") as h:
             dpg.bind_item_theme(h, theme)
@@ -635,7 +634,14 @@ class Moire(Animation):
     def __init__(self, params):
         self.params = params
         self.mode = params.add("moire_mode", 0, max(MoireType.values()), 0)
-        self.freq = params.add("spatial_freq_1", 0,)
+        self.freq_1 = params.add("spatial_freq_1", 0, 100, 10)
+        self.freq_2 = params.add("spatial_freq_2", 0, 100, 10)
+        self.angle_1 = params.add("angle_1", 0, 100, 10)
+        self.angle_2 = params.add("angle_2", 0, 100, 10)
+        self.zoom_1 = params.add("zoom_1", 0.8, 1.5, 1.0)
+        self.zoom_2 = params.add("zoom_2", 0.8, 1.5, 1.0)
+        self.size = params.add("moire_size", 0, 512, 512)
+        self.mode = params.add("moire_mode", 0, max(MoireType.values()), 0)
 
     def create_moire_pattern(size=512, f1=20, f2=20, angle1_deg=0, angle2_deg=5, zoom1=1.0, zoom2=1.0, mode='rotational'):
         """
@@ -700,15 +706,14 @@ class Moire(Animation):
             grating2 = 0.5 + 0.5 * np.cos(2 * np.pi * f2 * r_scaled2)
 
         else:
-            # Fallback or unrecognized mode
-            print(f"Error: Unrecognized Moiré mode: {mode}. Defaulting to empty image.")
+            log.error(f"Unrecognized Moiré mode: {mode}. Defaulting to empty image.")
             return np.zeros((size, size), dtype=np.uint8)
 
 
-        # 2. Combine the Gratings (Multiplication is the common method for Moiré)
+        # Combine the Gratings (Multiplication is the common method for Moiré)
         moire_float = grating1 * grating2
 
-        # 3. Convert to 8-bit unsigned integer (0-255) for OpenCV display
+        # Convert to 8-bit unsigned integer (0-255) for OpenCV display
         moire_uint8 = (moire_float * 255).astype(np.uint8)
 
         return moire_uint8

@@ -1006,11 +1006,6 @@ class Reflector(EffectBase):
             # Place reflected left half onto right half
             output_frame[:, w_half:] = reflected_left[:, : width - w_half]
             return output_frame
-        else:
-            print(
-                f"Warning: Unknown reflection mode: {self._mode}. Returning original frame."
-            )
-            return frame.copy()
 
     def _apply_quad_symmetry(self, frame: np.ndarray) -> np.ndarray:
         """
@@ -1189,7 +1184,7 @@ class PTZ(EffectBase):
         )
 
     def _on_button_click(self, sender, app_data, user_data):
-        print(f"Toggle clicked: {user_data}, {app_data}, {sender}")
+        log.info(f"Toggle clicked: {user_data}, {app_data}, {sender}")
         # Perform action based on button click
         if enable_polar_transform == True:
             enable_polar_transform = False
