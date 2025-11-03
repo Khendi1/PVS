@@ -27,28 +27,41 @@ from gui_elements import ButtonsTable
 def parse_args():
     parser = argparse.ArgumentParser(description='Video Synthesizer initialization arguments')
     parser.add_argument(
+        '-o',
         '--osc', 
         type=int, 
         default=DEFAULT_NUM_OSC, 
         help='Number of general purpose oscillators')
     parser.add_argument(
+        '-l',
         '--log-level',
         default=DEFAULT_LOG_LEVEL,  
         choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'],
         help='Set the logging level (CRITICAL, ERROR, WARNING, INFO, DEBUG)'
     )
     parser.add_argument(
+        '-d',
+        '--devices',
+        default=DEFAULT_NUM_DEVICES,
+        choices=[i for i in range(1,11)],
+        type=int,
+        help='Number of USB video capture devices to search for on boot. Will safely ignore a extra devices if not found'
+    )
+    parser.add_argument(
+        '-p',
         '--patch',
         default=DEFAULT_PATCH_INDEX,
         type=int,
         help='Initialize program with a saved patch. Defaults to using "saved_values.yaml", but can be changed'
     )
     parser.add_argument(
+        '-f',
         '--file',
         default= DEFAULT_SAVE_FILE,
         type=str,
         help='Use an alternate save file. Must still be located in the save directory'
     )
+    parser.print_help()
     return parser.parse_args()
 
 """ Global logging module configuration using """
@@ -62,7 +75,7 @@ def config_log(log_level):
     return log
 
 """ Main app setup and loop """
-def main(num_osc, log_level):
+def main(num_osc, log_level, devices):
     global effects
 
     log.info("Initializing video synthesizer... Press 'q' or 'ESC' to quit")
@@ -75,7 +88,7 @@ def main(num_osc, log_level):
     osc_bank = OscBank(params, num_osc)
 
     # Initialize video mixer, get a frame, create copies for feedback
-    mixer = Mixer(params)
+    mixer = Mixer(params, devices)
     dry_frame = mixer.get_frame()  
     wet_frame = dry_frame.copy()
     prev_frame = dry_frame.copy()
@@ -161,4 +174,4 @@ def main(num_osc, log_level):
 if __name__ == "__main__":
     args = parse_args()
     log = config_log(args.log_level)
-    main(args.osc, args.log_level)
+    main(args.osc, args.log_level, args.devices)

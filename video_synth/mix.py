@@ -50,7 +50,7 @@ class Mixer:
     """Mixer is used to init sources, get frames from each, and blend them"""
 
 
-    def __init__(self, params):
+    def __init__(self, params, num_devices):
 
         self.params = params
 
@@ -68,7 +68,7 @@ class Mixer:
         self.sources = {}   # dict for storing device/animation name and index
 
         # add valid cv2 video device indicies to source dict
-        self.cv2_max_devices = 10
+        self.cv2_max_devices = num_devices
         self.detect_devices(max_index=self.cv2_max_devices)
 
         # file source indicies begin at cv2_max_devices+1
@@ -171,9 +171,10 @@ class Mixer:
                         self.sources[f'{MixSources.DEVICE_1.name}_{index}'] = index
                         self.sources[f'{MixSources.DEVICE_2.name}_{index}'] = index
                     cap.release()
+                else:
+                    log.warning(f"Failed to find capture device at index {index}")
             except Exception as e:
                 pass
-
 
     def failback_camera(self):
         # TODO: implement a fallback camera source if the selected source fails, move to mixer class

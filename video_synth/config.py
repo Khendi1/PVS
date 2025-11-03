@@ -6,6 +6,7 @@ import logging
 # default argparse values
 DEFAULT_NUM_OSC = 5 
 DEFAULT_LOG_LEVEL = logging.INFO
+DEFAULT_NUM_DEVICES = 5
 DEFAULT_PATCH_INDEX = 0
 DEFAULT_SAVE_FILE = "saved_values.yaml"
 
