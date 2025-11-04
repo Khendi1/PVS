@@ -173,6 +173,7 @@ class ButtonsTable:
 
     def add_button(self, label, tag, default_val=False):
         self.buttons[tag] = Toggle(label=label, tag=tag, default_val=default_val)
+        return self.buttons[tag]
         
     def val(self, tag):
         if tag in self.buttons:
@@ -191,3 +192,4 @@ class ButtonsTable:
     
     def items(self):
         return self.buttons.items()
+    

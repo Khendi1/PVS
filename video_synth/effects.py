@@ -1451,15 +1451,19 @@ class Feedback(EffectBase):
 
         with dpg.collapsing_header(label=f"\tFeedback", tag="effects") as h:
             dpg.bind_item_theme(h, theme)
-            temporal_filter = TrackbarRow(
-                "Temporal Filter", self.params.get("temporal_filter"), default_font_id
+            TrackbarRow(
+                "Temporal Filter", 
+                self.params.get("temporal_filter"), 
+                default_font_id
             )
 
-            alpha = TrackbarRow(
-                "Feedback", self.alpha, default_font_id
+            TrackbarRow(
+                "Feedback", 
+                self.alpha, 
+                default_font_id
             )
 
-            luma = TrackbarRow(
+            TrackbarRow(
                 "Luma Feedback Threshold",
                 self.feedback_luma_threshold,
                 default_font_id,

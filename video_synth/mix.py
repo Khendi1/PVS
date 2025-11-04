@@ -10,7 +10,8 @@ from enum import IntEnum, Enum, auto
 from animations import *
 import os
 from pathlib import Path
-from gui_elements import TrackbarRow, RadioButtonRow
+from gui_elements import TrackbarRow, RadioButtonRow, Toggle
+from effects import LumaMode
 
 
 log = logging.getLogger(__name__)
@@ -50,7 +51,7 @@ class Mixer:
     """Mixer is used to init sources, get frames from each, and blend them"""
 
 
-    def __init__(self, params, num_devices):
+    def __init__(self, params, toggles, num_devices):
 
         self.params = params
 
@@ -124,7 +125,7 @@ class Mixer:
 
         # Luma keying threshold and selection mode
         self.luma_threshold = params.add("luma_threshold", 0, 255, 128)
-        self.luma_selection = params.add("luma_selection", 0, 1, 1)
+        self.luma_selection = params.add("luma_selection", 0, 1, 0)
 
         # Chroma key upper and lower HSV bounds
         self.upper_hue = params.add("upper_hue", 0, 179, 80)
@@ -136,6 +137,8 @@ class Mixer:
 
         # amount to blend the metaball frame wisth the input frame
         self.frame_blend = params.add("frame_blend", 0.0, 1.0, 0.5)
+
+        self.swap = toggles.add_button("Swap Frames", "swap", False)
 
         # a frame must next be obtained from the capture object or animation instance
         # before the mixer can blend or key between the two sources.
@@ -293,20 +296,34 @@ class Mixer:
         return cv2.addWeighted(frame1, alpha, frame2, 1 - alpha, 0)
 
 
-    def luma_key(self, frame1, frame2, threshold=128, white=True):
+    def luma_key(self, frame1, frame2):
         """Mixes two frames using luma keying (brightness threshold)."""
-        # Convert frame1 to grayscale to get luma
+
+        # The mask will determine which parts of the current frame are kept
         gray = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
-        mask = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)[1]
-        mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-        # Check if we want to key out white or black areas
-        if white:
-            # Where mask is white, use frame1; else use frame2
-            result = np.where(mask == 255, frame1, frame2)
-        else:
-            # Where mask is black, use frame1; else use frame2
-            result = np.where(mask == 0, frame2, frame1)
-        return result
+        mask = None
+        if self.luma_selection.value == LumaMode.BLACK.value:
+            # Use THRESH_BINARY_INV to key out DARK areas (Luma is low)
+            # Pixels with Luma < threshold become white (255) in the mask, meaning they are KEPT
+            ret, mask = cv2.threshold(
+                gray, self.luma_threshold.value, 255, cv2.THRESH_BINARY_INV
+            )
+        elif self.luma_selection.value == LumaMode.WHITE.value:
+            ret, mask = cv2.threshold(
+                gray, self.luma_threshold.value, 255, cv2.THRESH_BINARY
+            )
+
+        # Keep the keyed-out (bright) parts of the current frame
+        fg = cv2.bitwise_and(frame1, frame1, mask=mask)
+
+        # Invert the mask to find the areas *not* keyed out (the dark areas)
+        mask_inv = cv2.bitwise_not(mask)
+
+        # Use the inverted mask to "cut a hole" in the previous frame
+        bg = cv2.bitwise_and(frame2, frame2, mask=mask_inv)
+
+        # Combine the new foreground (fg) with the previous frame's background (bg)
+        return cv2.add(fg, bg)
 
 
     def chroma_key(self, frame1, frame2, lower=(0, 100, 0), upper=(80, 255, 80)):
@@ -354,14 +371,14 @@ class Mixer:
             height, width, _ = frame1.shape
             frame2 = cv2.resize(frame2, (width, height))
 
+            if self.swap.value == True:
+                temp = frame1.copy()
+                frame1 = frame2
+                frame2 = temp
+
             # For luma_key, you can pass threshold as needed
             if self.blend_mode.value == MixModes.LUMA_KEY.value:
-                return self.luma_key(
-                    frame1,
-                    frame2,
-                    threshold=self.luma_threshold.value,
-                    white=self.luma_selection.value,
-                )
+                return self.luma_key(frame1,frame2)
             elif self.blend_mode.value == MixModes.CHROMA_KEY.value:
                 lower = (
                     self.lower_hue.value,
@@ -381,6 +398,7 @@ class Mixer:
             log.error("Could not retrieve frames from both sources.")
             return None
 
+
     def get_hsv_for_cv2(self, dpg_rgba_value):
         """Converts Dear PyGui's [R, G, B, A] (0.0-1.0) to OpenCV's [H, S, V] (0-180, 0-255, 0-255)."""
         
@@ -392,6 +410,7 @@ class Mixer:
         h, s, v = hsv_image[0, 0]
 
         return h, s, v
+
 
     def color_picker_callback(self, sender, app_data, user_data):
         """Callback to read RGBA from the color picker and convert it to cv2-compatible HSV."""
@@ -445,6 +464,12 @@ class Mixer:
             # Get list of srcs without DEVICE_2, X_FILE_2
             sources = [src for src in self.sources.keys() if 'E_2' not in src]
             
+            dpg.add_button(
+                label=self.swap.label,
+                callback=self.swap.toggle,
+                parent="mixer",
+            )
+
             with dpg.group(horizontal=True):
                 dpg.add_text("Source 1")
                 dpg.add_combo(sources, default_value="DEVICE_1_0", tag="source_1", callback=self.select_source1_callback)
@@ -473,12 +498,14 @@ class Mixer:
 
                 dpg.add_button(label="File 2", user_data=dpg.last_container(), callback=lambda s, a, u: dpg.configure_item(u, show=True))
 
+
             RadioButtonRow(
                 "Blend Mode",
                 MixModes,
                 self.blend_mode,
                 None
             )
+
 
             frame_blend_slider = TrackbarRow(
                 "Alpha Blend",

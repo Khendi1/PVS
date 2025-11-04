@@ -88,7 +88,7 @@ def main(num_osc, log_level, devices):
     osc_bank = OscBank(params, num_osc)
 
     # Initialize video mixer, get a frame, create copies for feedback
-    mixer = Mixer(params, devices)
+    mixer = Mixer(params, toggles, devices)
     dry_frame = mixer.get_frame()  
     wet_frame = dry_frame.copy()
     prev_frame = dry_frame.copy()
