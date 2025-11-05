@@ -143,7 +143,7 @@ class EffectManager:
         self.reflector = Reflector(params, )                    
         self.sync = Sync(params) 
         self.warp = Warp(params, width, height)
-        self.glitch = Glitch(params)
+        self.glitch = Glitch(params, toggles)
         self.ptz = PTZ(params, width, height)
 
         self._all_services = [
@@ -241,6 +241,7 @@ class EffectManager:
 
             for method in self.all_methods:
                 frame = method(frame)
+                # log.debug(F"{str(method.__name__)}  ->  {type(frame).__name__}")
 
         return frame
 
@@ -710,10 +711,13 @@ class Sync(EffectBase):
         dpg.bind_item_font("sync", global_font_id)
 
 
+PERLIN_SCALE=1700
 class Warp(EffectBase):
 
     def __init__(self, params, image_width: int, image_height: int):
         self.params = params
+        self.width = image_width
+        self.height = image_height
         self.warp_type = params.add(
             "warp_type", WarpType.NONE.value, WarpType.WARP0.value, WarpType.NONE.value
         )
@@ -731,7 +735,6 @@ class Warp(EffectBase):
 
         self.t = 0
 
-    # TODO: implement
     def _generate_perlin_flow(self, t, amp_x, amp_y, freq_x, freq_y):
         fx = np.zeros((self.height, self.width), dtype=np.float32)
         fy = np.zeros((self.height, self.width), dtype=np.float32)
@@ -743,7 +746,6 @@ class Warp(EffectBase):
                 fy[y, x] = amp_y * pnoise2(nx + 1000, ny + 1000, base=int(t))
         return fx, fy
 
-    # TODO: implement
     def _generate_fractal_flow(
         self, t, amp_x, amp_y, freq_x, freq_y, octaves, gain, lacunarity
     ):
@@ -774,7 +776,6 @@ class Warp(EffectBase):
                 fy[y, x] = amp_y * noise_y
         return fx, fy
 
-    # TODO: implement
     def _polar_warp(self, frame, t, angle_amt, radius_amt, speed):
         cx, cy = self.width / 2, self.height / 2
         y, x = np.indices((self.height, self.width), dtype=np.float32)
@@ -784,8 +785,8 @@ class Warp(EffectBase):
         a = np.arctan2(dy, dx)
 
         # Modify radius and angle
-        r_mod = r + np.sin(a * 5 + t * speed * 2) * radius_amt
-        a_mod = a + np.cos(r * 0.02 + t * speed * 2) * (angle_amt * np.pi / 180)
+        r_mod = r + np.sin(a * 5 + t * speed) * radius_amt
+        a_mod = a + np.cos(r * 0.02 + t * speed) * (angle_amt * np.pi / 180)
 
         # Back to Cartesian
         map_x = (r_mod * np.cos(a_mod) + cx).astype(np.float32)
@@ -800,8 +801,8 @@ class Warp(EffectBase):
         )
 
     def _first_warp(self, frame: np.ndarray):
-        self.height, self.width = feedback_frame.shape[:2]
-        feedback_frame = cv2.resize(feedback_frame, (self.width, self.height))
+        self.height, self.width = frame.shape[:2]
+        # frame = cv2.resize(frame, (self.width, self.height))
 
         # Create meshgrid for warping effect
         x_indices, y_indices = np.meshgrid(
@@ -811,10 +812,10 @@ class Warp(EffectBase):
         # Calculate warped indices using sine function
         time = cv2.getTickCount() / cv2.getTickFrequency()
         x_warp = x_indices + self.x_size * np.sin(
-            y_indices / 20.0 + time * self.x_speed
+            y_indices / 20.0 + time * self.x_speed.value
         )
         y_warp = y_indices + self.y_size * np.sin(
-            x_indices / 20.0 + time * self.y_speed
+            x_indices / 20.0 + time * self.y_speed.value
         )
 
         # Bound indices within valid range
@@ -830,6 +831,7 @@ class Warp(EffectBase):
 
     # TODO: implement
     def warp(self, frame):
+        self.t += 0.1
         if self.warp_type.value == WarpType.NONE:  # No warp
             return frame
         elif self.warp_type.value == WarpType.SINE:  # Sine warp
@@ -846,7 +848,7 @@ class Warp(EffectBase):
                 borderMode=cv2.BORDER_REFLECT,
             )
 
-        elif self.warp_type == WarpType.FRACTAL:
+        elif self.warp_type.value == WarpType.FRACTAL:
             if self.warp_use_fractal.value > 0: #TODO: CHANGE TO TOGGLE
                 fx, fy = self._generate_fractal_flow(
                     self.t, self.x_size.value, self.y_size.value, self.x_speed.value, self.y_speed.value, octaves, gain, lacunarity
@@ -866,32 +868,39 @@ class Warp(EffectBase):
                 borderMode=cv2.BORDER_REFLECT,
             )
 
-        elif self.warp_type == WarpType.RADIAL:
-            return self.polar_warp(frame, self.t, self.warp_angle_amt, self.self.radius_amt, self.warp_speed)
+        elif self.warp_type.value == WarpType.RADIAL:
+            return self._polar_warp(frame, 
+                                    self.t, 
+                                    self.warp_angle_amt.value, 
+                                    self.warp_radius_amt.value, 
+                                    self.warp_speed.value)
 
-        elif self.warp_type == WarpType.PERLIN:  # Perlin warp
-            # Fractal Perlin warp
+        elif self.warp_type.value == WarpType.PERLIN:  # Perlin warp
             fx, fy = self._generate_perlin_flow(self.t, self.x_size.value, self.y_size.value, self.x_speed.value, self.y_speed.value)
             map_x, map_y = np.meshgrid(np.arange(self.width), np.arange(self.height))
             map_x = (map_x + fx).astype(np.float32)
             map_y = (map_y + fy).astype(np.float32)
-            return cv2.remap(
+            f = cv2.remap(
                 frame,
                 map_x,
                 map_y,
                 interpolation=cv2.INTER_LINEAR,
                 borderMode=cv2.BORDER_REFLECT,
             )
-        elif self.warp_type == WarpType.WARP0:
+            return f
+        elif self.warp_type.value == WarpType.WARP0:
             return self._first_warp(frame)
+        else:
+            return frame
 
     def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
 
         with dpg.collapsing_header(label=f"\tWarp", tag="warp") as h:
             dpg.bind_item_theme(h, theme)
 
-            warp_type = TrackbarRow(
+            warp_type = RadioButtonRow(
                 "Warp Type",
+                WarpType,
                 self.params.get("warp_type"),
                 default_font_id,
             )
@@ -1786,7 +1795,7 @@ class ImageNoiser(EffectBase):
 
 class Glitch(EffectBase):   
 
-    def __init__(self, params):
+    def __init__(self, params, toggles):
         self.params = params
         self.glitch_phase_start_frame = 0
         self.glitch_cycle_start_frame = 0
@@ -1801,19 +1810,19 @@ class Glitch(EffectBase):
         self.glitch_phase_start_frame_color = 0
         self.glitch_phase_start_frame_block = 0
 
-        self.enable_pixel_shift = Toggle(
+        self.enable_pixel_shift = toggles.add(
             "Enable Pixel Shift Glitch", "enable_pixel_shift", False
         )
-        self.enable_color_split = Toggle(
+        self.enable_color_split = toggles.add(
             "Enable Color Split Glitch", "enable_color_split", False
         )
-        self.enable_block_corruption = Toggle(
+        self.enable_block_corruption = toggles.add(
             "Enable Block Corruption Glitch", "enable_block_corruption", False
         )
-        self.enable_random_rectangles = Toggle(
+        self.enable_random_rectangles = toggles.add(
             "Enable Random Rectangles Glitch", "enable_random_rectangles", False
         )
-        self.enable_horizontal_scroll_freeze = Toggle(
+        self.enable_horizontal_scroll_freeze = toggles.add(
             "Enable Horizontal Scroll Freeze Glitch",
             "enable_horizontal_scroll_freeze",
             False,

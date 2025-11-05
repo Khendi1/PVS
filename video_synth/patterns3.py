@@ -3,7 +3,7 @@ import cv2
 from enum import Enum
 import noise 
 from generators import Oscillator
-from gui_elements import TrackbarRow
+from gui_elements import TrackbarRow, RadioButtonRow
 import dearpygui.dearpygui as dpg
 import logging
 
@@ -61,12 +61,10 @@ class Patterns:
         self.X, self.Y = np.meshgrid(self.x_coords, self.y_coords)
 
         # Define pattern-specific parameters (using the global params_table)
-        self._pattern_type = params.add("pattern_type", PatternType.NONE.value, len(PatternType)-1, 0) 
-        self.prev_pattern_type = self._pattern_type.value 
+        self.pattern_type = params.add("pattern_type", PatternType.NONE.value, len(PatternType)-1, 0) 
+        self.prev_pattern_type = self.pattern_type.value 
         self.pattern_speed = params.add("pattern_speed", 0.1, 10.0, 1.0)
         
-        self.use_fractal = params.add("pattern_use_fractal", 0, 1, 0) # Toggle for fractal noise
-
         self.octaves = params.add("pattern_octaves", 1, 8, 4) # Number of octaves for fractal noise
         self.gain = params.add("pattern_gain", 0.0, 1.0, 0.2) # Gain for fractal noise
         self.lacunarity = params.add("pattern_lacunarity", 1.0, 4.0, 2.0) # Lacunarity for fractal noise
@@ -104,16 +102,16 @@ class Patterns:
         self.x_hue = params.add("x_hue", 0.0, 1.0, 0.5, family="XY Bars") # Hue for X bars
         self.y_hue = params.add("y_hue", 0.0, 1.0, 0.5, family="XY Bars") # Hue for Y bars
 
-        params.add("pperlin_scale_x", 0.001, 0.05, 0.005, family="Perlin Blobs")
-        params.add("pperlin_scale_y", 0.001, 0.05, 0.005, family="Perlin Blobs")
+        self.x_scale = params.add("pperlin_scale_x", 0.001, 0.05, 0.005, family="Perlin Blobs")
+        self.y_scale = params.add("pperlin_scale_y", 0.001, 0.05, 0.005, family="Perlin Blobs")
 
-        params.add("pperlin_octaves", 1, 10, 6, family="Perlin Blobs")
-        params.add("pperlin_persistence", 0.1, 1.0, 0.5, family="Perlin Blobs")
-        params.add("pperlin_lacunarity", 1.0, 4.0, 2.0, family="Perlin Blobs")
-        params.add("pperlin_time_speed", 0.01, 1.0, 0.1, family="Perlin Blobs")
+        self.octaves = params.add("pperlin_octaves", 1, 10, 6, family="Perlin Blobs")
+        self.persistence = params.add("pperlin_persistence", 0.1, 1.0, 0.5, family="Perlin Blobs")
+        self.lacunarity= params.add("pperlin_lacunarity", 1.0, 4.0, 2.0, family="Perlin Blobs")
+        self.time_speed=params.add("pperlin_time_speed", 0.01, 1.0, 0.1, family="Perlin Blobs")
 
-        params.add("pfractal_amplitude", 0.5, 5.0, 1.5, family="Fractal Sine")
-        params.add("pfractal_octaves", 1, 8, 4, family="Fractal Sine")
+        self.famp=params.add("pfractal_amplitude", 0.5, 5.0, 1.5, family="Fractal Sine")
+        self.foct=params.add("pfractal_octaves", 1, 8, 4, family="Fractal Sine")
 
         # Fractal Sine parameters
         self.x_perturb = params.add("x_perturb", 0, 50, 25.0, family="Sine")
@@ -126,7 +124,7 @@ class Patterns:
 
         self.posc_bank = [] # List to hold Oscillator instances
         for i in range(4):
-            self.posc_bank.append(Oscillator(params, name=f"posc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=0)) 
+            self.posc_bank.append(Oscillator(params, name=f"posc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=1)) 
 
 
         self.prev = None
@@ -159,37 +157,37 @@ class Patterns:
         return tuple(norm_vals)
 
     def _set_osc_params(self):
-        if self._pattern_type.value != self.prev_pattern_type:
-            log.info(f"Pattern type changed from {self.prev_pattern_type} to {self._pattern_type.value}.")
-            self.prev_pattern_type = self._pattern_type.value
-            if self._pattern_type.value == PatternType.BARS.value:
+        if self.pattern_type.value != self.prev_pattern_type:
+            log.info(f"Pattern type changed from {self.prev_pattern_type} to {self.pattern_type.value}.")
+            self.prev_pattern_type = self.pattern_type.value
+            if self.pattern_type.value == PatternType.BARS.value:
                 # log.info("PatternType is set to BARS; Linking bar frequency to osc 0.")
                 self.posc_bank[0].link_param(self.bar_x_offset)
-            elif self._pattern_type.value == PatternType.WAVES.value:
+            elif self.pattern_type.value == PatternType.WAVES.value:
                 # log.info("PatternType is set to WAVES; Linking wave frequencies to osc 0, 1.")
                 self.posc_bank[0].link_param(self.wave_freq_x)
                 self.posc_bank[1].link_param(self.wave_freq_y)
-            elif self._pattern_type.value == PatternType.CHECKERS.value:
+            elif self.pattern_type.value == PatternType.CHECKERS.value:
                 # log.info("PatternType is set to CHECKERS; Linking grid size to osc 0.")
                 self.posc_bank[0].link_param(self.grid_size)
                 self.posc_bank[1].link_param(self.color_shift)
                 self.posc_bank[2].link_param(self.color_blend)
-            elif self._pattern_type.value == PatternType.RADIAL.value:
+            elif self.pattern_type.value == PatternType.RADIAL.value:
                 pass
                 # log.info("PatternType is set to RADIAL; Linking radial parameters to osc 0.")
                 # self.posc_bank[0].link_param(self.radial_freq)
                 # self.posc_bank[1].link_param(self.angular_freq)
                 # self.posc_bank[2].link_param(self.radial_mod)
                 # self.posc_bank[3].link_param(self.angle_mod)
-            elif self._pattern_type.value == PatternType.PERLIN_BLOBS.value:
+            elif self.pattern_type.value == PatternType.PERLIN_BLOBS.value:
                 pass
                 # log.info("PatternType is set to PERLIN BLOBS; Linking Perlin noise parameters to oscillators.")
                 # Link Perlin noise parameters to oscillators if needed
-            elif self._pattern_type.value == PatternType.FRACTAL_SINE.value:
+            elif self.pattern_type.value == PatternType.FRACTAL_SINE.value:
                 # log.info("PatternType is set to FRACTAL SINE; Linking fractal sine parameters to oscillators.")
                 self.posc_bank[0].link_param(self.bar_x_offset)
                 self.posc_bank[1].link_param(self.bar_y_offset)
-            elif self._pattern_type.value == PatternType.XY_BARS.value:
+            elif self.pattern_type.value == PatternType.XY_BARS.value:
                 # log.info("PatternType is set to XY_BARS; Linking XY bar parameters to oscillators.")
                 self.posc_bank[0].link_param(self.bar_x_offset)
                 self.posc_bank[1].link_param(self.bar_y_offset)
@@ -210,17 +208,17 @@ class Patterns:
         posc_vals = [osc.get_next_value() for osc in self.posc_bank if osc.linked_param is not None]
 
         # Dispatch to the appropriate pattern generation function
-        if self.pattern_type == PatternType.NONE.value:
+        if self.pattern_type.value == PatternType.NONE.value:
             pass # Returns black image
-        elif self.pattern_type == PatternType.BARS.value:
+        elif self.pattern_type.value == PatternType.BARS.value:
             pattern = self._generate_bars(pattern, self.X, 0)
-        elif self.pattern_type == PatternType.WAVES.value:
+        elif self.pattern_type.value == PatternType.WAVES.value:
             pattern = self._generate_waves(pattern, self.X, self.Y)
-        elif self.pattern_type == PatternType.CHECKERS.value:
+        elif self.pattern_type.value == PatternType.CHECKERS.value:
             pattern = self._generate_checkers(pattern, self.X, self.Y)
-        elif self.pattern_type == PatternType.RADIAL.value:
+        elif self.pattern_type.value == PatternType.RADIAL.value:
             pattern = self._generate_radial(pattern, self.X, self.Y)
-        elif self.pattern_type == PatternType.PERLIN_BLOBS.value:
+        elif self.pattern_type.value == PatternType.PERLIN_BLOBS.value:
             pass
             # pattern = self._generate_perlin_blobs(norm_osc_vals, frame_time)
         elif self.pattern_type == PatternType.FRACTAL_SINE.value:
@@ -229,34 +227,13 @@ class Patterns:
         elif self.pattern_type == PatternType.XY_BARS.value:
             pattern = self._generate_xy_bars(pattern, self.X, self.Y)
         else:
-            log.warning(f"Unknown pattern type {self._pattern_type}. Returning black frame.")
+            log.warning(f"Unknown pattern type {self.pattern_type.value}. Returning black frame.")
 
         # return pattern
         alpha = 0.5 
         blended_frame = cv2.addWeighted(frame, 1 - alpha, pattern, alpha, 0)
         return blended_frame
 
-
-    @property
-    def pattern_type(self) -> int:
-        """Get the current pattern type."""
-        return self._pattern_type.value
-    
-
-    @pattern_type.setter
-    def pattern_type(self, value):
-        """
-        Setter for pattern_type to ensure it is a valid PatternType.
-        """
-        if isinstance(value, PatternType):
-            self._pattern_type.value = value
-        elif isinstance(value, int) and 0 <= value < len(PatternType):
-            self._pattern_type.value = PatternType(value).value
-        else:
-            pass
-            # raise ValueError(f"Invalid pattern type: {value}. Must be an instance of PatternType or a valid integer index.")
-
-    # --- Pattern Generation Methods ---
 
     def _generate_bars(self, pattern: np.ndarray, axis: np.ndarray, osc_idx) -> np.ndarray:
 
@@ -450,14 +427,14 @@ class Patterns:
         # osc1_norm: modulates Y spatial scale
         # osc2_norm: modulates persistence and time evolution speed
 
-        scale_x = params.val("pperlin_scale_x") + norm_osc_vals[0] * 0.02
-        scale_y = params.val("pperlin_scale_y") + norm_osc_vals[1] * 0.02
-        octaves = int(params.val("pperlin_octaves"))
-        persistence = params.val("pperlin_persistence") + norm_osc_vals[2] * 0.2
-        lacunarity = params.val("pperlin_lacunarity")
+        scale_x = self.x_scale + norm_osc_vals[0] * 0.02
+        scale_y = self.y_scale + norm_osc_vals[1] * 0.02
+        octaves = int(self.octaves.value)
+        persistence = self.persistence.value + norm_osc_vals[2] * 0.2
+        lacunarity = self.lacunarity.value
         
         # Use time as a Z-axis for 3D Perlin noise to ensure continuous evolution
-        time_speed = params.val("pperlin_time_speed") + norm_osc_vals[2] * 0.2
+        time_speed = self.time_speed.value + norm_osc_vals[2] * 0.2
         time_factor = frame_time * time_speed
 
         # Pre-calculate noise for the entire grid for efficiency
@@ -580,89 +557,75 @@ class Patterns:
 
     def create_gui_panel(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tPattern Generator", tag="pattern_generator"):
-            pattern_type_slider = TrackbarRow(
+            pattern_type_slider = RadioButtonRow(
                 "Pattern Type",
-                params.get("pattern_type"),
+                PatternType,
+                self.pattern_type,
                 default_font_id)
             
             pattern_mod = TrackbarRow(
                 "Pattern Mod",  
-                params.get("pattern_mod"),
+                self.mod,
                 default_font_id)
             
             pattern_r = TrackbarRow(
                 "Pattern R",
-                params.get("pattern_r"),
+                self.r,
                 default_font_id)
             
             pattern_g = TrackbarRow(
                 "Pattern G",
-                params.get("pattern_g"),
+                self.g,
                 default_font_id)
             
             pattern_b = TrackbarRow(
                 "Pattern B",
-                params.get("pattern_b"),
+                self.b,
                 default_font_id)
                   
             pattern_bar_x_freq_slider = TrackbarRow(
                 "Bar x Density",
-                params.get("bar_x_freq"),
+                self.bar_x_freq,
                 default_font_id)
             
             pattern_bar_y_freq_slider = TrackbarRow(
                 "Bar y Density",
-                params.get("bar_y_freq"),
+                self.bar_y_freq,
                 default_font_id)
             
-            # speed_slider = TrackbarRow(
-            #     "Speed",
-            #     params.get("pattern_speed"),
-            #     default_font_id)
+            speed_slider = TrackbarRow(
+                "Speed",
+                self.pattern_speed,
+                default_font_id)
 
             pattern_distance = TrackbarRow(
                 "Pattern Distance",
-                params.get("pattern_distance"),
+                self.pattern_distance,
                 default_font_id)
 
             angle_amt_slider = TrackbarRow(
                 "Radial Frequency",
-                params.get("pattern_radial_freq"),
+                self.radial_freq,
                 default_font_id)
             
             radius_amt_slider = TrackbarRow(
                 "Angular Frequency",
-                params.get("pattern_angular_freq"),
+                self.angular_freq,
                 default_font_id)
             
             radial_mod_slider = TrackbarRow(
                 "Radial Mod",
-                params.get("pattern_radial_mod"),
+                self.radial_mod,
                 default_font_id)
             
             angle_mod_slider = TrackbarRow(
                 "Angle Mode",
-                params.get("pattern_angle_mod"),
+                self.angle_mod,
                 default_font_id)
 
             # use_fractal_slider = TrackbarRow(
             #     "Use Fractal",
-            #     params.get("pattern_use_fractal"),
-            #     default_font_id)
-
-            # octaves_slider = TrackbarRow(
-            #     "Octaves",
-            #     params.get("pattern_octaves"),
-            #     default_font_id)
-
-            # gain_slider = TrackbarRow(
-            #     "Gain",
-            #     params.get("pattern_gain"),
-            #     default_font_id)
-
-            # lacunarity_slider = TrackbarRow(
-            #     "Lacunarity",
-            #     params.get("pattern_lacunarity"),
+            #     self.use_fractal,
             #     default_font_id)
             
             posc_freq_sliders = []
@@ -674,27 +637,27 @@ class Patterns:
                 with dpg.collapsing_header(label=f"\tpOscillator {i}", tag=f"posc{i}"):
                     posc_shape_sliders.append(TrackbarRow(
                         f"pOsc {i} Shape", 
-                        params.get(f"posc{i}_shape"), 
+                        self.params.get(f"posc{i}_shape"), 
                         default_font_id))
                     
                     posc_freq_sliders.append(TrackbarRow(
                         f"pOsc {i} Freq", 
-                        params.get(f"posc{i}_frequency"), 
+                        self.params.get(f"posc{i}_frequency"), 
                         default_font_id))
                     
                     posc_amp_sliders.append(TrackbarRow(
                         f"pOsc {i} Amp", 
-                        params.get(f"posc{i}_amplitude"), 
+                        self.params.get(f"posc{i}_amplitude"), 
                         default_font_id))
                     
                     posc_phase_sliders.append(TrackbarRow(
                         f"pOsc {i} Phase", 
-                        params.get(f"posc{i}_phase"), 
+                        self.params.get(f"posc{i}_phase"), 
                         default_font_id))
                     
                     posc_seed_sliders.append(TrackbarRow(
                         f"pOsc {i} Seed", 
-                        params.get(f"posc{i}_seed"), 
+                        self.params.get(f"posc{i}_seed"), 
                         default_font_id))
                     
                 dpg.bind_item_font(f"posc{i}", global_font_id)

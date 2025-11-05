@@ -1,6 +1,20 @@
 mixer:
-- button to swap source1 to source2
 - load image
 - loop video automatically
-- luma key mode radio buttons (select white or black)
+
+warp:
+- test all modes
+- tune params
+
+metaballs:
+- hue
+- skew
+- test speed
+
+moire:
+- parameterize
+
+sequencer gui panel:
+- ???
+
 

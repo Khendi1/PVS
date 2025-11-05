@@ -158,7 +158,7 @@ class Oscillator:
             else:
                 raise ValueError(f"Invalid shape value. Must be 0 (sine), 1 (square), 2 (triangle), or 3 (sawtooth). got shape={shape}")
 
-            if self.linked_param is not None:
+            if self.linked_param is not None and sample is not None:
                 if shape == 5:
                     # TODO: handle perlin noise mapping using the map_value method
                     mapped_sample = self._scale_value(self.linked_param, sample, in_min=-1.0, in_max=1.0) * self.amplitude.value
@@ -169,7 +169,7 @@ class Oscillator:
                     mapped_sample = map_value(sample, self.param_min, self.param_max, self.linked_param.min, self.linked_param.max)
         
                 self.linked_param.value = mapped_sample
-                log.debug(f'{sample} mapped to {mapped_sample} for linked param {self.linked_param.name}')
+                # log.debug(f'{sample} mapped to {mapped_sample} for linked param {self.linked_param.name}')
             yield sample
             t += 1 / self.sample_rate  # Increment time by sample period 
         

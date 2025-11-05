@@ -138,7 +138,7 @@ class Mixer:
         # amount to blend the metaball frame wisth the input frame
         self.frame_blend = params.add("frame_blend", 0.0, 1.0, 0.5)
 
-        self.swap = toggles.add_button("Swap Frames", "swap", False)
+        self.swap = toggles.add("Swap Frames", "swap", False)
 
         # a frame must next be obtained from the capture object or animation instance
         # before the mixer can blend or key between the two sources.

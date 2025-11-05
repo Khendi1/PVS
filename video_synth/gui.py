@@ -200,6 +200,7 @@ class Interface:
         effects.noise.create_gui_panel(default_font_id, global_font_id,effects_theme)
         effects.shapes.create_gui_panel(default_font_id, global_font_id,effects_theme)
         effects.warp.create_gui_panel(default_font_id, global_font_id,effects_theme)
+        effects.patterns.create_gui_panel(default_font_id, global_font_id)
         # self.perlin_generator_sliders(default_font_id, global_font_id)
         # self.lissajous_sliders(default_font_id, global_font_id)
         

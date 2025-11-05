@@ -171,7 +171,7 @@ class ButtonsTable:
         else:
             raise TypeError("Key must be a string or an integer")
 
-    def add_button(self, label, tag, default_val=False):
+    def add(self, label, tag, default_val=False):
         self.buttons[tag] = Toggle(label=label, tag=tag, default_val=default_val)
         return self.buttons[tag]
         
