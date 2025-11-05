@@ -3,7 +3,6 @@ mixer:
 - loop video automatically
 
 warp:
-- test all modes
 - tune params
 
 metaballs:

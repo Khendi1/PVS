@@ -170,8 +170,9 @@ class Oscillator:
         
                 self.linked_param.value = mapped_sample
                 # log.debug(f'{sample} mapped to {mapped_sample} for linked param {self.linked_param.name}')
-            yield sample
+            
             t += 1 / self.sample_rate  # Increment time by sample period 
+            yield sample
         
     def link_param(self, param: Param):
         """

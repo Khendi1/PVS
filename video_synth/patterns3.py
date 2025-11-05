@@ -70,8 +70,8 @@ class Patterns:
         self.lacunarity = params.add("pattern_lacunarity", 1.0, 4.0, 2.0) # Lacunarity for fractal noise
 
         # controls density of bars
-        self.bar_x_freq = params.add("bar_x_freq", 0.01, 2, 0.1, family="Bars")
-        self.bar_y_freq = params.add("bar_y_freq", 0.01, 2, 0.1, family="Bars")
+        self.bar_x_freq = params.add("bar_x_freq", 0.01, 1, 0.1, family="Bars")
+        self.bar_y_freq = params.add("bar_y_freq", 0.01, 1, 0.1, family="Bars")
         # controls bar scrolling speed
         self.bar_x_offset = params.add("bar_x_offset", -100, 100, 2.0, family="Bars") # Offset for X bars
         self.bar_y_offset = params.add("bar_y_offset", -10, 10, 1.0, family="Bars") # Offset for Y bars
@@ -124,8 +124,10 @@ class Patterns:
 
         self.posc_bank = [] # List to hold Oscillator instances
         for i in range(4):
-            self.posc_bank.append(Oscillator(params, name=f"posc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=1)) 
-
+            self.posc_bank.append(Oscillator(params, name=f"posc{i}", frequency=0.5, 
+                                             amplitude=1.0, phase=0.0, shape=1,
+                                             max_amplitude=self.width, min_amplitude=-self.width
+                                             )) 
 
         self.prev = None
 
@@ -243,7 +245,7 @@ class Patterns:
         """
         
         density = self.bar_x_freq.value
-        offset = self.bar_x_offset.value / 10 # linked to posc 0
+        offset = self.bar_x_offset.value  # linked to posc 0
         mod = self.mod.value # gradient modulation for stripy bar patterns
         bar_mod = (np.sin(axis * density + offset) + 1) / mod
 
