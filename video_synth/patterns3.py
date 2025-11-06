@@ -39,7 +39,7 @@ class PatternType(Enum):
 class Patterns:
     """
     Generates various animated patterns using OpenCV and modulates them
-    with a bank of Oscillators.
+    with its own bank of Oscillators.
     """
     def __init__(self, params, width, height):
         """
@@ -73,8 +73,8 @@ class Patterns:
         self.lacunarity = params.add("pattern_lacunarity", 1.0, 4.0, 2.0) # Lacunarity for fractal noise
 
         # controls density of bars
-        self.bar_x_freq = params.add("bar_x_freq", 0.01, 1, 0.1, family="Bars")
-        self.bar_y_freq = params.add("bar_y_freq", 0.01, 1, 0.1, family="Bars")
+        self.bar_x_freq = params.add("bar_x_freq", 0.01, 0.75, 0.01, family="Bars")
+        self.bar_y_freq = params.add("bar_y_freq", 0.01, 0.75, 0.01, family="Bars")
         # controls bar scrolling speed
         self.bar_x_offset = params.add("bar_x_offset", -100, 100, 2.0, family="Bars") # Offset for X bars
         self.bar_y_offset = params.add("bar_y_offset", -10, 10, 1.0, family="Bars") # Offset for Y bars
@@ -170,10 +170,13 @@ class Patterns:
             if self.pattern_type.value == PatternType.BARS.value:
                 # log.info("PatternType is set to BARS; Linking bar frequency to osc 0.")
                 self.posc_bank[0].link_param(self.bar_x_offset)
+                self.posc_bank[1].link_param(self.rotation)
+                self.posc_bank[2].link_param(self.bar_x_freq)
             elif self.pattern_type.value == PatternType.WAVES.value:
                 # log.info("PatternType is set to WAVES; Linking wave frequencies to osc 0, 1.")
                 self.posc_bank[0].link_param(self.wave_freq_x)
                 self.posc_bank[1].link_param(self.wave_freq_y)
+                self.posc_bank[2].link_param(self.rotation)
             elif self.pattern_type.value == PatternType.CHECKERS.value:
                 # log.info("PatternType is set to CHECKERS; Linking grid size to osc 0.")
                 self.posc_bank[0].link_param(self.grid_size)
@@ -259,8 +262,8 @@ class Patterns:
 
         # Create normalized X and Y coordinate grids (e.g., from -1 to 1 or 0 to 1)
         # This example uses normalized coordinates from 0 to 1, then scales/centers them
-        x = np.linspace(0, 1, width)
-        y = np.linspace(0, 1, height)
+        x = np.linspace(-1, 1, width)
+        y = np.linspace(-1, 1, height)
         xx, yy = np.meshgrid(x, y)
         
         # The rotated coordinate (x', y') is calculated from the original (x, y)
@@ -275,29 +278,6 @@ class Patterns:
         # color modulation: clamp bar_mod to avoid overflow errors
         bar_mod = (np.sin(rotated_axis * density * width + offset) + 1) / mod
         bar_mod = np.clip(bar_mod, 0, 1)
-
-        # Apply colors based on modulated brightness and other oscillators
-        # BGR format for OpenCV
-        blue_channel = (bar_mod * 255 * self.b.value / 255).astype(np.uint8)
-        green_channel = (bar_mod * 255 * self.g.value / 255).astype(np.uint8)
-        red_channel = (bar_mod * 255 * self.r.value / 255).astype(np.uint8)
-
-        pattern[:, :, 0] = blue_channel
-        pattern[:, :, 1] = green_channel
-        pattern[:, :, 2] = red_channel
-        return pattern
-
-    def _generate_bars1(self, pattern: np.ndarray, axis: np.ndarray, osc_idx) -> np.ndarray:
-
-        """
-        Generates vertical bars that shift color and position based on oscillator values.
-        Includes modes for growing/spacing and fixed scrolling.
-        """
-        
-        density = self.bar_x_freq.value
-        offset = self.bar_x_offset.value  # linked to posc 0
-        mod = self.mod.value # gradient modulation for stripy bar patterns
-        bar_mod = (np.sin(axis * density + offset) + 1) / mod
 
         # Apply colors based on modulated brightness and other oscillators
         # BGR format for OpenCV

@@ -142,7 +142,6 @@ class Oscillator:
                 sample *= direction
             elif shape == 5:  # Perlin noise             
                 
-                # noise_input_x = self._time / 10.0 # Adjust divisor for desired speed/smoothness
                 noise_input_x = (t * self.frequency.value) # % self.noise_repeat
 
                 sample = noise.pnoise1(
@@ -158,7 +157,7 @@ class Oscillator:
             else:
                 raise ValueError(f"Invalid shape value. Must be 0 (sine), 1 (square), 2 (triangle), or 3 (sawtooth). got shape={shape}")
 
-            if self.linked_param is not None and sample is not None:
+            if self.linked_param is not None:
                 if shape == 5:
                     # TODO: handle perlin noise mapping using the map_value method
                     mapped_sample = self._scale_value(self.linked_param, sample, in_min=-1.0, in_max=1.0) * self.amplitude.value
