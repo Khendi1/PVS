@@ -6,6 +6,7 @@ from generators import Oscillator
 from gui_elements import TrackbarRow, RadioButtonRow
 import dearpygui.dearpygui as dpg
 import logging
+import math
 
 posc_bank = []  
 
@@ -64,7 +65,9 @@ class Patterns:
         self.pattern_type = params.add("pattern_type", PatternType.NONE.value, len(PatternType)-1, 0) 
         self.prev_pattern_type = self.pattern_type.value 
         self.pattern_speed = params.add("pattern_speed", 0.1, 10.0, 1.0)
-        
+        self.pattern_alpha = params.add("pattern_alpha", 0.0, 1.0, 0.5)
+
+
         self.octaves = params.add("pattern_octaves", 1, 8, 4) # Number of octaves for fractal noise
         self.gain = params.add("pattern_gain", 0.0, 1.0, 0.2) # Gain for fractal noise
         self.lacunarity = params.add("pattern_lacunarity", 1.0, 4.0, 2.0) # Lacunarity for fractal noise
@@ -75,6 +78,8 @@ class Patterns:
         # controls bar scrolling speed
         self.bar_x_offset = params.add("bar_x_offset", -100, 100, 2.0, family="Bars") # Offset for X bars
         self.bar_y_offset = params.add("bar_y_offset", -10, 10, 1.0, family="Bars") # Offset for Y bars
+
+        self.rotation = params.add("pattern_rotation", -360, 360, 0.0)
 
         # creates interesting patterns
         self.mod = params.add("pattern_mod", 0.1, 2.0, 1.0, family="Bars") # Modulation factor for bar patterns
@@ -232,12 +237,57 @@ class Patterns:
             log.warning(f"Unknown pattern type {self.pattern_type.value}. Returning black frame.")
 
         # return pattern
-        alpha = 0.5 
+        alpha = self.pattern_alpha.value
         blended_frame = cv2.addWeighted(frame, 1 - alpha, pattern, alpha, 0)
         return blended_frame
 
+# Assuming self has a new control for the rotation angle
+# For example, self.bar_rotation_angle = Control(0.0, 0.0, 360.0) in degrees
 
     def _generate_bars(self, pattern: np.ndarray, axis: np.ndarray, osc_idx) -> np.ndarray:
+        """
+        Generates bars that can be rotated, shifting color and position based on oscillator values.
+        """
+        height, width, _ = pattern.shape
+
+        density = self.bar_x_freq.value
+        offset = self.bar_x_offset.value  # linked to posc 0 for scrolling
+        mod = self.mod.value # gradient modulation for stripy bar patterns
+        
+        rotation_deg = self.rotation.value
+        rotation_rad = math.radians(rotation_deg)
+
+        # Create normalized X and Y coordinate grids (e.g., from -1 to 1 or 0 to 1)
+        # This example uses normalized coordinates from 0 to 1, then scales/centers them
+        x = np.linspace(0, 1, width)
+        y = np.linspace(0, 1, height)
+        xx, yy = np.meshgrid(x, y)
+        
+        # The rotated coordinate (x', y') is calculated from the original (x, y)
+        # x' = x * cos(theta) - y * sin(theta)
+        # y' = x * sin(theta) + y * cos(theta)
+        
+        # Combine the new coordinates into a single axis for modulation
+        rotated_axis = (
+            xx * math.cos(rotation_rad) - yy * math.sin(rotation_rad)
+        )
+
+        # color modulation: clamp bar_mod to avoid overflow errors
+        bar_mod = (np.sin(rotated_axis * density * width + offset) + 1) / mod
+        bar_mod = np.clip(bar_mod, 0, 1)
+
+        # Apply colors based on modulated brightness and other oscillators
+        # BGR format for OpenCV
+        blue_channel = (bar_mod * 255 * self.b.value / 255).astype(np.uint8)
+        green_channel = (bar_mod * 255 * self.g.value / 255).astype(np.uint8)
+        red_channel = (bar_mod * 255 * self.r.value / 255).astype(np.uint8)
+
+        pattern[:, :, 0] = blue_channel
+        pattern[:, :, 1] = green_channel
+        pattern[:, :, 2] = red_channel
+        return pattern
+
+    def _generate_bars1(self, pattern: np.ndarray, axis: np.ndarray, osc_idx) -> np.ndarray:
 
         """
         Generates vertical bars that shift color and position based on oscillator values.
@@ -556,7 +606,6 @@ class Patterns:
         pattern[:, :, 2] = red_channel # Red
         return pattern
     
-
     def create_gui_panel(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tPattern Generator", tag="pattern_generator"):
             pattern_type_slider = RadioButtonRow(
@@ -584,6 +633,12 @@ class Patterns:
                 "Pattern B",
                 self.b,
                 default_font_id)
+            
+            TrackbarRow(
+                "Alpha",
+                self.pattern_alpha,
+                default_font_id
+            )
                   
             pattern_bar_x_freq_slider = TrackbarRow(
                 "Bar x Density",
@@ -594,6 +649,12 @@ class Patterns:
                 "Bar y Density",
                 self.bar_y_freq,
                 default_font_id)
+            
+            TrackbarRow(
+                "Rotation",
+                self.rotation,
+                default_font_id
+            )
             
             speed_slider = TrackbarRow(
                 "Speed",

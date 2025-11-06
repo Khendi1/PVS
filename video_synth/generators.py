@@ -128,7 +128,7 @@ class Oscillator:
             arg = 2 * np.pi * freq * t + np.deg2rad(phase_offset)
 
             if shape == 0:  # null wave
-                pass
+                sample = 0
             elif shape == 1:  # sine wave
                 sample = amp * np.sin(arg) + seed
                 sample *= direction
