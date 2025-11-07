@@ -74,9 +74,55 @@ def config_log(log_level):
     log = logging.getLogger(__name__)
     return log
 
+
+""" Identifies midi controller ports from controller_names"""
+def identify_midi_ports(params, controller_names):
+    
+    # Mido uses a default backend (often python-rtmidi) which handles platform differences.    
+    controllers = []
+    ports_found = False
+    
+    try:
+        # List all available MIDI input ports. Ex: ["MIDI Mix 0", "SMC Mixer 1"]
+        input_ports = mido.get_input_names()
+        # Note that the controller_names list should follow a similar naming convention,
+        # with the port number omitted
+
+        if input_ports:
+            string = "\nFound MIDI Input Devices:"
+
+            # attempt to match found ports with known controller names
+            for i, port_name in enumerate(input_ports):
+                for name in controller_names:
+                    if name in port_name:
+                        found_controller = MidiControllerInterface(params, name=name, port_name=port_name)
+                        # add to list of controllers so threads can be gracefully stopped on exit
+                        controllers.append(found_controller)
+                        # build output string with formatting so we only have to log once
+                        string += f"\n\tInitialized midi controller: {name}"
+        
+            log.info(string)
+            ports_found = True
+        
+        # List all available MIDI output ports
+        output_ports = mido.get_output_names()
+        if output_ports:
+            string = "\nFound MIDI Output Devices:"
+            for i, name in enumerate(output_ports):
+                string += (f"\n\t[{i+1}] {name}")
+            ports_found = True
+            log.info(string)
+            
+    except Exception as e:
+        log.exception(f"\nAn unexpected error occurred during port scan: {e}")
+        return    
+    if not ports_found:
+        log.warning("No MIDI ports found by the operating system.")
+
+    return controllers
+
 """ Main app setup and loop """
-def main(num_osc, log_level, devices):
-    global effects
+def main(num_osc, devices, effects, controller_names):
 
     log.info("Initializing video synthesizer... Press 'q' or 'ESC' to quit")
 
@@ -100,9 +146,9 @@ def main(num_osc, log_level, devices):
     # Initialize effects classes with image dimensions
     effects.init(params, toggles, image_width, image_height)
 
-    # Automatically identify and initialize midi input controllers before creating the GUI
+    # Automatically identify and initialize midi controllers before creating the GUI
     # The midi controller must have an existing interface class, with its name appended to the names list
-    controllers = identify_midi_ports(params)
+    controllers = identify_midi_ports(params, controller_names)
 
     # Create control panel after initializing objects that will be used in the GUI
     gui = Interface(params, osc_bank, toggles)
@@ -153,7 +199,6 @@ def main(num_osc, log_level, devices):
             for c in controllers:
                 c.thread_stop = True
                 c.thread.join(timeout=5)
-            # for c in controllers:     
                 if c.thread.is_alive():
                     log.warning("MIDI thread did not terminate gracefully. Forcing exit.")
                 else:
@@ -172,6 +217,7 @@ def main(num_osc, log_level, devices):
         log.info("Goodbye!")
 
 if __name__ == "__main__":
+    global effects, CONTROLLER_NAMES
     args = parse_args()
     log = config_log(args.log_level)
-    main(args.osc, args.log_level, args.devices)
+    main(args.osc, args.devices, effects, CONTROLLER_NAMES)

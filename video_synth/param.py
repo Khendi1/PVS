@@ -129,7 +129,7 @@ class Param:
         
         # Initialize the internal _value attribute using the setter
         # This ensures initial default_val is clamped and type-casted correctly
-        self._value = None # Placeholder for the internal value
+        self._value = None # Placeholder for the private/internal value
         self.value = default_val # Assigning to 'value' calls the setter
 
     @property
@@ -147,7 +147,7 @@ class Param:
         Assigning to `param_instance.value = new_val` will call this method.
         It handles clamping, type casting, and specific logic for certain parameters.
         """
-        # 1. Clamp the new_value within min and max
+        # Clamp the new_value within min and max
         if new_value < self.min:
             clamped_value = self.min
         elif new_value > self.max:
@@ -168,6 +168,10 @@ class Param:
         # Ensures blur kernel size is odd and at least 1
         if self.name == "blur_kernel_size":
             self._value = max(1, int(self._value) | 1) # Bitwise OR with 1 ensures it's odd
+
+    def __repr__(self):
+        """"""
+        return f"Param(name={self.name}, min={self.min}, max={self.max}, default_val={self.default_val}, family=None"
 
     def __str__(self):
         """String representation of the Param object."""
@@ -204,7 +208,7 @@ class Param:
         elif isinstance(other, (int, float)):
             return self.value * other
         else:
-            raise TypeError("Unsupported type for multiplication")
+            raise TypeError(f"Unsupported type '{type(other)}' for multiplication")
     
     def __truediv__(self, other):
         if isinstance(other, Param):
@@ -251,14 +255,6 @@ class Param:
             # For other types (e.g., bool), you might need specific randomization logic
             pass
         return self.value
-    
-    # Retain val() for backward compatibility. It now calls the property getter.
-    def val(self):
-        """
-        Returns the current value of the parameter. This method is retained for backward compatibility.
-        It now internally calls the `value` property's getter.
-        """
-        return self.value # This accesses the @property getter
     
     def min_max(self):
         """Returns a tuple containing the minimum and maximum allowed values."""

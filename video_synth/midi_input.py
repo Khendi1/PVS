@@ -10,6 +10,10 @@ log = logging.getLogger(__name__)
 MIN = 0
 MAX = 127
 
+#NOTE: any new midi controllers must expose a class-level name attribute and append to this list
+CONTROLLER_NAMES = []
+
+
 class MidiProcessor:
     """
     A class to handle the processing of MIDI messages,
@@ -156,6 +160,7 @@ class SMC_Mixer(ControllerBase):
 
     """
     name = "SMC-Mixer"
+    CONTROLLER_NAMES.append(name)
 
     def __init__(self, port_name, params):
         """
@@ -192,13 +197,13 @@ class SMC_Mixer(ControllerBase):
             value (int): The value of the MIDI control message.
         """
         if control in range(30, 38):
-            self.set_encoder_param(control, value)
+            self._set_encoder_param(control, value)
         elif control in range(40, 48):
-            self.set_fader_param(control, value)
+            self._set_fader_param(control, value)
         elif control in range(20, 36):
-            self.set_button_param(control, value)
+            self._set_button_param(control, value)
 
-    def set_fader_param(self, control, value):
+    def _set_fader_param(self, control, value):
         """
         Maps the MIDI faders to the SMC-Mixer.
         This function is a placeholder for actual mapping logic.
@@ -211,32 +216,30 @@ class SMC_Mixer(ControllerBase):
             log.warning(f"No parameter found for control {control} in fader_config.")
             return
 
-        min, max = param.min_max()
-        value = self.processor.process_message(control, value, min, max)
+        value = self.processor.process_message(control, value, param.min, param.max)
 
         self.params.set(self.fader_config[index], value)
 
         log.info(f"{self.fader_config[index]}: {value} (MIDI value: {value})")
 
-    def set_encoder_param(self, control, value):
+    def _set_encoder_param(self, control, value):
         """
         Maps the MIDI encoders to the SMC-Mixer.
         This function is a placeholder for actual mapping logic.
         """
-        index = control % 10
+        index = control % 10 #
         param = self.params.get(self.encoder_config[index])
 
         if param is None:
             log.warning(f"No parameter found for channel {control} in encoder_config.")
             return
         
-        min, max = param.min_max()
-        value = self.processor.process_message(control, value, min, max)
+        value = self.processor.process_message(control, value, param.min, param.max)
         self.params.set(self.encoder_config[index], value)
 
         log.info(f"{self.encoder_config[index]}: {value} (MIDI value: {value})")
 
-    def set_button_param(self, control, value):
+    def _set_button_param(self, control, value):
         """
         Maps the MIDI buttons to the SMC-Mixer.
         This function is a placeholder for actual mapping logic.
@@ -246,6 +249,7 @@ class SMC_Mixer(ControllerBase):
 
 class MidiMix(ControllerBase):
     name = "MIDI Mix"
+    CONTROLLER_NAMES.append(name)
 
     def __init__(self, params, port_name):
         """
@@ -277,7 +281,7 @@ class MidiMix(ControllerBase):
             2: ["x_sync_amp", 'x_sync_freq', 'x_sync_speed', 'y_sync_amp', 'y_sync_freq', 'y_sync_speed', 'x_shift', 'pattern_type', 'pattern_mod', 'y_shift', 'solarize_threshold', 'posterize_levels', 'r_shift', 'hue_invert_angle', 'hue_invert_strength', 'zoom', 'val_threshold', 'val_hue_shift', 'reflection_mode', 'noise_type', 'noise_intensity', 'sequence', 'sharpen_intensity', 'blur_type'] }
         self.encoder_config = self.encoder_params.get(2, [])
 
-        # self.set_button_params = {}
+        # self._set_button_params = {}
 
     def set_values(self, control, value):
         """
@@ -289,13 +293,13 @@ class MidiMix(ControllerBase):
             value (int): The value of the MIDI control message.
         """
         if control in self.fader_controls:
-            self.set_fader_param(control, value)
+            self._set_fader_param(control, value)
         elif control in self.pot_controls:
-            self.set_encoder_param(control, value)
+            self._set_encoder_param(control, value)
         elif control in self.button_controls:
-            self.set_button_param(control, value)
+            self._set_button_param(control, value)
 
-    def set_fader_param(self, control, value):
+    def _set_fader_param(self, control, value):
         """
         Maps the MIDI faders to the SMC-Mixer.
         This function is a placeholder for actual mapping logic.
@@ -309,14 +313,13 @@ class MidiMix(ControllerBase):
             log.warning(f"No parameter found for control {control} in fader_config.")
             return
 
-        min, max = param.min_max()
-        value = self.processor.process_message(control, value, min, max)
+        value = self.processor.process_message(control, value, param.min, param.max)
 
         self.params.set(self.fader_config[index], value)
 
         log.info(f"{self.fader_config[index]}: {value} (MIDI value: {value})")
 
-    def set_encoder_param(self, control, value):
+    def _set_encoder_param(self, control, value):
         """
         Maps the MIDI encoders to the SMC-Mixer.
         This function is a placeholder for actual mapping logic.
@@ -326,16 +329,15 @@ class MidiMix(ControllerBase):
         param = self.params.get(self.encoder_config[index]) # get the parameter by name using the index
 
         if param is None:
-            log.warning(f"No parameter found for channel {control} in encoder_config.")
+            log.warning(f"Param '{param.name}' not found for channel {control} in encoder_config.")
             return
         
-        min, max = param.min_max()
-        value = self.processor.process_message(control, value, min, max)
+        value = self.processor.process_message(control, value, param.min, param.max)
         self.params.set(self.encoder_config[index], value)
 
         log.info(f"{self.encoder_config[index]}: {value} (MIDI value: {value})")
 
-    def set_button_param(self, control, value):
+    def _set_button_param(self, control, value):
         """
         Maps the MIDI buttons to the SMC-Mixer.
         This function is a placeholder for actual mapping logic.
@@ -461,47 +463,3 @@ class MidiControllerInterface:
         finally:
             log.warning(f"MIDI input thread for '{self.port_name}' has terminated.")
 
-
-#NOTE: any new midi controllers must expose a name attribute
-names = [SMC_Mixer.name,  MidiMix.name]
-
-
-def identify_midi_ports(params):
-    
-    # Mido uses a default backend (often python-rtmidi) which handles platform differences.    
-    controllers = []
-    ports_found = False
-    
-    try:
-        # List all available MIDI input ports
-        input_ports = mido.get_input_names()
-        if input_ports:
-            string = "\nFound MIDI Input Devices:"
-
-
-            for i, port_name in enumerate(input_ports):
-                for name in names:
-                    if name in port_name:
-                        found_controller = MidiControllerInterface(params, name=name, port_name=port_name)
-                        controllers.append(found_controller)
-                        string += f"\n\tInitialized midi controller: {name}"
-        
-            log.info(string)
-            ports_found = True
-        
-        # List all available MIDI output ports
-        output_ports = mido.get_output_names()
-        if output_ports:
-            string = "\nFound MIDI Output Devices:"
-            for i, name in enumerate(output_ports):
-                string += (f"\n\t[{i+1}] {name}")
-            ports_found = True
-            log.info(string)
-            
-    except Exception as e:
-        log.exception(f"\nAn unexpected error occurred during port scan: {e}")
-        return    
-    if not ports_found:
-        log.warning("No MIDI ports found by the operating system.")
-
-    return controllers

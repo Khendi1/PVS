@@ -56,21 +56,21 @@ class WarpType(IntEnum):
     RADIAL = auto()
     FRACTAL = auto()
     PERLIN = auto()
-    WARP0 = auto()  # placeholder for old warp_frame method; yet to be tested
+    WARP0 = auto()
 
 """Enumeration of blur modes"""
 class BlurType(IntEnum):
     NONE = 0
-    GAUSSIAN = 1
-    MEDIAN = 2
-    BOX = 3
-    BILATERAL = 4
+    GAUSSIAN = auto()
+    MEDIAN = auto()
+    BOX = auto()
+    BILATERAL = auto()
 
 """Enumeration of sharpening modes"""
 class SharpenType(IntEnum):
     NONE = 0
-    SHARPEN = 1
-    UNSHARP_MASK = 2
+    SHARPEN = auto()
+    UNSHARP_MASK = auto()
 
 """Enum to access hsv tuple indicies"""
 class HSV(IntEnum):
@@ -82,11 +82,12 @@ class ReflectionMode(Enum):
     """Enumeration for different image reflection modes."""
 
     NONE = 0  # No reflection
-    HORIZONTAL = 1  # Reflect across the Y-axis (flip horizontally)
-    VERTICAL = 2  # Reflect across the X-axis (flip vertically)
-    BOTH = 3  # Reflect across both X and Y axes (flip horizontally and vertically)
-    QUAD_SYMMETRY = 4  # Reflect across both axes with quadrants (not implemented)
-    SPLIT = 5  # Reflect left half onto right half
+    HORIZONTAL = auto()  # Reflect across the Y-axis (flip horizontally)
+    VERTICAL = auto() # Reflect across the X-axis (flip vertically)
+    BOTH = auto()  # Reflect across both X and Y axes (flip horizontally and vertically)
+    QUAD_SYMMETRY = auto()  # Reflect across both axes with quadrants (not implemented)
+    SPLIT = auto()  # Reflect left half onto right half
+    KALEIDOSCOPE = auto()
 
     def __str__(self):
         return self.name.replace("_", " ").title()
@@ -102,7 +103,7 @@ class Shape(IntEnum):
     NONE = 5
 
 """
-End Enum classes, begin 
+End Enum classes, begin effects classes
 """
 
 """ 
@@ -137,7 +138,6 @@ class EffectManager:
         self.feedback = Feedback(params, width, height)
         self.color = Color(params)
         self.pixels = Pixels(params, width, height)
-        self.noise = ImageNoiser(params, NoiseType.NONE)
         self.shapes = ShapeGenerator(params, width, height)
         self.patterns = Patterns(params, width, height)
         self.reflector = Reflector(params, )                    
@@ -150,7 +150,6 @@ class EffectManager:
             self.feedback,
             self.color,
             self.pixels,
-            self.noise,
             self.shapes,
             self.patterns,
             self.reflector,
@@ -266,6 +265,7 @@ class EffectManager:
         # prev_frame = effects.feedback.scale_frame(wet_frame)
 
         return prev_frame, wet_frame
+
 
 class Color(EffectBase):
 
@@ -549,7 +549,7 @@ class Color(EffectBase):
 
 class Pixels(EffectBase):
 
-    def __init__(self, params, image_width: int, image_height: int):
+    def __init__(self, params, image_width: int, image_height: int, noise_type=NoiseType.NONE):
         self.params = params
         self.image_width = image_width
         self.image_height = image_height
@@ -563,9 +563,193 @@ class Pixels(EffectBase):
         self.sharpen_intensity = params.add("sharpen_intensity", 4.0, 8.0, 4.0)
 
         self.blur_type = params.add(
-            "blur_type", 0, 4, 1
-        )  # 1=Gaussian, 2=Median, 3=Box, 4=Bilateral
+            "blur_type", 0, len(BlurType)-1, 1
+        )
         self.blur_kernel_size = params.add("blur_kernel_size", 1, 100, 1)
+
+
+        if not isinstance(noise_type, NoiseType):
+            raise ValueError("noise_type must be an instance of NoiseType Enum.")
+
+        self._noise_type = params.add(
+            "noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, noise_type.value
+        )
+        self._noise_intensity = params.add("noise_intensity", 0.0, 1.0, 0.1)
+
+    @property
+    def noise_type(self) -> NoiseType:
+        """Get the current noise type."""
+        return self._noise_type.value
+
+    @noise_type.setter
+    def noise_type(self, new_type: NoiseType):
+        """Set the noise type."""
+        if not isinstance(new_type, NoiseType):
+            raise ValueError("noise_type must be an instance of NoiseType Enum.")
+        self._noise_type.value = new_type
+        log.debug(f"Noise type set to: {self._noise_type.value}")
+
+    @property
+    def noise_intensity(self) -> float:
+        """Get the current noise intensity."""
+        return self._noise_intensity.value
+
+    @noise_intensity.setter
+    def noise_intensity(self, new_intensity: float):
+        """Set the noise intensity."""
+        if not (0.0 <= new_intensity <= 1.0):
+            log.warning("Warning: noise_intensity should ideally be between 0.0 and 1.0.")
+        self._noise_intensity.value = new_intensity
+        log.debug(f"Noise intensity set to: {self._noise_intensity}")
+
+    def apply_noise(self, image: np.ndarray) -> np.ndarray:
+        """
+        Applies the currently set noise type to the input image.
+
+        Args:
+            image (np.ndarray): The input image (NumPy array).
+                                Expected to be in BGR format for color images
+                                or grayscale for single-channel images, with
+                                pixel values typically 0-255 (uint8).
+
+        Returns:
+            np.ndarray: The image with noise applied.
+        """
+        # Ensure image is a float type for calculations, then convert back to uint8
+        # Make a copy to avoid modifying the original image
+        noisy_image = image.astype(np.float32)
+
+        # Dispatch to the appropriate noise function based on noise_type
+        if self._noise_type.value == NoiseType.NONE.value:
+            return self._apply_none_noise(noisy_image)
+        elif self._noise_type.value == NoiseType.GAUSSIAN.value:
+            return self._apply_gaussian_noise(noisy_image)
+        elif self._noise_type.value == NoiseType.POISSON.value:
+            return self._apply_poisson_noise(noisy_image)
+        elif self._noise_type.value == NoiseType.SALT_AND_PEPPER.value:
+            return self._apply_salt_and_pepper_noise(noisy_image)
+        elif self._noise_type.value == NoiseType.SPECKLE.value:
+            return self._apply_speckle_noise(noisy_image)
+        elif self._noise_type.value == NoiseType.SPARSE.value:
+            return self._apply_sparse_noise(noisy_image)
+        elif self._noise_type.value == NoiseType.RANDOM.value:
+            return self._apply_random_noise(noisy_image)
+        else:
+            log.warning(
+                f"Unknown noise type: {self._noise_type.value}. Returning original image."
+            )
+            return image.copy()  # Return original if type is unknown
+
+    def _apply_none_noise(self, image: np.ndarray) -> np.ndarray:
+        """Returns the image without applying any noise."""
+        return image.astype(np.uint8)
+
+    def _apply_gaussian_noise(self, image: np.ndarray) -> np.ndarray:
+        """
+        Applies Gaussian (normal distribution) noise to the image.
+        Intensity controls the standard deviation of the noise.
+        """
+        mean = 0
+        # Standard deviation scales with intensity, up to a max of ~50 for uint8 range
+        std_dev = self._noise_intensity * 50
+        gaussian_noise = np.random.normal(mean, std_dev, image.shape).astype(np.float32)
+        noisy_image = image + gaussian_noise
+        # Clip values to 0-255 range and convert back to uint8
+        return np.clip(noisy_image, 0, 255).astype(np.uint8)
+
+    def _apply_poisson_noise(self, image: np.ndarray) -> np.ndarray:
+        """
+        Applies Poisson noise to the image.
+        For typical 0-255 images, this is simulated by adding noise
+        proportional to the pixel intensity.
+        Intensity controls the scaling factor for the Poisson distribution.
+        """
+        # Scale to a range suitable for Poisson (e.g., 0-100), Then add noise and scale back
+        scaled_image = (
+            image / 255.0 * 100.0
+        )  # Scale to 0-100 for better Poisson distribution
+        poisson_noise = np.random.poisson(
+            scaled_image * self._noise_intensity.value * 2
+        ).astype(np.float32)
+        noisy_image = image + (
+            poisson_noise / 100.0 * 255.0
+        )  # Scale noise back to 0-255 range
+        return np.clip(noisy_image, 0, 255).astype(np.uint8)
+
+    def _apply_salt_and_pepper_noise(self, image: np.ndarray) -> np.ndarray:
+        """
+        Applies Salt & Pepper noise to the image.
+        Intensity controls the proportion of pixels affected.
+        """
+        amount = self._noise_intensity  # Proportion of pixels to affect
+        s_vs_p = 0.5  # Ratio of salt vs. pepper (0.5 means equal)
+
+        # Apply salt noise (white pixels)
+        num_salt = np.ceil(amount * image.size * s_vs_p).astype(int)
+        coords = [np.random.randint(0, i - 1, num_salt) for i in image.shape]
+        image[tuple(coords)] = 255
+
+        # Apply pepper noise (black pixels)
+        num_pepper = np.ceil(amount * image.size * (1.0 - s_vs_p)).astype(int)
+        coords = [np.random.randint(0, i - 1, num_pepper) for i in image.shape]
+        image[tuple(coords)] = 0
+        return image.astype(np.uint8)
+
+    def _apply_speckle_noise(self, image: np.ndarray) -> np.ndarray:
+        """
+        Applies Speckle (multiplicative) noise to the image.
+        noisy_image = image + image * noise
+        Intensity controls the standard deviation of the noise.
+        """
+        mean = 0
+        std_dev = self._noise_intensity * 0.5  # Scale std_dev for multiplicative noise
+        speckle_noise = np.random.normal(mean, std_dev, image.shape).astype(np.float32)
+        noisy_image = image + image * speckle_noise
+        return np.clip(noisy_image, 0, 255).astype(np.uint8)
+
+    def _apply_sparse_noise(self, image: np.ndarray) -> np.ndarray:
+        """
+        Applies sparse noise by randomly selecting a percentage of pixels
+        and setting them to a random value within the 0-255 range.
+        Intensity controls the proportion of pixels affected.
+        """
+        amount = self._noise_intensity  # Proportion of pixels to affect
+
+        num_pixels_to_affect = np.ceil(
+            amount * image.size / image.shape[-1] if image.ndim == 3 else image.size
+        ).astype(int)
+
+        # Get image dimensions
+        height, width = image.shape[0], image.shape[1]
+
+        # Generate random (y, x) coordinates for the pixels to affect
+        random_y = np.random.randint(0, height, num_pixels_to_affect)
+        random_x = np.random.randint(0, width, num_pixels_to_affect)
+
+        # Apply random values to the selected pixels
+        for i in range(num_pixels_to_affect):
+            y, x = random_y[i], random_x[i]
+            if image.ndim == 3:  # Color image (e.g., BGR)
+                # Assign a list of 3 random values to the (y, x) pixel
+                image[y, x] = [random.randint(0, 255) for _ in range(image.shape[2])]
+            else:  # Grayscale image
+                # Assign a single random value to the (y, x) pixel
+                image[y, x] = random.randint(0, 255)
+
+        return image.astype(np.uint8)
+
+    def _apply_random_noise(self, image: np.ndarray) -> np.ndarray:
+        """
+        Applies uniform random noise to every pixel.
+        Intensity controls the maximum range of the random noise added.
+        """
+        # Generate random noise in the range [-intensity*127.5, intensity*127.5]
+        noise_range = (self._noise_intensity * 127.5)  
+        random_noise = np.random.uniform(-noise_range, noise_range, image.shape).astype(
+            np.float32
+        )
+        noisy_image = image + random_noise
+        return np.clip(noisy_image, 0, 255).astype(np.uint8)
 
     def gaussian_blur(self, frame: np.ndarray):
         mode = self.blur_type.value
@@ -624,6 +808,20 @@ class Pixels(EffectBase):
             TrackbarRow(
                 "Sharpen Amount", 
                 self.params.get("sharpen_intensity"), 
+                default_font_id
+            )
+
+
+            RadioButtonRow(
+                "Noise Type", 
+                NoiseType, 
+                self.params.get("noise_type"), 
+                default_font_id
+            )
+
+            noise_intensity = TrackbarRow(
+                "Noise Intensity", 
+                self.params.get("noise_intensity"), 
                 default_font_id
             )
 
@@ -706,7 +904,7 @@ class Sync(EffectBase):
         dpg.bind_item_font("sync", global_font_id)
 
 
-PERLIN_SCALE=1700
+PERLIN_SCALE=1700 #???
 class Warp(EffectBase):
 
     def __init__(self, params, image_width: int, image_height: int):
@@ -985,6 +1183,8 @@ class Reflector(EffectBase):
         self._mode = params.add(
             "reflection_mode", 0, len(ReflectionMode) - 1, ReflectionMode.NONE.value
         )
+        self.width = None 
+        self.height = None
         self.num_axis = 3
 
     @property
@@ -1009,10 +1209,14 @@ class Reflector(EffectBase):
         Returns:
             np.ndarray: The reflected image frame.
         """
+
+        # init frame dims
+        if self.width is None or self.height is None:
+            self.height,self.width, _ = frame.shape
+
         if self._mode.value == ReflectionMode.NONE.value:
-            return frame.copy()  # Return a copy to ensure original isn't modified
+            return frame
         elif self._mode.value == ReflectionMode.HORIZONTAL.value:
-            # cv2.flip(src, flipCode): flipCode > 0 for horizontal, 0 for vertical, < 0 for both
             return cv2.flip(frame, 1)
         elif self._mode.value == ReflectionMode.VERTICAL.value:
             return cv2.flip(frame, 0)
@@ -1020,18 +1224,73 @@ class Reflector(EffectBase):
             return cv2.flip(frame, -1)
         elif self._mode.value == ReflectionMode.QUAD_SYMMETRY.value:
             return self._apply_quad_symmetry(frame)
-        elif (
-            self._mode.value == ReflectionMode.SPLIT.value
-        ):  # New mode: reflect left half onto right half
-            height, width = frame.shape[:2]
-            w_half = width // 2
+        elif (self._mode.value == ReflectionMode.SPLIT.value): 
+            w_half = self.width // 2
             output_frame = frame.copy()
             left_half = frame[:, :w_half]
             # Reflect left half horizontally
             reflected_left = cv2.flip(left_half, 1)
             # Place reflected left half onto right half
-            output_frame[:, w_half:] = reflected_left[:, : width - w_half]
+            output_frame[:, w_half:] = reflected_left[:, : self.width - w_half]
             return output_frame
+        elif self._mode.value == ReflectionMode.KALEIDOSCOPE.value:
+            return self._apply_kaleidoscope(frame)
+
+
+    def _apply_kaleidoscope(self, frame):
+        """Applies the kaleidoscope effect to a single frame."""
+        
+        segments = self.segments.value
+        zoom = self.zoom.value
+        rotation = self.rotation.value
+        center_x_rel = None
+        center_y_rel = None
+        border_mode = None
+
+        # Calculate geometric parameters
+        K = max(2, segments)
+        center = (int(self.width * center_x_rel), int(self.height * center_y_rel))
+        angle_offset = rotation
+        
+        # Map to Polar Coordinates (for tiling in angle)
+        max_radius = min(self.width - center[0], center[0], self.height - center[1], center[1])
+        polar_h = int(max_radius * zoom * 2) # Height (radius) scaled by zoom
+        polar_w = 360 * 10 # Width (angle) in pixels (arbitrarily large for smooth rotation/tiling)
+
+        # Use warpPolar to map the frame to polar coordinates
+        polar_img = cv2.warpPolar(
+            frame, (polar_w, polar_h), center, max_radius, 
+            cv2.WARP_POLAR_LINEAR | cv2.WARP_FILL_OUTLIERS | cv2.INTER_LINEAR
+        )
+        # flags: WARP_FILL_OUTLIERS fills unmapped pixels (like outside the circle) with black
+        
+        # Calculate the size of one segment (angular slice)
+        tile_w = polar_w // K
+        tile = polar_img[:, :tile_w]
+        
+        # Create the full tiled/mirrored image
+        tiled_img = np.zeros((polar_h, polar_w, 3), dtype=frame.dtype)
+        for i in range(K):
+            # Mirror every other tile for true kaleidoscope effect
+            t = cv2.flip(tile, 1) if i % 2 == 1 else tile
+            # Place the tile
+            tiled_img[:, i*tile_w:(i+1)*tile_w] = t
+
+        # Apply rotation by shifting the image horizontally (wrap around)
+        shift_pixels = int(polar_w * (angle_offset / 360.0))
+        shifted_tiled_img = np.roll(tiled_img, shift_pixels, axis=1)
+
+        # Map back to Cartesian Coordinates
+        kaleido_frame = cv2.warpPolar(
+            shifted_tiled_img, (self.width, self.height), center, max_radius, 
+            cv2.WARP_INVERSE_MAP | cv2.INTER_LINEAR
+        )
+
+        # Handle Border Modes for the 'background' (outside the circular kaleidoscope area)
+        if border_mode == cv2.BORDER_WRAP:
+            pass # For this simple example, we'll keep the effect centered.
+
+        return kaleido_frame
 
     def _apply_quad_symmetry(self, frame: np.ndarray) -> np.ndarray:
         """
@@ -1605,7 +1864,7 @@ class ImageNoiser(EffectBase):
     @property
     def noise_type(self) -> NoiseType:
         """Get the current noise type."""
-        return self._noise_type.val()
+        return self._noise_type.value
 
     @noise_type.setter
     def noise_type(self, new_type: NoiseType):
@@ -1613,7 +1872,7 @@ class ImageNoiser(EffectBase):
         if not isinstance(new_type, NoiseType):
             raise ValueError("noise_type must be an instance of NoiseType Enum.")
         self._noise_type.value = new_type
-        log.debug(f"Noise type set to: {self._noise_type.val()}")
+        log.debug(f"Noise type set to: {self._noise_type.value}")
 
     @property
     def noise_intensity(self) -> float:
@@ -1770,10 +2029,7 @@ class ImageNoiser(EffectBase):
         Intensity controls the maximum range of the random noise added.
         """
         # Generate random noise in the range [-intensity*127.5, intensity*127.5]
-        # Then add it to the image
-        noise_range = (
-            self._noise_intensity * 127.5
-        )  # Max deviation from original pixel value
+        noise_range = (self._noise_intensity * 127.5)  
         random_noise = np.random.uniform(-noise_range, noise_range, image.shape).astype(
             np.float32
         )
@@ -2295,7 +2551,7 @@ class ShapeGenerator:
         self.fill_h = params.add("fill_hue", 0, 179, 120)  # Hue for fill color
         self.fill_s = params.add("fill_sat", 0, 255, 100)  # Saturation for fill color
         self.fill_v = params.add("fill_val", 0, 255, 255)  # Value for fill color
-        self.fill_hsv = [self.fill_h.val(), self.fill_s.val(), self.fill_v.val()]  # H, S, V (Blue) - will be converted to BGR
+        self.fill_hsv = [self.fill_h.value, self.fill_s.value, self.fill_v.value]  # H, S, V (Blue) - will be converted to BGR
         self.fill_opacity = params.add("fill_opacity", 0.0, 1.0, 0.25)
         self.fill_color = self._hsv_to_bgr(self.fill_hsv)
         self.line_color = self._hsv_to_bgr(self.line_hsv)
@@ -2307,11 +2563,11 @@ class ShapeGenerator:
     def _draw_rectangle(self, canvas, center_x, center_y,):
         """ Draw a rotated rectangle on the canvas """
 
-        rect_width = int(50 * self.size_multiplier.val() * self.aspect_ratio.val())
-        rect_height = int(50 * self.size_multiplier.val())
+        rect_width = int(50 * self.size_multiplier.value * self.aspect_ratio.value)
+        rect_height = int(50 * self.size_multiplier.value)
 
         # Create a rotation matrix
-        M = cv2.getRotationMatrix2D((center_x, center_y), self.rotation_angle.val(), 1)
+        M = cv2.getRotationMatrix2D((center_x, center_y), self.rotation_angle.value, 1)
 
         # Define the rectangle's corners before rotation
         pts = np.array([
@@ -2327,24 +2583,24 @@ class ShapeGenerator:
 
         if self.fill_enabled:
             cv2.fillPoly(canvas, [rotated_pts_int], self.fill_color)
-        cv2.polylines(canvas, [rotated_pts_int], True, self.line_color, self.line_weight.val())
+        cv2.polylines(canvas, [rotated_pts_int], True, self.line_color, self.line_weight.value)
         
         return canvas
 
     def _draw_circle(self, canvas, center_x, center_y):
         """ Draw a circle on the canvas """
 
-        radius = int(30 * self.size_multiplier.val())
+        radius = int(30 * self.size_multiplier.value)
         if self.fill_enabled:
             cv2.circle(canvas, (center_x, center_y), radius, self.fill_color, -1) # -1 for fill
-        cv2.circle(canvas, (center_x, center_y), radius, self.line_color, self.line_weight.val())
+        cv2.circle(canvas, (center_x, center_y), radius, self.line_color, self.line_weight.value)
 
         return canvas
     
     def _draw_triangle(self, canvas, center_x, center_y):
         """ Draw a rotated triangle on the canvas """
 
-        side_length = int(60 * self.size_multiplier.val())
+        side_length = int(60 * self.size_multiplier.value)
 
         # Vertices for an equilateral triangle centered at (0,0)
         p1_x = 0
@@ -2361,24 +2617,24 @@ class ShapeGenerator:
         pts[:, 1] += center_y
 
         # Apply rotation
-        M = cv2.getRotationMatrix2D((center_x, center_y), self.rotation_angle.val(), 1)
+        M = cv2.getRotationMatrix2D((center_x, center_y), self.rotation_angle.value, 1)
         rotated_pts = cv2.transform(pts.reshape(-1, 1, 2), M)
         rotated_pts_int = np.int32(rotated_pts)
 
         if self.fill_enabled:
             cv2.fillPoly(canvas, [rotated_pts_int], self.fill_color)
-        cv2.polylines(canvas, [rotated_pts_int], True, self.line_color, self.line_weight.val())
+        cv2.polylines(canvas, [rotated_pts_int], True, self.line_color, self.line_weight.value)
 
         return canvas
     
     def _draw_line(self, canvas, center_x, center_y):
-        length = int(50 * self.size_multiplier.val())
+        length = int(50 * self.size_multiplier.value)
         start_point = (center_x - length // 2, center_y)
         end_point = (center_x + length // 2, center_y)
 
         if self.fill_enabled:
-            cv2.line(canvas, start_point, end_point, self.fill_color, self.line_weight.val())
-        cv2.line(canvas, start_point, end_point, self.line_color, self.line_weight.val())
+            cv2.line(canvas, start_point, end_point, self.fill_color, self.line_weight.value)
+        cv2.line(canvas, start_point, end_point, self.line_color, self.line_weight.value)
 
         return canvas
 
@@ -2390,20 +2646,20 @@ class ShapeGenerator:
         center_x = max(0, min(canvas.shape[1], center_x))
         center_y = max(0, min(canvas.shape[0], center_y))
 
-        if self.shape_type.val() == Shape.NONE:
+        if self.shape_type.value == Shape.NONE:
             pass
-        elif self.shape_type.val() == Shape.RECTANGLE:
+        elif self.shape_type.value == Shape.RECTANGLE:
             canvas = self._draw_rectangle(canvas, center_x, center_y)
-        elif self.shape_type.val() == Shape.CIRCLE:
+        elif self.shape_type.value == Shape.CIRCLE:
             canvas = self._draw_circle(canvas, center_x, center_y)
-        elif self.shape_type.val() == Shape.TRIANGLE:
+        elif self.shape_type.value == Shape.TRIANGLE:
             canvas = self._draw_triangle(canvas, center_x, center_y)
-        elif self.shape_type.val() == Shape.LINE:
+        elif self.shape_type.value == Shape.LINE:
             canvas = self._draw_line(canvas, center_x, center_y)
-        elif self.shape_type.val() == Shape.DIAMOND:
+        elif self.shape_type.value == Shape.DIAMOND:
             pass
         else:
-            raise ValueError(f"Invalid shape type: {self.shape_type.val()}. Must be 'rectangle', 'circle', 'triangle', or 'line'.")
+            raise ValueError(f"Invalid shape type: {self.shape_type.value}. Must be 'rectangle', 'circle', 'triangle', or 'line'.")
         
         return canvas
 
@@ -2445,21 +2701,21 @@ class ShapeGenerator:
     def _draw_shapes_on_frame(self, frame):
         """ Draw shapes on the given frame based on current parameters """
 
-        base_center_x, base_center_y = self.width // 2 + self.shape_x_shift.val(), self.height // 2 + self.shape_y_shift.val()
+        base_center_x, base_center_y = self.width // 2 + self.shape_x_shift.value, self.height // 2 + self.shape_y_shift.value
 
         # Create separate 3-channel (BGR) canvases for lines and fills
         temp_line_canvas = np.zeros((self.height, self.width, 3), dtype=np.uint8)
         temp_fill_canvas = np.zeros((self.height, self.width, 3), dtype=np.uint8)
 
-        self.line_color = self._hsv_to_bgr([self.line_h.val(), self.line_s.val(), self.line_v.val()])
-        self.fill_color = self._hsv_to_bgr([self.fill_h.val(), self.fill_s.val(), self.fill_v.val()])
+        self.line_color = self._hsv_to_bgr([self.line_h.value, self.line_s.value, self.line_v.value])
+        self.fill_color = self._hsv_to_bgr([self.fill_h.value, self.fill_s.value, self.fill_v.value])
 
         # Grid Multiplication Mode
-        for row in range(self.multiply_grid_y.val()):
-            for col in range(self.multiply_grid_x.val()):
+        for row in range(self.multiply_grid_y.value):
+            for col in range(self.multiply_grid_x.value):
                 # Calculate center for each shape in the grid
-                current_center_x = base_center_x + col * self.grid_pitch_x.val() - (self.multiply_grid_x.val() - 1) * self.grid_pitch_x.val() // 2
-                current_center_y = base_center_y + row * self.grid_pitch_y.val() - (self.multiply_grid_y.val() - 1) * self.grid_pitch_y.val() // 2
+                current_center_x = base_center_x + col * self.grid_pitch_x.value - (self.multiply_grid_x.value - 1) * self.grid_pitch_x.value // 2
+                current_center_y = base_center_y + row * self.grid_pitch_y.value - (self.multiply_grid_y.value - 1) * self.grid_pitch_y.value // 2
 
                 self._draw_shape_on_canvas(temp_line_canvas, current_center_x, current_center_y)
 

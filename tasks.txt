@@ -4,6 +4,7 @@ mixer:
 
 warp:
 - tune params
+- hide gui sliders when unused by current warp mode
 
 metaballs:
 - hue
@@ -14,6 +15,8 @@ moire:
 - parameterize
 
 sequencer gui panel:
-- ???
+- implement... how???
 
+patterns:
+- hide gui sliders when unused by current warp mode
 

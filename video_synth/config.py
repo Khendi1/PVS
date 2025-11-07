@@ -1,5 +1,6 @@
 from effects import EffectManager
 import logging
+# from midi_input import *
 
 """Module to store basic global variables and effects manager"""
 
@@ -16,7 +17,7 @@ VIDEO_OUTPUT_WINDOW_TITLE = "Synthesizer Output"
 WIDTH = None
 HEIGHT = None
 
-ESCAPE_KEYS = [ord('q'), ord('Q'), 27]
+ESCAPE_KEYS = [ord('q'), ord('Q'), 27] # 27 is escape key
 
 effects = EffectManager() # initialized with params in main.py
 
