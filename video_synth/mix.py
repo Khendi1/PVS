@@ -135,8 +135,7 @@ class Mixer:
         self.lower_saturation = params.add("lower_sat", 0, 255, 100)
         self.lower_value = params.add("lower_val", 0, 255, 100)
 
-        # amount to blend the metaball frame wisth the input frame
-        self.frame_blend = params.add("frame_blend", 0.0, 1.0, 0.5)
+        self.alpha_blend = params.add("alpha_blend", 0.0, 1.0, 0.5)
 
         self.swap = toggles.add("Swap Frames", "swap", False)
 
@@ -292,7 +291,7 @@ class Mixer:
 
 
     def blend(self, frame1, frame2):
-        alpha = self.frame_blend.value
+        alpha = self.alpha_blend.value
         return cv2.addWeighted(frame1, alpha, frame2, 1 - alpha, 0)
 
 
@@ -430,15 +429,39 @@ class Mixer:
             self.lower_value.value = v
 
     def _blend_mode_select_callback(self, sender, app_data, user_data):
-        if "Alpha" in app_data:
+        if MixModes.ALPHA_BLEND.name in app_data:
             self.blend_mode.value = 0
-        elif "Luma" in app_data:
-            self.blend_mode.value = 1
-        elif "Chroma" in app_data:
-            self.blend_mode.value = 2
-    
+            dpg.configure_item("alpha_blend", show=True)
+            dpg.configure_item("alpha_blend_reset", show=False)            
 
-    import os
+            dpg.configure_item("upper_chroma", show=False)
+            dpg.configure_item("lower_chroma", show=False)
+            dpg.configure_item("luma_threshold", show=False)
+            dpg.configure_item("luma_threshold_reset", show=False)
+            dpg.configure_item("luma_selection", show=False)
+            dpg.configure_item("luma_selection_reset", show=False)
+        elif MixModes.LUMA_KEY.name in app_data:
+            self.blend_mode.value = MixModes.LUMA_KEY.value
+            dpg.configure_item("luma_threshold", show=True)
+            dpg.configure_item("luma_threshold_reset", show=True)
+            dpg.configure_item("luma_selection", show=True)
+            dpg.configure_item("luma_selection_reset", show=True)
+
+            dpg.configure_item("alpha_blend", show=False)
+            dpg.configure_item("alpha_blend_reset", show=False)                        
+            dpg.configure_item("upper_chroma", show=False)
+            dpg.configure_item("lower_chroma", show=False)
+        elif MixModes.CHROMA_KEY.name in app_data:
+            self.blend_mode.value = MixModes.CHROMA_KEY.value
+            dpg.configure_item("upper_chroma", show=True)
+            dpg.configure_item("lower_chroma", show=True)
+            
+            dpg.configure_item("alpha_blend", show=False)
+            dpg.configure_item("alpha_blend_reset", show=False)            
+            dpg.configure_item("luma_threshold", show=False)
+            dpg.configure_item("luma_threshold_reset", show=False)
+            dpg.configure_item("luma_selection", show=False)
+            dpg.configure_item("luma_selection_reset", show=False)
 
     def _file_select_callback(self, sender, app_data, user_data):
         file_name, file_extension = os.path.splitext(app_data['file_path_name'])
@@ -503,14 +526,15 @@ class Mixer:
                 "Blend Mode",
                 MixModes,
                 self.blend_mode,
-                None
+                None,
+                callback = self._blend_mode_select_callback
             )
 
-
-            frame_blend_slider = TrackbarRow(
+            TrackbarRow(
                 "Alpha Blend",
-                self.params.get("frame_blend"),
-                None) # fix defulat font_id=None
+                self.params.get("alpha_blend"),
+                None
+            )
             
             with dpg.group(horizontal=True):
                 dpg.add_color_picker(

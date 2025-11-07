@@ -105,7 +105,7 @@ class RadioButtonRow:
     Args:
         options: 
     """
-    def __init__(self, label: str = None, cls: Enum = None, param=None, font=None):
+    def __init__(self, label: str = None, cls: Enum = None, param=None, font=None, callback=None):
         
         self.label = label
         self.options = dict_from_enum(cls)
@@ -114,7 +114,7 @@ class RadioButtonRow:
 
         dpg.add_radio_button(
             list(self.options.keys()), 
-            callback=self.callback, 
+            callback=self.callback if callback is None else callback, 
             horizontal=True,
             user_data=self.param.name,
         )

@@ -415,11 +415,6 @@ class Color(EffectBase):
         step = 256 // self.levels_per_channel.value
         half_step = step // 2
 
-        # TODO: switch posterization methods with toggle
-
-        # Method 1: Simple quantization (floor division)
-        # posterized_frame = (frame // step) * step
-
         # Method 2: Quantization with rounding (often looks better)
         posterized_frame = ((frame + half_step) // step) * step
 
@@ -801,7 +796,7 @@ class Warp(EffectBase):
         )
 
     def _first_warp(self, frame: np.ndarray):
-        self.height, self.width = frame.shape[:2]
+        # self.height, self.width = frame.shape[:2]
         # frame = cv2.resize(frame, (self.width, self.height))
 
         # Create meshgrid for warping effect
@@ -811,10 +806,10 @@ class Warp(EffectBase):
 
         # Calculate warped indices using sine function
         time = cv2.getTickCount() / cv2.getTickFrequency()
-        x_warp = x_indices + self.x_size * np.sin(
+        x_warp = x_indices + self.x_size.value * np.sin(
             y_indices / 20.0 + time * self.x_speed.value
         )
-        y_warp = y_indices + self.y_size * np.sin(
+        y_warp = y_indices + self.y_size.value * np.sin(
             x_indices / 20.0 + time * self.y_speed.value
         )
 
@@ -823,17 +818,18 @@ class Warp(EffectBase):
         y_warp = np.clip(y_warp, 0, self.height - 1).astype(np.float32)
 
         # Remap frame using warped indices
-        feedback_frame = cv2.remap(
-            feedback_frame, x_warp, y_warp, interpolation=cv2.INTER_LINEAR
+        frame = cv2.remap(
+            frame, x_warp, y_warp, interpolation=cv2.INTER_LINEAR
         )
 
-        return feedback_frame
+        return frame
 
-    # TODO: implement
     def warp(self, frame):
         self.t += 0.1
+
         if self.warp_type.value == WarpType.NONE:  # No warp
             return frame
+        
         elif self.warp_type.value == WarpType.SINE:  # Sine warp
             fx = np.sin(np.linspace(0, np.pi * 2, self.width)[None, :] + self.t) * self.x_size.value
             fy = np.cos(np.linspace(0, np.pi * 2, self.height)[:, None] + self.t) * self.y_size.value
@@ -898,55 +894,76 @@ class Warp(EffectBase):
         with dpg.collapsing_header(label=f"\tWarp", tag="warp") as h:
             dpg.bind_item_theme(h, theme)
 
-            warp_type = RadioButtonRow(
+            RadioButtonRow(
                 "Warp Type",
                 WarpType,
                 self.params.get("warp_type"),
                 default_font_id,
             )
 
-            warp_angle_amt = TrackbarRow(
-                "Warp Angle Amt", self.params.get("warp_angle_amt"), default_font_id
+            TrackbarRow(
+                "Warp Angle Amt", 
+                self.params.get("warp_angle_amt"), 
+                default_font_id
             )
 
-            warp_radius_amt = TrackbarRow(
-                "Warp Radius Amt", self.params.get("warp_radius_amt"), default_font_id
+            TrackbarRow(
+                "Warp Radius Amt", 
+                self.params.get("warp_radius_amt"), 
+                default_font_id
             )
 
-            warp_speed = TrackbarRow(
-                "Warp Speed", self.params.get("warp_speed"), default_font_id
+            TrackbarRow(
+                "Warp Speed", 
+                self.params.get("warp_speed"), 
+                default_font_id
             )
 
-            warp_use_fractal = TrackbarRow(
-                "Warp Use Fractal", self.params.get("warp_use_fractal"), default_font_id
+            TrackbarRow(
+                "Warp Use Fractal", 
+                self.params.get("warp_use_fractal"), 
+                default_font_id
             )
 
-            warp_octaves = TrackbarRow(
-                "Warp Octaves", self.params.get("warp_octaves"), default_font_id
+            TrackbarRow(
+                "Warp Octaves", 
+                self.params.get("warp_octaves"), 
+                default_font_id
             )
 
             warp_gain = TrackbarRow(
-                "Warp Gain", self.params.get("warp_gain"), default_font_id
+                "Warp Gain", 
+                self.params.get("warp_gain"), 
+                default_font_id
             )
 
             warp_lacunarity = TrackbarRow(
-                "Warp Lacunarity", self.params.get("warp_lacunarity"), default_font_id
+                "Warp Lacunarity", 
+                self.params.get("warp_lacunarity"), 
+                default_font_id
             )
 
             x_speed = TrackbarRow(
-                "X Speed", self.params.get("x_speed"), default_font_id
+                "X Speed", 
+                self.params.get("x_speed"), default_font_id
             )
 
             y_speed = TrackbarRow(
-                "Y Speed", self.params.get("y_speed"), default_font_id
+                "Y Speed", 
+                self.params.get("y_speed"), 
+                default_font_id
             )
 
             x_size = TrackbarRow(
-                "X Size", self.params.get("x_size"), default_font_id
+                "X Size", 
+                self.params.get("x_size"), 
+                default_font_id
             )
 
             y_size = TrackbarRow(
-                "Y Size", self.params.get("y_size"), default_font_id
+                "Y Size", 
+                self.params.get("y_size"), 
+                default_font_id
             )
 
 

@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 from enum import Enum
 import noise 
-from generators import Oscillator
+from generators import Oscillator, OscillatorShape
 from gui_elements import TrackbarRow, RadioButtonRow
 import dearpygui.dearpygui as dpg
 import logging
@@ -45,18 +45,15 @@ class Patterns:
         """
         Initializes the PatternGenerator.
         Args:
+            params_table (ParamTable): An instance of ParamTable to register pattern-specific parameters.
             width (int): Width of the generated pattern image.
             height (int): Height of the generated pattern image.
-            posc_bank (list): A list of Oscillator instances to use for modulation.
-            params_table (ParamTable): An instance of ParamTable to register pattern-specific parameters.
         """
+        self.params = params
         self.width = width
         self.height = height
 
-        self.params = params
-
         # Create coordinate grids for vectorized operations (much faster than loops)
-        # These are pre-calculated as they don't change per frame
         self.x_coords = np.linspace(0, self.width - 1, self.width, dtype=np.float32)
         self.y_coords = np.linspace(0, self.height - 1, self.height, dtype=np.float32)
         self.X, self.Y = np.meshgrid(self.x_coords, self.y_coords)
@@ -67,7 +64,7 @@ class Patterns:
         self.pattern_speed = params.add("pattern_speed", 0.1, 10.0, 1.0)
         self.pattern_alpha = params.add("pattern_alpha", 0.0, 1.0, 0.5)
 
-
+        # perlin params
         self.octaves = params.add("pattern_octaves", 1, 8, 4) # Number of octaves for fractal noise
         self.gain = params.add("pattern_gain", 0.0, 1.0, 0.2) # Gain for fractal noise
         self.lacunarity = params.add("pattern_lacunarity", 1.0, 4.0, 2.0) # Lacunarity for fractal noise
@@ -81,7 +78,7 @@ class Patterns:
 
         self.rotation = params.add("pattern_rotation", -360, 360, 0.0)
 
-        # creates interesting patterns
+        # creates interesting color patterns
         self.mod = params.add("pattern_mod", 0.1, 2.0, 1.0, family="Bars") # Modulation factor for bar patterns
 
         # Color parameters for patterns # TODO: mapping seems off
@@ -127,41 +124,15 @@ class Patterns:
         self.p2 = params.add("posc1_val", -10, 10, 1.1)
         self.p3 = params.add("posc2_val", -10, 10, 1.1)
 
+        self.num_osc = 5
         self.posc_bank = [] # List to hold Oscillator instances
-        for i in range(4):
-            self.posc_bank.append(Oscillator(params, name=f"posc{i}", frequency=0.5, 
-                                             amplitude=1.0, phase=0.0, shape=1,
+        for i in range(self.num_osc):
+            self.posc_bank.append(Oscillator(params, name=f"posc{i}", frequency=0.1, 
+                                             amplitude=100.0, phase=0.0, shape=4,
                                              max_amplitude=self.width, min_amplitude=-self.width
                                              )) 
 
         self.prev = None
-
-    def _normalize_osc_values(self):
-        """
-        Normalizes oscillator values from their raw [-amplitude, +amplitude] range
-        to a [0, 1] range for easier use in color/modulation.
-        Returns a tuple of normalized oscillator values.
-        """
-        norm_vals = []
-        for osc in self.posc_bank:
-            # Ensure amplitude is not zero to avoid division by zero
-            amp_val = osc.amplitude.value
-            if amp_val == 0:
-                log.info(f"Warning: Oscillator {osc.name} has zero amplitude. Defaulting to mid-range normalization.\n")
-                norm_vals.append(0.05) # Default to mid-range if amplitude is zero
-            else:
-                # Map from [-amp_val, +amp_val] to [0, 1]
-                normalized = (osc.value + amp_val) / (2 * amp_val) + 0.001
-                norm_vals.append(normalized)
-        log.info(f"normalized: {norm_vals}")
-        if self.prev is not None and self.prev == norm_vals:
-            log.info(f"previous: {self.prev}\n")
-            if norm_vals == self.prev:
-                log.info("No change in normalized values, returning previous values.")
-                self.prev = [i-.5 for i in self.prev]
-                return self.prev
-            self.prev = norm_vals.copy()
-        return tuple(norm_vals)
 
     def _set_osc_params(self):
         if self.pattern_type.value != self.prev_pattern_type:
@@ -171,7 +142,7 @@ class Patterns:
                 # log.info("PatternType is set to BARS; Linking bar frequency to osc 0.")
                 self.posc_bank[0].link_param(self.bar_x_offset)
                 self.posc_bank[1].link_param(self.rotation)
-                self.posc_bank[2].link_param(self.bar_x_freq)
+                # self.posc_bank[2].link_param(self.bar_x_freq)
             elif self.pattern_type.value == PatternType.WAVES.value:
                 # log.info("PatternType is set to WAVES; Linking wave frequencies to osc 0, 1.")
                 self.posc_bank[0].link_param(self.wave_freq_x)
@@ -243,9 +214,6 @@ class Patterns:
         alpha = self.pattern_alpha.value
         blended_frame = cv2.addWeighted(frame, 1 - alpha, pattern, alpha, 0)
         return blended_frame
-
-# Assuming self has a new control for the rotation angle
-# For example, self.bar_rotation_angle = Control(0.0, 0.0, 360.0) in degrees
 
     def _generate_bars(self, pattern: np.ndarray, axis: np.ndarray, osc_idx) -> np.ndarray:
         """
@@ -588,31 +556,36 @@ class Patterns:
     
     def create_gui_panel(self, default_font_id=None, global_font_id=None):
         with dpg.collapsing_header(label=f"\tPattern Generator", tag="pattern_generator"):
-            pattern_type_slider = RadioButtonRow(
+            RadioButtonRow(
                 "Pattern Type",
                 PatternType,
                 self.pattern_type,
-                default_font_id)
+                default_font_id
+            )
             
-            pattern_mod = TrackbarRow(
+            TrackbarRow(
                 "Pattern Mod",  
                 self.mod,
-                default_font_id)
+                default_font_id
+            )
             
-            pattern_r = TrackbarRow(
+            TrackbarRow(
                 "Pattern R",
                 self.r,
-                default_font_id)
+                default_font_id
+            )
             
-            pattern_g = TrackbarRow(
+            TrackbarRow(
                 "Pattern G",
                 self.g,
-                default_font_id)
+                default_font_id
+            )
             
-            pattern_b = TrackbarRow(
+            TrackbarRow(
                 "Pattern B",
                 self.b,
-                default_font_id)
+                default_font_id
+            )
             
             TrackbarRow(
                 "Alpha",
@@ -620,15 +593,17 @@ class Patterns:
                 default_font_id
             )
                   
-            pattern_bar_x_freq_slider = TrackbarRow(
+            TrackbarRow(
                 "Bar x Density",
                 self.bar_x_freq,
-                default_font_id)
+                default_font_id
+            )
             
-            pattern_bar_y_freq_slider = TrackbarRow(
+            TrackbarRow(
                 "Bar y Density",
                 self.bar_y_freq,
-                default_font_id)
+                default_font_id
+            )
             
             TrackbarRow(
                 "Rotation",
@@ -636,72 +611,79 @@ class Patterns:
                 default_font_id
             )
             
-            speed_slider = TrackbarRow(
+            TrackbarRow(
                 "Speed",
                 self.pattern_speed,
-                default_font_id)
+                default_font_id
+            )
 
-            pattern_distance = TrackbarRow(
+            TrackbarRow(
                 "Pattern Distance",
                 self.pattern_distance,
-                default_font_id)
+                default_font_id
+            )
 
-            angle_amt_slider = TrackbarRow(
+            TrackbarRow(
                 "Radial Frequency",
                 self.radial_freq,
-                default_font_id)
+                default_font_id
+            )
             
-            radius_amt_slider = TrackbarRow(
+            TrackbarRow(
                 "Angular Frequency",
                 self.angular_freq,
-                default_font_id)
+                default_font_id
+            )
             
-            radial_mod_slider = TrackbarRow(
+            TrackbarRow(
                 "Radial Mod",
                 self.radial_mod,
-                default_font_id)
+                default_font_id
+            )
             
-            angle_mod_slider = TrackbarRow(
-                "Angle Mode",
+            TrackbarRow(
+                "Angle Mod",
                 self.angle_mod,
-                default_font_id)
+                default_font_id
+            )
 
             # use_fractal_slider = TrackbarRow(
             #     "Use Fractal",
             #     self.use_fractal,
             #     default_font_id)
             
-            posc_freq_sliders = []
-            posc_amp_sliders = []
-            posc_phase_sliders = []
-            posc_seed_sliders = []
-            posc_shape_sliders = []
-            for i in range(3):
+            for i in range(self.num_osc):
                 with dpg.collapsing_header(label=f"\tpOscillator {i}", tag=f"posc{i}"):
-                    posc_shape_sliders.append(TrackbarRow(
+                    RadioButtonRow(
                         f"pOsc {i} Shape", 
+                        OscillatorShape,
                         self.params.get(f"posc{i}_shape"), 
-                        default_font_id))
+                        default_font_id
+                    )
                     
-                    posc_freq_sliders.append(TrackbarRow(
+                    TrackbarRow(
                         f"pOsc {i} Freq", 
                         self.params.get(f"posc{i}_frequency"), 
-                        default_font_id))
+                        default_font_id
+                    )
                     
-                    posc_amp_sliders.append(TrackbarRow(
+                    TrackbarRow(
                         f"pOsc {i} Amp", 
                         self.params.get(f"posc{i}_amplitude"), 
-                        default_font_id))
+                        default_font_id
+                    )
                     
-                    posc_phase_sliders.append(TrackbarRow(
+                    TrackbarRow(
                         f"pOsc {i} Phase", 
                         self.params.get(f"posc{i}_phase"), 
-                        default_font_id))
+                        default_font_id
+                    )
                     
-                    posc_seed_sliders.append(TrackbarRow(
+                    TrackbarRow(
                         f"pOsc {i} Seed", 
                         self.params.get(f"posc{i}_seed"), 
-                        default_font_id))
+                        default_font_id
+                    )
                     
                 dpg.bind_item_font(f"posc{i}", global_font_id)
 
