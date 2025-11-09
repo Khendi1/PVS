@@ -554,8 +554,9 @@ class Patterns:
         pattern[:, :, 2] = red_channel # Red
         return pattern
     
-    def create_gui_panel(self, default_font_id=None, global_font_id=None):
-        with dpg.collapsing_header(label=f"\tPattern Generator", tag="pattern_generator"):
+    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
+        with dpg.collapsing_header(label=f"\tPattern Generator", tag="pattern_generator") as h:
+            dpg.bind_item_theme(h, theme)
             RadioButtonRow(
                 "Pattern Type",
                 PatternType,
@@ -654,6 +655,7 @@ class Patterns:
             
             for i in range(self.num_osc):
                 with dpg.collapsing_header(label=f"\tpOscillator {i}", tag=f"posc{i}"):
+                    dpg.bind_item_theme(h, theme)
                     RadioButtonRow(
                         f"pOsc {i} Shape", 
                         OscillatorShape,

@@ -7,22 +7,32 @@ from generators import Oscillator
 from abc import ABC, abstractmethod
 import dearpygui.dearpygui as dpg
 from enum import IntEnum, auto
-from gui_elements import TrackbarRow
+from gui_elements import *
 import logging
+
 
 log = logging.getLogger(__name__)
 
 
-class MoireType(IntEnum):
-    ROTATIONAL = 0
-    TRANSLATIONAL = auto()
-    CIRCULAR = auto()
+class MoirePattern(IntEnum):
+    SINE = 0
+    RADIAL = auto()
+    GRID = auto()
+
+
+class MoireBlend(IntEnum):
+    MULTIPLY = 0
+    ADD = auto()
+    SUB = auto()
+
 
 class Animation(ABC):
     """
     Abstract class to help unify animation frame retrieval
     """
-    def __init__(self, width=800, height=600):
+    def __init__(self, params, toggles, width=800, height=600):
+        self.params = params
+        self.toggles = toggles
         self.width = width
         self.height = height
 
@@ -35,7 +45,8 @@ class Animation(ABC):
 
 
 class Plasma(Animation):
-    def __init__(self, params, width=800, height=600):
+    def __init__(self, params, toggles, width=800, height=600):
+        super().__init__(params, toggles)
         self.params = params
         self.width = width
         self.height = height
@@ -181,12 +192,18 @@ class Plasma(Animation):
         dpg.bind_item_font("plasma_oscillator", global_font_id)
 
 
-class ReactionDiffusionSimulator(Animation):
+class ReactionDiffusion(Animation):
 
-    def __init__(self, params, width=500, height=500, da=1.0, db=0.5, feed=0.055, kill=0.062, randomize_seed=False, max_seed_size=50, num_seeds=15):
-        self.params = params
-        self.width = width
-        self.height = height
+    def __init__(self, params, toggles, width=500, height=500):
+        super().__init__(params, toggles)
+        da=1.0
+        db=0.5
+        feed=0.055
+        kill=0.062
+        randomize_seed=False
+        max_seed_size=50
+        num_seeds=15
+
         self.da = params.add("da", 0, 2.0, da)
         self.db = params.add("db", 0, 2.0, db)
 
@@ -203,7 +220,7 @@ class ReactionDiffusionSimulator(Animation):
         # Kill rate (k): How much chemical B is removed from the system
         self.kill = params.add("kill", 0, 0.1, kill)
         # Time step for the simulation. Smaller values increase stability but require more iterations.
-        self.dt = 0.25
+        self.dt = 0.15
         # Number of simulation steps per displayed frame. Increased to compensate for smaller dt.
         self.iterations_per_frame = params.add("iterations_per_frame", 5, 100, 50)
         self.current_A = np.ones((height, width), dtype=np.float32)
@@ -351,13 +368,11 @@ class Metaballs(Animation):
     # BUG: find bug; when increasing num_metaballs, their sizes seem to get smaller
     # TODO: add parameters to control metaball colors, blending modes, and feedback intensity
     # BUG: find bug: when reducing metaball size then returning to original/larger sizes, they get smaller each time
-    def __init__(self, params, width=800, height=600):
+    def __init__(self, params, toggles, width=800, height=600):
         """
         Initializes the Metaballs with given dimensions.
         """
-        self.params = params
-        self.width = width if width else 800
-        self.height = height if height else 600
+        super().__init__(params, toggles)
         self.metaballs = []
         self.num_metaballs = 5        # Number of metaballs
         self.min_radius = 40          # Minimum radiuWSs of a metaball
@@ -631,91 +646,185 @@ class Metaballs(Animation):
 
 
 class Moire(Animation):
-    def __init__(self, params):
-        self.params = params
-        self.mode = params.add("moire_mode", 0, max(MoireType.values()), 0)
-        self.freq_1 = params.add("spatial_freq_1", 0, 100, 10)
-        self.freq_2 = params.add("spatial_freq_2", 0, 100, 10)
-        self.angle_1 = params.add("angle_1", 0, 100, 10)
-        self.angle_2 = params.add("angle_2", 0, 100, 10)
-        self.zoom_1 = params.add("zoom_1", 0.8, 1.5, 1.0)
-        self.zoom_2 = params.add("zoom_2", 0.8, 1.5, 1.0)
-        self.size = params.add("moire_size", 0, 512, 512)
-        self.mode = params.add("moire_mode", 0, max(MoireType.values()), 0)
+    def __init__(self, params, toggles):
+        super().__init__(params, toggles)
+        self.blend_mode = params.add("moire_blend", 0, len(MoireBlend)-1, 0)
+        
+        center_x = self.width//2
+        center_y = self.height//2
 
-    def create_moire_pattern(size=512, f1=20, f2=20, angle1_deg=0, angle2_deg=5, zoom1=1.0, zoom2=1.0, mode='rotational'):
+        self.pattern_1 = params.add("moire_type_1", 0, len(MoirePattern)-1, 0)
+        self.freq_1 = params.add("spatial_freq_1", 0, 100, 10)
+        self.angle_1 = params.add("angle_1", 0, 100, 10)
+        self.zoom_1 = params.add("zoom_1", 0.8, 1.5, 1.0)
+        self.center_x_1 = params.add("moire_center_x_1", 0, self.width, center_x)
+        self.center_y_1 = params.add("moire_center_y_1", 0, self.width, center_x)
+
+        self.pattern_2 = params.add("moire_type_2", 0, len(MoirePattern)-1, 0)
+        self.freq_2 = params.add("spatial_freq_2", 0, 100, 10)
+        self.angle_2 = params.add("angle_2", 0, 100, 10)
+        self.zoom_2 = params.add("zoom_2", 0.8, 1.5, 1.0)    
+        self.center_x_2 = params.add("moire_center_x_2", 0, self.height, center_y)
+        self.center_y_2 = params.add("moire_center_y_2", 0, self.height, center_y)
+
+    def _generate_single_pattern(self, X_shifted, Y_shifted, frequency, angle_rad, zoom, pattern_type):
+        """Internal helper to generate one of the two interfering patterns."""
+        
+        # apply zoom
+        X_z = X_shifted * zoom
+        Y_z = Y_shifted * zoom
+
+        if pattern_type == MoirePattern.SINE.value:
+            # Creates lines
+            P = X_z * np.cos(angle_rad) + Y_z * np.sin(angle_rad)
+            pattern = np.sin(P * frequency)
+            
+        elif pattern_type == MoirePattern.RADIAL.value:
+            # Creates circles
+            R = np.sqrt(X_z**2 + Y_z**2)
+            pattern = np.sin(R * frequency)
+            
+        elif pattern_type == MoirePattern.GRID.value:
+            # Creates grid
+            freq_x = frequency * (1.0 + np.sin(angle_rad) * 0.05)
+            freq_y = frequency * (1.0 + np.cos(angle_rad) * 0.05)
+            
+            # Additive combination of two sine waves forms a diamond-like grid structure
+            pattern = np.sin(X_z * freq_x) + np.sin(Y_z * freq_y)
+
+        # TODO: define moire pattern magic numbers
+        # Scale the sine wave output (which is between -1 and 1 or -2 and 2 for grid) to 0-255
+        if pattern_type == MoirePattern.GRID.value:
+            # Grid sine output is -2 to 2, scale to 0-255
+            return (pattern * 63.75 + 127.5).astype(np.float32)
+        else:
+            # Standard sine output is -1 to 1, scale to 0-255
+            return (pattern * 127.5 + 127.5).astype(np.float32)
+
+
+    def get_frame(self, frame):
         """
         Generates a Moiré pattern based on the specified mode and parameters,
-        including independent zoom factors for each grating.
-
-        Args:
-            size (int): The width and height of the square image in pixels.
-            f1 (float): Spatial frequency/pitch for the first grating.
-            f2 (float): Spatial frequency/pitch for the second grating.
-            angle1_deg (float): Rotation angle for the first grating in degrees.
-            angle2_deg (float): Rotation angle for the second grating in degrees.
-            zoom1 (float): Zoom factor for the first grating (scales the pattern).
-            zoom2 (float): Zoom factor for the second grating.
-            mode (str): 'rotational', 'translational', or 'circular'.
+        including independent zoom factors for each grating. Takes no args, but
+        utilizes class params.
 
         Returns:
             np.ndarray: The resulting Moiré pattern image (grayscale, 0-255).
         """
         
-        #C reate coordinate grids (from -1 to 1, centered at 0)
-        coords = np.linspace(-1, 1, size)
-        x, y = np.meshgrid(coords, coords)
+        # Create coordinate grids
+        X, Y = np.meshgrid(np.arange(self.width), np.arange(self.height))
+
+        # Apply Center Shift: Subtract the desired center from coordinates
+        x1 = X - self.center_x_1.value
+        y1 = Y - self.center_y_1.value
+        x2 = X - self.center_x_2.value
+        y2 = Y - self.center_y_2.value
+
+        # generate patterns to be blended
+        pattern1_float = self._generate_single_pattern(
+            x1, y1, self.freq_1.value, self.angle_1.value, self.zoom_1.value, self.pattern_1.value
+        )
         
-        # Initialize gratings
-        grating1 = np.zeros_like(x)
-        grating2 = np.zeros_like(x)
+        pattern2_float = self._generate_single_pattern(
+            x2, y2, self.freq_2.value, self.angle_2.value, self.zoom_2.value, self.pattern_2.value
+        )
 
-        if mode == MoireType.ROTATIONAL.value:
-
-            angle1_rad = np.radians(angle1_deg)
-            angle2_rad = np.radians(angle2_deg)
-
-            # Grating 1
-            x_rotated1 = x * np.cos(angle1_rad) + y * np.sin(angle1_rad)
-            x_scaled1 = x_rotated1 / zoom1 #
-            grating1 = 0.5 + 0.5 * np.cos(2 * np.pi * f1 * x_scaled1)
-
-            # Grating 2
-            x_rotated2 = x * np.cos(angle2_rad) + y * np.sin(angle2_rad)
-            x_scaled2 = x_rotated2 / zoom2
-            grating2 = 0.5 + 0.5 * np.cos(2 * np.pi * f2 * x_scaled2)
-
-        elif mode == MoireType.TRANSLATIONAL.value:
-
-            x_scaled1 = x / zoom1
-            x_scaled2 = x / zoom2
-            
-            grating1 = 0.5 + 0.5 * np.cos(2 * np.pi * f1 * x_scaled1)
-            grating2 = 0.5 + 0.5 * np.cos(2 * np.pi * f2 * x_scaled2)
-
-        elif mode == MoireType.CIRCULAR.value:
-
-            r = np.sqrt(x**2 + y**2)
-
-            # Grating 1 (
-            r_scaled1 = r / zoom1
-            grating1 = 0.5 + 0.5 * np.cos(2 * np.pi * f1 * r_scaled1)
-
-            # Grating 2 
-            r_scaled2 = r / zoom2
-            grating2 = 0.5 + 0.5 * np.cos(2 * np.pi * f2 * r_scaled2)
-
+        # blend pattens according to blend_mode
+        if self.blend_mode.value == MoireBlend.MULTIPLY:
+            # Multiply (normalized float 0-1) for a strong interference
+            combined_pattern = (pattern1_float / 255.0) * (pattern2_float / 255.0)
+            # Scale back to 0-255 range and convert to 8-bit integer
+            moire_image = (combined_pattern * 255).astype(np.uint8)
+        elif self.blend_mode.value == MoireBlend.ADD.value:
+            # Add the two patterns and clip to 255
+            combined_pattern = pattern1_float + pattern2_float
+            moire_image = np.clip(combined_pattern / 2.0, 0, 255).astype(np.uint8)
+        elif self.blend_mode.value == MoireBlend.SUB.value:
+            # Add the two patterns and clip to 255
+            combined_pattern = pattern1_float - pattern2_float
+            moire_image = np.clip(combined_pattern / 2.0, 0, 255).astype(np.uint8)
         else:
-            log.error(f"Unrecognized Moiré mode: {mode}. Defaulting to empty image.")
-            return np.zeros((size, size), dtype=np.uint8)
+            # Default to multiply
+            combined_pattern = (pattern1_float / 255.0) * (pattern2_float / 255.0)
+            moire_image = (combined_pattern * 255).astype(np.uint8)
 
+        # apply a contrast stretch (optional but makes pattern clearer)
+        moire_image = cv2.equalizeHist(moire_image)
 
-        # Combine the Gratings (Multiplication is the common method for Moiré)
-        moire_float = grating1 * grating2
-
-        # Convert to 8-bit unsigned integer (0-255) for OpenCV display
-        moire_uint8 = (moire_float * 255).astype(np.uint8)
-
-        return moire_uint8
+        return moire_image
     
+    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
+        with dpg.collapsing_header(label=f"\t Moire animation", tag="moire_animation") as h:
+            RadioButtonRow(
+                "Blend Mode",
+                MoireBlend,
+                self.blend_mode,
+                default_font_id
+            )
+            
+            RadioButtonRow(
+                "Pattern 1",
+                MoirePattern,
+                self.pattern_1,
+                default_font_id
+            )
+            TrackbarRow(
+                "Freq 1",
+                self.freq_1,
+                default_font_id
+            )
+            TrackbarRow(
+                "Zoom 1",
+                self.zoom_1,
+                default_font_id
+            )
+            TrackbarRow(
+                "Angle 1",
+                self.angle_1,
+                default_font_id
+            )
+            TrackbarRow(
+                "Center X 1",
+                self.center_x_1,
+                default_font_id
+            )
+            TrackbarRow(
+                "Center Y 1",
+                self.center_y_1,
+                default_font_id
+            )
+    
+            RadioButtonRow(
+                "Pattern 2",
+                MoirePattern,
+                self.pattern_2,
+                default_font_id
+            )
+            TrackbarRow(
+                "Freq 2",
+                self.freq_2,
+                default_font_id
+            )
+            TrackbarRow(
+                "Zoom 2",
+                self.zoom_2,
+                default_font_id
+            )
+            TrackbarRow(
+                "Angle 2",
+                self.angle_2,
+                default_font_id
+            )
+            TrackbarRow(
+                "Center X 2",
+                self.center_x_2,
+                default_font_id
+            )
+            TrackbarRow(
+                "Center Y 2",
+                self.center_y_2,
+                default_font_id
+            )
+ 
     

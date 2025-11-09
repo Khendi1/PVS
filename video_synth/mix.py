@@ -86,9 +86,10 @@ class Mixer:
         # Dictionary of available animation sources. These differ from captured sources
         # in that they generate frames algorithmically rather than capturing from a device or file.
         self.animation_sources = {
-            MixSources.METABALLS_ANIM.name: Metaballs(params, width=640, height=480),
-            MixSources.PLASMA_ANIM.name: Plasma(params, width=640, height=480),
-            MixSources.REACTION_DIFFUSION_ANIM.name: ReactionDiffusionSimulator(params, 640, 480),
+            MixSources.METABALLS_ANIM.name: Metaballs(params, toggles, width=640, height=480),
+            MixSources.PLASMA_ANIM.name: Plasma(params, toggles, width=640, height=480),
+            MixSources.REACTION_DIFFUSION_ANIM.name: ReactionDiffusion(params, toggles, 640, 480),
+            MixSources.MOIRE_ANIM.name: Moire(params, toggles)
         }
 
         self.device_sources = [k for k,v in self.sources.items() if v <= self.cv2_max_devices-(len(FILE_SOURCE_NAMES)-1)]

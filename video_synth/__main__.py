@@ -8,7 +8,7 @@ The Effects manager is stored in globals.py for easy sharing with the GUI, but i
 See the Program Architecture section in README.md for in-depth explainations
 of module function and interation.
 
-Author: Kyle Henderson
+Author: Kyle Henderson 
 """
 
 import argparse
@@ -63,6 +63,7 @@ def parse_args():
     )
     parser.print_help()
     return parser.parse_args()
+
 
 """ Global logging module configuration using """
 def config_log(log_level):
@@ -120,6 +121,7 @@ def identify_midi_ports(params, controller_names):
         log.warning("No MIDI ports found by the operating system.")
 
     return controllers
+
 
 """ Main app setup and loop """
 def main(num_osc, devices, effects, controller_names):
@@ -217,7 +219,6 @@ def main(num_osc, devices, effects, controller_names):
         log.info("Goodbye!")
 
 if __name__ == "__main__":
-    global effects, CONTROLLER_NAMES
     args = parse_args()
     log = config_log(args.log_level)
     main(args.osc, args.devices, effects, CONTROLLER_NAMES)
