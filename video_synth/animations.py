@@ -25,6 +25,7 @@ class MoireBlend(IntEnum):
     ADD = auto()
     SUB = auto()
 
+# ---- End Enum classes, begin animation base&concrete classes
 
 class Animation(ABC):
     """
@@ -646,7 +647,7 @@ class Metaballs(Animation):
 
 
 class Moire(Animation):
-    def __init__(self, params, toggles):
+    def __init__(self, params, toggles, width=800, height=600):
         super().__init__(params, toggles)
         self.blend_mode = params.add("moire_blend", 0, len(MoireBlend)-1, 0)
         
@@ -654,15 +655,15 @@ class Moire(Animation):
         center_y = self.height//2
 
         self.pattern_1 = params.add("moire_type_1", 0, len(MoirePattern)-1, 0)
-        self.freq_1 = params.add("spatial_freq_1", 0, 100, 10)
-        self.angle_1 = params.add("angle_1", 0, 100, 10)
+        self.freq_1 = params.add("spatial_freq_1", 0, 100, 10.0)
+        self.angle_1 = params.add("angle_1", 0, 100, 10.0)
         self.zoom_1 = params.add("zoom_1", 0.8, 1.5, 1.0)
         self.center_x_1 = params.add("moire_center_x_1", 0, self.width, center_x)
         self.center_y_1 = params.add("moire_center_y_1", 0, self.width, center_x)
 
         self.pattern_2 = params.add("moire_type_2", 0, len(MoirePattern)-1, 0)
-        self.freq_2 = params.add("spatial_freq_2", 0, 100, 10)
-        self.angle_2 = params.add("angle_2", 0, 100, 10)
+        self.freq_2 = params.add("spatial_freq_2", 0, 100, 10.0)
+        self.angle_2 = params.add("angle_2", 0, 100, 10.0)
         self.zoom_2 = params.add("zoom_2", 0.8, 1.5, 1.0)    
         self.center_x_2 = params.add("moire_center_x_2", 0, self.height, center_y)
         self.center_y_2 = params.add("moire_center_y_2", 0, self.height, center_y)
@@ -752,10 +753,11 @@ class Moire(Animation):
         # apply a contrast stretch (optional but makes pattern clearer)
         moire_image = cv2.equalizeHist(moire_image)
 
-        return moire_image
+        return cv2.cvtColor(moire_image, cv2.COLOR_GRAY2BGR)
     
     def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
         with dpg.collapsing_header(label=f"\t Moire animation", tag="moire_animation") as h:
+            dpg.bind_item_theme(h, theme)
             RadioButtonRow(
                 "Blend Mode",
                 MoireBlend,

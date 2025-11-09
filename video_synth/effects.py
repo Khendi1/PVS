@@ -1183,9 +1183,9 @@ class Reflector(EffectBase):
         self._mode = params.add(
             "reflection_mode", 0, len(ReflectionMode) - 1, ReflectionMode.NONE.value
         )
+        self.segments = params.add("reflector_segments",0,10,0)
         self.width = None 
         self.height = None
-        self.num_axis = 3
 
     @property
     def mode(self) -> ReflectionMode:

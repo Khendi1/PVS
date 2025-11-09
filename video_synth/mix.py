@@ -89,7 +89,7 @@ class Mixer:
             MixSources.METABALLS_ANIM.name: Metaballs(params, toggles, width=640, height=480),
             MixSources.PLASMA_ANIM.name: Plasma(params, toggles, width=640, height=480),
             MixSources.REACTION_DIFFUSION_ANIM.name: ReactionDiffusion(params, toggles, 640, 480),
-            MixSources.MOIRE_ANIM.name: Moire(params, toggles)
+            MixSources.MOIRE_ANIM.name: Moire(params, toggles, width=640, height=480)
         }
 
         self.device_sources = [k for k,v in self.sources.items() if v <= self.cv2_max_devices-(len(FILE_SOURCE_NAMES)-1)]
@@ -293,6 +293,8 @@ class Mixer:
 
     def blend(self, frame1, frame2):
         alpha = self.alpha_blend.value
+        # height1, width1, = frame1.shape[:2]
+        # height2, width2 = frame2.shape[:2]
         return cv2.addWeighted(frame1, alpha, frame2, 1 - alpha, 0)
 
 
