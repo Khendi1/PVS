@@ -557,7 +557,7 @@ class Pixels(EffectBase):
         self.image_height = image_height
 
         self.sharpen_type = params.add("sharpen_type", 0, len(SharpenType)-1, 0)
-        self.sharpen_intensity = params.add("sharpen_intensity", 4.0, 8.0, 4.0)
+        self.sharpen_intensity = params.add("sharpen_intensity", 1.0, 8.0, 4.0)
         self.mask_blur = params.add("mask_blur", 1, 10, 5)
         self.k_size = params.add("k_size", 0, 11, 3)
 

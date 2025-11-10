@@ -137,7 +137,7 @@ def main(num_osc, devices, effects, controller_names):
 
     # Initialize video mixer, get a frame, create copies for feedback
     mixer = Mixer(params, toggles, devices)
-    dry_frame = mixer.get_frame()  
+    dry_frame = mixer.get_mixed_frame()  
     wet_frame = dry_frame.copy()
     prev_frame = dry_frame.copy()
 
@@ -166,7 +166,7 @@ def main(num_osc, devices, effects, controller_names):
     try:
         while True:
             # retreive and mix frames from the selected sources
-            dry_frame = mixer.get_frame()
+            dry_frame = mixer.get_mixed_frame()
 
             # frame retrieval may fail when changing sources; skip
             if mixer.skip or dry_frame is None:

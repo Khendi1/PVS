@@ -1,6 +1,5 @@
 mixer:
 - load image
-- loop video automatically
 
 warp:
 - tune params
@@ -10,9 +9,6 @@ metaballs:
 - hue
 - skew
 - test speed
-
-moire:
-- parameterize
 
 sequencer gui panel:
 - implement... how???

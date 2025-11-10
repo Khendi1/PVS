@@ -113,11 +113,11 @@ class Mixer:
 
         # initialize source 1 to use the first hardware device available (probably webcam if on laptop)
         self.selected_source1 = params.add(
-            "source1", 0, max(self.sources.values()) - 1, self.sources[self.device_sources[0]]
+            "source1", 0, max(self.sources.values()), self.sources[self.device_sources[0]]
         )
         # init source 2 to metaballs
         self.selected_source2 = params.add(
-            "source2", 0, max(self.sources.values()) - 1, self.sources[MixSources.METABALLS_ANIM.name]
+            "source2", 0, max(self.sources.values()), self.sources[MixSources.METABALLS_ANIM.name]
         )
 
         # --- Parameters for blending and keying ---
@@ -144,6 +144,9 @@ class Mixer:
         # before the mixer can blend or key between the two sources.
         self.start_video(self.selected_source1.value, 1)
         self.start_video(self.selected_source2.value, 2)
+        
+        # show source k-v pairs for debugging
+        log.info(f'Sources: {self.sources}')
 
     # find dir one level up from current working directory
     def find_dir(self, dir_name: str, file_name: str = None):
@@ -337,36 +340,48 @@ class Mixer:
         return result
 
 
-    def get_frame(self):
+    def get_mixed_frame(self):
         ret1, frame1 = False, None
         ret2, frame2 = False, None
 
         # Read from source 1
         if not isinstance(self.cap1, cv2.VideoCapture):
-            frame1 = self.cap1.get_frame(frame1)
+            frame1 = self.cap1.get_frame(frame1)  
             ret1 = True
         else:
             ret1, frame1 = self.cap1.read()
             # TODO: retry a couple times to let devices connect before changing src
             if not ret1:
-                log.error(
-                    f"Source 1 '{self.selected_source1.value}' read failed"
-                )
-                # self.cap1.release()
-                # self.cap1 = self.failback_camera()
+                if self.selected_source1.value == self.sources[MixSources.VIDEO_FILE_1.name]:
+                    log.info("Video end reached. Looping back to start.")
+                    # Reset the video position to the beginning
+                    self.cap1.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    ret1, frame1 = self.cap1.read()
+                else:
+                    log.error(
+                        f"Source 1 '{self.selected_source1.value}' read failed"
+                    )
+                    # self.cap1.release()
+                    # self.cap1 = self.failback_camera()
 
         # Read from source 2
         if not isinstance(self.cap2, cv2.VideoCapture):
+            print(type(self.cap2))
             frame2 = self.cap2.get_frame(frame2)
             ret2 = True
         else:
             ret2, frame2 = self.cap2.read()
             if not ret2:
-                log.error(
-                    f"Source 2 '{self.selected_source2.value}' read failed, attempting to reopen."
-                )
-                # self.cap2.release()
-                # self.cap2 = self.failback_camera()
+                if self.selected_source2.value == self.sources[MixSources.VIDEO_FILE_2.name]:
+                    log.info("Video end reached. Looping back to start...")
+                    self.cap2.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    ret2, frame2 = self.cap2.read()
+                else:
+                    log.error(
+                        f"Source 2 '{self.selected_source2.value}' read failed, attempting to reopen."
+                    )
+                    # self.cap2.release()
+                    # self.cap2 = self.failback_camera()
 
         # Process and display frames
         if ret1 and ret2:
