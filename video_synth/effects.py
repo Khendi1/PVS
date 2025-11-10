@@ -69,8 +69,10 @@ class BlurType(IntEnum):
 """Enumeration of sharpening modes"""
 class SharpenType(IntEnum):
     NONE = 0
-    SHARPEN = auto()
-    UNSHARP_MASK = auto()
+    TEST = auto()
+    KERNEL = auto()
+    UNSHARP = auto()
+    LAPLACIAN = auto()
 
 """Enum to access hsv tuple indicies"""
 class HSV(IntEnum):
@@ -208,7 +210,7 @@ class EffectManager:
         frame = self.noise.apply_noise(frame)
         frame = self.color.solarize_image(frame)
         frame = self.color.posterize(frame)
-        frame = self.pixels.gaussian_blur(frame)
+        frame = self.pixels.blur(frame)
         frame = self.pixels.sharpen_frame(frame)
         frame = self.glitch.apply_glitch_effects(frame)        
 
@@ -554,13 +556,10 @@ class Pixels(EffectBase):
         self.image_width = image_width
         self.image_height = image_height
 
-        self.sharpen_type = params.add(
-            "sharpen_type",
-            SharpenType.NONE.value,
-            len(SharpenType),
-            SharpenType.NONE.value,
-        )
+        self.sharpen_type = params.add("sharpen_type", 0, len(SharpenType)-1, 0)
         self.sharpen_intensity = params.add("sharpen_intensity", 4.0, 8.0, 4.0)
+        self.mask_blur = params.add("mask_blur", 1, 10, 5)
+        self.k_size = params.add("k_size", 0, 11, 3)
 
         self.blur_type = params.add(
             "blur_type", 0, len(BlurType)-1, 1
@@ -665,15 +664,11 @@ class Pixels(EffectBase):
         Intensity controls the scaling factor for the Poisson distribution.
         """
         # Scale to a range suitable for Poisson (e.g., 0-100), Then add noise and scale back
-        scaled_image = (
-            image / 255.0 * 100.0
-        )  # Scale to 0-100 for better Poisson distribution
+        scaled_image = (image / 255.0 * 100.0)
         poisson_noise = np.random.poisson(
             scaled_image * self._noise_intensity.value * 2
         ).astype(np.float32)
-        noisy_image = image + (
-            poisson_noise / 100.0 * 255.0
-        )  # Scale noise back to 0-255 range
+        noisy_image = image + (poisson_noise / 100.0 * 255.0)  # Scale noise back to 0-255 range
         return np.clip(noisy_image, 0, 255).astype(np.uint8)
 
     def _apply_salt_and_pepper_noise(self, image: np.ndarray) -> np.ndarray:
@@ -751,7 +746,7 @@ class Pixels(EffectBase):
         noisy_image = image + random_noise
         return np.clip(noisy_image, 0, 255).astype(np.uint8)
 
-    def gaussian_blur(self, frame: np.ndarray):
+    def blur(self, frame: np.ndarray):
         mode = self.blur_type.value
         if mode == BlurType.NONE:
             pass
@@ -771,27 +766,68 @@ class Pixels(EffectBase):
 
         return frame
 
+    def _kernel_sharpening(self, image, strength=1.0):
+        """Sharpening using a custom convolution kernel (Filter Mode)."""
+        base_kernel = np.array([[0, -1, 0],
+                                [-1, 5, -1],
+                                [0, -1, 0]], dtype=np.float32)
+        
+        scaled_kernel = base_kernel * strength + (1 - strength) * np.array([[0, 0, 0],
+                                                                            [0, 1, 0],
+                                                                            [0, 0, 0]], dtype=np.float32)
+
+        sharpened = cv2.filter2D(image, -1, scaled_kernel)
+        return sharpened
+
+    def _unsharp_masking(self, image, blur_sigma=5, amount=1.5):
+        """Explicit Unsharp Masking technique (controlled by blur and amount)."""
+        blurred = cv2.GaussianBlur(image, (0, 0), blur_sigma) 
+        sharpened = cv2.addWeighted(image, 1.0 + amount, blurred, -amount, 0)
+        sharpened = np.clip(sharpened, 0, 255).astype(np.uint8)
+        return sharpened
+
+    def _laplacian_sharpening(self, image, ksize=3):
+        """Sharpening using the Laplacian edge detection filter."""
+        img_float = image.astype(np.float32)
+        laplacian = cv2.Laplacian(img_float, cv2.CV_32F, ksize=ksize)
+        sharpened = img_float - laplacian
+        sharpened = np.clip(sharpened, 0, 255).astype(np.uint8)
+        return sharpened
+
     def sharpen_frame(self, frame: np.ndarray):
 
-        if self.sharpen_intensity.value <= self.sharpen_intensity.min + 0.01:
+        sharpened_frame = frame
+        if self.sharpen_type.value == SharpenType.NONE.value:
             return frame
-
-        sharpening_kernel = np.array(
-            [[0, -1, 0], [-1, self.sharpen_intensity.value, -1], [0, -1, 0]]
-        )
-
-        # Apply the kernel to the frame using cv2.filter2D
-        # -1 indicates that the output image will have the same depth (data type) as the input image.
-        sharpened_frame = cv2.filter2D(frame, -1, sharpening_kernel)
+        if self.sharpen_type.value == SharpenType.KERNEL.value:
+            # TODO: map sharpen_intensity to apropriate range (0.0-2.0???)
+            sharpened_frame = self._kernel_sharpening(frame, self.sharpen_intensity.value)
+        elif self.sharpen_type.value == SharpenType.UNSHARP.value:
+            sharpened_frame = self._unsharp_masking(frame, self.mask_blur.value, self.sharpen_intensity.value)
+        elif self.sharpen_type.value == SharpenType.LAPLACIAN.value:
+            sharpened_frame = self._laplacian_sharpening(frame, self.k_size.value)
+        elif self.sharpen_type.value == SharpenType.TEST.value:
+            if self.sharpen_intensity.value <= self.sharpen_intensity.min + 0.01:
+                return frame
+            sharpening_kernel = np.array(
+                [[0, -1, 0], [-1, self.sharpen_intensity.value, -1], [0, -1, 0]]
+            )
+            # Apply the kernel to the frame using cv2.filter2D
+            sharpened_frame = cv2.filter2D(frame, -1, sharpening_kernel)
 
         return sharpened_frame
     
-
     def create_gui_panel(self, default_font_id, theme):
 
         with dpg.collapsing_header(label=f"\tPixels", tag="pixels") as h:
             dpg.bind_item_theme(h, theme)
             
+            RadioButtonRow(
+                label="Blur Type", 
+                cls=BlurType,
+                param=self.params.get("blur_type"), 
+                font=default_font_id
+            )
             TrackbarRow(
                 "Blur Kernel", 
                 self.params.get("blur_kernel_size"), 
@@ -799,29 +835,36 @@ class Pixels(EffectBase):
             )
 
             RadioButtonRow(
-                label="Blur Type", 
-                cls=BlurType,
-                param=self.params.get("blur_type"), 
-                font=default_font_id
-            )
-
-            TrackbarRow(
-                "Sharpen Amount", 
-                self.params.get("sharpen_intensity"), 
+                "Sharpen Type",
+                SharpenType,
+                self.sharpen_type,
                 default_font_id
             )
-
+            TrackbarRow(
+                "Sharpen Amount", 
+                self.sharpen_intensity, 
+                default_font_id
+            )
+            TrackbarRow(
+                "Shapen Blur",
+                self.mask_blur,
+                default_font_id
+            )
+            TrackbarRow(
+                "Sharpen Kernel",
+                self.k_size,
+                default_font_id
+            )
 
             RadioButtonRow(
                 "Noise Type", 
                 NoiseType, 
-                self.params.get("noise_type"), 
+                self._noise_type, 
                 default_font_id
             )
-
-            noise_intensity = TrackbarRow(
+            TrackbarRow(
                 "Noise Intensity", 
-                self.params.get("noise_intensity"), 
+                self._noise_intensity, 
                 default_font_id
             )
 

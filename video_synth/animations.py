@@ -9,13 +9,14 @@ import dearpygui.dearpygui as dpg
 from enum import IntEnum, auto
 from gui_elements import *
 import logging
+import math
 
 
 log = logging.getLogger(__name__)
 
 
 class MoirePattern(IntEnum):
-    SINE = 0
+    LINE = 0
     RADIAL = auto()
     GRID = auto()
 
@@ -31,7 +32,7 @@ class Animation(ABC):
     """
     Abstract class to help unify animation frame retrieval
     """
-    def __init__(self, params, toggles, width=800, height=600):
+    def __init__(self, params, toggles, width=640, height=480):
         self.params = params
         self.toggles = toggles
         self.width = width
@@ -655,52 +656,55 @@ class Moire(Animation):
         center_y = self.height//2
 
         self.pattern_1 = params.add("moire_type_1", 0, len(MoirePattern)-1, 0)
-        self.freq_1 = params.add("spatial_freq_1", 0, 100, 10.0)
-        self.angle_1 = params.add("angle_1", 0, 100, 10.0)
-        self.zoom_1 = params.add("zoom_1", 0.8, 1.5, 1.0)
+        self.freq_1 = params.add("spatial_freq_1", 0.01, 25, 10.0)
+        self.angle_1 = params.add("angle_1", 0, 360, 90.0)
+        self.zoom_1 = params.add("zoom_1", 0.05, 1.5, 1.0)
         self.center_x_1 = params.add("moire_center_x_1", 0, self.width, center_x)
-        self.center_y_1 = params.add("moire_center_y_1", 0, self.width, center_x)
+        self.center_y_1 = params.add("moire_center_y_1", 0, self.height, center_y)
 
         self.pattern_2 = params.add("moire_type_2", 0, len(MoirePattern)-1, 0)
-        self.freq_2 = params.add("spatial_freq_2", 0, 100, 10.0)
-        self.angle_2 = params.add("angle_2", 0, 100, 10.0)
-        self.zoom_2 = params.add("zoom_2", 0.8, 1.5, 1.0)    
-        self.center_x_2 = params.add("moire_center_x_2", 0, self.height, center_y)
+        self.freq_2 = params.add("spatial_freq_2", 0.01, 25, 1.0)
+        self.angle_2 = params.add("angle_2", 0, 360, 0.0)
+        self.zoom_2 = params.add("zoom_2", 0.05, 1.5, 1.0)    
+        self.center_x_2 = params.add("moire_center_x_2", 0, self.width, center_x)
         self.center_y_2 = params.add("moire_center_y_2", 0, self.height, center_y)
 
     def _generate_single_pattern(self, X_shifted, Y_shifted, frequency, angle_rad, zoom, pattern_type):
         """Internal helper to generate one of the two interfering patterns."""
         
+        angle_rad = math.radians(angle_rad)
+
         # apply zoom
         X_z = X_shifted * zoom
         Y_z = Y_shifted * zoom
 
-        if pattern_type == MoirePattern.SINE.value:
+        if pattern_type == MoirePattern.LINE.value:
             # Creates lines
             P = X_z * np.cos(angle_rad) + Y_z * np.sin(angle_rad)
-            pattern = np.sin(P * frequency)
+            pattern = np.sin(P * frequency/2)
             
         elif pattern_type == MoirePattern.RADIAL.value:
             # Creates circles
             R = np.sqrt(X_z**2 + Y_z**2)
-            pattern = np.sin(R * frequency)
+            pattern = np.sin(R * frequency/2)
             
         elif pattern_type == MoirePattern.GRID.value:
             # Creates grid
-            freq_x = frequency * (1.0 + np.sin(angle_rad) * 0.05)
-            freq_y = frequency * (1.0 + np.cos(angle_rad) * 0.05)
+            freq_x = frequency * (1.0 + np.sin(angle_rad) * .01)
+            freq_y = frequency * (1.0 + np.cos(angle_rad) * .01)
             
             # Additive combination of two sine waves forms a diamond-like grid structure
             pattern = np.sin(X_z * freq_x) + np.sin(Y_z * freq_y)
 
         # TODO: define moire pattern magic numbers
         # Scale the sine wave output (which is between -1 and 1 or -2 and 2 for grid) to 0-255
+        SCALE_FACTOR = 127.5
         if pattern_type == MoirePattern.GRID.value:
             # Grid sine output is -2 to 2, scale to 0-255
-            return (pattern * 63.75 + 127.5).astype(np.float32)
+            return (pattern * 63.75 + SCALE_FACTOR).astype(np.float32)
         else:
             # Standard sine output is -1 to 1, scale to 0-255
-            return (pattern * 127.5 + 127.5).astype(np.float32)
+            return (pattern * SCALE_FACTOR + SCALE_FACTOR).astype(np.float32)
 
 
     def get_frame(self, frame):
@@ -742,13 +746,9 @@ class Moire(Animation):
             combined_pattern = pattern1_float + pattern2_float
             moire_image = np.clip(combined_pattern / 2.0, 0, 255).astype(np.uint8)
         elif self.blend_mode.value == MoireBlend.SUB.value:
-            # Add the two patterns and clip to 255
+            # Subtract the two patterns and clip to 255
             combined_pattern = pattern1_float - pattern2_float
             moire_image = np.clip(combined_pattern / 2.0, 0, 255).astype(np.uint8)
-        else:
-            # Default to multiply
-            combined_pattern = (pattern1_float / 255.0) * (pattern2_float / 255.0)
-            moire_image = (combined_pattern * 255).astype(np.uint8)
 
         # apply a contrast stretch (optional but makes pattern clearer)
         moire_image = cv2.equalizeHist(moire_image)
@@ -756,7 +756,7 @@ class Moire(Animation):
         return cv2.cvtColor(moire_image, cv2.COLOR_GRAY2BGR)
     
     def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
-        with dpg.collapsing_header(label=f"\t Moire animation", tag="moire_animation") as h:
+        with dpg.collapsing_header(label=f"\tMoire animation", tag="moire_animation") as h:
             dpg.bind_item_theme(h, theme)
             RadioButtonRow(
                 "Blend Mode",

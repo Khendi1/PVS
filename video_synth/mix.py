@@ -293,8 +293,9 @@ class Mixer:
 
     def blend(self, frame1, frame2):
         alpha = self.alpha_blend.value
-        # height1, width1, = frame1.shape[:2]
-        # height2, width2 = frame2.shape[:2]
+        # if frame1.shape != frame2.shape:
+        #     print(frame1.shape)
+        #     print(frame2.shape)
         return cv2.addWeighted(frame1, alpha, frame2, 1 - alpha, 0)
 
 
