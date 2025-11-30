@@ -10,9 +10,27 @@ metaballs:
 - skew
 - test speed
 
+Moire:
+- more shapes
+
+Plasma:
+- slow and broken; debug
+
+oscillators:
+- default perlin wave shape params need tuning
+- implement cut off 
+
 sequencer gui panel:
 - implement... how???
 
 patterns:
 - hide gui sliders when unused by current warp mode
 
+shaders:
+- begin implementation
+
+lissajous:
+- tune params
+- make more interesting
+
+save:

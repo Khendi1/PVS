@@ -34,6 +34,12 @@ class ParamTable:
         else:
             raise TypeError("Key must be a string or an integer")
 
+    def __delitem__(self, key):
+        """
+        Enables item deletion using del obj[key]
+        """
+        del self.params[key]
+
     def val(self, param_name: str):
         """
         Returns the current value of the Param object with the given name.

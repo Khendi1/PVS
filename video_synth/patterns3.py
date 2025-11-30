@@ -61,7 +61,6 @@ class Patterns:
         # Define pattern-specific parameters (using the global params_table)
         self.pattern_type = params.add("pattern_type", PatternType.NONE.value, len(PatternType)-1, 0) 
         self.prev_pattern_type = self.pattern_type.value 
-        self.pattern_speed = params.add("pattern_speed", 0.1, 10.0, 1.0)
         self.pattern_alpha = params.add("pattern_alpha", 0.0, 1.0, 0.5)
 
         # perlin params
@@ -89,8 +88,6 @@ class Patterns:
         self.grid_size = params.add("pattern_grid_size", 10, 100, 30, family="Checkers") # Base grid size for checkers
         self.color_shift = params.add("pattern_color_shift", 0, 255, 127, family="Checkers")
         self.color_blend = params.add("pattern_color_blend", 0, 255, 127, family="Checkers")
-
-        self.pattern_distance = params.add("pattern_distance", 0.1, 10.0, 5.0) 
 
         self.wave_freq_x = params.add("pattern_wave_freq_x", 0.0, 100, 0.05, family="Waves")
         self.wave_freq_y = params.add("pattern_wave_freq_y", 0.0, 100, 0.05, family="Waves")
@@ -120,12 +117,9 @@ class Patterns:
         self.y_perturb = params.add("y_perturb", 0, 50, 25.0, family="Sine")
         self.phase_speed = params.add("phase_speed", 0.01, 10.0, 1.0, family="Sine") 
 
-        self.p1 = params.add("posc0_val", -10, 10, 1.15)
-        self.p2 = params.add("posc1_val", -10, 10, 1.1)
-        self.p3 = params.add("posc2_val", -10, 10, 1.1)
-
         self.num_osc = 5
         self.posc_bank = [] # List to hold Oscillator instances
+
         for i in range(self.num_osc):
             self.posc_bank.append(Oscillator(params, name=f"posc{i}", frequency=0.1, 
                                              amplitude=100.0, phase=0.0, shape=4,
@@ -140,9 +134,10 @@ class Patterns:
             self.prev_pattern_type = self.pattern_type.value
             if self.pattern_type.value == PatternType.BARS.value:
                 # log.info("PatternType is set to BARS; Linking bar frequency to osc 0.")
-                self.posc_bank[0].link_param(self.bar_x_offset)
-                self.posc_bank[1].link_param(self.rotation)
-                # self.posc_bank[2].link_param(self.bar_x_freq)
+                self.posc_bank[0].link_param(self.bar_x_offset, True)
+                self.posc_bank[1].link_param(self.rotation, True)
+                self.posc_bank[1].frequency.value = 0 # stop auto oscillation
+
             elif self.pattern_type.value == PatternType.WAVES.value:
                 # log.info("PatternType is set to WAVES; Linking wave frequencies to osc 0, 1.")
                 self.posc_bank[0].link_param(self.wave_freq_x)
@@ -150,12 +145,11 @@ class Patterns:
                 self.posc_bank[2].link_param(self.rotation)
             elif self.pattern_type.value == PatternType.CHECKERS.value:
                 # log.info("PatternType is set to CHECKERS; Linking grid size to osc 0.")
-                self.posc_bank[0].link_param(self.grid_size)
-                self.posc_bank[1].link_param(self.color_shift)
-                self.posc_bank[2].link_param(self.color_blend)
+                self.posc_bank[0].link_param(self.grid_size, True)
+                self.posc_bank[1].link_param(self.color_shift, True)
+                self.posc_bank[2].link_param(self.color_blend, True)
             elif self.pattern_type.value == PatternType.RADIAL.value:
-                pass
-                # log.info("PatternType is set to RADIAL; Linking radial parameters to osc 0.")
+                log.info("PatternType is set to RADIAL; Linking radial parameters to osc 0.")
                 # self.posc_bank[0].link_param(self.radial_freq)
                 # self.posc_bank[1].link_param(self.angular_freq)
                 # self.posc_bank[2].link_param(self.radial_mod)
@@ -185,14 +179,14 @@ class Patterns:
         # Initialize a black image
         pattern = np.zeros((self.height, self.width, 3), dtype=np.uint8)
 
-        self._set_osc_params()
+        self._set_osc_params() # TODO: use conditional to compare current/last setting so not calling every time
         posc_vals = [osc.get_next_value() for osc in self.posc_bank if osc.linked_param is not None]
 
         # Dispatch to the appropriate pattern generation function
         if self.pattern_type.value == PatternType.NONE.value:
             pass # Returns black image
         elif self.pattern_type.value == PatternType.BARS.value:
-            pattern = self._generate_bars(pattern, self.X, 0)
+            pattern = self._generate_bars(pattern)
         elif self.pattern_type.value == PatternType.WAVES.value:
             pattern = self._generate_waves(pattern, self.X, self.Y)
         elif self.pattern_type.value == PatternType.CHECKERS.value:
@@ -215,28 +209,24 @@ class Patterns:
         blended_frame = cv2.addWeighted(frame, 1 - alpha, pattern, alpha, 0)
         return blended_frame
 
-    def _generate_bars(self, pattern: np.ndarray, axis: np.ndarray, osc_idx) -> np.ndarray:
+    def _generate_bars(self, pattern: np.ndarray) -> np.ndarray:
         """
         Generates bars that can be rotated, shifting color and position based on oscillator values.
         """
         height, width, _ = pattern.shape
 
         density = self.bar_x_freq.value
-        offset = self.bar_x_offset.value  # linked to posc 0 for scrolling
+        offset = self.bar_x_offset.value / 4  # linked to posc 0 for scrolling
         mod = self.mod.value # gradient modulation for stripy bar patterns
         
-        rotation_deg = self.rotation.value
-        rotation_rad = math.radians(rotation_deg)
+        rotation_rad = math.radians(self.rotation.value)
+        # log.debug(f'pattern rotation: {self.rotation.value}\u00b0->{rotation_rad}')
 
         # Create normalized X and Y coordinate grids (e.g., from -1 to 1 or 0 to 1)
         # This example uses normalized coordinates from 0 to 1, then scales/centers them
         x = np.linspace(-1, 1, width)
         y = np.linspace(-1, 1, height)
         xx, yy = np.meshgrid(x, y)
-        
-        # The rotated coordinate (x', y') is calculated from the original (x, y)
-        # x' = x * cos(theta) - y * sin(theta)
-        # y' = x * sin(theta) + y * cos(theta)
         
         # Combine the new coordinates into a single axis for modulation
         rotated_axis = (
@@ -262,39 +252,25 @@ class Patterns:
         """
         Generates a pattern of bars on both X and Y axes, controlled by static parameters.
         """
-        # Get parameters from ParamTable
-        x_density = self.bar_x_freq.value
-        y_density = self.bar_y_freq.value
 
         x_offset = self.bar_x_offset.value / 10 # linked to posc 0
         y_offset = self.bar_y_offset.value / 10 # linked to posc 1
 
-        color_x_hue = self.x_hue.value 
-        color_y_hue = self.y_hue.value
-
-        # Generate X-axis bars
-        x_bars = (np.sin(X * x_density + x_offset) + 1) / 2 # Range 0-1
-
-        # Generate Y-axis bars
-        y_bars = (np.sin(Y * y_density + y_offset) + 1) / 2 # Range 0-1
+        # Generate bars per axis
+        x_bars = (np.sin(X * self.bar_x_freq.value + x_offset) + 1) / 2 # Range 0-1
+        y_bars = (np.sin(Y * self.bar_y_freq.value + y_offset) + 1) / 2 # Range 0-1
 
         # Combine the bar patterns. Multiplying creates a grid-like intersection.
         # Adding would create overlapping bars.
         combined_bars = x_bars * y_bars # This creates a grid where both X and Y bars are bright
 
-        # Apply colors. We can blend colors based on the individual bar patterns
-        # or apply a single color to the combined pattern.
-        # Let's try to make X bars one color and Y bars another, with overlap.
-
-        # Color for X bars (e.g., more red)
-        red_x = (combined_bars * 255 * color_x_hue).astype(np.uint8)
-        green_x = (combined_bars * 255 * (1 - color_x_hue)).astype(np.uint8)
+        # Apply colors; make X bars one color and Y bars another, with overlap.
+        red_x = (combined_bars * 255 * self.x_hue.value ).astype(np.uint8)
+        green_x = (combined_bars * 255 * (1 - self.x_hue.value )).astype(np.uint8)
         blue_x = np.zeros_like(combined_bars, dtype=np.uint8) # Minimal blue for X
-
-        # Color for Y bars (e.g., more blue)
         red_y = np.zeros_like(combined_bars, dtype=np.uint8) # Minimal red for Y
-        green_y = (combined_bars * 255 * (1 - color_y_hue)).astype(np.uint8)
-        blue_y = (combined_bars * 255 * color_y_hue).astype(np.uint8)
+        green_y = (combined_bars * 255 * (1 - self.y_hue.value )).astype(np.uint8)
+        blue_y = (combined_bars * 255 * self.y_hue.value ).astype(np.uint8)
 
         # Combine colors. Additive blending for overlapping effects.
         pattern[:, :, 0] = np.clip(blue_x + blue_y, 0, 255) # Blue channel
@@ -307,28 +283,21 @@ class Patterns:
         """
         Generates horizontal/vertical waves that ripple and change color based on oscillators.
         """
-        # osc0_norm: controls horizontal wave frequency/speed
-        # osc1_norm: controls vertical wave frequency/speed
-        # osc2_norm: controls overall brightness/color shift
-        # Growing/spacing mode: use oscillators to modulate wave frequencies
-        # freq_x = 0.03 + norm_osc_vals[0] # original is 0.05
-        # freq_y = 0.03 + norm_osc_vals[1] 
-        freq_x = 0.03 + self.wave_freq_x.value / 5 # original is 0.05
-        freq_y = 0.03 + self.wave_freq_y.value / 5
+        # posc0: controls horizontal wave frequency/speed
+        # posc1: controls vertical wave frequency/speed
+        # posc2: controls overall brightness/color shift
+
+        # Growing/spacing mode: use oscillators to modulate wave frequencies 
+        freq_x = 0.03 + self.wave_freq_x.value / 0.05 # testing w/ value 5, original is 0.05
+        freq_y = 0.03 + self.wave_freq_y.value / 0.05
         # Combine waves and modulate with osc2 for overall brightness/color
-        # val_x = np.sin(X * freq_x + norm_osc_vals * 1) # 5Horizontal wave
-        # val_y = np.sin(Y * freq_y + norm_osc_vals[1] * 1) #5 Vertical wave
-        val_x = np.sin(X * freq_x + self.bar_x_offset.value * .1) # Horizontal wave
-        val_y = np.sin(Y * freq_y + self.bar_y_offset.value * .1) # Vertical wave
+        val_x = np.sin(X * freq_x + self.bar_x_offset.value * 5) # Horizontal wave
+        val_y = np.sin(Y * freq_y + self.bar_y_offset.value * 5) # Vertical wave
 
         total_val = (val_x + val_y) / 2 # Range -1 to 1
         brightness = ((total_val + self.brightness.value) / 2 + 1) / self.mod.value * 255 # Map to 0-255
 
         # Apply color based on brightness and oscillator values
-        # blue_channel = (brightness * (1 - norm_osc_vals[1])).astype(np.uint8)
-        # green_channel = (brightness * norm_osc_vals[0]).astype(np.uint8)
-        # red_channel = (brightness * norm_osc_vals[2]).astype(np.uint8)
-        
         blue_channel = (brightness * (1 - self.b.value)).astype(np.uint8)
         green_channel = (brightness * self.g.value).astype(np.uint8)
         red_channel = (brightness * self.r.value).astype(np.uint8)
@@ -342,9 +311,9 @@ class Patterns:
         """
         Generates a checkerboard pattern whose square size and colors shift.
         """
-        # osc0_norm: controls grid size
-        # osc1_norm: controls color blend
-        # osc2_norm: controls color shift
+        # posc0: controls grid size
+        # posc1: controls color blend
+        # posc2: controls color shift
 
         grid_size_base = 30 # Base size in pixels
         grid_size_mod = self.grid_size.value * 40 # Modulation amount
@@ -385,9 +354,9 @@ class Patterns:
         """
         Generates a radial pattern that pulsates and rotates based on oscillators.
         """
-        # osc0_norm: controls radial wave density/pulsation
-        # osc1_norm: controls angular wave density/rotation speed
-        # osc2_norm: controls overall color hue
+        # posc0: controls radial wave density/pulsation
+        # posc1: controls angular wave density/rotation speed
+        # posc2: controls overall color hue
 
         center_x, center_y = self.width / 2, self.height / 2
         
@@ -423,9 +392,9 @@ class Patterns:
         pattern = np.zeros((self.height, self.width, 3), dtype=np.uint8)
 
         # Perlin noise parameters from ParamTable, modulated by oscillators
-        # osc0_norm: modulates X spatial scale
-        # osc1_norm: modulates Y spatial scale
-        # osc2_norm: modulates persistence and time evolution speed
+        # posc0: modulates X spatial scale
+        # posc1: modulates Y spatial scale
+        # posc2: modulates persistence and time evolution speed
 
         scale_x = self.x_scale + norm_osc_vals[0] * 0.02
         scale_y = self.y_scale + norm_osc_vals[1] * 0.02
@@ -493,36 +462,21 @@ class Patterns:
         Generates a fractal pattern by summing layered, modulated sine waves.
         """
         total_val_accumulator = np.zeros_like(X) # Accumulate values for each pixel
-
-        # Parameters from ParamTable, modulated by oscillators
-        # base_freq_x = params.val("pfractal_base_freq_x") # * 0.01
-        # base_freq_y = params.val("pfractal_base_freq_y") # + norm_osc_vals[1] * 0.01
         base_freq_x = self.bar_x_freq.value * 0.01
         base_freq_y = self.bar_y_freq.value * 0.01
-        base_amplitude_for_fractal = params.val("pfractal_amplitude")
-        num_octaves = int(params.val("pfractal_octaves"))
-        
-        # Oscillator values to perturb coordinates or phase
-        # Use a scaling factor to make oscillator influence more noticeable
-        # x_perturb_osc = norm_osc_vals[0] * 50 # Amount of x perturbation
-        # y_perturb_osc = norm_osc_vals[1] * 50 # Amount of y perturbation
-        
-        x_perturb_osc = self.x_perturb.value
-        y_perturb_osc = self.y_perturb.value 
 
-
-        # Use osc2_norm for overall time-based movement / phase shift
+        # Use osc for overall time-based movement / phase shift
         phase_speed = self.phase_speed.value * 2
         time_offset = frame_time * phase_speed
 
-        for i in range(num_octaves):
+        for i in range(self.foct.value+1):
             freq_x = base_freq_x * (2 ** i) # Frequency doubles each octave
             freq_y = base_freq_y * (2 ** i)
-            amplitude = base_amplitude_for_fractal / (2 ** i) # Amplitude halves each octave
+            amplitude = self.famp.value / (2 ** i) # Amplitude halves each octave
 
             # Perturb coordinates using oscillators
-            current_x = X + x_perturb_osc
-            current_y = Y + y_perturb_osc
+            current_x = X + self.x_perturb.value # * 50
+            current_y = Y + self.y_perturb.value # * 50
 
             # Calculate wave for current octave
             wave = (amplitude * np.sin(current_x * freq_x + time_offset * i) +
@@ -532,16 +486,12 @@ class Patterns:
         
         # Normalize and scale the accumulated value to 0-255
         # Calculate max possible sum of amplitudes
-        max_possible_val = base_amplitude_for_fractal * (2 - (1 / (2**(num_octaves-1)))) 
+        max_possible_val = self.famp.value * (2 - (1 / (2**(self.foct.value)))) 
         
         if max_possible_val > 0.001: # Avoid division by zero
             brightness = ( (total_val_accumulator / max_possible_val / 2 + 0.5) * 255).astype(np.uint8)
         else:
             brightness = np.zeros_like(X, dtype=np.uint8) # Default to black if no meaningful range
-
-        # Apply a color based on some oscillator or fixed color for the fractal
-        # Use oscillator to shift color
-        hue_shift = norm_osc_vals[2]
         
         # Create a color based on brightness and hue shift
         # For simplicity, let's mix colors based on hue_shift
@@ -555,8 +505,10 @@ class Patterns:
         return pattern
     
     def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
+        
         with dpg.collapsing_header(label=f"\tPattern Generator", tag="pattern_generator") as h:
             dpg.bind_item_theme(h, theme)
+            
             RadioButtonRow(
                 "Pattern Type",
                 PatternType,
@@ -565,65 +517,35 @@ class Patterns:
             )
             
             TrackbarRow(
-                "Pattern Mod",  
-                self.mod,
-                default_font_id
+                "Pattern Mod", self.mod, default_font_id
             )
             
             TrackbarRow(
-                "Pattern R",
-                self.r,
-                default_font_id
+                "Red", self.r, default_font_id
             )
             
             TrackbarRow(
-                "Pattern G",
-                self.g,
-                default_font_id
+                "Green", self.g, default_font_id
             )
             
             TrackbarRow(
-                "Pattern B",
-                self.b,
-                default_font_id
+                "Blue", self.b, default_font_id
             )
             
             TrackbarRow(
-                "Alpha",
-                self.pattern_alpha,
-                default_font_id
+                "Alpha", self.pattern_alpha, default_font_id
             )
                   
             TrackbarRow(
-                "Bar x Density",
-                self.bar_x_freq,
-                default_font_id
+                "Bar x Density",self.bar_x_freq, default_font_id
             )
             
             TrackbarRow(
-                "Bar y Density",
-                self.bar_y_freq,
-                default_font_id
-            )
-            
-            TrackbarRow(
-                "Rotation",
-                self.rotation,
-                default_font_id
-            )
-            
-            TrackbarRow(
-                "Speed",
-                self.pattern_speed,
-                default_font_id
+                "Bar y Density", self.bar_y_freq, default_font_id
             )
 
-            TrackbarRow(
-                "Pattern Distance",
-                self.pattern_distance,
-                default_font_id
-            )
-
+            # radial pattern sliders
+            # TODO: hide under collapsable header? or show based selected pattern mode?
             TrackbarRow(
                 "Radial Frequency",
                 self.radial_freq,
@@ -631,21 +553,15 @@ class Patterns:
             )
             
             TrackbarRow(
-                "Angular Frequency",
-                self.angular_freq,
-                default_font_id
+                "Angular Frequency", self.angular_freq, default_font_id
             )
             
             TrackbarRow(
-                "Radial Mod",
-                self.radial_mod,
-                default_font_id
+                "Radial Mod", self.radial_mod, default_font_id
             )
             
             TrackbarRow(
-                "Angle Mod",
-                self.angle_mod,
-                default_font_id
+                "Angle Mod", self.angle_mod, default_font_id
             )
 
             # use_fractal_slider = TrackbarRow(
@@ -657,32 +573,32 @@ class Patterns:
                 with dpg.collapsing_header(label=f"\tpOscillator {i}", tag=f"posc{i}"):
                     dpg.bind_item_theme(h, theme)
                     RadioButtonRow(
-                        f"pOsc {i} Shape", 
+                        f"Pattern Osc {i} Shape", 
                         OscillatorShape,
                         self.params.get(f"posc{i}_shape"), 
                         default_font_id
                     )
                     
                     TrackbarRow(
-                        f"pOsc {i} Freq", 
+                        f"Pattern Osc {i} Freq", 
                         self.params.get(f"posc{i}_frequency"), 
                         default_font_id
                     )
                     
                     TrackbarRow(
-                        f"pOsc {i} Amp", 
+                        f"Pattern Osc {i} Amp", 
                         self.params.get(f"posc{i}_amplitude"), 
                         default_font_id
                     )
                     
                     TrackbarRow(
-                        f"pOsc {i} Phase", 
+                        f"Pattern Osc {i} Phase", 
                         self.params.get(f"posc{i}_phase"), 
                         default_font_id
                     )
                     
                     TrackbarRow(
-                        f"pOsc {i} Seed", 
+                        f"Pattern Osc {i} Seed", 
                         self.params.get(f"posc{i}_seed"), 
                         default_font_id
                     )

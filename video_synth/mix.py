@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from gui_elements import TrackbarRow, RadioButtonRow, Toggle
 from effects import LumaMode
-
+from luma import *
 
 log = logging.getLogger(__name__)
 
@@ -93,18 +93,16 @@ class Mixer:
         }
 
         self.device_sources = [k for k,v in self.sources.items() if v <= self.cv2_max_devices-(len(FILE_SOURCE_NAMES)-1)]
-        # self.file_sources = 
 
         # --- Configure file sources ---
         self.video_samples = os.listdir(self.find_dir("samples"))
         self.images = os.listdir(self.find_dir("images"))
 
         # default file paths for video and image files. The actual path can be changed in the GUI
-        self.default_video_file_path = self.video_samples[0] if len(self.video_samples) > 0 else None
         self.default_image_file_path = self.images[0] if len(self.images) > 0 else None
 
-        self.video_file_name1 = self.default_video_file_path
-        self.video_file_name2 = self.default_video_file_path
+        self.video_file_name1 = self.video_samples[0] if len(self.video_samples) > 0 else None
+        self.video_file_name2 = self.video_samples[0] if len(self.video_samples) > 0 else None
 
         self.image_file_name1 = self.default_image_file_path
         self.image_file_name2 = self.default_image_file_path
@@ -126,7 +124,8 @@ class Mixer:
 
         # Luma keying threshold and selection mode
         self.luma_threshold = params.add("luma_threshold", 0, 255, 128)
-        self.luma_selection = params.add("luma_selection", 0, 1, 0)
+        self.luma_selection = params.add("luma_selection", LumaMode.WHITE.value, 
+                                         LumaMode.BLACK.value, LumaMode.WHITE.value)
 
         # Chroma key upper and lower HSV bounds
         self.upper_hue = params.add("upper_hue", 0, 179, 80)
@@ -146,7 +145,7 @@ class Mixer:
         self.start_video(self.selected_source2.value, 2)
         
         # show source k-v pairs for debugging
-        log.info(f'Sources: {self.sources}')
+        log.debug(f'Sources: {self.sources}')
 
     # find dir one level up from current working directory
     def find_dir(self, dir_name: str, file_name: str = None):
@@ -301,36 +300,8 @@ class Mixer:
         #     print(frame2.shape)
         return cv2.addWeighted(frame1, alpha, frame2, 1 - alpha, 0)
 
-
     def luma_key(self, frame1, frame2):
-        """Mixes two frames using luma keying (brightness threshold)."""
-
-        # The mask will determine which parts of the current frame are kept
-        gray = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
-        mask = None
-        if self.luma_selection.value == LumaMode.BLACK.value:
-            # Use THRESH_BINARY_INV to key out DARK areas (Luma is low)
-            # Pixels with Luma < threshold become white (255) in the mask, meaning they are KEPT
-            ret, mask = cv2.threshold(
-                gray, self.luma_threshold.value, 255, cv2.THRESH_BINARY_INV
-            )
-        elif self.luma_selection.value == LumaMode.WHITE.value:
-            ret, mask = cv2.threshold(
-                gray, self.luma_threshold.value, 255, cv2.THRESH_BINARY
-            )
-
-        # Keep the keyed-out (bright) parts of the current frame
-        fg = cv2.bitwise_and(frame1, frame1, mask=mask)
-
-        # Invert the mask to find the areas *not* keyed out (the dark areas)
-        mask_inv = cv2.bitwise_not(mask)
-
-        # Use the inverted mask to "cut a hole" in the previous frame
-        bg = cv2.bitwise_and(frame2, frame2, mask=mask_inv)
-
-        # Combine the new foreground (fg) with the previous frame's background (bg)
-        return cv2.add(fg, bg)
-
+        return luma_key2(frame1, frame2, self.luma_selection.value, self.luma_threshold.value)
 
     def chroma_key(self, frame1, frame2, lower=(0, 100, 0), upper=(80, 255, 80)):
         hsv = cv2.cvtColor(frame1, cv2.COLOR_BGR2HSV)
@@ -366,7 +337,6 @@ class Mixer:
 
         # Read from source 2
         if not isinstance(self.cap2, cv2.VideoCapture):
-            print(type(self.cap2))
             frame2 = self.cap2.get_frame(frame2)
             ret2 = True
         else:
@@ -523,10 +493,8 @@ class Mixer:
 
                 dpg.add_button(label="File 1", user_data=dpg.last_container(), callback=lambda s, a, u: dpg.configure_item(u, show=True))
 
-            # dpg.add_combo(self.video_samples+self.images, default_value=self.default_video_file_path, tag="source_1_file", callback=self.select_source1_file)
-            # dpg.add_input_text(label="Video File Path 1", tag="file_path_source_1", default_value=mixer.default_video_file_path)
-            
-            #get only sources for source 2; hacky shortcut to avoid selecting 'device_1' and 'x_file_1'
+          
+            #get only sources for source 2; hacky shortcut to avoid selecting 'device_1' and 'x_file_1'; needs revisit
             sources = [src for src in self.sources.keys() if 'E_1' not in src]
 
             with dpg.group(horizontal=True):

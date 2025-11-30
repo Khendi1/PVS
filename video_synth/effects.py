@@ -31,15 +31,12 @@ import logging
 from patterns3 import Patterns  
 from param import ParamTable
 from enum import IntEnum, Enum, auto
+from luma import *
 
 log = logging.getLogger(__name__)
 
 
 """This section stores all local custom enum classes"""
-
-class LumaMode(IntEnum):
-    WHITE = auto()
-    BLACK = auto()
 
 class NoiseType(IntEnum):
     NONE = 0
@@ -207,7 +204,7 @@ class EffectManager:
         frame = self.color.polarize_frame_hsv(frame)
         frame = self.color.modify_hsv(frame)
         frame = self.color.adjust_brightness_contrast(frame)
-        frame = self.noise.apply_noise(frame)
+        frame = self.pixels.apply_noise(frame)
         frame = self.color.solarize_image(frame)
         frame = self.color.posterize(frame)
         frame = self.pixels.blur(frame)
@@ -236,7 +233,7 @@ class EffectManager:
         Returns the modified frame.
         """
         
-        if frame_count % (self.params.val('frame_skip')+1) == 0: 
+        if frame_count % (self.feedback.frame_skip.value+1) == 0: 
             
             # frame = self.default_effect_sequence(frame)
 
@@ -954,9 +951,7 @@ class Warp(EffectBase):
         self.params = params
         self.width = image_width
         self.height = image_height
-        self.warp_type = params.add(
-            "warp_type", WarpType.NONE.value, WarpType.WARP0.value, WarpType.NONE.value
-        )
+        self.warp_type = params.add("warp_type", 0, len(WarpType)-1, 0)
         self.warp_angle_amt = params.add("warp_angle_amt", 0, 360, 30)
         self.warp_radius_amt = params.add("warp_radius_amt", 0, 360, 30)
         self.warp_speed = params.add("warp_speed", 0, 100, 10)
@@ -967,7 +962,7 @@ class Warp(EffectBase):
         self.x_speed = params.add("x_speed", 0.0, 100.0, 1.0)
         self.x_size = params.add("x_size", 0.25, 100.0, 20.0)
         self.y_speed = params.add("y_speed", 0.0, 10.0, 1.0)
-        self.y_size = params.add("y_size", 0.0, 100.0, 10.0)
+        self.y_size = params.add("y_size", 0.25, 100.0, 10.0)
 
         self.t = 0
 
@@ -1227,6 +1222,8 @@ class Reflector(EffectBase):
             "reflection_mode", 0, len(ReflectionMode) - 1, ReflectionMode.NONE.value
         )
         self.segments = params.add("reflector_segments",0,10,0)
+        self.zoom = params.add("reflector_z", 0.5, 2, 1.0)
+        self.rotation = params.add("reflector_r", -360,360,0.0)
         self.width = None 
         self.height = None
 
@@ -1285,15 +1282,13 @@ class Reflector(EffectBase):
         
         segments = self.segments.value
         zoom = self.zoom.value
-        rotation = self.rotation.value
-        center_x_rel = None
-        center_y_rel = None
+        center_x_rel = 1
+        center_y_rel = 1
         border_mode = None
 
         # Calculate geometric parameters
         K = max(2, segments)
         center = (int(self.width * center_x_rel), int(self.height * center_y_rel))
-        angle_offset = rotation
         
         # Map to Polar Coordinates (for tiling in angle)
         max_radius = min(self.width - center[0], center[0], self.height - center[1], center[1])
@@ -1320,7 +1315,7 @@ class Reflector(EffectBase):
             tiled_img[:, i*tile_w:(i+1)*tile_w] = t
 
         # Apply rotation by shifting the image horizontally (wrap around)
-        shift_pixels = int(polar_w * (angle_offset / 360.0))
+        shift_pixels = int(polar_w * (self.rotation.value / 360.0))
         shifted_tiled_img = np.roll(tiled_img, shift_pixels, axis=1)
 
         # Map back to Cartesian Coordinates
@@ -1709,7 +1704,10 @@ class Feedback(EffectBase):
         # Convert back to uint8 for display
         return cv2.convertScaleAbs(filtered_frame)
 
-
+    def apply_luma_feedback2(self, cur_frame, prev_frame):
+        return luma_key(cur_frame, prev_frame, self.luma_select_mode.value, self.feedback_luma_threshold.value)
+    
+    # TODO: this is a duplicate function; find way to reuse in mixer
     def apply_luma_feedback(self, prev_frame, cur_frame):
         # The mask will determine which parts of the current frame are kept
         gray = cv2.cvtColor(cur_frame, cv2.COLOR_BGR2GRAY)
@@ -2564,12 +2562,10 @@ class ShapeGenerator:
 
     def __init__(self, params, width, height, shape_x_shift=0, shape_y_shift=0):
         self.params = params
-        self.shape_x_shift = params.add("shape_x_shift", -width, width, shape_x_shift)  # Allow negative shifts
-        self.shape_y_shift = params.add("shape_y_shift", -height, height, shape_y_shift)
-        self.center_x = width // 2
-        self.center_y = height // 2
         self.width = width
         self.height = height
+        self.center_x = width // 2
+        self.center_y = height // 2
         
         self.shape_type = params.add("shape_type", 0, len(Shape)-1, Shape.RECTANGLE)
         
@@ -2577,14 +2573,18 @@ class ShapeGenerator:
         self.line_s = params.add("line_sat", 0, 255, 255)  # Saturation range
         self.line_v = params.add("line_val", 0, 255, 255)  # Value range
 
-        self.line_hsv = [params.val("line_hue"), params.val("line_val"), params.val("line_sat")]  # H, S, V (Red) - will be converted to BGR
+        self.line_hsv = [self.line_h, self.line_s, self.line_v]  # H, S, V (Red) - will be converted to BGR
         self.line_weight = params.add("line_weight", 1, 20, 2)  # Thickness of the shape outline, must be integer
         self.line_opacity = params.add("line_opacity", 0.0, 1.0, 0.66)  # Opacity of the shape outline
+        self.line_color = self._hsv_to_bgr(self.line_hsv)
         
         self.size_multiplier = params.add("size_multiplier", 0.1, 10.0, 0.9)  # Scale factor for shape size
         self.aspect_ratio = params.add("aspect_ratio", 0.1, 10.0, 1.0)  # Scale factor for shape size
         self.rotation_angle = params.add("rotation_angle", 0, 360, 0)  # Rotation angle in degrees
         
+        self.shape_x_shift = params.add("shape_x_shift", -width, width, shape_x_shift)  # Allow negative shifts
+        self.shape_y_shift = params.add("shape_y_shift", -height, height, shape_y_shift)
+
         self.multiply_grid_x = params.add("multiply_grid_x", 1, 10, 2)  # Number of shapes in X direction
         self.multiply_grid_y = params.add("multiply_grid_y", 1, 10, 2)  # Number of shapes in Y direction
         self.grid_pitch_x = params.add("grid_pitch_x", min=0, max=width, default_val=100)  # Distance between shapes in X direction
@@ -2597,7 +2597,6 @@ class ShapeGenerator:
         self.fill_hsv = [self.fill_h.value, self.fill_s.value, self.fill_v.value]  # H, S, V (Blue) - will be converted to BGR
         self.fill_opacity = params.add("fill_opacity", 0.0, 1.0, 0.25)
         self.fill_color = self._hsv_to_bgr(self.fill_hsv)
-        self.line_color = self._hsv_to_bgr(self.line_hsv)
 
         self.convas_rotation = params.add("canvas_rotation", 0, 360, 0)  # Rotation angle in degrees
         
