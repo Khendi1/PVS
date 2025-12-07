@@ -302,8 +302,8 @@ class Mixer:
         #     print(frame2.shape)
         return cv2.addWeighted(frame1, alpha, frame2, 1 - alpha, 0)
 
-    def luma_key(self, frame1, frame2):
-        return luma_key2(frame1, frame2, self.luma_selection.value, self.luma_threshold.value)
+    def _luma_key(self, frame1, frame2):
+        return luma_key(frame1, frame2, self.luma_selection.value, self.luma_threshold.value)
 
     def chroma_key(self, frame1, frame2, lower=(0, 100, 0), upper=(80, 255, 80)):
         hsv = cv2.cvtColor(frame1, cv2.COLOR_BGR2HSV)
@@ -368,7 +368,7 @@ class Mixer:
 
             # For luma_key, you can pass threshold as needed
             if self.blend_mode.value == MixModes.LUMA_KEY.value:
-                return self.luma_key(frame1,frame2)
+                return self._luma_key(frame1,frame2)
             elif self.blend_mode.value == MixModes.CHROMA_KEY.value:
                 lower = (
                     self.lower_hue.value,

@@ -27,7 +27,8 @@ class MoireBlend(IntEnum):
     SUB = auto()
 
 class Shaders(IntEnum):
-    FRACTAL = 0
+    FRACTAL_0 = 0
+    FRACTAL = auto()
     GRID = auto()
     PLASMA = auto()
     CLOUD = auto()
@@ -878,6 +879,64 @@ class ShaderVisualizer(Animation):
 
         # All fragment shaders with proper u_time usage
         code = {
+
+            Shaders.FRACTAL_0: '''
+                #version 330
+                uniform vec2 u_resolution;
+                uniform float u_time;
+                uniform float u_zoom;
+                uniform float u_distortion;
+                uniform float u_iterations;
+                uniform float u_color_shift;
+                uniform float u_brightness;
+                uniform float u_hue_shift;
+                uniform float u_saturation;
+                uniform float u_scroll_x;
+                uniform float u_scroll_y;
+                uniform float u_rotation;
+
+                out vec4 f_color;
+
+                vec3 palette(float t) {
+                    vec3 a = vec3(0.5, 0.5, 0.5);
+                    vec3 b = vec3(0.5, 0.5, 0.5);
+                    vec3 c = vec3(1.0, 1.0, 1.0);
+                    vec3 d = vec3(0.263, 0.416, 0.557);
+                    return a + b * cos(6.28318 * (c * t * u_color_shift + d + u_hue_shift));
+                }
+
+                mat2 rotate2d(float angle){
+                    return mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
+                }
+
+                void main() {
+                    vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / u_resolution.y;
+                    
+                    // Apply rotation
+                    uv *= rotate2d(u_rotation);
+                    
+                    // Apply scrolling
+                    uv += vec2(u_scroll_x, u_scroll_y);
+                    
+                    vec2 uv0 = uv;
+                    vec3 finalColor = vec3(0.0);
+                    
+                    for (float i = 0.0; i < u_iterations; i++) {
+                        uv = fract(uv * u_zoom) - 0.5;
+                        float d = length(uv) * exp(-length(uv0));
+                        vec3 col = palette(length(uv0) + i * 0.4 + u_time * 0.4);
+                        d = sin(d * 8.0 + u_time) / 8.0;
+                        d = abs(d);
+                        d = pow(0.01 / d, 1.2 + u_distortion * 0.5);
+                        finalColor += col * d;
+                    }
+                    
+                    // Apply saturation
+                    float gray = dot(finalColor, vec3(0.299, 0.587, 0.114));
+                    finalColor = mix(vec3(gray), finalColor, u_saturation);
+                    
+                    f_color = vec4(finalColor * u_brightness, 1.0);
+                }''',
             Shaders.FRACTAL: '''
                 #version 330
                 uniform vec2 u_resolution;
