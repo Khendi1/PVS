@@ -89,7 +89,9 @@ class Mixer:
             MixSources.METABALLS_ANIM.name: Metaballs(params, toggles, width=640, height=480),
             MixSources.PLASMA_ANIM.name: Plasma(params, toggles, width=640, height=480),
             MixSources.REACTION_DIFFUSION_ANIM.name: ReactionDiffusion(params, toggles, 640, 480),
-            MixSources.MOIRE_ANIM.name: Moire(params, toggles, width=640, height=480)
+            MixSources.MOIRE_ANIM.name: Moire(params, toggles, width=640, height=480),
+            MixSources.SHADER_ANIM.name: ShaderVisualizer(params, toggles, 640, 480)
+
         }
 
         self.device_sources = [k for k,v in self.sources.items() if v <= self.cv2_max_devices-(len(FILE_SOURCE_NAMES)-1)]
