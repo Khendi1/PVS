@@ -297,20 +297,22 @@ class Mixer:
 
     def blend(self, frame1, frame2):
         alpha = self.alpha_blend.value
+        
         # if frame1.shape != frame2.shape:
         #     print(frame1.shape)
         #     print(frame2.shape)
-        return cv2.addWeighted(frame1, alpha, frame2, 1 - alpha, 0)
+
+        return cv2.addWeighted(frame1.astype(np.float32), 1-alpha, frame2.astype(np.float32), alpha, 0)
 
     def _luma_key(self, frame1, frame2):
-        return luma_key(frame1, frame2, self.luma_selection.value, self.luma_threshold.value)
+        return luma_key(frame1, frame2, self.luma_selection.value, self.luma_threshold.value).astype(np.float32)
 
     def chroma_key(self, frame1, frame2, lower=(0, 100, 0), upper=(80, 255, 80)):
         hsv = cv2.cvtColor(frame1, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
         mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
         result = np.where(mask == 255, frame2, frame1)
-        return result
+        return result.astype(np.float32)
 
 
     def get_mixed_frame(self):

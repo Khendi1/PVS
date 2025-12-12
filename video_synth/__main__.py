@@ -22,6 +22,7 @@ from midi_input import *
 from param import ParamTable
 from mix import Mixer
 from gui_elements import ButtonsTable
+import numpy as np
 
 """Creates ArgumentParser, configures arguments, returns parser"""
 def parse_args():
@@ -185,7 +186,9 @@ def main(num_osc, devices, effects, controller_names):
             frame_count += 1
 
             # Display the resulting frame and control panel
-            cv2.imshow('Modified Frame', wet_frame)
+            # cv2.imshow('Previous Frame', prev_frame.astype(np.uint8)) # for debugging
+            # cv2.imshow('Dry Frame', dry_frame.astype(np.uint8))       # for debugging
+            cv2.imshow('Modified Frame', wet_frame.astype(np.uint8))
             dpg.render_dearpygui_frame()
 
             # Break the loop if a quit key is pressed

@@ -197,8 +197,8 @@ class EffectManager:
     default sequence of effects for future reference; 
     """
     def default_effect_sequence(self, frame):
-        frame = self.patterns.generate_pattern_frame(frame)
         frame = self.ptz.shift_frame(frame)
+        frame = self.patterns.generate_pattern_frame(frame)
         frame = self.sync.sync(frame)
         frame = self.reflector.apply_reflection(frame)
         frame = self.color.polarize_frame_hsv(frame)
@@ -247,12 +247,13 @@ class EffectManager:
     def modify_frames(self, dry_frame, wet_frame, prev_frame, frame_count):
 
         # Blend the current dry frame with the previous wet frame using the alpha param
-        if self.toggles.val("effects_first") == True:         
+        if self.toggles.val("effects_first") == True:
             wet_frame = self.apply_effects(wet_frame, frame_count)
-            wet_frame = cv2.addWeighted(dry_frame, 1 - self.feedback.alpha.value, wet_frame, self.feedback.alpha.value, 0)
+            wet_frame = cv2.addWeighted(dry_frame.astype(np.float32), 1 - self.feedback.alpha.value, wet_frame.astype(np.float32), self.feedback.alpha.value, 0)
         else:
-            wet_frame = cv2.addWeighted(dry_frame, 1 - self.feedback.alpha.value, wet_frame, self.feedback.alpha.value, 0)
-            wet_frame = self.apply_effects(wet_frame, frame_count) 
+            wet_frame = cv2.addWeighted(dry_frame.astype(np.float32), 1 - self.feedback.alpha.value, wet_frame.astype(np.float32), self.feedback.alpha.value, 0)
+            wet_frame = self.apply_effects(wet_frame, frame_count)
+            # wet_frame = self.default_effect_sequence(wet_frame)
 
         # Apply feedback effects
         wet_frame = self.feedback.apply_temporal_filter(prev_frame, wet_frame)
@@ -261,9 +262,10 @@ class EffectManager:
         wet_frame = self.feedback.apply_luma_feedback(prev_frame, wet_frame)
         prev_frame = wet_frame
         prev_frame = self.ptz._shift_prev_frame(prev_frame)
-        # prev_frame = effects.feedback.scale_frame(wet_frame)
 
-        return prev_frame, wet_frame
+        # prev_frame = self.color.tonemap(prev_frame)
+        # wet_frame = self.color.tonemap(wet_frame)
+        return np.clip(prev_frame, 0, 255), np.clip(wet_frame, 0, 255)
 
 
 class Color(EffectBase):
@@ -287,6 +289,8 @@ class Color(EffectBase):
 
         self.contrast = params.add("contrast", 0.5, 3.0, 1.0)
         self.brightness = params.add("brightness", 0, 100, 0)
+        self.gamma = params.add("gamma", 0.1, 3.0, 1.0)
+        self.highlight_compression = params.add("highlight_compression", 0.0, 1.0, 1.0)
 
     def _shift_hue(self, hue: int):
         """
@@ -341,7 +345,20 @@ class Color(EffectBase):
         return hsv
 
     def modify_hsv(self, image: np.ndarray):
-        hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        if (self.hue_shift.value == 0 and
+            self.sat_shift.value == 0 and
+            self.val_shift.value == 0 and
+            self.val_threshold.value == 0):
+            return image
+        
+        is_float = image.dtype == np.float32
+        if is_float:
+            # Convert float image [0, 255] to uint8 for this function's processing
+            image_uint8 = np.clip(image, 0, 255).astype(np.uint8)
+        else:
+            image_uint8 = image
+            
+        hsv_image = cv2.cvtColor(image_uint8, cv2.COLOR_BGR2HSV)
         h, s, v = cv2.split(hsv_image)
         hsv = [h, s, v]
 
@@ -350,10 +367,15 @@ class Color(EffectBase):
         hsv = self._val_threshold_hue_shift(hsv)
 
         # Merge the modified channels and convert back to BGR color space.
-        return cv2.cvtColor(
+        result_uint8 = cv2.cvtColor(
             cv2.merge((hsv[HSV.H.value], hsv[HSV.S.value], hsv[HSV.V.value])),
             cv2.COLOR_HSV2BGR,
         )
+
+        if is_float:
+            return result_uint8.astype(np.float32)
+        else:
+            return result_uint8
 
     def limit_hues_kmeans(self, frame: np.ndarray):
 
@@ -448,18 +470,21 @@ class Color(EffectBase):
 
     def adjust_brightness_contrast(self, image):
         """
-        Adjusts the brightness and contrast of an image.
-
-        Args:
-            image: The input image (NumPy array).
-
-        Returns:
-            The adjusted image (NumPy array).
+        Adjusts the brightness and contrast of an image using float precision.
         """
-        adjusted_image = cv2.convertScaleAbs(
-            image, alpha=self.contrast.value, beta=self.brightness.value
-        )
-        return adjusted_image
+        if self.contrast.value == 1.0 and self.brightness.value == 0:
+            return image
+
+        # Ensure we are working with floats for this calculation
+        if image.dtype != np.float32:
+            image = image.astype(np.float32)
+            
+        # Perform the calculation in float32.
+        # Clipping will be handled once at the end of the modify_frames function.
+        # return image * self.contrast.value + self.brightness.value
+        return cv2.convertScaleAbs(
+                image, alpha=self.contrast.value, beta=self.brightness.value
+            ).astype(np.float32)
 
     def polarize_frame_hsv(self, frame: np.ndarray):
         """
@@ -517,6 +542,10 @@ class Color(EffectBase):
                 "Brighness", self.params.get("brightness"), default_font_id
             )
 
+            gamma = TrackbarRow(
+                "Gamma", self.gamma, default_font_id
+            )
+
             val_threshold = TrackbarRow(
                 "Val Threshold", self.params.get("val_threshold"), default_font_id
             )
@@ -543,8 +572,51 @@ class Color(EffectBase):
                 "Solarize Threshold", self.params.get("solarize_threshold"), default_font_id
             )
 
+            # highlight_compression = TrackbarRow(
+            #     "Highlight Compression", self.highlight_compression, default_font_id
+            # )
+
+
         dpg.bind_item_font("color", global_font_id)
 
+
+    def adjust_gamma(self, image: np.ndarray):
+        """
+        Applies gamma correction to the image.
+        """
+        gamma = self.gamma.value
+        if gamma == 1.0:
+            return image
+
+        # Ensure we are working with floats
+        if image.dtype != np.float32:
+            image = image.astype(np.float32)
+
+        # Normalize to [0, 1], apply gamma, then scale back to [0, 255]
+        # The 1e-6 avoids division by zero for black pixels.
+        return np.power(image / 255.0, gamma) * 255.0
+
+
+    def tonemap(self, image: np.ndarray):
+        """
+        Applies Reinhard tonemapping to compress highlights and prevent clipping.
+        """
+        strength = self.highlight_compression.value
+        if strength == 0.0:
+            return np.clip(image, 0, 255)
+
+        # Map the [0,1] strength slider to the intensity parameter of the tonemapper.
+        # Negative intensity values decrease brightness.
+        tonemap_intensity = (strength * -8.0)
+
+        tonemapper = cv2.createTonemapReinhard(gamma=2.2, intensity=tonemap_intensity, light_adapt=0.0, color_adapt=0.0)
+        
+        # The tonemapper expects a float32 BGR image, which is what we have.
+        # It processes the image and returns it mapped to the [0, 1] range.
+        ldr_image = tonemapper.process(image)
+        
+        # Scale the result back up to the [0, 255] range.
+        return ldr_image * 255.0
 
 class Pixels(EffectBase):
 
@@ -881,6 +953,9 @@ class Sync(EffectBase):
         """
         Applies a raster wobble effect to the frame using sine waves on both X and Y axes.
         """
+        if self.x_sync_amp.value == 0 and self.y_sync_amp.value == 0:
+            return frame
+            
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         height, width = frame.shape[:2]
         warped = np.zeros_like(frame)
@@ -1434,6 +1509,13 @@ class PTZ(EffectBase):
         Returns:
             A new numpy array representing the shifted frame.
         """
+        # If all parameters are at their default values, do nothing.
+        if (self.x_shift.value == 0 and
+            self.y_shift.value == 0 and
+            self.r_shift.value == 0.0 and
+            self.zoom.value == 1.0):
+            return frame
+
         # (height, width) = frame.shape[:2]
         center = (self.width / 2, self.height / 2)
 
@@ -1459,6 +1541,14 @@ class PTZ(EffectBase):
     
     def _shift_prev_frame(self, frame: np.ndarray):
         '''DUPLICATE CODE :('''
+        if (self.prev_x_shift.value == 0 and
+            self.prev_y_shift.value == 0 and
+            self.prev_r_shift.value == 0.0 and
+            self.prev_zoom.value == 1.0 and
+            self.prev_cx.value == 0 and
+            self.prev_cy.value == 0):
+            return frame
+
         # (height, width) = frame.shape[:2]
         center = (self.width / 2 +self.prev_cx.value, self.height / 2+self.prev_cy.value)
 
@@ -1639,20 +1729,21 @@ class Feedback(EffectBase):
         nth_frame = self.frame_buffer[self.buffer_select.value]
         
         frame = cv2.addWeighted(
-            frame.astype(np.float32),
+            frame,
             1 - self.buffer_frame_blend.value,
-            nth_frame.astype(np.float32),
+            nth_frame,
             self.buffer_frame_blend.value,
             0,
         )       
 
-        return cv2.convertScaleAbs(frame)
+        # return cv2.convertScaleAbs(frame).astype('uint8')
+        return frame
 
 
     def avg_frame_buffer(self, frame):
 
         # important: update buffer even if we aren't doing anything with it
-        self.frame_buffer.append(frame.astype(np.float32))
+        self.frame_buffer.append(frame)
 
         # averaging with single previous frame already accomplished, so return
         if self.buffer_size.value <= 1:
@@ -1669,7 +1760,7 @@ class Feedback(EffectBase):
 
 
         # Convert the averaged frame back to the correct data type (uint8)
-        return np.clip(avg_frame, 0, 255).astype(np.uint8)
+        return avg_frame
 
 
     def apply_temporal_filter(self, prev_frame, cur_frame):
@@ -1683,26 +1774,21 @@ class Feedback(EffectBase):
                         Lower alpha means more smoothing, less responsiveness.
         """
 
-        # Convert the first frame to float for accurate averaging
-        filtered_frame = prev_frame.astype(np.float32)
-
-        # Convert current frame to float for calculations
-        current_frame_float = cur_frame.astype(np.float32)
-
         # Apply the temporal filter (Exponential Moving Average)
         # filtered_frame = alpha * current_frame_float + (1 - alpha) * filtered_frame
         # This formula directly updates the filtered_frame based on the new current_frame.
         # It's a low-pass filter in the time domain.
         filtered_frame = cv2.addWeighted(
-            current_frame_float,
+            cur_frame.astype(np.float32),
             1 - self.temporal_filter.value,
-            filtered_frame,
+            prev_frame.astype(np.float32),
             self.temporal_filter.value,
             0,
         )
 
         # Convert back to uint8 for display
-        return cv2.convertScaleAbs(filtered_frame)
+        # return cv2.convertScaleAbs(filtered_frame).astype('uint8')
+        return filtered_frame
 
     def apply_luma_feedback2(self, cur_frame, prev_frame):
         return luma_key(cur_frame, prev_frame, self.luma_select_mode.value, self.feedback_luma_threshold.value)
@@ -1710,7 +1796,11 @@ class Feedback(EffectBase):
     # TODO: this is a duplicate function; find way to reuse in mixer
     def apply_luma_feedback(self, prev_frame, cur_frame):
         # The mask will determine which parts of the current frame are kept
-        gray = cv2.cvtColor(cur_frame, cv2.COLOR_BGR2GRAY)
+
+        cur_frame_int = cur_frame.astype(np.uint8)
+        prev_frame_int = prev_frame.astype(np.uint8)
+
+        gray = cv2.cvtColor(cur_frame_int, cv2.COLOR_BGR2GRAY)
 
         if self.luma_select_mode.value == LumaMode.BLACK.value:
             # Use THRESH_BINARY_INV to key out DARK areas (Luma is low)
@@ -1724,16 +1814,16 @@ class Feedback(EffectBase):
             )
 
         # Keep the keyed-out (bright) parts of the current frame
-        fg = cv2.bitwise_and(cur_frame, cur_frame, mask=mask)
+        fg = cv2.bitwise_and(cur_frame_int, cur_frame_int, mask=mask)
 
         # Invert the mask to find the areas *not* keyed out (the dark areas)
         mask_inv = cv2.bitwise_not(mask)
 
         # Use the inverted mask to "cut a hole" in the previous frame
-        bg = cv2.bitwise_and(prev_frame, prev_frame, mask=mask_inv)
+        bg = cv2.bitwise_and(prev_frame_int, prev_frame_int, mask=mask_inv)
 
         # Combine the new foreground (fg) with the previous frame's background (bg)
-        return cv2.add(fg, bg)
+        return cv2.add(fg, bg).astype(np.float32)
 
 
     # TODO: implement
@@ -1770,7 +1860,7 @@ class Feedback(EffectBase):
         # Blend the original frame with the noise
         noisy_frame = cv2.addWeighted(frame, 1.0, noise_colored, 0.5, 0)
 
-        return noisy_frame
+        return noisy_frame.astype('uint8')
 
 
     def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):

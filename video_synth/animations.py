@@ -576,12 +576,12 @@ class Metaballs(Animation):
         
         # Apply feedback effect
         if self.previous_frame is None:
-            self.previous_frame = current_frame
+            self.previous_frame = current_frame.astype(np.float32)
         else:
             # Blend the current frame with the previous frame
-            current_frame = cv2.addWeighted(current_frame, 1-self.feedback_alpha.value, 
+            current_frame = cv2.addWeighted(current_frame.astype(np.float32), 1-self.feedback_alpha.value, 
                                             self.previous_frame, self.feedback_alpha.value, 0)
-            self.previous_frame = current_frame # Store this blended frame for the next iteration
+            self.previous_frame = current_frame.copy() # Store this blended frame for the next iteration
 
         return current_frame
 
