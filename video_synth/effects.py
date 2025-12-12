@@ -290,7 +290,7 @@ class Color(EffectBase):
         self.contrast = params.add("contrast", 0.5, 3.0, 1.0)
         self.brightness = params.add("brightness", 0, 100, 0)
         self.gamma = params.add("gamma", 0.1, 3.0, 1.0)
-        self.highlight_compression = params.add("highlight_compression", 0.0, 1.0, 1.0)
+        self.highlight_compression = params.add("highlight_compression", 0.0, 1.0, 0.0)
 
     def _shift_hue(self, hue: int):
         """
@@ -572,9 +572,9 @@ class Color(EffectBase):
                 "Solarize Threshold", self.params.get("solarize_threshold"), default_font_id
             )
 
-            # highlight_compression = TrackbarRow(
-            #     "Highlight Compression", self.highlight_compression, default_font_id
-            # )
+            highlight_compression = TrackbarRow(
+                "Highlight Compression", self.highlight_compression, default_font_id
+            )
 
 
         dpg.bind_item_font("color", global_font_id)

@@ -186,8 +186,8 @@ def main(num_osc, devices, effects, controller_names):
             frame_count += 1
 
             # Display the resulting frame and control panel
-            # cv2.imshow('Previous Frame', prev_frame.astype(np.uint8)) # for debugging
-            # cv2.imshow('Dry Frame', dry_frame.astype(np.uint8))       # for debugging
+            cv2.imshow('Previous Frame', prev_frame.astype(np.uint8)) # for debugging
+            cv2.imshow('Dry Frame', dry_frame.astype(np.uint8))       # for debugging
             cv2.imshow('Modified Frame', wet_frame.astype(np.uint8))
             dpg.render_dearpygui_frame()
 
