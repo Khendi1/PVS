@@ -206,7 +206,7 @@ class Patterns:
 
         # return pattern
         alpha = self.pattern_alpha.value
-        blended_frame = cv2.addWeighted(frame, 1 - alpha, pattern.astype(np.float32), alpha, 0)
+        blended_frame = cv2.addWeighted(frame.astype(np.float32), 1 - alpha, pattern.astype(np.float32), alpha, 0)
         return blended_frame.astype('uint8')
 
     def _generate_bars(self, pattern: np.ndarray) -> np.ndarray:

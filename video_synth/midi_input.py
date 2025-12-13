@@ -123,7 +123,7 @@ class MidiProcessor:
 class ControllerBase(ABC):
     """ Abstract class to enforce common interface for setting params """
     @abstractmethod
-    def set_value(self):
+    def set_values(self):
         """Must be implemented by any concrete subclass."""
         pass
 

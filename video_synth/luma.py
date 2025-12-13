@@ -7,6 +7,10 @@ class LumaMode(IntEnum):
     BLACK = auto()
 
 def luma_key(frame1: np.ndarray, frame2: np.ndarray, mode: LumaMode, threshold: int):
+        # Ensure inputs are uint8 for bitwise operations
+        frame1 = np.clip(frame1, 0, 255).astype(np.uint8)
+        frame2 = np.clip(frame2, 0, 255).astype(np.uint8)
+
         # The mask will determine which parts of the current frame are kept
         gray = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
 
@@ -23,7 +27,7 @@ def luma_key(frame1: np.ndarray, frame2: np.ndarray, mode: LumaMode, threshold: 
 
         smoothed_mask = cv2.GaussianBlur(mask, (1, 1), 0)
 
-        # Keep the keyed-out (bright) parts of the current frame
+        # Keep the keyed-out parts of the current frame
         fg = cv2.bitwise_and(frame1, frame1, mask=smoothed_mask)
 
         # Invert the mask to find the areas *not* keyed out (the dark areas)
