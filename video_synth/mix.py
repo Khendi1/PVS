@@ -51,17 +51,17 @@ class Mixer:
     """Mixer is used to init sources, get frames from each, and blend them"""
 
 
-    def __init__(self, src_1_effects, src_2_effects, post_effects, num_devices):
-
-        self.src_1_effects = src_1_effects
-        self.src_2_effects = src_2_effects
-        self.post_effects = post_effects
-
-        self.post_params = post_effects.params
-        self.post_toggles = post_effects.toggles
+    def __init__(self, effects, num_devices):
 
         self.parent = ParentClass.MIXER
         subclass = self.__class__.__name__
+
+        self.src_1_effects = effects[SourceIndex.SRC_1]
+        self.src_2_effects = effects[SourceIndex.SRC_2]
+        self.post_effects = effects[SourceIndex.POST]
+
+        self.post_params = self.post_effects.params
+        self.post_toggles = self.post_effects.toggles
 
         # cap variables to store video capture objects or animation instances
         # e.g. self.cap1 can be a cv2.VideoCapture or Metaballs instance

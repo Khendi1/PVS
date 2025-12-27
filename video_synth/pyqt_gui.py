@@ -4,9 +4,10 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHB
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSignal
 import logging
 from param import ParamTable, Param
-from config import ParentClass # Import the title from config
+from config import ParentClass, SourceIndex # Import the title from config
 
 log = logging.getLogger(__name__)
+
 
 class CollapsibleGroupBox(QWidget):
     def __init__(self, title="", header_color="#607D8B", parent=None): # Default grey color
@@ -42,15 +43,17 @@ class CollapsibleGroupBox(QWidget):
 
 
 class PyQTGUI(QMainWindow):
-    def __init__(self, src_1_effects, src_2_effects, post_effects):
+    def __init__(self, effects):
         super().__init__()
-        log.info(f"DEBUG: GUI src_1_params id: {id(src_1_effects.params)}")
-        self.src_1_params = src_1_effects.params
-        self.src_2_params = src_2_effects.params
-        self.post_params = post_effects.params
-        self.src_1_toggles = src_1_effects.toggles
-        self.src_2_toggles = src_2_effects.toggles
-        self.post_toggles = post_effects.toggles
+
+        self.src_1_params = effects[SourceIndex.SRC_1].params
+        self.src_2_params = effects[SourceIndex.SRC_2].params
+        self.post_params = effects[SourceIndex.POST].params
+
+        self.src_1_toggles = effects[SourceIndex.SRC_1].toggles
+        self.src_2_toggles = effects[SourceIndex.SRC_2].toggles
+        self.post_toggles = effects[SourceIndex.POST].toggles
+
         self.setWindowTitle("PyQt Control Panel")
 
         # Top Section: Two horizontal panes
@@ -243,29 +246,10 @@ class PyQTGUI(QMainWindow):
 
     def closeEvent(self, event):
         """Handle the window closing event."""
-        print("Closing PyQt window.")
+        # print("Closing PyQt window.")
         QApplication.instance().quit()
         event.accept()
 
-
 def create_pyqt_gui(src_1_effects, src_2_effects, post_effects):
-    video_output_window = None#VideoOutputWindow()
-    # main_window = PyQTGUI(params, video_output_window)
     main_window = PyQTGUI(src_1_effects, src_2_effects, post_effects)
-    return main_window, video_output_window
-
-if __name__ == '__main__':
-    app = QApplication(sys.argv) # Initialize QApplication
-    # Create a dummy ParamTable for testing
-    params = ParamTable()
-    params.add("test_param_1", 0.0, 1.0, 0.5, "family_a", "Uncategorized")
-    params.add("test_param_2", 0, 10, 5, "family_a", "Uncategorized")
-    params.add("test_param_3", 0, 3, 1, "family_b", "Uncategorized")
-    params.add("anim_param_1", 0.0, 1.0, 0.2, "animation_group_1", ParentClass.SRC_1_ANIMATIONS)
-    params.add("anim_param_2", 0, 50, 25, "animation_group_1", ParentClass.SRC_1_ANIMATIONS)
-    params.add("effect_param_1", 0.0, 1.0, 0.8, "effect_group_a", ParentClass.POST_EFFECTS)
-    
-    main_window, video_output_window = create_pyqt_gui(params)
-    main_window.show()
-    video_output_window.show() # Make sure the video output window is also shown
-    sys.exit(app.exec())
+    return main_window

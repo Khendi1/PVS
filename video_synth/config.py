@@ -37,6 +37,3 @@ ESCAPE_KEYS = [ord('q'), ord('Q'), 27] # 27 is escape key
 
 # effects = EffectManager(ParentClass.SRC_1_EFFECTS) # initialized with params in main.py
 
-src_1_effects = EffectManager(ParentClass.SRC_1_EFFECTS)
-src_2_effects = EffectManager(ParentClass.SRC_2_EFFECTS)
-post_effects = EffectManager(ParentClass.POST_EFFECTS)

@@ -28,10 +28,9 @@ from effects import EffectManager
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QImage, QPixmap
-from pyqt_gui import create_pyqt_gui
-import signal 
+from pyqt_gui import PyQTGUI
+import signal
 
-print("DEBUG: __main__.py is being executed")
 
 """Creates ArgumentParser, configures arguments, returns parser"""
 def parse_args():
@@ -140,8 +139,8 @@ def identify_midi_ports(params, controller_names):
     return controllers
 
 
-def video_loop_pyqt(mixer, osc_bank, effects, should_quit):
-    """Video processing loop for PyQt GUI."""
+"""Video processing loop"""
+def video_loop(mixer, effects, should_quit):
     wet_frame = dry_frame = mixer.get_mixed_frame()
     if dry_frame is None:
         log.error("Failed to get initial frame from mixer. Exiting video loop.")
@@ -161,8 +160,8 @@ def video_loop_pyqt(mixer, osc_bank, effects, should_quit):
             log.warning("Skipping frame due to source read failure")
             continue
 
-        for osc_group in osc_bank:
-            osc_group.update()
+        for effect_manager in effects:
+            effect_manager.oscs.update()
 
         prev_frame, wet_frame = effects[2].modify_frames(
             dry_frame, wet_frame, prev_frame, frame_count
@@ -173,47 +172,8 @@ def video_loop_pyqt(mixer, osc_bank, effects, should_quit):
         if cv2.waitKey(1) & 0xFF in ESCAPE_KEYS:
             break
         
-        
-    
     log.info("Video loop for PyQt has gracefully stopped.")
     cv2.destroyAllWindows()
-
-
-def video_loop_dpg(mixer, osc_bank, effects, gui):
-    """Video processing loop for Dear PyGui."""
-    
-    cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
-    cv2.setWindowProperty("Modified Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-
-    try:
-        while dpg.is_dearpygui_running():
-            dry_frame = mixer.get_mixed_frame()
-
-            if mixer.skip or dry_frame is None:
-                mixer.skip = False
-                log.warning("Skipping frame due to source read failure")
-                continue
-
-            osc_bank.update()
-
-            prev_frame, wet_frame = effects.modify_frames(
-                dry_frame, wet_frame, prev_frame, frame_count
-            )
-            frame_count += 1
-
-            cv2.imshow('Modified Frame', wet_frame.astype(np.uint8))
-            dpg.render_dearpygui_frame()
-
-            key = cv2.waitKey(1) & 0xFF
-            if key in ESCAPE_KEYS:
-                log.info(f"Received quit command, begining shutdown")
-                break
-    finally:
-        cv2.destroyAllWindows()
-        for cap in mixer.live_caps:
-            if cap and cap.isOpened():
-                cap.release()
-        dpg.destroy_context()
 
 
 """ Main app setup and loop """
@@ -221,25 +181,12 @@ def main(num_osc, devices, controller_names, gui_choice):
 
     log.info("Initializing video synthesizer... Press 'q' or 'ESC' to quit")
 
-    src_1_params = ParamTable()
-    src_2_params = ParamTable()
-    post_params = ParamTable()
-
-    src_1_toggles = ButtonsTable()
-    src_2_toggles = ButtonsTable()
-    post_toggles = ButtonsTable()
-
-    src_1_oscs = OscBank(src_1_params, num_osc)
-    src_2_oscs = OscBank(src_2_params, num_osc)
-    post_oscs = OscBank(post_params, num_osc)
-    osc_bank = (src_1_oscs, src_2_oscs, post_oscs)
-
-    src_1_effects.init(src_1_params, src_1_toggles, 640, 480)
-    src_2_effects.init(src_2_params, src_2_toggles, 640, 480)
-    post_effects.init(post_params, post_toggles, 640, 480)
+    src_1_effects = EffectManager(ParentClass.SRC_1_EFFECTS, 640, 480)
+    src_2_effects = EffectManager(ParentClass.SRC_2_EFFECTS, 640, 480)
+    post_effects = EffectManager(ParentClass.POST_EFFECTS, 640, 480)
     effects = (src_1_effects, src_2_effects, post_effects)
 
-    mixer = Mixer(src_1_effects, src_2_effects, post_effects, devices)
+    mixer = Mixer(effects, devices)
 
     # Automatically identify and initialize midi controllers before creating the GUI
     CONTROLLER_NAMES = [] # Placeholder for now, assumed to be defined elsewhere
@@ -247,41 +194,29 @@ def main(num_osc, devices, controller_names, gui_choice):
 
     # log.info(f'Starting program with {len(params.keys())} tunable parameters')
 
-    if gui_choice == 'pyqt':
-        print("DEBUG: gui_choice is pyqt")
-        from PyQt6.QtWidgets import QApplication
-        from PyQt6.QtGui import QImage, QPixmap
-        from pyqt_gui import create_pyqt_gui
-        import signal
-        # Handle Ctrl+C from terminal
-        signal.signal(signal.SIGINT, signal.SIG_DFL)
-        
-        app = QApplication(sys.argv)
-        main_window, x = create_pyqt_gui(src_1_effects, src_2_effects, post_effects)
+    # Handle Ctrl+C from terminal
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+    
+    app = QApplication(sys.argv)
+    main_window = PyQTGUI(effects)
 
-        main_window.show()
-        
-        should_quit = threading.Event()
-        
-        video_thread = threading.Thread(
-            target=video_loop_pyqt, 
-            args=(mixer, osc_bank, effects, should_quit)
-        )
-        video_thread.start()
-        
-        log.info("Starting PyQt event loop.")
-        exit_code = app.exec()
-        log.info("PyQt event loop finished.")
-        
-        should_quit.set()
-        video_thread.join()
-        sys.exit(exit_code)
-    else: # dearpygui
-        # TODO: This part is broken after refactoring to multiple param tables.
-        # It needs to be updated to handle the three separate param tables.
-        # For now, this will not work correctly.
-        log.error("DearPyGui is not supported in this version.")
-
+    main_window.show()
+    
+    should_quit = threading.Event()
+    
+    video_thread = threading.Thread(
+        target=video_loop, 
+        args=(mixer, effects, should_quit)
+    )
+    video_thread.start()
+    
+    log.info("Starting PyQt event loop.")
+    exit_code = app.exec()
+    log.info("PyQt event loop finished.")
+    
+    should_quit.set()
+    video_thread.join()
+    sys.exit(exit_code)
 
     if controllers:
         for c in controllers:

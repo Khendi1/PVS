@@ -31,6 +31,8 @@ from patterns3 import Patterns
 from param import ParamTable
 from enum import IntEnum, Enum, auto
 from luma import *
+from gui_elements import ButtonsTable
+from generators import OscBank
 
 log = logging.getLogger(__name__)
 
@@ -117,24 +119,22 @@ class EffectManager:
     """
     A central class to aggregate all singleton effect objects and simplify dependencies, arg len
     """
-    def __init__(self, parent=None):
+    def __init__(self, parent, width, height):
         self.parent = parent
-
-    def init(self, params, toggles, width, height):
-        """ This method is separate so the params and frame dims may be initialized"""
-        self.params = params
-        self.toggles = toggles
+        self.params = ParamTable()
+        self.toggles = ButtonsTable()
+        self.oscs = OscBank(self.params, 5)
         
-        self.feedback = Feedback(params, width, height, self.parent)
-        self.color = Color(params, self.parent)
-        self.pixels = Pixels(params, width, height, parent=self.parent)
-        self.shapes = ShapeGenerator(params, width, height, parent=self.parent)
-        self.patterns = Patterns(params, width, height, self.parent)
-        self.reflector = Reflector(params, parent=self.parent)                    
-        self.sync = Sync(params, self.parent) 
-        self.warp = Warp(params, width, height, self.parent)
-        self.glitch = Glitch(params, toggles, self.parent)
-        self.ptz = PTZ(params, width, height, self.parent)
+        self.feedback = Feedback(self.params, width, height, self.parent)
+        self.color = Color(self.params, self.parent)
+        self.pixels = Pixels(self.params, width, height, parent=self.parent)
+        self.shapes = ShapeGenerator(self.params, width, height, parent=self.parent)
+        self.patterns = Patterns(self.params, width, height, self.parent)
+        self.reflector = Reflector(self.params, parent=self.parent)                    
+        self.sync = Sync(self.params, self.parent) 
+        self.warp = Warp(self.params, width, height, self.parent)
+        self.glitch = Glitch(self.params, self.toggles, self.parent)
+        self.ptz = PTZ(self.params, width, height, self.parent)
 
         self._all_services = [
             self.feedback,
@@ -168,7 +168,7 @@ class EffectManager:
             # Filter for public methods and add them to the set
             public_methods = [
                 getattr(obj, attr) for attr in all_attributes 
-                if not attr.startswith('_') and 'create_gui_panel' not in attr and callable(getattr(obj, attr))
+                if not attr.startswith('_') and callable(getattr(obj, attr))
             ]
             methods+=public_methods
             class_with_methods[type(obj).__name__] = public_methods
@@ -182,6 +182,7 @@ class EffectManager:
 
     def adjust_sequence(self, from_idx, to_idx):
         self.all_methods.insert(to_idx, self.all_methods.pop(from_idx))
+
 
     """ 
     obsolete after implementing the effects sequencer.
