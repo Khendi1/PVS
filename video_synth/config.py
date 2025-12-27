@@ -4,6 +4,22 @@ import logging
 
 """Module to store basic global variables and effects manager"""
 
+from enum import StrEnum, auto
+
+class ParentClass(StrEnum):
+    """Enumeration for different parent classes of parameters."""
+    SRC_1_EFFECTS = "#4CAF50"
+    SRC_2_EFFECTS = "#28702A"
+    POST_EFFECTS = "#113F13"
+    SRC_1_ANIMATIONS = "#2196F3"
+    SRC_2_ANIMATIONS = "#0B5C9C"
+    MIXER = "#B53D3D"
+
+class SourceIndex:
+    SRC_1 = 0
+    SRC_2 = 1
+    POST = 2
+
 # default argparse values
 DEFAULT_NUM_OSC = 5 
 DEFAULT_LOG_LEVEL = logging.INFO
@@ -19,5 +35,8 @@ HEIGHT = None
 
 ESCAPE_KEYS = [ord('q'), ord('Q'), 27] # 27 is escape key
 
-effects = EffectManager() # initialized with params in main.py
+# effects = EffectManager(ParentClass.SRC_1_EFFECTS) # initialized with params in main.py
 
+src_1_effects = EffectManager(ParentClass.SRC_1_EFFECTS)
+src_2_effects = EffectManager(ParentClass.SRC_2_EFFECTS)
+post_effects = EffectManager(ParentClass.POST_EFFECTS)

@@ -10,12 +10,12 @@ from enum import IntEnum, Enum, auto
 from animations import *
 import os
 from pathlib import Path
-from gui_elements import TrackbarRow, RadioButtonRow, Toggle
-from effects import LumaMode
+from effects import LumaMode, EffectManager
+from param import ParamTable
 from luma import *
+from config import ParentClass, SourceIndex
 
 log = logging.getLogger(__name__)
-
 
 class MixModes(IntEnum):
     ALPHA_BLEND = 0
@@ -51,9 +51,17 @@ class Mixer:
     """Mixer is used to init sources, get frames from each, and blend them"""
 
 
-    def __init__(self, params, toggles, num_devices):
+    def __init__(self, src_1_effects, src_2_effects, post_effects, num_devices):
 
-        self.params = params
+        self.src_1_effects = src_1_effects
+        self.src_2_effects = src_2_effects
+        self.post_effects = post_effects
+
+        self.post_params = post_effects.params
+        self.post_toggles = post_effects.toggles
+
+        self.parent = ParentClass.MIXER
+        subclass = self.__class__.__name__
 
         # cap variables to store video capture objects or animation instances
         # e.g. self.cap1 can be a cv2.VideoCapture or Metaballs instance
@@ -83,16 +91,25 @@ class Mixer:
             i+=1
             self.sources[src.name] = self.cv2_max_devices+i
 
-        # Dictionary of available animation sources. These differ from captured sources
-        # in that they generate frames algorithmically rather than capturing from a device or file.
-        self.animation_sources = {
-            MixSources.METABALLS_ANIM.name: Metaballs(params, toggles, width=640, height=480),
-            MixSources.PLASMA_ANIM.name: Plasma(params, toggles, width=640, height=480),
-            MixSources.REACTION_DIFFUSION_ANIM.name: ReactionDiffusion(params, toggles, 640, 480),
-            MixSources.MOIRE_ANIM.name: Moire(params, toggles, width=640, height=480),
-            MixSources.SHADER_ANIM.name: ShaderVisualizer(params, toggles, 640, 480)
-
+# --------------------------------------------------------------------
+        parent = ParentClass.SRC_1_ANIMATIONS
+        self.src_1_animations = {
+            MixSources.METABALLS_ANIM.name: Metaballs(self.src_1_effects.params, self.src_1_effects.toggles, width=640, height=480, parent=parent),
+            MixSources.PLASMA_ANIM.name: Plasma(self.src_1_effects.params, self.src_1_effects.toggles, width=640, height=480, parent=parent),
+            MixSources.REACTION_DIFFUSION_ANIM.name: ReactionDiffusion(self.src_1_effects.params, self.src_1_effects.toggles, 640, 480, parent=parent),
+            MixSources.MOIRE_ANIM.name: Moire(self.src_1_effects.params, self.src_1_effects.toggles, width=640, height=480, parent=parent),
+            MixSources.SHADER_ANIM.name: ShaderVisualizer(self.src_1_effects.params, self.src_1_effects.toggles, 640, 480, parent=parent)
         }
+
+        parent = ParentClass.SRC_2_ANIMATIONS
+        self.src_2_animations = {
+            MixSources.METABALLS_ANIM.name: Metaballs(self.src_2_effects.params, self.src_2_effects.toggles, width=640, height=480, parent=parent),
+            MixSources.PLASMA_ANIM.name: Plasma(self.src_2_effects.params, self.src_2_effects.toggles, width=640, height=480, parent=parent),
+            MixSources.REACTION_DIFFUSION_ANIM.name: ReactionDiffusion(self.src_2_effects.params, self.src_2_effects.toggles, 640, 480, parent=parent),
+            MixSources.MOIRE_ANIM.name: Moire(self.src_2_effects.params, self.src_2_effects.toggles, width=640, height=480, parent=parent),
+            MixSources.SHADER_ANIM.name: ShaderVisualizer(self.src_2_effects.params, self.src_2_effects.toggles, 640, 480, parent=parent)
+        }
+# --------------------------------------------------------------------
 
         self.device_sources = [k for k,v in self.sources.items() if v <= self.cv2_max_devices-(len(FILE_SOURCE_NAMES)-1)]
 
@@ -112,34 +129,46 @@ class Mixer:
         # --- Source Params ---
 
         # initialize source 1 to use the first hardware device available (probably webcam if on laptop)
-        self.selected_source1 = params.add(
-            "source1", 0, max(self.sources.values()), self.sources[self.device_sources[0]]
+        self.selected_source1 = self.post_params.add(
+            "source1", 0, max(self.sources.values()), self.sources[self.device_sources[0]], subclass, self.parent
         )
         # init source 2 to metaballs
-        self.selected_source2 = params.add(
-            "source2", 0, max(self.sources.values()), self.sources[MixSources.METABALLS_ANIM.name]
+        self.selected_source2 = self.post_params.add(
+            "source2", 0, max(self.sources.values()), self.sources[MixSources.METABALLS_ANIM.name], subclass, self.parent
         )
 
         # --- Parameters for blending and keying ---
 
-        self.blend_mode = params.add("blend_mode", 0, 2, 0)
+        self.blend_mode = self.post_params.add("blend_mode", 0, 2, 0, subclass, self.parent)
 
         # Luma keying threshold and selection mode
-        self.luma_threshold = params.add("luma_threshold", 0, 255, 128)
-        self.luma_selection = params.add("luma_selection", LumaMode.WHITE.value, 
-                                         LumaMode.BLACK.value, LumaMode.WHITE.value)
+        self.luma_threshold = self.post_params.add("luma_threshold", 0, 255, 128, subclass, self.parent)
+        self.luma_selection = self.post_params.add("luma_selection", LumaMode.WHITE.value, 
+                                         LumaMode.BLACK.value, LumaMode.WHITE.value, subclass, self.parent)
 
         # Chroma key upper and lower HSV bounds
-        self.upper_hue = params.add("upper_hue", 0, 179, 80)
-        self.upper_saturation = params.add("upper_sat", 0, 255, 255)
-        self.upper_value = params.add("upper_val", 0, 255, 255)
-        self.lower_hue = params.add("lower_hue", 0, 179, 0)  
-        self.lower_saturation = params.add("lower_sat", 0, 255, 100)
-        self.lower_value = params.add("lower_val", 0, 255, 100)
+        self.upper_hue = self.post_params.add("upper_hue", 0, 179, 80, subclass, self.parent)
+        self.upper_saturation = self.post_params.add("upper_sat", 0, 255, 255, subclass, self.parent)
+        self.upper_value = self.post_params.add("upper_val", 0, 255, 255, subclass, self.parent)
+        self.lower_hue = self.post_params.add("lower_hue", 0, 179, 0, subclass, self.parent)  
+        self.lower_saturation = self.post_params.add("lower_sat", 0, 255, 100, subclass, self.parent)
+        self.lower_value = self.post_params.add("lower_val", 0, 255, 100, subclass, self.parent)
 
-        self.alpha_blend = params.add("alpha_blend", 0.0, 1.0, 0.5)
+        self.alpha_blend = self.post_params.add("alpha_blend", 0.0, 1.0, 0.5, subclass, self.parent)
 
-        self.swap = toggles.add("Swap Frames", "swap", False)
+        self.swap = self.post_toggles.add("Swap Frames", "swap", False)
+
+        self.src_1_prev = None
+        self.src_2_prev = None
+        self.post_prev = None
+
+        self.src_1_wet = None
+        self.src_2_wet = None
+        self.post_wet = None
+
+        self.src_1_count = 0
+        self.src_2_count = 0
+        self.post_count = 0
 
         # a frame must next be obtained from the capture object or animation instance
         # before the mixer can blend or key between the two sources.
@@ -183,6 +212,7 @@ class Mixer:
             except Exception as e:
                 pass
 
+
     def failback_camera(self):
         # TODO: implement a fallback camera source if the selected source fails, move to mixer class
         pass
@@ -216,17 +246,19 @@ class Mixer:
         return cap
 
 
-    def open_animation(self, cap, source_val):
+    def open_animation(self, cap, source_val, index):
 
         # Release previous capture if it exists and is not an animation
         if cap and isinstance(cap, cv2.VideoCapture):
             cap.release()
+
+        animations = self.src_1_animations if index == 1 else self.src_2_animations
         
         source = None
         # get key using value since all animation values are unique
         for k,v in self.sources.items():
             if source_val == v:
-                return self.animation_sources[k]
+                return animations[k]
 
 
     def start_video(self, source, index):
@@ -240,17 +272,17 @@ class Mixer:
                 f"Starting mixer source {index}: with cv2 source value: {source}"
             )
             if index == 1:
-                self.cap1 = self.open_cv2_capture(self.cap1, source, 1)
+                self.cap1 = self.open_cv2_capture(self.cap1, source, index)
             elif index == 2:
-                self.cap2 = self.open_cv2_capture(self.cap2, source, 2)
+                self.cap2 = self.open_cv2_capture(self.cap2, source, index)
         else:  # handle animation sources
             log.info(
                 f"Starting mixer source {index}: with animation source value: {source}"
             )
             if index == 1:
-                self.cap1 = self.open_animation(self.cap1, source)
+                self.cap1 = self.open_animation(self.cap1, source, index)
             if index == 2:
-                self.cap2 = self.open_animation(self.cap2, source)
+                self.cap2 = self.open_animation(self.cap2, source, index)
 
 
     def select_source1_callback(self, sender, app_data):
@@ -304,8 +336,10 @@ class Mixer:
 
         return cv2.addWeighted(frame1.astype(np.float32), 1-alpha, frame2.astype(np.float32), alpha, 0)
 
+
     def _luma_key(self, frame1, frame2):
         return luma_key(frame1, frame2, self.luma_selection.value, self.luma_threshold.value).astype(np.float32)
+
 
     def chroma_key(self, frame1, frame2, lower=(0, 100, 0), upper=(80, 255, 80)):
         hsv = cv2.cvtColor(frame1, cv2.COLOR_BGR2HSV)
@@ -321,47 +355,58 @@ class Mixer:
 
         # Read from source 1
         if not isinstance(self.cap1, cv2.VideoCapture):
-            frame1 = self.cap1.get_frame(frame1)  
+            frame1 = self.cap1.get_frame()
             ret1 = True
         else:
             ret1, frame1 = self.cap1.read()
-            # TODO: retry a couple times to let devices connect before changing src
             if not ret1:
-                if self.selected_source1.value == self.sources[MixSources.VIDEO_FILE_1.name]:
+                if self.selected_source1.value == self.sources.get(MixSources.VIDEO_FILE_1.name):
                     log.info("Video end reached. Looping back to start.")
-                    # Reset the video position to the beginning
                     self.cap1.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     ret1, frame1 = self.cap1.read()
                 else:
-                    log.error(
-                        f"Source 1 '{self.selected_source1.value}' read failed"
-                    )
-                    # self.cap1.release()
-                    # self.cap1 = self.failback_camera()
+                    log.error(f"Source 1 '{self.selected_source1.value}' read failed")
 
         # Read from source 2
         if not isinstance(self.cap2, cv2.VideoCapture):
-            frame2 = self.cap2.get_frame(frame2)
+            frame2 = self.cap2.get_frame()
             ret2 = True
         else:
             ret2, frame2 = self.cap2.read()
             if not ret2:
-                if self.selected_source2.value == self.sources[MixSources.VIDEO_FILE_2.name]:
+                if self.selected_source2.value == self.sources.get(MixSources.VIDEO_FILE_2.name):
                     log.info("Video end reached. Looping back to start...")
                     self.cap2.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     ret2, frame2 = self.cap2.read()
                 else:
-                    log.error(
-                        f"Source 2 '{self.selected_source2.value}' read failed, attempting to reopen."
-                    )
-                    # self.cap2.release()
-                    # self.cap2 = self.failback_camera()
+                    log.error(f"Source 2 '{self.selected_source2.value}' read failed, attempting to reopen.")
 
         # Process and display frames
         if ret1 and ret2:
             # Ensure frames are the same size for mixing
             height, width, _ = frame1.shape
             frame2 = cv2.resize(frame2, (width, height))
+
+            if self.src_1_wet is None:
+                self.src_1_wet = np.zeros_like(frame1)
+            if self.src_2_wet is None:
+                self.src_2_wet = np.zeros_like(frame2)
+            if self.src_1_prev is None:
+                self.src_1_prev = frame1.copy()
+            if self.src_2_prev is None:
+                self.src_2_prev = frame2.copy()
+
+            self.src_1_count += 1
+            self.src_1_prev, self.src_1_wet = self.src_1_effects.modify_frames(
+                frame1, self.src_1_wet, self.src_1_prev, self.src_1_count
+            )
+            frame1 = self.src_1_wet
+
+            self.src_2_count += 1
+            self.src_2_prev, self.src_2_wet = self.src_2_effects.modify_frames(
+                frame2, self.src_2_wet, self.src_2_prev, self.src_2_count
+            )
+            frame2 = self.src_2_wet
 
             if self.swap.value == True:
                 temp = frame1.copy()
@@ -473,94 +518,6 @@ class Mixer:
             else:
                 pass
 
-    def create_gui_panel(self, theme):
-        with dpg.collapsing_header(label=f"\tMixer", tag="mixer") as h:
-            dpg.bind_item_theme(h, theme)
-            
-            # Get list of srcs without DEVICE_2, X_FILE_2
-            sources = [src for src in self.sources.keys() if 'E_2' not in src]
-            
-            dpg.add_button(
-                label=self.swap.label,
-                callback=self.swap.toggle,
-                parent="mixer",
-            )
-
-            with dpg.group(horizontal=True):
-                dpg.add_text("Source 1")
-                dpg.add_combo(sources, default_value="DEVICE_1_0", tag="source_1", callback=self.select_source1_callback)
-                with dpg.file_dialog(label="Source File Dialog 1", width=300, height=400, show=False, callback=lambda s, a, u : print(s, a, u), tag="filedialog1", user_data="filedialog1"):
-                    # dpg.add_file_extension(".*", color=(255, 255, 255, 255))
-                    dpg.add_file_extension(".mp4", color=(255, 255, 0, 255))
-                    dpg.add_file_extension(".jpeg", color=(255, 255, 0, 255))
-                    dpg.add_file_extension(".jpg", color=(255, 255, 0, 255))
-
-                dpg.add_button(label="File 1", user_data=dpg.last_container(), callback=lambda s, a, u: dpg.configure_item(u, show=True))
-
-          
-            #get only sources for source 2; hacky shortcut to avoid selecting 'device_1' and 'x_file_1'; needs revisit
-            sources = [src for src in self.sources.keys() if 'E_1' not in src]
-
-            with dpg.group(horizontal=True):
-                dpg.add_text("Source 2")
-                dpg.add_combo(sources, default_value="METABALLS_ANIM", tag="source_2", callback=self.select_source2_callback)
-                with dpg.file_dialog(label="Source File Dialog 2", width=300, height=400, show=False, callback=lambda s, a, u : print(s, a, u), tag="filedialog2", user_data="filedialog2"):
-                    # dpg.add_file_extension(".*", color=(255, 255, 255, 255))
-                    dpg.add_file_extension(".mp4", color=(255, 255, 0, 255))
-                    dpg.add_file_extension(".jpeg", color=(255, 255, 0, 255))
-                    dpg.add_file_extension(".jpg", color=(255, 255, 0, 255))
-
-                dpg.add_button(label="File 2", user_data=dpg.last_container(), callback=lambda s, a, u: dpg.configure_item(u, show=True))
-
-
-            RadioButtonRow(
-                "Blend Mode",
-                MixModes,
-                self.blend_mode,
-                None,
-                callback = self._blend_mode_select_callback
-            )
-
-            TrackbarRow(
-                "Alpha Blend",
-                self.params.get("alpha_blend"),
-                None
-            )
-            
-            with dpg.group(horizontal=True):
-                dpg.add_color_picker(
-                    (255, 0, 255, 200), 
-                    label="Upper Chroma", 
-                    width=200, 
-                    tag='upper_chroma', 
-                    user_data='upper_chroma', 
-                    callback=self.color_picker_callback, 
-                    display_hex=False, 
-                    display_rgb=False, 
-                    display_hsv=True
-                )
-                dpg.add_color_picker(
-                    (255, 0, 255, 200), 
-                    label="Lower Chroma", 
-                    width=200, 
-                    tag='lower_chroma', 
-                    user_data='lower_chroma', 
-                    callback=self.color_picker_callback, 
-                    display_hex=False, 
-                    display_rgb=False, 
-                    display_hsv=True
-                )
-            
-            luma_threshold_slider = TrackbarRow(
-                "Luma Threshold",
-                self.params.get("luma_threshold"),
-                None) # fix defulat font_id=None
-            
-            luma_selection_slider = TrackbarRow(
-                "Luma Selection",
-                self.params.get("luma_selection"),
-                None) # fix defulat font_id=None
-            
     def select_source1_file(self, sender, app_data):
         self.video_file_name1 = app_data
 

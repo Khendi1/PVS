@@ -6,7 +6,6 @@ import numpy as np
 import noise
 from param import Param
 import logging
-from gui_elements import *
 import dearpygui.dearpygui as dpg
 
 log = logging.getLogger(__name__)
@@ -259,97 +258,97 @@ class OscBank():
             if str(i) in user_data[:-3]:
                 self.osc_bank[i].shape.value = OscillatorShape[app_data].value
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
+    # def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
         
-        osc_freq_sliders = []
-        osc_amp_sliders = []
-        osc_phase_sliders = []
-        osc_seed_sliders = []
+    #     osc_freq_sliders = []
+    #     osc_amp_sliders = []
+    #     osc_phase_sliders = []
+    #     osc_seed_sliders = []
 
-        osc_noise_octaves = []
-        osc_noise_persistence = []
-        osc_noise_lacunarity = []
-        osc_noise_repeat = []
-        osc_noise_base = []
+    #     osc_noise_octaves = []
+    #     osc_noise_persistence = []
+    #     osc_noise_lacunarity = []
+    #     osc_noise_repeat = []
+    #     osc_noise_base = []
 
-        with dpg.collapsing_header(label=f"\tOscillator Bank", tag=f"osc_bank") as h:
-            dpg.bind_item_theme(h, theme)
-            for i in range(self.len):
+    #     with dpg.collapsing_header(label=f"\tOscillator Bank", tag=f"osc_bank") as h:
+    #         dpg.bind_item_theme(h, theme)
+    #         for i in range(self.len):
                 
-                with dpg.collapsing_header(label=f"\t\tOscillator {i}", tag=f"osc{i}"):
-                    dpg.bind_item_theme(h, theme)
+    #             with dpg.collapsing_header(label=f"\t\tOscillator {i}", tag=f"osc{i}"):
+    #                 dpg.bind_item_theme(h, theme)
 
-                    shapes = (
-                        OscillatorShape.NONE.name, 
-                        OscillatorShape.SINE.name,
-                        OscillatorShape.TRIANGLE.name,
-                        OscillatorShape.SQUARE.name,
-                        OscillatorShape.SAWTOOTH.name,
-                        OscillatorShape.PERLIN.name
-                    )
-                    dpg.add_radio_button(
-                        shapes, 
-                        callback=self._shape_callback, 
-                        horizontal=True,
-                        user_data=f"{self.osc_bank[i].shape}"
-                    )
+    #                 shapes = (
+    #                     OscillatorShape.NONE.name, 
+    #                     OscillatorShape.SINE.name,
+    #                     OscillatorShape.TRIANGLE.name,
+    #                     OscillatorShape.SQUARE.name,
+    #                     OscillatorShape.SAWTOOTH.name,
+    #                     OscillatorShape.PERLIN.name
+    #                 )
+    #                 dpg.add_radio_button(
+    #                     shapes, 
+    #                     callback=self._shape_callback, 
+    #                     horizontal=True,
+    #                     user_data=f"{self.osc_bank[i].shape}"
+    #                 )
                     
-                    osc_freq_sliders.append(TrackbarRow(
-                        f"Osc {i} Freq", 
-                        self.osc_bank[i].frequency, 
-                        default_font_id))
+    #                 osc_freq_sliders.append(TrackbarRow(
+    #                     f"Osc {i} Freq", 
+    #                     self.osc_bank[i].frequency, 
+    #                     default_font_id))
                     
-                    osc_amp_sliders.append(TrackbarRow(
-                        f"Osc {i} Amp", 
-                        self.osc_bank[i].amplitude, 
-                        default_font_id))
+    #                 osc_amp_sliders.append(TrackbarRow(
+    #                     f"Osc {i} Amp", 
+    #                     self.osc_bank[i].amplitude, 
+    #                     default_font_id))
                     
-                    osc_phase_sliders.append(TrackbarRow(
-                        f"Osc {i} Phase", 
-                        self.osc_bank[i].phase,
-                        default_font_id))
+    #                 osc_phase_sliders.append(TrackbarRow(
+    #                     f"Osc {i} Phase", 
+    #                     self.osc_bank[i].phase,
+    #                     default_font_id))
                     
-                    osc_seed_sliders.append(TrackbarRow(
-                        f"Osc {i} Seed", 
-                        self.osc_bank[i].seed, 
-                        default_font_id))
+    #                 osc_seed_sliders.append(TrackbarRow(
+    #                     f"Osc {i} Seed", 
+    #                     self.osc_bank[i].seed, 
+    #                     default_font_id))
                     
-                    osc_noise_octaves.append(TrackbarRow(
-                        f"Osc {i} Noise Octaves",
-                        self.osc_bank[i].noise_octaves,
-                        default_font_id))
+    #                 osc_noise_octaves.append(TrackbarRow(
+    #                     f"Osc {i} Noise Octaves",
+    #                     self.osc_bank[i].noise_octaves,
+    #                     default_font_id))
                     
-                    osc_noise_persistence.append(TrackbarRow(
-                        f"Osc {i} Noise Persistence",
-                        self.osc_bank[i].noise_persistence,
-                        default_font_id))
+    #                 osc_noise_persistence.append(TrackbarRow(
+    #                     f"Osc {i} Noise Persistence",
+    #                     self.osc_bank[i].noise_persistence,
+    #                     default_font_id))
                     
-                    osc_noise_lacunarity.append(TrackbarRow(
-                        f"Osc {i} Noise Lacunarity",
-                        self.osc_bank[i].noise_lacunarity,
-                        default_font_id))
+    #                 osc_noise_lacunarity.append(TrackbarRow(
+    #                     f"Osc {i} Noise Lacunarity",
+    #                     self.osc_bank[i].noise_lacunarity,
+    #                     default_font_id))
                     
-                    osc_noise_repeat.append(TrackbarRow(
-                        f"Osc {i} Noise Repeat",
-                        self.osc_bank[i].noise_repeat,
-                        default_font_id))
+    #                 osc_noise_repeat.append(TrackbarRow(
+    #                     f"Osc {i} Noise Repeat",
+    #                     self.osc_bank[i].noise_repeat,
+    #                     default_font_id))
                     
-                    osc_noise_base.append(TrackbarRow(
-                        f"Osc {i} Noise Base",
-                        self.osc_bank[i].noise_base,
-                        default_font_id))
+    #                 osc_noise_base.append(TrackbarRow(
+    #                     f"Osc {i} Noise Base",
+    #                     self.osc_bank[i].noise_base,
+    #                     default_font_id))
                     
-                    # Create a list of items for the listbox
-                    items = list(self.params.keys())
+    #                 # Create a list of items for the listbox
+    #                 items = list(self.params.keys())
 
-                    # Create the listbox
-                    dpg.add_combo(items=items,
-                                    label="Select Parameter",
-                                    tag=f"osc{i}_combobox",
-                                    default_value=None,
-                                    callback=self.listbox_cb)
+    #                 # Create the listbox
+    #                 dpg.add_combo(items=items,
+    #                                 label="Select Parameter",
+    #                                 tag=f"osc{i}_combobox",
+    #                                 default_value=None,
+    #                                 callback=self.listbox_cb)
 
-                dpg.bind_item_font(f"osc{i}", global_font_id)
+    #             dpg.bind_item_font(f"osc{i}", global_font_id)
 
 
     def listbox_cb(self, sender, app_data):

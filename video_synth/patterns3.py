@@ -3,7 +3,7 @@ import cv2
 from enum import Enum
 import noise 
 from generators import Oscillator, OscillatorShape
-from gui_elements import TrackbarRow, RadioButtonRow
+from gui_elements import RadioButtonRow
 import dearpygui.dearpygui as dpg
 import logging
 import math
@@ -41,7 +41,7 @@ class Patterns:
     Generates various animated patterns using OpenCV and modulates them
     with its own bank of Oscillators.
     """
-    def __init__(self, params, width, height):
+    def __init__(self, params, width, height, parent=None):
         """
         Initializes the PatternGenerator.
         Args:
@@ -52,6 +52,7 @@ class Patterns:
         self.params = params
         self.width = width
         self.height = height
+        subclass = self.__class__.__name__
 
         # Create coordinate grids for vectorized operations (much faster than loops)
         self.x_coords = np.linspace(0, self.width - 1, self.width, dtype=np.float32)
@@ -61,61 +62,61 @@ class Patterns:
         # Define pattern-specific parameters (using the global params_table)
         self.pattern_type = params.add("pattern_type", PatternType.NONE.value, len(PatternType)-1, 0) 
         self.prev_pattern_type = self.pattern_type.value 
-        self.pattern_alpha = params.add("pattern_alpha", 0.0, 1.0, 0.5)
+        self.pattern_alpha = params.add("pattern_alpha", 0.0, 1.0, 0.5, subclass, parent)
 
         # perlin params
-        self.octaves = params.add("pattern_octaves", 1, 8, 4) # Number of octaves for fractal noise
-        self.gain = params.add("pattern_gain", 0.0, 1.0, 0.2) # Gain for fractal noise
-        self.lacunarity = params.add("pattern_lacunarity", 1.0, 4.0, 2.0) # Lacunarity for fractal noise
+        self.octaves = params.add("pattern_octaves", 1, 8, 4, subclass, parent) # Number of octaves for fractal noise
+        self.gain = params.add("pattern_gain", 0.0, 1.0, 0.2, subclass, parent) # Gain for fractal noise
+        self.lacunarity = params.add("pattern_lacunarity", 1.0, 4.0, 2.0, subclass, parent) # Lacunarity for fractal noise
 
         # controls density of bars
-        self.bar_x_freq = params.add("bar_x_freq", 0.01, 0.75, 0.01, family="Bars")
-        self.bar_y_freq = params.add("bar_y_freq", 0.01, 0.75, 0.01, family="Bars")
+        self.bar_x_freq = params.add("bar_x_freq", 0.01, 0.75, 0.01, subclass, parent)
+        self.bar_y_freq = params.add("bar_y_freq", 0.01, 0.75, 0.01, subclass, parent)
         # controls bar scrolling speed
-        self.bar_x_offset = params.add("bar_x_offset", -100, 100, 2.0, family="Bars") # Offset for X bars
-        self.bar_y_offset = params.add("bar_y_offset", -10, 10, 1.0, family="Bars") # Offset for Y bars
+        self.bar_x_offset = params.add("bar_x_offset", -100, 100, 2.0, subclass, parent) # Offset for X bars
+        self.bar_y_offset = params.add("bar_y_offset", -10, 10, 1.0, subclass, parent) # Offset for Y bars
 
-        self.rotation = params.add("pattern_rotation", -360, 360, 0.0)
+        self.rotation = params.add("pattern_rotation", -360, 360, 0.0, subclass, parent)
 
         # creates interesting color patterns
-        self.mod = params.add("pattern_mod", 0.1, 2.0, 1.0, family="Bars") # Modulation factor for bar patterns
+        self.mod = params.add("pattern_mod", 0.1, 2.0, 1.0, subclass, parent) # Modulation factor for bar patterns
 
         # Color parameters for patterns # TODO: mapping seems off
-        self.r = params.add("pattern_r", 0, 180, 127, family="Pattern Colors")
-        self.g = params.add("pattern_g", 0, 180, 127, family="Pattern Colors")
-        self.b = params.add("pattern_b", 0, 180, 127, family="Pattern Colors")
+        self.r = params.add("pattern_r", 0, 180, 127, subclass, parent)
+        self.g = params.add("pattern_g", 0, 180, 127, subclass, parent)
+        self.b = params.add("pattern_b", 0, 180, 127, subclass, parent)
 
-        self.grid_size = params.add("pattern_grid_size", 10, 100, 30, family="Checkers") # Base grid size for checkers
-        self.color_shift = params.add("pattern_color_shift", 0, 255, 127, family="Checkers")
-        self.color_blend = params.add("pattern_color_blend", 0, 255, 127, family="Checkers")
+        self.grid_size = params.add("pattern_grid_size", 10, 100, 30, subclass, parent) # Base grid size for checkers
+        self.color_shift = params.add("pattern_color_shift", 0, 255, 127, subclass, parent)
+        self.color_blend = params.add("pattern_color_blend", 0, 255, 127, subclass, parent)
 
-        self.wave_freq_x = params.add("pattern_wave_freq_x", 0.0, 100, 0.05, family="Waves")
-        self.wave_freq_y = params.add("pattern_wave_freq_y", 0.0, 100, 0.05, family="Waves")
-        self.brightness = params.add("pattern_brightness", 0.0, 100.0, 50.0, family="Waves") 
+        self.wave_freq_x = params.add("pattern_wave_freq_x", 0.0, 100, 0.05, subclass, parent)
+        self.wave_freq_y = params.add("pattern_wave_freq_y", 0.0, 100, 0.05, subclass, parent)
+        self.brightness = params.add("pattern_brightness", 0.0, 100.0, 50.0, subclass, parent) 
 
-        self.radial_freq = params.add("pattern_radial_freq", 1, 100, 30) # Angle amount for polar warp
-        self.angular_freq = params.add("pattern_angular_freq", 1, 40, 1) # Radius amount for polar warp
-        self.radial_mod = params.add("pattern_radial_mod", 0.1, 10.0, 1.0) # Modulation factor for radial patterns
-        self.angle_mod = params.add("pattern_angle_mod", 0.1, 10.0, 1.0) # Modulation factor for angle patterns
+        self.radial_freq = params.add("pattern_radial_freq", 1, 100, 30, subclass, parent) # Angle amount for polar warp
+        self.angular_freq = params.add("pattern_angular_freq", 1, 40, 1, subclass, parent) # Radius amount for polar warp
+        self.radial_mod = params.add("pattern_radial_mod", 0.1, 10.0, 1.0, subclass, parent) # Modulation factor for radial patterns
+        self.angle_mod = params.add("pattern_angle_mod", 0.1, 10.0, 1.0, subclass, parent) # Modulation factor for angle patterns
 
-        self.x_hue = params.add("x_hue", 0.0, 1.0, 0.5, family="XY Bars") # Hue for X bars
-        self.y_hue = params.add("y_hue", 0.0, 1.0, 0.5, family="XY Bars") # Hue for Y bars
+        self.x_hue = params.add("x_hue", 0.0, 1.0, 0.5, subclass, parent) # Hue for X bars
+        self.y_hue = params.add("y_hue", 0.0, 1.0, 0.5, subclass, parent) # Hue for Y bars
 
-        self.x_scale = params.add("pperlin_scale_x", 0.001, 0.05, 0.005, family="Perlin Blobs")
-        self.y_scale = params.add("pperlin_scale_y", 0.001, 0.05, 0.005, family="Perlin Blobs")
+        self.x_scale = params.add("pperlin_scale_x", 0.001, 0.05, 0.005, subclass, parent)
+        self.y_scale = params.add("pperlin_scale_y", 0.001, 0.05, 0.005, subclass, parent)
 
-        self.octaves = params.add("pperlin_octaves", 1, 10, 6, family="Perlin Blobs")
-        self.persistence = params.add("pperlin_persistence", 0.1, 1.0, 0.5, family="Perlin Blobs")
-        self.lacunarity= params.add("pperlin_lacunarity", 1.0, 4.0, 2.0, family="Perlin Blobs")
-        self.time_speed=params.add("pperlin_time_speed", 0.01, 1.0, 0.1, family="Perlin Blobs")
+        self.octaves = params.add("pperlin_octaves", 1, 10, 6, subclass, parent)
+        self.persistence = params.add("pperlin_persistence", 0.1, 1.0, 0.5, subclass, parent)
+        self.lacunarity= params.add("pperlin_lacunarity", 1.0, 4.0, 2.0, subclass, parent)
+        self.time_speed=params.add("pperlin_time_speed", 0.01, 1.0, 0.1, subclass, parent)
 
-        self.famp=params.add("pfractal_amplitude", 0.5, 5.0, 1.5, family="Fractal Sine")
-        self.foct=params.add("pfractal_octaves", 1, 8, 4, family="Fractal Sine")
+        self.famp=params.add("pfractal_amplitude", 0.5, 5.0, 1.5, subclass, parent)
+        self.foct=params.add("pfractal_octaves", 1, 8, 4, subclass, parent)
 
         # Fractal Sine parameters
-        self.x_perturb = params.add("x_perturb", 0, 50, 25.0, family="Sine")
-        self.y_perturb = params.add("y_perturb", 0, 50, 25.0, family="Sine")
-        self.phase_speed = params.add("phase_speed", 0.01, 10.0, 1.0, family="Sine") 
+        self.x_perturb = params.add("x_perturb", 0, 50, 25.0, subclass, parent)
+        self.y_perturb = params.add("y_perturb", 0, 50, 25.0, subclass, parent)
+        self.phase_speed = params.add("phase_speed", 0.01, 10.0, 1.0, subclass, parent) 
 
         self.num_osc = 5
         self.posc_bank = [] # List to hold Oscillator instances
@@ -504,105 +505,3 @@ class Patterns:
         pattern[:, :, 2] = red_channel # Red
         return pattern
     
-    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
-        
-        with dpg.collapsing_header(label=f"\tPattern Generator", tag="pattern_generator") as h:
-            dpg.bind_item_theme(h, theme)
-            
-            RadioButtonRow(
-                "Pattern Type",
-                PatternType,
-                self.pattern_type,
-                default_font_id
-            )
-            
-            TrackbarRow(
-                "Pattern Mod", self.mod, default_font_id
-            )
-            
-            TrackbarRow(
-                "Red", self.r, default_font_id
-            )
-            
-            TrackbarRow(
-                "Green", self.g, default_font_id
-            )
-            
-            TrackbarRow(
-                "Blue", self.b, default_font_id
-            )
-            
-            TrackbarRow(
-                "Alpha", self.pattern_alpha, default_font_id
-            )
-                  
-            TrackbarRow(
-                "Bar x Density",self.bar_x_freq, default_font_id
-            )
-            
-            TrackbarRow(
-                "Bar y Density", self.bar_y_freq, default_font_id
-            )
-
-            # radial pattern sliders
-            # TODO: hide under collapsable header? or show based selected pattern mode?
-            TrackbarRow(
-                "Radial Frequency",
-                self.radial_freq,
-                default_font_id
-            )
-            
-            TrackbarRow(
-                "Angular Frequency", self.angular_freq, default_font_id
-            )
-            
-            TrackbarRow(
-                "Radial Mod", self.radial_mod, default_font_id
-            )
-            
-            TrackbarRow(
-                "Angle Mod", self.angle_mod, default_font_id
-            )
-
-            # use_fractal_slider = TrackbarRow(
-            #     "Use Fractal",
-            #     self.use_fractal,
-            #     default_font_id)
-            
-            for i in range(self.num_osc):
-                with dpg.collapsing_header(label=f"\tpOscillator {i}", tag=f"posc{i}"):
-                    dpg.bind_item_theme(h, theme)
-                    RadioButtonRow(
-                        f"Pattern Osc {i} Shape", 
-                        OscillatorShape,
-                        self.params.get(f"posc{i}_shape"), 
-                        default_font_id
-                    )
-                    
-                    TrackbarRow(
-                        f"Pattern Osc {i} Freq", 
-                        self.params.get(f"posc{i}_frequency"), 
-                        default_font_id
-                    )
-                    
-                    TrackbarRow(
-                        f"Pattern Osc {i} Amp", 
-                        self.params.get(f"posc{i}_amplitude"), 
-                        default_font_id
-                    )
-                    
-                    TrackbarRow(
-                        f"Pattern Osc {i} Phase", 
-                        self.params.get(f"posc{i}_phase"), 
-                        default_font_id
-                    )
-                    
-                    TrackbarRow(
-                        f"Pattern Osc {i} Seed", 
-                        self.params.get(f"posc{i}_seed"), 
-                        default_font_id
-                    )
-                    
-                dpg.bind_item_font(f"posc{i}", global_font_id)
-
-        dpg.bind_item_font("pattern_generator", global_font_id)

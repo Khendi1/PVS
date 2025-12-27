@@ -15,6 +15,28 @@ import math
 log = logging.getLogger(__name__)
 
 
+class Colormap(IntEnum):
+    JET = 0
+    VIRIDIS = auto()
+    MAGMA = auto()
+    PLASMA = auto()
+    RAINBOW = auto()
+    OCEAN = auto()
+    SPRING = auto()
+    COOL = auto()
+
+COLORMAP_OPTIONS = [
+    cv2.COLORMAP_JET,
+    cv2.COLORMAP_VIRIDIS,
+    cv2.COLORMAP_MAGMA,
+    cv2.COLORMAP_PLASMA,
+    cv2.COLORMAP_RAINBOW,
+    cv2.COLORMAP_OCEAN,
+    cv2.COLORMAP_SPRING,
+    cv2.COLORMAP_COOL,
+]
+
+
 class MoirePattern(IntEnum):
     LINE = 0
     RADIAL = auto()
@@ -60,16 +82,17 @@ class Animation(ABC):
 
 
 class Plasma(Animation):
-    def __init__(self, params, toggles, width=800, height=600):
+    def __init__(self, params, toggles, width=800, height=600, parent=None):
         super().__init__(params, toggles)
+        subclass = self.__class__.__name__
         self.params = params
         self.width = width
         self.height = height
 
-        self.plasma_speed = params.add("plasma_speed", 0.01, 10, 1.0)
-        self.plasma_distance = params.add("plasma_distance", 0.01, 10, 1.0)
-        self.plasma_color_speed = params.add("plasma_color_speed", 0.01, 10, 1.0)
-        self.plasma_flow_speed = params.add("plasma_flow_speed", 0.01, 10, 1.0)
+        self.plasma_speed = params.add("plasma_speed", 0.01, 10, 1.0, subclass, parent)
+        self.plasma_distance = params.add("plasma_distance", 0.01, 10, 1.0, subclass, parent)
+        self.plasma_color_speed = params.add("plasma_color_speed", 0.01, 10, 1.0, subclass, parent)
+        self.plasma_flow_speed = params.add("plasma_flow_speed", 0.01, 10, 1.0, subclass, parent)
 
         self.plasma_params = [
             "plasma_speed",
@@ -163,54 +186,11 @@ class Plasma(Animation):
         return self.generate_plasma_effect()
 
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
-        plasma_freq_sliders = []
-        plasma_amp_sliders = []
-        plasma_phase_sliders = []
-        plasma_seed_sliders = []
-        plasma_shape_sliders = []
-        plasma_params = [
-            "plasma_speed",
-            "plasma_distance",
-            "plasma_color_speed",
-            "plasma_flow_speed",
-        ]
-        with dpg.collapsing_header(label=f"\tPlasma Oscillator", tag="plasma_oscillator") as h:
-            dpg.bind_item_theme(h, theme)
-            for i in range(len(plasma_params)):
-                with dpg.collapsing_header(label=f"\t{plasma_params[i]} panel", tag=f"{plasma_params[i]}_panel"):
-                    plasma_shape_sliders.append(TrackbarRow(
-                        f"{plasma_params[i]} Shape", 
-                         self.params.get(f"{plasma_params[i]}_shape"), 
-                        default_font_id))
-                    
-                    plasma_freq_sliders.append(TrackbarRow(
-                        f"{plasma_params[i]} Freq", 
-                         self.params.get(f"{plasma_params[i]}_frequency"), 
-                        default_font_id))
-                    
-                    plasma_amp_sliders.append(TrackbarRow(
-                        f"{plasma_params[i]} Amp", 
-                         self.params.get(f"{plasma_params[i]}_amplitude"),
-                        default_font_id))
-                    
-                    plasma_phase_sliders.append(TrackbarRow(
-                        f"{plasma_params[i]} Phase", 
-                         self.params.get(f"{plasma_params[i]}_phase"),
-                        default_font_id))
-                    
-                    plasma_seed_sliders.append(TrackbarRow(
-                        f"{plasma_params[i]} Seed", 
-                         self.params.get(f"{plasma_params[i]}_seed"),
-                        default_font_id))
-                dpg.bind_item_font(f"{plasma_params[i]}_panel", global_font_id)
-        dpg.bind_item_font("plasma_oscillator", global_font_id)
-
-
 class ReactionDiffusion(Animation):
 
-    def __init__(self, params, toggles, width=500, height=500):
+    def __init__(self, params, toggles, width=500, height=500, parent=None):
         super().__init__(params, toggles)
+        subclass = self.__class__.__name__
         da=1.0
         db=0.5
         feed=0.055
@@ -219,8 +199,8 @@ class ReactionDiffusion(Animation):
         max_seed_size=50
         num_seeds=15
 
-        self.da = params.add("da", 0, 2.0, da)
-        self.db = params.add("db", 0, 2.0, db)
+        self.da = params.add("da", 0, 2.0, da, subclass, parent)
+        self.db = params.add("db", 0, 2.0, db, subclass, parent)
 
         example_patterns = {
             "worms": (0.055, 0.062),
@@ -231,13 +211,13 @@ class ReactionDiffusion(Animation):
         self.pattern = example_patterns.get("coral", (feed, kill))
 
         # Feed rate (f): How much chemical A is added to the system
-        self.feed = params.add("feed", 0, 0.1, feed)
+        self.feed = params.add("feed", 0, 0.1, feed, subclass, parent)
         # Kill rate (k): How much chemical B is removed from the system
-        self.kill = params.add("kill", 0, 0.1, kill)
+        self.kill = params.add("kill", 0, 0.1, kill, subclass, parent)
         # Time step for the simulation. Smaller values increase stability but require more iterations.
         self.dt = 0.15
         # Number of simulation steps per displayed frame. Increased to compensate for smaller dt.
-        self.iterations_per_frame = params.add("iterations_per_frame", 5, 100, 50)
+        self.iterations_per_frame = params.add("iterations_per_frame", 5, 100, 50, subclass, parent)
         self.current_A = np.ones((height, width), dtype=np.float32)
         self.current_B = np.zeros((height, width), dtype=np.float32)
         self.next_A = np.copy(self.current_A)
@@ -353,41 +333,17 @@ class ReactionDiffusion(Animation):
         """
         return self.run()
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
-        with dpg.collapsing_header(label=f"\tReaction Diffusion", tag="reaction_diffusion") as h:
-            dpg.bind_item_theme(h, theme)
-            rd_diffusion_rate_a_slider = TrackbarRow(
-                "Diffusion Rate A",
-                 self.params.get("da"),
-                default_font_id)
-            
-            rd_diffusion_rate_b_slider = TrackbarRow(
-                "Diffusion Rate B",
-                 self.params.get("db"),
-                default_font_id)
-            
-            rd_feed_rate_slider = TrackbarRow(
-                "Feed Rate",
-                self.params.get("feed"),
-                default_font_id)
-            
-            rd_kill_rate_slider = TrackbarRow(
-                "Kill Rate",
-                self.params.get("kill"),
-                default_font_id)
-        
-        dpg.bind_item_font("reaction_diffusion", global_font_id)
-
 
 class Metaballs(Animation):
     # BUG: find bug; when increasing num_metaballs, their sizes seem to get smaller
     # TODO: add parameters to control metaball colors, blending modes, and feedback intensity
     # BUG: find bug: when reducing metaball size then returning to original/larger sizes, they get smaller each time
-    def __init__(self, params, toggles, width=800, height=600):
+    def __init__(self, params, toggles, width=800, height=600, parent=None):
         """
         Initializes the Metaballs with given dimensions.
         """
         super().__init__(params, toggles)
+        subclass=self.__class__.__name__
         self.metaballs = []
         self.num_metaballs = 5        # Number of metaballs
         self.min_radius = 40          # Minimum radiuWSs of a metaball
@@ -405,32 +361,30 @@ class Metaballs(Animation):
         self.feedback_alpha = 0.950  # Weight of the new frame (0.0 - 1.0)
         self.previous_frame = None  # Stores the previous frame for feedback
 
-        self.num_metaballs = params.add("num_metaballs", 2, 10, self.num_metaballs)
+        self.num_metaballs = params.add("num_metaballs", 2, 10, self.num_metaballs, subclass, parent)
         self.current_num_metaballs = self.num_metaballs.value
 
-        self.min_radius = params.add("min_radius", 20, 100, 40)
-        self.max_radius = params.add("max_radius", 40, 200, 80)
-        self.radius_multplier = params.add("radius_multiplier", 1.0, 3.0, 1.0)
+        self.min_radius = params.add("min_radius", 20, 100, 40, subclass, parent)
+        self.max_radius = params.add("max_radius", 40, 200, 80, subclass, parent)
+        self.radius_multplier = params.add("radius_multiplier", 1.0, 3.0, 1.0, subclass, parent)
         self.current_radius_multiplier = self.radius_multplier.value
 
-        self.max_speed = params.add("max_speed", 1, 10, self.max_speed)
-        self.speed_multiplier = params.add("speed_multiplier", 1.0, 3.0, 1.0)
+        self.max_speed = params.add("max_speed", 1, 10, self.max_speed, subclass, parent)
+        self.speed_multiplier = params.add("speed_multiplier", 1.0, 3.0, 1.0, subclass, parent)
         self.current_speed_multiplier = self.speed_multiplier.value
 
-        self.threshold = params.add("threshold", 0.5, 3.0, self.threshold)
-        self.smooth_coloring_max_field = params.add("smooth_coloring_max_field", 1.0, 3.0, self.smooth_coloring_max_field)
+        self.threshold = params.add("threshold", 0.5, 3.0, self.threshold, subclass, parent)
+        self.smooth_coloring_max_field = params.add("smooth_coloring_max_field", 1.0, 3.0, self.smooth_coloring_max_field, subclass, parent)
 
-        self.skew_angle = params.add("metaball_skew_angle", 0.0, 360.0, 0.0)  # Angle to skew the metaballs
-        self.skew_intensity = params.add("metaball_skew_intensity", 0.0, 1.0, 0.0)  # Intensity of the skew effect
+        self.skew_angle = params.add("metaball_skew_angle", 0.0, 360.0, 0.0, subclass, parent)  # Angle to skew the metaballs
+        self.skew_intensity = params.add("metaball_skew_intensity", 0.0, 1.0, 0.0, subclass, parent)  # Intensity of the skew effect
 
-        self.zoom = params.add("metaball_zoom", 1.0, 3.0, 1.0)  # Zoom level for the metaballs
+        self.zoom = params.add("metaball_zoom", 1.0, 3.0, 1.0, subclass, parent)
 
-        self.hue = params.add("metaball_hue", 0.0, 255.0, 0.0)  # Hue shift for the metaballs
-        self.saturation = params.add("metaball_saturation", 0.0, 255.0, 255.0)  # Saturation for the metaballs
-        self.value = params.add("metaball_value", 0.0, 255.0, 255.0)  # Value for the metaballs
+        self.colormap = params.add("metaball_colormap", 0, len(COLORMAP_OPTIONS) - 1, 0, subclass, parent)
         
         # apply feedback to the metaball frame
-        self.feedback_alpha = params.add("metaballs_feedback", 0.0, 1.0, self.feedback_alpha)
+        self.feedback_alpha = params.add("metaballs_feedback", 0.0, 1.0, self.feedback_alpha, subclass, parent)
 
         self.setup_metaballs()
 
@@ -480,61 +434,43 @@ class Metaballs(Animation):
 
     def create_metaball_frame(self, metaballs, threshold, max_field_strength=None):
         """
-        Generates a single frame with metaball blobs based on their properties.
-
-        Args:
-            metaballs (list): A list of dictionaries, where each dictionary
-                              represents a metaball with 'x', 'y', and 'radius' keys.
-            threshold (float): The field strength value above which pixels are colored.
-            max_field_strength (float, optional): If provided, the field strength will be
-                                                  normalized by this value for smoother coloring.
-                                                  If None, a simple binary coloring is used.
-
-        Returns:
-            numpy.ndarray: An 8-bit grayscale or BGR image (frame) representing the metaballs.
+        Generates a single frame with metaball blobs and applies a selected colormap.
         """
-        # Create a grid of pixel coordinates for efficient calculation using NumPy
+        # Create a grid of pixel coordinates
         x_coords = np.arange(self.width)
         y_coords = np.arange(self.height)
         X, Y = np.meshgrid(x_coords, y_coords)
 
-        # Initialize a 2D array to store the total field strength for each pixel
+        # --- Implement Transformations (Zoom and Skew) ---
+        center_x, center_y = self.width / 2, self.height / 2
+        X_centered = X - center_x
+        Y_centered = Y - center_y
+        X_processed = X_centered / self.zoom.value
+        Y_processed = Y_centered / self.zoom.value
+        if self.skew_intensity.value > 0:
+            angle_rad = np.radians(self.skew_angle.value)
+            X_processed += Y_processed * self.skew_intensity.value * np.cos(angle_rad)
+            Y_processed += X_processed * self.skew_intensity.value * np.sin(angle_rad)
+        X_transformed = X_processed + center_x
+        Y_transformed = Y_processed + center_y
+        
+        # --- Calculate Field Strength ---
         field_strength = np.zeros((self.height, self.width), dtype=np.float32)
-
-        # Iterate through each metaball and add its contribution to the field
         for ball in metaballs:
             mx, my, r = ball['x'], ball['y'], ball['radius']
-
-            # Calculate squared distance from each pixel to the metaball center
-            # Adding a small epsilon (1e-6) to avoid division by zero if a pixel
-            # is exactly at the metaball's center.
-            dist_sq = (X - mx)**2 + (Y - my)**2 + 1e-6
-
-            # Add the field contribution of this metaball.
-            # The field strength decreases with the squared distance from the center.
+            dist_sq = (X_transformed - mx)**2 + (Y_transformed - my)**2 + 1e-6
             field_strength += (r**2) / dist_sq
 
-        #  Coloring the frame based on field strength 
+        # --- Base Coloring with Colormap ---
         if max_field_strength is not None:
-            # Normalize the field strength to a 0-1 range based on max_field_strength.
-            # This allows for a gradient effect, like a real lava lamp.
-            # np.clip ensures values stay within 0 and 1 before scaling to 0-255.
             normalized_field = np.clip(field_strength / max_field_strength, 0, 1)
-
-            # Map normalized field strength to a grayscale value (0-255)
             grayscale_image = (normalized_field * 255).astype(np.uint8)
-
-            # Apply a colormap to create vibrant colors
-            # cv2.COLORMAP_JET is a good general-purpose colormap.
-            # You can try others like cv2.COLORMAP_HSV, cv2.COLORMAP_RAINBOW, cv2.COLORMAP_TURBO
-            image = cv2.applyColorMap(grayscale_image, cv2.COLORMAP_JET)
+            # Apply the selected colormap
+            image = cv2.applyColorMap(grayscale_image, COLORMAP_OPTIONS[self.colormap.value])
         else:
-            # Simple binary thresholding: pixels above threshold are white (255), others black (0)
-            image = (field_strength >= threshold) * 255
-            image = image.astype(np.uint8)
-            # Convert grayscale to BGR to match the output type of the colormap branch
-            image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR) 
-
+            image = ((field_strength >= threshold) * 255).astype(np.uint8)
+            image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+        
         return image
 
     def do_metaballs(self, frame: np.ndarray):
@@ -592,95 +528,28 @@ class Metaballs(Animation):
         return self.do_metaballs(frame)
 
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
-
-        with dpg.collapsing_header(label=f"\tMetaballs", tag="metaballs") as h:
-            dpg.bind_item_theme(h, theme)
-
-            num_metaballs_slider = TrackbarRow(
-                "Num Metaballs", self.num_metaballs, default_font_id
-            )
-            
-            min_radius_slider = TrackbarRow(
-                "Min Radius", self.min_radius, default_font_id
-            )
-            
-            max_radius_slider = TrackbarRow(
-                "Max Radius", self.max_radius, default_font_id
-            )
-            
-            radius_multiplier = TrackbarRow(
-                "Radius Multiplier", self.radius_multplier, default_font_id
-            )
-            
-            max_speed_slider = TrackbarRow(
-                "Max Speed", self.max_speed, default_font_id
-            )
-
-            speed_multiplier = TrackbarRow(
-                "Speed Multiplier", self.speed_multiplier, default_font_id
-            )
-            
-            threshold_slider = TrackbarRow(
-                "Threshold", self.threshold, default_font_id
-            )
-            
-            smooth_coloring_max_field_slider = TrackbarRow(
-                "Smooth Coloring Max Field", self.smooth_coloring_max_field, default_font_id
-            )
-            
-            feedback_alpha_slider = TrackbarRow(
-                "Feedback Alpha", self.feedback_alpha, default_font_id
-            )
-
-            skew_angle = TrackbarRow(
-                "Skew Angle", self.skew_angle, default_font_id
-            )
-
-            skew_intensity = TrackbarRow(
-                "Skew Instensity", self.skew_intensity, default_font_id
-            )
-
-            zoom = TrackbarRow(
-                "Zoom", self.zoom, default_font_id
-            )
-
-            hue = TrackbarRow(
-                "Hue", self.hue, default_font_id
-            )
-
-            sat = TrackbarRow(
-                "Sat", self.saturation, default_font_id
-            )
-
-            val = TrackbarRow(
-                "Val", self.value, default_font_id
-            )
-
-        dpg.bind_item_font("metaballs", global_font_id)
-
-
 class Moire(Animation):
-    def __init__(self, params, toggles, width=800, height=600):
+    def __init__(self, params, toggles, width=800, height=600, parent=None):
         super().__init__(params, toggles)
-        self.blend_mode = params.add("moire_blend", 0, len(MoireBlend)-1, 0)
+        subclass = self.__class__.__name__
+        self.blend_mode = params.add("moire_blend", 0, len(MoireBlend)-1, 0, subclass, parent)
         
         center_x = self.width//2
         center_y = self.height//2
 
-        self.pattern_1 = params.add("moire_type_1", 0, len(MoirePattern)-1, 0)
-        self.freq_1 = params.add("spatial_freq_1", 0.01, 25, 10.0)
-        self.angle_1 = params.add("angle_1", 0, 360, 90.0)
-        self.zoom_1 = params.add("zoom_1", 0.05, 1.5, 1.0)
-        self.center_x_1 = params.add("moire_center_x_1", 0, self.width, center_x)
-        self.center_y_1 = params.add("moire_center_y_1", 0, self.height, center_y)
+        self.pattern_1 = params.add("moire_type_1", 0, len(MoirePattern)-1, 0, subclass, parent)
+        self.freq_1 = params.add("spatial_freq_1", 0.01, 25, 10.0, subclass, parent)
+        self.angle_1 = params.add("angle_1", 0, 360, 90.0, subclass, parent)
+        self.zoom_1 = params.add("zoom_1", 0.05, 1.5, 1.0, subclass, parent)
+        self.center_x_1 = params.add("moire_center_x_1", 0, self.width, center_x, subclass, parent)
+        self.center_y_1 = params.add("moire_center_y_1", 0, self.height, center_y, subclass, parent)
 
-        self.pattern_2 = params.add("moire_type_2", 0, len(MoirePattern)-1, 0)
-        self.freq_2 = params.add("spatial_freq_2", 0.01, 25, 1.0)
-        self.angle_2 = params.add("angle_2", 0, 360, 0.0)
-        self.zoom_2 = params.add("zoom_2", 0.05, 1.5, 1.0)    
-        self.center_x_2 = params.add("moire_center_x_2", 0, self.width, center_x)
-        self.center_y_2 = params.add("moire_center_y_2", 0, self.height, center_y)
+        self.pattern_2 = params.add("moire_type_2", 0, len(MoirePattern)-1, 0, subclass, parent)
+        self.freq_2 = params.add("spatial_freq_2", 0.01, 25, 1.0, subclass, parent)
+        self.angle_2 = params.add("angle_2", 0, 360, 0.0, subclass, parent)
+        self.zoom_2 = params.add("zoom_2", 0.05, 1.5, 1.0, subclass, parent)    
+        self.center_x_2 = params.add("moire_center_x_2", 0, self.width, center_x, subclass, parent)
+        self.center_y_2 = params.add("moire_center_y_2", 0, self.height, center_y, subclass, parent)
 
     def _generate_single_pattern(self, X_shifted, Y_shifted, frequency, angle_rad, zoom, pattern_type):
         """Internal helper to generate one of the two interfering patterns."""
@@ -768,105 +637,32 @@ class Moire(Animation):
 
         return cv2.cvtColor(moire_image, cv2.COLOR_GRAY2BGR)
     
-    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
-        with dpg.collapsing_header(label=f"\tMoire animation", tag="moire_animation") as h:
-            dpg.bind_item_theme(h, theme)
-            RadioButtonRow(
-                "Blend Mode",
-                MoireBlend,
-                self.blend_mode,
-                default_font_id
-            )
-            
-            RadioButtonRow(
-                "Pattern 1",
-                MoirePattern,
-                self.pattern_1,
-                default_font_id
-            )
-            TrackbarRow(
-                "Freq 1",
-                self.freq_1,
-                default_font_id
-            )
-            TrackbarRow(
-                "Zoom 1",
-                self.zoom_1,
-                default_font_id
-            )
-            TrackbarRow(
-                "Angle 1",
-                self.angle_1,
-                default_font_id
-            )
-            TrackbarRow(
-                "Center X 1",
-                self.center_x_1,
-                default_font_id
-            )
-            TrackbarRow(
-                "Center Y 1",
-                self.center_y_1,
-                default_font_id
-            )
-    
-            RadioButtonRow(
-                "Pattern 2",
-                MoirePattern,
-                self.pattern_2,
-                default_font_id
-            )
-            TrackbarRow(
-                "Freq 2",
-                self.freq_2,
-                default_font_id
-            )
-            TrackbarRow(
-                "Zoom 2",
-                self.zoom_2,
-                default_font_id
-            )
-            TrackbarRow(
-                "Angle 2",
-                self.angle_2,
-                default_font_id
-            )
-            TrackbarRow(
-                "Center X 2",
-                self.center_x_2,
-                default_font_id
-            )
-            TrackbarRow(
-                "Center Y 2",
-                self.center_y_2,
-                default_font_id
-            )
- 
 import moderngl
 import time
 
 class ShaderVisualizer(Animation):
-    def __init__(self, params, toggles, width=1280, height=720):
+    def __init__(self, params, toggles, width=1280, height=720, parent=None):
         super().__init__(params, toggles)
+        subclass = self.__class__.__name__
         self.width = width
         self.height = height
         self.ctx = moderngl.create_context(standalone=True)
 
         self.time = time.time()
 
-        self.zoom = params.add("s_zoom", 0.1, 5.0, 1.5)
-        self.distortion = params.add("s_distortion", 0.0, 1.0, 0.5)
-        self.iterations = params.add("s_iterations", 1.0, 10.0, 4.0)
-        self.color_shift = params.add("s_color_shift", 0.5, 3.0, 1.0)
-        self.brightness = params.add("s_brightness", 0.0, 2.0, 1.0)
-        self.hue_shift = params.add("s_hue_shift", 0.0, 7, 0.0) # 6.28
-        self.saturation = params.add("s_saturation", 0.0, 2.0, 1.0)
-        self.x_shift = params.add("s_x_shift", -5.0, 5.0, 0.0)
-        self.y_shift = params.add("s_y_shift", -5.0, 5.0, 0.0)
-        self.rotation = params.add("s_rotation", -3.14, 3.14, 0.0)
-        self.speed = params.add("s_speed", 0.0, 2.0, 1.0)
+        self.zoom = params.add("s_zoom", 0.1, 5.0, 1.5, subclass, parent)
+        self.distortion = params.add("s_distortion", 0.0, 1.0, 0.5, subclass, parent)
+        self.iterations = params.add("s_iterations", 1.0, 10.0, 4.0, subclass, parent)
+        self.color_shift = params.add("s_color_shift", 0.5, 3.0, 1.0, subclass, parent)
+        self.brightness = params.add("s_brightness", 0.0, 2.0, 1.0, subclass, parent)
+        self.hue_shift = params.add("s_hue_shift", 0.0, 7, 0.0, subclass, parent) # 6.28
+        self.saturation = params.add("s_saturation", 0.0, 2.0, 1.0, subclass, parent)
+        self.x_shift = params.add("s_x_shift", -5.0, 5.0, 0.0, subclass, parent)
+        self.y_shift = params.add("s_y_shift", -5.0, 5.0, 0.0, subclass, parent)
+        self.rotation = params.add("s_rotation", -3.14, 3.14, 0.0, subclass, parent)
+        self.speed = params.add("s_speed", 0.0, 2.0, 1.0, subclass, parent)
 
-        self.current_shader = params.add("s_type", 0, len(Shaders)-1, 0)
+        self.current_shader = params.add("s_type", 0, len(Shaders)-1, 0, subclass, parent)
         self.prev_shader = self.current_shader.value
 
         # Vertex shader
@@ -1305,74 +1101,3 @@ class ShaderVisualizer(Animation):
         #                 'u_color_shift': 1.0, 'u_brightness': 1.0})
 
         return frame
-
-    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
-        with dpg.collapsing_header(label=f"\tShaders", tag="shaders") as h:
-            dpg.bind_item_theme(h, theme)
-            # RadioButtonRow(
-            #     "Shader Type",
-            #     Shaders,
-            #     self.current_shader,
-            #     default_font_id
-            # )
-            TrackbarRow(
-                "Shader Type",
-                self.current_shader,
-                default_font_id
-            )
-            TrackbarRow(
-                "Zoom",
-                self.zoom,
-                default_font_id
-            )
-            TrackbarRow(
-                "Distortion",
-                self.distortion,
-                default_font_id
-            )
-            TrackbarRow(
-                "Iterations",
-                self.iterations,
-                default_font_id
-            )
-            TrackbarRow(
-                "Color Shift",
-                self.color_shift,
-                default_font_id
-            )
-            TrackbarRow(
-                "Brightness",
-                self.brightness,
-                default_font_id
-            )
-            TrackbarRow(
-                "Hue Shift",
-                self.hue_shift,
-                default_font_id
-            )
-            TrackbarRow(
-                "Saturation",
-                self.saturation,
-                default_font_id
-            )
-            TrackbarRow(
-                "X Shift",
-                self.x_shift,
-                default_font_id
-            )
-            TrackbarRow(
-                "Y Shift",
-                self.y_shift,
-                default_font_id
-            )
-            TrackbarRow(
-                "Rotation",
-                self.rotation,
-                default_font_id
-            )
-            TrackbarRow(
-                "Speed",
-                self.speed,
-                default_font_id
-            )
-

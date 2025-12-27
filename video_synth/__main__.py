@@ -11,18 +11,27 @@ of module function and interation.
 Author: Kyle Henderson 
 """
 
+import sys
 import argparse
 import logging
 import cv2
 import dearpygui.dearpygui as dpg 
+import threading
 from config import *
-from gui import Interface
 from generators import OscBank
 from midi_input import *
 from param import ParamTable
 from mix import Mixer
 from gui_elements import ButtonsTable
 import numpy as np
+from effects import EffectManager
+
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QImage, QPixmap
+from pyqt_gui import create_pyqt_gui
+import signal 
+
+print("DEBUG: __main__.py is being executed")
 
 """Creates ArgumentParser, configures arguments, returns parser"""
 def parse_args():
@@ -61,6 +70,13 @@ def parse_args():
         default= DEFAULT_SAVE_FILE,
         type=str,
         help='Use an alternate save file. Must still be located in the save directory'
+    )
+    parser.add_argument(
+        '-g',
+        '--gui',
+        default='dearpygui',
+        choices=['dearpygui', 'pyqt'],
+        help='Choose which GUI framework to use: dearpygui or pyqt'
     )
     parser.print_help()
     return parser.parse_args()
@@ -124,104 +140,161 @@ def identify_midi_ports(params, controller_names):
     return controllers
 
 
-""" Main app setup and loop """
-def main(num_osc, devices, effects, controller_names):
+def video_loop_pyqt(mixer, osc_bank, effects, should_quit):
+    """Video processing loop for PyQt GUI."""
+    wet_frame = dry_frame = mixer.get_mixed_frame()
+    if dry_frame is None:
+        log.error("Failed to get initial frame from mixer. Exiting video loop.")
+        return
 
-    log.info("Initializing video synthesizer... Press 'q' or 'ESC' to quit")
-
-    # all user modifiable parameters are stored here
-    params = ParamTable()       # params have a min and max value
-    toggles = ButtonsTable()    # toggles are binary
-
-    # initialize general purpose oscillators for linking to params
-    osc_bank = OscBank(params, num_osc)
-
-    # Initialize video mixer, get a frame, create copies for feedback
-    mixer = Mixer(params, toggles, devices)
-    dry_frame = mixer.get_mixed_frame()  
-    wet_frame = dry_frame.copy()
     prev_frame = dry_frame.copy()
-
-    image_height, image_width = dry_frame.shape[:2]
-
     frame_count = 0
-
-    # Initialize effects classes with image dimensions
-    effects.init(params, toggles, image_width, image_height)
-
-    # Automatically identify and initialize midi controllers before creating the GUI
-    # The midi controller must have an existing interface class, with its name appended to the names list
-    controllers = identify_midi_ports(params, controller_names)
-
-    # Create control panel after initializing objects that will be used in the GUI
-    gui = Interface(params, osc_bank, toggles)
-    gui.create_control_window(params, mixer=mixer, osc_bank=osc_bank)
-
+    
     cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Modified Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
-    log.info(f'Starting program with {len(params.keys())} tunable parameters')
-    # for p in params.values():
-    #     log.info(f'{p.name}: {p.min}-{p.max}, {p.value}')
+    while not should_quit.is_set():
+        dry_frame = mixer.get_mixed_frame()
+
+        if mixer.skip or dry_frame is None:
+            mixer.skip = False
+            log.warning("Skipping frame due to source read failure")
+            continue
+
+        for osc_group in osc_bank:
+            osc_group.update()
+
+        prev_frame, wet_frame = effects[2].modify_frames(
+            dry_frame, wet_frame, prev_frame, frame_count
+        )
+        frame_count += 1
+
+        cv2.imshow('Modified Frame', wet_frame.astype(np.uint8))
+        if cv2.waitKey(1) & 0xFF in ESCAPE_KEYS:
+            break
+        
+        
+    
+    log.info("Video loop for PyQt has gracefully stopped.")
+    cv2.destroyAllWindows()
+
+
+def video_loop_dpg(mixer, osc_bank, effects, gui):
+    """Video processing loop for Dear PyGui."""
+    
+    cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty("Modified Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     try:
-        while True:
-            # retreive and mix frames from the selected sources
+        while dpg.is_dearpygui_running():
             dry_frame = mixer.get_mixed_frame()
 
-            # frame retrieval may fail when changing sources; skip
             if mixer.skip or dry_frame is None:
                 mixer.skip = False
                 log.warning("Skipping frame due to source read failure")
                 continue
 
-            # update osc values if linked to params
             osc_bank.update()
 
-            # apply effects sequence
             prev_frame, wet_frame = effects.modify_frames(
                 dry_frame, wet_frame, prev_frame, frame_count
             )
-
             frame_count += 1
 
-            # Display the resulting frame and control panel
-            # cv2.imshow('Previous Frame', prev_frame.astype(np.uint8)) # for debugging
-            # cv2.imshow('Dry Frame', dry_frame.astype(np.uint8))       # for debugging
             cv2.imshow('Modified Frame', wet_frame.astype(np.uint8))
             dpg.render_dearpygui_frame()
 
-            # Break the loop if a quit key is pressed
             key = cv2.waitKey(1) & 0xFF
             if key in ESCAPE_KEYS:
                 log.info(f"Received quit command, begining shutdown")
                 break
-
-    except KeyboardInterrupt:
-        log.warning("Quit command detected, signaling thread stop...")
-        
-        if controllers:
-            for c in controllers:
-                c.thread_stop = True
-                c.thread.join(timeout=5)
-                if c.thread.is_alive():
-                    log.warning("MIDI thread did not terminate gracefully. Forcing exit.")
-                else:
-                    log.info("MIDI thread stopped successfully.")
-
     finally:
-        # Destroy all windows 
-        dpg.destroy_context()
         cv2.destroyAllWindows()
-
-        # close capture streams
         for cap in mixer.live_caps:
             if cap and cap.isOpened():
                 cap.release()
+        dpg.destroy_context()
+
+
+""" Main app setup and loop """
+def main(num_osc, devices, controller_names, gui_choice):
+
+    log.info("Initializing video synthesizer... Press 'q' or 'ESC' to quit")
+
+    src_1_params = ParamTable()
+    src_2_params = ParamTable()
+    post_params = ParamTable()
+
+    src_1_toggles = ButtonsTable()
+    src_2_toggles = ButtonsTable()
+    post_toggles = ButtonsTable()
+
+    src_1_oscs = OscBank(src_1_params, num_osc)
+    src_2_oscs = OscBank(src_2_params, num_osc)
+    post_oscs = OscBank(post_params, num_osc)
+    osc_bank = (src_1_oscs, src_2_oscs, post_oscs)
+
+    src_1_effects.init(src_1_params, src_1_toggles, 640, 480)
+    src_2_effects.init(src_2_params, src_2_toggles, 640, 480)
+    post_effects.init(post_params, post_toggles, 640, 480)
+    effects = (src_1_effects, src_2_effects, post_effects)
+
+    mixer = Mixer(src_1_effects, src_2_effects, post_effects, devices)
+
+    # Automatically identify and initialize midi controllers before creating the GUI
+    CONTROLLER_NAMES = [] # Placeholder for now, assumed to be defined elsewhere
+    controllers = [] #identify_midi_ports(src_1_params, CONTROLLER_NAMES) # TODO: which params to use?
+
+    # log.info(f'Starting program with {len(params.keys())} tunable parameters')
+
+    if gui_choice == 'pyqt':
+        print("DEBUG: gui_choice is pyqt")
+        from PyQt6.QtWidgets import QApplication
+        from PyQt6.QtGui import QImage, QPixmap
+        from pyqt_gui import create_pyqt_gui
+        import signal
+        # Handle Ctrl+C from terminal
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
         
-        log.info("Goodbye!")
+        app = QApplication(sys.argv)
+        main_window, x = create_pyqt_gui(src_1_effects, src_2_effects, post_effects)
+
+        main_window.show()
+        
+        should_quit = threading.Event()
+        
+        video_thread = threading.Thread(
+            target=video_loop_pyqt, 
+            args=(mixer, osc_bank, effects, should_quit)
+        )
+        video_thread.start()
+        
+        log.info("Starting PyQt event loop.")
+        exit_code = app.exec()
+        log.info("PyQt event loop finished.")
+        
+        should_quit.set()
+        video_thread.join()
+        sys.exit(exit_code)
+    else: # dearpygui
+        # TODO: This part is broken after refactoring to multiple param tables.
+        # It needs to be updated to handle the three separate param tables.
+        # For now, this will not work correctly.
+        log.error("DearPyGui is not supported in this version.")
+
+
+    if controllers:
+        for c in controllers:
+            c.thread_stop = True
+            c.thread.join(timeout=5)
+            if c.thread.is_alive():
+                log.warning("MIDI thread did not terminate gracefully. Forcing exit.")
+            else:
+                log.info("MIDI thread stopped successfully.")
+
+    log.info("Goodbye!")
 
 if __name__ == "__main__":
     args = parse_args()
     log = config_log(args.log_level)
-    main(args.osc, args.devices, effects, CONTROLLER_NAMES)
+    main(args.osc, args.devices, CONTROLLER_NAMES, args.gui)

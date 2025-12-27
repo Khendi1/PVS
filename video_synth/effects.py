@@ -26,7 +26,6 @@ import cv2
 import numpy as np
 import dearpygui.dearpygui as dpg
 from noise import pnoise2
-from gui_elements import TrackbarRow, Toggle, RadioButtonRow
 import logging
 from patterns3 import Patterns  
 from param import ParamTable
@@ -112,38 +111,30 @@ classes a common interface in the EffectsManager
 class EffectBase:
     _instance = None
     
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance.name = cls.__name__
-        return cls._instance
-
-    def create_gui_panel(self):
-        log.info(f"Creating GUI panel for {self.__name__}")
 
 
 class EffectManager:
     """
     A central class to aggregate all singleton effect objects and simplify dependencies, arg len
     """
-    def __init__(self):
-        pass
+    def __init__(self, parent=None):
+        self.parent = parent
 
     def init(self, params, toggles, width, height):
         """ This method is separate so the params and frame dims may be initialized"""
         self.params = params
         self.toggles = toggles
         
-        self.feedback = Feedback(params, width, height)
-        self.color = Color(params)
-        self.pixels = Pixels(params, width, height)
-        self.shapes = ShapeGenerator(params, width, height)
-        self.patterns = Patterns(params, width, height)
-        self.reflector = Reflector(params, )                    
-        self.sync = Sync(params) 
-        self.warp = Warp(params, width, height)
-        self.glitch = Glitch(params, toggles)
-        self.ptz = PTZ(params, width, height)
+        self.feedback = Feedback(params, width, height, self.parent)
+        self.color = Color(params, self.parent)
+        self.pixels = Pixels(params, width, height, parent=self.parent)
+        self.shapes = ShapeGenerator(params, width, height, parent=self.parent)
+        self.patterns = Patterns(params, width, height, self.parent)
+        self.reflector = Reflector(params, parent=self.parent)                    
+        self.sync = Sync(params, self.parent) 
+        self.warp = Warp(params, width, height, self.parent)
+        self.glitch = Glitch(params, toggles, self.parent)
+        self.ptz = PTZ(params, width, height, self.parent)
 
         self._all_services = [
             self.feedback,
@@ -234,13 +225,14 @@ class EffectManager:
         """
         
         if frame_count % (self.feedback.frame_skip.value+1) == 0: 
-            
-            # frame = self.default_effect_sequence(frame)
-
+            original_frame_for_recovery = frame.copy() # Keep a copy for recovery
             for method in self.all_methods:
-                frame = method(frame)
-                # log.debug(F"{str(method.__name__)}  ->  {type(frame).__name__}")
-
+                processed_frame = method(frame)
+                if processed_frame is None:
+                    log.warning(f"Method {method.__name__} in EffectManager ({self.parent}) returned None. Recovering with previous frame.")
+                    frame = original_frame_for_recovery # Use the original frame for the next effect
+                else:
+                    frame = processed_frame
         return frame
 
     
@@ -270,27 +262,29 @@ class EffectManager:
 
 class Color(EffectBase):
 
-    def __init__(self, params):
+    def __init__(self, params, parent):
+        subclass = self.__class__.__name__
         self.params = params
+        self.parent = parent
 
-        self.hue_shift = params.add("hue_shift", 0, 180, 0)
-        self.sat_shift = params.add("sat_shift", 0, 255, 0)
-        self.val_shift = params.add("val_shift", 0, 255, 0)
+        self.hue_shift = params.add("hue_shift", 0, 180, 0, subclass, parent)
+        self.sat_shift = params.add("sat_shift", 0, 255, 0, subclass, parent)
+        self.val_shift = params.add("val_shift", 0, 255, 0, subclass, parent)
 
-        self.levels_per_channel = params.add("posterize_levels", 0, 100, 0.0)
-        self.num_hues = params.add("num_hues", 2, 10, 8)
+        self.levels_per_channel = params.add("posterize_levels", 0, 100, 0.0, subclass, parent)
+        self.num_hues = params.add("num_hues", 2, 10, 8, subclass, parent)
 
-        self.val_threshold = params.add("val_threshold", 0, 255, 0)
-        self.val_hue_shift = params.add("val_hue_shift", 0, 255, 0)
+        self.val_threshold = params.add("val_threshold", 0, 255, 0, subclass, parent)
+        self.val_hue_shift = params.add("val_hue_shift", 0, 255, 0, subclass, parent)
 
-        self.solarize_threshold = params.add("solarize_threshold", 0, 100, 0.0)
-        self.hue_invert_angle = params.add("hue_invert_angle", 0, 360, 0)
-        self.hue_invert_strength = params.add("hue_invert_strength", 0.0, 1.0, 0.0)
+        self.solarize_threshold = params.add("solarize_threshold", 0, 100, 0.0, subclass, parent)
+        self.hue_invert_angle = params.add("hue_invert_angle", 0, 360, 0, subclass, parent)
+        self.hue_invert_strength = params.add("hue_invert_strength", 0.0, 1.0, 0.0, subclass, parent)
 
-        self.contrast = params.add("contrast", 0.5, 3.0, 1.0)
-        self.brightness = params.add("brightness", 0, 100, 0)
-        self.gamma = params.add("gamma", 0.1, 3.0, 1.0)
-        self.highlight_compression = params.add("highlight_compression", 0.0, 1.0, 0.0)
+        self.contrast = params.add("contrast", 0.5, 3.0, 1.0, subclass, parent)
+        self.brightness = params.add("brightness", 0, 100, 0, subclass, parent)
+        self.gamma = params.add("gamma", 0.1, 3.0, 1.0, subclass, parent)
+        self.highlight_compression = params.add("highlight_compression", 0.0, 1.0, 0.0, subclass, parent)
 
     def _shift_hue(self, hue: int):
         """
@@ -353,15 +347,14 @@ class Color(EffectBase):
         
         is_float = image.dtype == np.float32
         if is_float:
-            # Convert float image [0, 255] to uint8 for this function's processing
             image_uint8 = np.clip(image, 0, 255).astype(np.uint8)
         else:
             image_uint8 = image
             
         hsv_image = cv2.cvtColor(image_uint8, cv2.COLOR_BGR2HSV)
         h, s, v = cv2.split(hsv_image)
-        hsv = [h, s, v]
-
+        hsv = [h, s, v] # Create a list of channels for _shift_hsv
+        
         # Apply the hue, saturation, and value shifts to the image.
         hsv = self._shift_hsv(hsv)
         hsv = self._val_threshold_hue_shift(hsv)
@@ -519,67 +512,6 @@ class Color(EffectBase):
         polarized_frame = cv2.cvtColor(hsv_frame.astype(np.uint8), cv2.COLOR_HSV2BGR)
         return polarized_frame
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
-
-        with dpg.collapsing_header(label=f"\tColor", tag="color") as h:
-            dpg.bind_item_theme(h, theme)
-
-            hue = TrackbarRow("Hue Shift", self.params["hue_shift"], default_font_id)
-
-            sat = TrackbarRow(
-                "Sat Shift", self.params.get("sat_shift"), default_font_id
-            )
-
-            val = TrackbarRow(
-                "Val Shift", self.params.get("val_shift"), default_font_id
-            )
-
-            contrast = TrackbarRow(
-                "Contrast", self.params.get("contrast"), default_font_id
-            )
-
-            brightness = TrackbarRow(
-                "Brighness", self.params.get("brightness"), default_font_id
-            )
-
-            gamma = TrackbarRow(
-                "Gamma", self.gamma, default_font_id
-            )
-
-            val_threshold = TrackbarRow(
-                "Val Threshold", self.params.get("val_threshold"), default_font_id
-            )
-
-            val_hue_shift = TrackbarRow(
-                "Hue Shift for Val", self.params.get("val_hue_shift"), default_font_id
-            )
-
-            hue_invert_angle = TrackbarRow(
-                "Hue Invert Angle", self.params.get("hue_invert_angle"), default_font_id
-            )
-
-            hue_invert_strength = TrackbarRow(
-                "Hue Invert Strength",
-                self.params.get("hue_invert_strength"),
-                default_font_id,
-            )
-
-            posterize = TrackbarRow(
-                "Posterize Levels", self.params.get("posterize_levels"), default_font_id
-            )
-
-            solarize = TrackbarRow(
-                "Solarize Threshold", self.params.get("solarize_threshold"), default_font_id
-            )
-
-            highlight_compression = TrackbarRow(
-                "Highlight Compression", self.highlight_compression, default_font_id
-            )
-
-
-        dpg.bind_item_font("color", global_font_id)
-
-
     def adjust_gamma(self, image: np.ndarray):
         """
         Applies gamma correction to the image.
@@ -618,31 +550,33 @@ class Color(EffectBase):
         # Scale the result back up to the [0, 255] range.
         return ldr_image * 255.0
 
+
 class Pixels(EffectBase):
 
-    def __init__(self, params, image_width: int, image_height: int, noise_type=NoiseType.NONE):
+    def __init__(self, params, image_width: int, image_height: int, noise_type=NoiseType.NONE, parent=None):
+        subclass = self.__class__.__name__
         self.params = params
         self.image_width = image_width
         self.image_height = image_height
 
-        self.sharpen_type = params.add("sharpen_type", 0, len(SharpenType)-1, 0)
-        self.sharpen_intensity = params.add("sharpen_intensity", 1.0, 8.0, 4.0)
-        self.mask_blur = params.add("mask_blur", 1, 10, 5)
-        self.k_size = params.add("k_size", 0, 11, 3)
+        self.sharpen_type = params.add("sharpen_type", 0, len(SharpenType)-1, 0, subclass, parent)
+        self.sharpen_intensity = params.add("sharpen_intensity", 1.0, 8.0, 4.0, subclass, parent)
+        self.mask_blur = params.add("mask_blur", 1, 10, 5, subclass, parent)
+        self.k_size = params.add("k_size", 0, 11, 3, subclass, parent)
 
         self.blur_type = params.add(
-            "blur_type", 0, len(BlurType)-1, 1
+            "blur_type", 0, len(BlurType)-1, 1, subclass, parent
         )
-        self.blur_kernel_size = params.add("blur_kernel_size", 1, 100, 1)
+        self.blur_kernel_size = params.add("blur_kernel_size", 1, 100, 1, subclass, parent)
 
 
         if not isinstance(noise_type, NoiseType):
             raise ValueError("noise_type must be an instance of NoiseType Enum.")
 
         self._noise_type = params.add(
-            "noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, noise_type.value
+            "noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, noise_type.value, subclass, parent
         )
-        self._noise_intensity = params.add("noise_intensity", 0.0, 1.0, 0.1)
+        self._noise_intensity = params.add("noise_intensity", 0.0, 1.0, 0.1, subclass, parent)
 
     @property
     def noise_type(self) -> NoiseType:
@@ -885,69 +819,19 @@ class Pixels(EffectBase):
             sharpened_frame = cv2.filter2D(frame, -1, sharpening_kernel)
 
         return sharpened_frame
-    
-    def create_gui_panel(self, default_font_id, theme):
-
-        with dpg.collapsing_header(label=f"\tPixels", tag="pixels") as h:
-            dpg.bind_item_theme(h, theme)
-            
-            RadioButtonRow(
-                label="Blur Type", 
-                cls=BlurType,
-                param=self.params.get("blur_type"), 
-                font=default_font_id
-            )
-            TrackbarRow(
-                "Blur Kernel", 
-                self.params.get("blur_kernel_size"), 
-                default_font_id
-            )
-
-            RadioButtonRow(
-                "Sharpen Type",
-                SharpenType,
-                self.sharpen_type,
-                default_font_id
-            )
-            TrackbarRow(
-                "Sharpen Amount", 
-                self.sharpen_intensity, 
-                default_font_id
-            )
-            TrackbarRow(
-                "Shapen Blur",
-                self.mask_blur,
-                default_font_id
-            )
-            TrackbarRow(
-                "Sharpen Kernel",
-                self.k_size,
-                default_font_id
-            )
-
-            RadioButtonRow(
-                "Noise Type", 
-                NoiseType, 
-                self._noise_type, 
-                default_font_id
-            )
-            TrackbarRow(
-                "Noise Intensity", 
-                self._noise_intensity, 
-                default_font_id
-            )
 
 
 class Sync(EffectBase):
 
-    def __init__(self, params):
+    def __init__(self, params, parent):
+        subclass = self.__class__.__name__
         self.params = params
-        self.x_sync_freq = params.add("x_sync_freq", 0.1, 100.0, 1.0)
-        self.x_sync_amp = params.add("x_sync_amp", -200, 200, 0.0)
-        self.x_sync_speed = params.add("x_sync_speed", 5.0, 10.0, 9.0)
-        self.y_sync_freq = params.add("y_sync_freq", 0.1, 100.0, 1.0)
-        self.y_sync_amp = params.add("y_sync_amp", -200, 200, 00.0)
-        self.y_sync_speed = params.add("y_sync_speed", 5.0, 10.0, 9.0)
+        self.x_sync_freq = params.add("x_sync_freq", 0.1, 100.0, 1.0, subclass, parent)
+        self.x_sync_amp = params.add("x_sync_amp", -200, 200, 0.0, subclass, parent)
+        self.x_sync_speed = params.add("x_sync_speed", 5.0, 10.0, 9.0, subclass, parent)
+        self.y_sync_freq = params.add("y_sync_freq", 0.1, 100.0, 1.0, subclass, parent)
+        self.y_sync_amp = params.add("y_sync_amp", -200, 200, 00.0, subclass, parent)
+        self.y_sync_speed = params.add("y_sync_speed", 5.0, 10.0, 9.0, subclass, parent)
 
     def sync(self, frame: np.ndarray):
         """
@@ -985,59 +869,28 @@ class Sync(EffectBase):
 
         warped_y = cv2.cvtColor(warped_y, cv2.COLOR_RGB2BGR)
         return warped_y
-
-    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
-        with dpg.collapsing_header(label=f"\tSync", tag="sync") as h:
-            dpg.bind_item_theme(h, theme)
-
-            x_sync_speed = TrackbarRow(
-                "X Sync Speed", self.params.get("x_sync_speed"), default_font_id
-            )
-
-            x_sync_freq = TrackbarRow(
-                "X Sync Freq", self.params.get("x_sync_freq"), default_font_id
-            )
-
-            x_sync_amp = TrackbarRow(
-                "X Sync Amp", self.params.get("x_sync_amp"), default_font_id
-            )
-
-            x_sync_speed = TrackbarRow(
-                "Y Sync Speed", self.params.get("y_sync_speed"), default_font_id
-            )
-
-            x_sync_freq = TrackbarRow(
-                "Y Sync Freq",
-                self.params.get("y_sync_freq"),
-                default_font_id,
-            )
-
-            x_sync_amp = TrackbarRow(
-                "Y Sync Amp", self.params.get("y_sync_amp"), default_font_id
-            )
-
-        dpg.bind_item_font("sync", global_font_id)
-
+    
 
 PERLIN_SCALE=1700 #???
 class Warp(EffectBase):
 
-    def __init__(self, params, image_width: int, image_height: int):
+    def __init__(self, params, image_width: int, image_height: int, parent=None):
+        subclass = self.__class__.__name__
         self.params = params
         self.width = image_width
         self.height = image_height
-        self.warp_type = params.add("warp_type", 0, len(WarpType)-1, 0)
-        self.warp_angle_amt = params.add("warp_angle_amt", 0, 360, 30)
-        self.warp_radius_amt = params.add("warp_radius_amt", 0, 360, 30)
-        self.warp_speed = params.add("warp_speed", 0, 100, 10)
-        self.warp_use_fractal = params.add("warp_use_fractal", 0, 1, 0)
-        self.warp_octaves = params.add("warp_octaves", 1, 8, 4)
-        self.warp_gain = params.add("warp_gain", 0.0, 1.0, 0.5)
-        self.warp_lacunarity = params.add("warp_lacunarity", 1.0, 4.0, 2.0)
-        self.x_speed = params.add("x_speed", 0.0, 100.0, 1.0)
-        self.x_size = params.add("x_size", 0.25, 100.0, 20.0)
-        self.y_speed = params.add("y_speed", 0.0, 10.0, 1.0)
-        self.y_size = params.add("y_size", 0.25, 100.0, 10.0)
+        self.warp_type = params.add("warp_type", 0, len(WarpType)-1, 0, subclass, parent)
+        self.warp_angle_amt = params.add("warp_angle_amt", 0, 360, 30, subclass, parent)
+        self.warp_radius_amt = params.add("warp_radius_amt", 0, 360, 30, subclass, parent)
+        self.warp_speed = params.add("warp_speed", 0, 100, 10, subclass, parent)
+        self.warp_use_fractal = params.add("warp_use_fractal", 0, 1, 0, subclass, parent)
+        self.warp_octaves = params.add("warp_octaves", 1, 8, 4, subclass, parent)
+        self.warp_gain = params.add("warp_gain", 0.0, 1.0, 0.5, subclass, parent)
+        self.warp_lacunarity = params.add("warp_lacunarity", 1.0, 4.0, 2.0, subclass, parent)
+        self.x_speed = params.add("x_speed", 0.0, 100.0, 1.0, subclass, parent)
+        self.x_size = params.add("x_size", 0.25, 100.0, 20.0, subclass, parent)
+        self.y_speed = params.add("y_speed", 0.0, 10.0, 1.0, subclass, parent)
+        self.y_size = params.add("y_size", 0.25, 100.0, 10.0, subclass, parent)
 
         self.t = 0
 
@@ -1200,105 +1053,29 @@ class Warp(EffectBase):
         else:
             return frame
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
-
-        with dpg.collapsing_header(label=f"\tWarp", tag="warp") as h:
-            dpg.bind_item_theme(h, theme)
-
-            RadioButtonRow(
-                "Warp Type",
-                WarpType,
-                self.params.get("warp_type"),
-                default_font_id,
-            )
-
-            TrackbarRow(
-                "Warp Angle Amt", 
-                self.params.get("warp_angle_amt"), 
-                default_font_id
-            )
-
-            TrackbarRow(
-                "Warp Radius Amt", 
-                self.params.get("warp_radius_amt"), 
-                default_font_id
-            )
-
-            TrackbarRow(
-                "Warp Speed", 
-                self.params.get("warp_speed"), 
-                default_font_id
-            )
-
-            TrackbarRow(
-                "Warp Use Fractal", 
-                self.params.get("warp_use_fractal"), 
-                default_font_id
-            )
-
-            TrackbarRow(
-                "Warp Octaves", 
-                self.params.get("warp_octaves"), 
-                default_font_id
-            )
-
-            warp_gain = TrackbarRow(
-                "Warp Gain", 
-                self.params.get("warp_gain"), 
-                default_font_id
-            )
-
-            warp_lacunarity = TrackbarRow(
-                "Warp Lacunarity", 
-                self.params.get("warp_lacunarity"), 
-                default_font_id
-            )
-
-            x_speed = TrackbarRow(
-                "X Speed", 
-                self.params.get("x_speed"), default_font_id
-            )
-
-            y_speed = TrackbarRow(
-                "Y Speed", 
-                self.params.get("y_speed"), 
-                default_font_id
-            )
-
-            x_size = TrackbarRow(
-                "X Size", 
-                self.params.get("x_size"), 
-                default_font_id
-            )
-
-            y_size = TrackbarRow(
-                "Y Size", 
-                self.params.get("y_size"), 
-                default_font_id
-            )
-
 
 class Reflector(EffectBase):
     """
     A class to apply reflection transformations to image frames from a stream.
     """
 
-    def __init__(self, params, mode: ReflectionMode = ReflectionMode.NONE):
+    def __init__(self, params, mode: ReflectionMode = ReflectionMode.NONE, parent=None):
         """
         Initializes the Reflector with a specified reflection mode.
 
         Args:
             mode (ReflectionMode): The reflection mode to apply. Defaults to NONE.
         """
+        subclass = self.__class__.__name__
         self.params = params
         if not isinstance(mode, ReflectionMode):
             raise ValueError("mode must be an instance of ReflectionMode Enum.")
         self._mode = params.add(
-            "reflection_mode", 0, len(ReflectionMode) - 1, ReflectionMode.NONE.value
+            "reflection_mode", 0, len(ReflectionMode) - 1, ReflectionMode.NONE.value, subclass, parent
         )
-        self.segments = params.add("reflector_segments",0,10,0)
-        self.zoom = params.add("reflector_z", 0.5, 2, 1.0)
-        self.rotation = params.add("reflector_r", -360,360,0.0)
+        self.segments = params.add("reflector_segments",0,10,0,subclass, parent)
+        self.zoom = params.add("reflector_z", 0.5, 2, 1.0, subclass, parent)
+        self.rotation = params.add("reflector_r", -360,360,0.0,subclass, parent)
         self.width = None 
         self.height = None
 
@@ -1444,55 +1221,42 @@ class Reflector(EffectBase):
 
         return output_frame
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
-        with dpg.collapsing_header(label=f"\tReflector", tag="reflector") as h:
-            dpg.bind_item_theme(h, theme)
-            reflection_mode = TrackbarRow(
-                "Reflection Mode", self.params.get("reflection_mode"), default_font_id
-            )
-
-            # reflection_strength = TrackbarRow(
-            #     "Reflection Strength",
-            #     self.params.get("reflection_strength"),
-            #     default_font_id)
-
-        dpg.bind_item_font("reflector", global_font_id)
-
 
 class PTZ(EffectBase):
-    def __init__(self, params, image_width: int, image_height: int):
+    def __init__(self, params, image_width: int, image_height: int, parent=None):
+        subclass = self.__class__.__name__
         self.params = params
         self.height = image_height
         self.width = image_width
 
         self.x_shift = params.add(
-            "x_shift", -image_width, image_width, 0, family="Pan"
+            "x_shift", -image_width, image_width, 0, subclass, parent
         )  # min/max depends on image size
         self.y_shift = params.add(
-            "y_shift", -image_height, image_height, 0, family="Pan"
+            "y_shift", -image_height, image_height, 0, subclass, parent
         )  # min/max depends on image size
-        self.zoom = params.add("zoom", 0.75, 3, 1.0, family="Pan")
-        self.r_shift = params.add("r_shift", -360, 360, 0.0, family="Pan")
+        self.zoom = params.add("zoom", 0.75, 3, 1.0, subclass, parent)
+        self.r_shift = params.add("r_shift", -360, 360, 0.0, subclass, parent)
         
         
         self.prev_x_shift = params.add(
-            "prev_x_shift", -image_width, image_width, 0, family="Pan"
+            "prev_x_shift", -image_width, image_width, 0, subclass, parent
         )  # min/max depends on image size
         self.prev_y_shift = params.add(
-            "prev_y_shift", -image_height, image_height, 0, family="Pan"
+            "prev_y_shift", -image_height, image_height, 0, subclass, parent
         )  # min/max depends on image size
-        self.prev_zoom = params.add("prev_zoom", 0.75, 3, 1.0, family="Pan")
-        self.prev_r_shift = params.add("prev_r_shift", -360, 360, 0.0, family="Pan")
+        self.prev_zoom = params.add("prev_zoom", 0.75, 3, 1.0, subclass, parent)
+        self.prev_r_shift = params.add("prev_r_shift", -360, 360, 0.0, subclass, parent)
 
         self.prev_cx = params.add(
-            "prev_cx", -image_width/2, image_width/2, 0, family="Pan"
+            "prev_cx", -image_width/2, image_width/2, 0, subclass, parent
         )
         self.prev_cy = params.add(
-            "prev_cy", -image_height/2, image_height/2, 0, family="Pan"
+            "prev_cy", -image_height/2, image_height/2, 0, subclass, parent
         )
-        self.polar_x = params.add("polar_x", -image_width // 2, image_width // 2, 0)
-        self.polar_y = params.add("polar_y", -image_height // 2, image_height // 2, 0)
-        self.polar_radius = params.add("polar_radius", 0.1, 100, 1.0)
+        self.polar_x = params.add("polar_x", -image_width // 2, image_width // 2, 0, subclass, parent)
+        self.polar_y = params.add("polar_y", -image_height // 2, image_height // 2, 0, subclass, parent)
+        self.polar_radius = params.add("polar_radius", 0.1, 100, 1.0, subclass, parent)
 
     def shift_frame(self, frame: np.ndarray):
         """
@@ -1604,86 +1368,30 @@ class PTZ(EffectBase):
         else:
             enable_polar_transform = True
 
-    def create_gui_panel(
-        self, default_font_id=None, global_font_id=None, theme=None
-    ):
-        width=550
-        height=600
-        with dpg.collapsing_header(label=f"\tPan", tag="pan") as h:
-            dpg.bind_item_theme(h, theme)
-            x_shift = TrackbarRow(
-                "X Shift", self.params.get("x_shift"), default_font_id
-            )
-            y_shift = TrackbarRow(
-                "Y Shift", self.params.get("y_shift"), default_font_id
-            )
-            r_shift = TrackbarRow(
-                "R Shift", self.params.get("r_shift"), default_font_id
-            )
-            zoom = TrackbarRow("Zoom", self.params.get("zoom"), default_font_id)
-
-            prev_x_shift = TrackbarRow(
-                "Prev X Shift", self.prev_x_shift, default_font_id
-            )
-            y_shift = TrackbarRow(
-                "Prev Y Shift", self.prev_y_shift, default_font_id
-            )
-            r_shift = TrackbarRow(
-                "Prev R Shift", self.prev_r_shift, default_font_id
-            )
-            zoom = TrackbarRow("Prev Zoom", self.prev_zoom, default_font_id)
-            prev_center_x = TrackbarRow("prev_center_x", self.prev_cx, default_font_id)
-            prev_center_y = TrackbarRow("prev_center_y", self.prev_cy, default_font_id)
-
-    
-            enable_polar_transform_button = Toggle(
-                "Enable Polar Transform", "enable_polar_transform"
-            )
-            dpg.add_button(
-                label=enable_polar_transform_button.label,
-                tag="enable_polar_transform",
-                callback=self._on_button_click,
-                user_data=enable_polar_transform_button.tag,
-                width=width,
-            )
-            dpg.bind_item_font(enable_polar_transform_button.tag, default_font_id)
-
-            polar_x = TrackbarRow(
-                "Polar Center X", self.params.get("polar_x"), default_font_id
-            )
-            polar_y = TrackbarRow(
-                "Polar Center Y", self.params.get("polar_y"), default_font_id
-            )
-            polar_radius = TrackbarRow(
-                "Polar radius", self.params.get("polar_radius"), default_font_id
-            )
-
-        dpg.bind_item_font("pan", global_font_id)
-
 
 class Feedback(EffectBase):
 
-    def __init__(self, params: ParamTable, image_width: int, image_height: int):
+    def __init__(self, params: ParamTable, image_width: int, image_height: int, parent=None):
         self.params = params
         self.height = image_height
         self.width = image_width
 
-        family = self.__class__.__name__
+        subclass = self.__class__.__name__
 
-        self.frame_skip = params.add("frame_skip", 0, 10, 0, family)
-        self.alpha = params.add("alpha", 0.0, 1.0, 0.0, family)
-        self.temporal_filter = params.add("temporal_filter", 0, 1.0, 0.0, family)
-        self.feedback_luma_threshold = params.add("feedback_luma_threshold", 0, 255, 0, family)
+        self.frame_skip = params.add("frame_skip", 0, 10, 0, subclass, parent)
+        self.alpha = params.add("alpha", 0.0, 1.0, 0.0, subclass, parent)
+        self.temporal_filter = params.add("temporal_filter", 0, 1.0, 0.0, subclass, parent)
+        self.feedback_luma_threshold = params.add("feedback_luma_threshold", 0, 255, 0, subclass, parent)
         self.luma_select_mode = params.add(
-            "luma_select_mode", LumaMode.WHITE.value, LumaMode.BLACK.value, LumaMode.WHITE.value, family
+            "luma_select_mode", LumaMode.WHITE.value, LumaMode.BLACK.value, LumaMode.WHITE.value, subclass, parent
         )
-        self.buffer_select = params.add("buffer_frame_select", -1, 20, -1, family)
-        self.buffer_frame_blend = params.add("buffer_frame_blend", 0.0, 1.0, 0.0, family)
+        self.buffer_select = params.add("buffer_frame_select", -1, 20, -1, subclass, parent)
+        self.buffer_frame_blend = params.add("buffer_frame_blend", 0.0, 1.0, 0.0, subclass, parent)
 
-        self.prev_frame_scale = params.add("prev_frame_scale", 90, 110, 100, family)
+        self.prev_frame_scale = params.add("prev_frame_scale", 90, 110, 100, subclass, parent)
 
         self.max_buffer_size = 30
-        self.buffer_size = params.add("buffer_size", 0, self.max_buffer_size, 0, family)
+        self.buffer_size = params.add("buffer_size", 0, self.max_buffer_size, 0, subclass, parent)
         # this should probably be initialized in reset() to avoid issues with reloading config
         self.frame_buffer = deque(maxlen=self.max_buffer_size)
 
@@ -1863,63 +1571,15 @@ class Feedback(EffectBase):
         return noisy_frame.astype('uint8')
 
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
-
-        with dpg.collapsing_header(label=f"\tFeedback", tag="effects") as h:
-            dpg.bind_item_theme(h, theme)
-            TrackbarRow(
-                "Temporal Filter", 
-                self.params.get("temporal_filter"), 
-                default_font_id
-            )
-
-            TrackbarRow(
-                "Feedback", 
-                self.alpha, 
-                default_font_id
-            )
-
-            TrackbarRow(
-                "Luma Feedback Threshold",
-                self.feedback_luma_threshold,
-                default_font_id,
-            )
-
-            luma_mode = RadioButtonRow(
-                "Luma Mode", LumaMode, self.luma_select_mode, default_font_id
-            )
-
-            frame_buffer_size = TrackbarRow(
-                "Frame Buffer Size", self.buffer_size, default_font_id
-            )
-
-            frame_buffer_select = TrackbarRow(
-                "Frame Buffer Frame Select", self.buffer_select, default_font_id
-            )
-
-            frame_select_feedback = TrackbarRow(
-                "Frame Select Feedback", self.buffer_frame_blend, default_font_id
-            )
-
-            frame_skip = TrackbarRow(
-                "Frame Skip", self.frame_skip, default_font_id
-            )
-
-            num_hues = TrackbarRow(
-                "Num Hues", self.params.get("num_hues"), default_font_id
-            )
-
-        dpg.bind_item_font("effects", global_font_id)
-
-
 class Lissajous(EffectBase):
-    def __init__(self, params):
+    def __init__(self, params, parent=None):
         self.params = params
-        self.lissajous_A = params.add("lissajous_A", 0, 100, 50)
-        self.lissajous_B = params.add("lissajous_B", 0, 100, 50)
-        self.lissajous_a = params.add("lissajous_a", 0, 100, 50)
-        self.lissajous_b = params.add("lissajous_b", 0, 100, 50)
-        self.lissajous_delta = params.add("lissajous_delta", 0, 360, 0)
+        subclass = self.__class__.__name__
+        self.lissajous_A = params.add("lissajous_A", 0, 100, 50, subclass, parent)
+        self.lissajous_B = params.add("lissajous_B", 0, 100, 50, subclass, parent)
+        self.lissajous_a = params.add("lissajous_a", 0, 100, 50, subclass, parent)
+        self.lissajous_b = params.add("lissajous_b", 0, 100, 50, subclass, parent)
+        self.lissajous_delta = params.add("lissajous_delta", 0, 360, subclass, parent)
     
     # TODO: make this more engaging
     def lissajous_pattern(self, frame, t):
@@ -1942,37 +1602,12 @@ class Lissajous(EffectBase):
             cv2.circle(frame, (x, y), 1, (255, 255, 255), -1)
 
         return frame
-    
-    def temp_create_gui_panel(self, default_font_id=None, global_font_id=None):
-        with dpg.collapsing_header(label=f"\tLissajous", tag="Lissajous"):
-
-            lissajous_A = TrackbarRow(
-                "Lissajous A", self.params.get("lissajous_A"), default_font_id
-            )
-
-            lissajous_B = TrackbarRow(
-                "Lissajous B", self.params.get("lissajous_B"), default_font_id
-            )
-
-            lissajous_a = TrackbarRow(
-                "Lissajous a", self.params.get("lissajous_a"), default_font_id
-            )
-
-            lissajous_b = TrackbarRow(
-                "Lissajous b", self.params.get("lissajous_b"), default_font_id
-            )
-
-            lissajous_delta = TrackbarRow(
-                "Lissajous Delta", self.params.get("lissajous_delta"), default_font_id
-            )
-
-        dpg.bind_item_font("Lissajous", global_font_id)
 
 
 class ImageNoiser(EffectBase):
 
     def __init__(
-        self, params, noise_type: NoiseType = NoiseType.NONE
+        self, params, noise_type: NoiseType = NoiseType.NONE, parent=None
     ):
         """
         Initializes the ImageNoiser with a default noise type and intensity.
@@ -1983,14 +1618,15 @@ class ImageNoiser(EffectBase):
                                      Its interpretation varies by noise type. Defaults to 0.1.
         """
         self.params = params
+        subclass = self.__class__.__name__
 
         if not isinstance(noise_type, NoiseType):
             raise ValueError("noise_type must be an instance of NoiseType Enum.")
 
         self._noise_type = params.add(
-            "noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, noise_type.value
+            "noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, noise_type.value, subclass, parent
         )
-        self._noise_intensity = params.add("noise_intensity", 0.0, 1.0, 0.1)
+        self._noise_intensity = params.add("noise_intensity", 0.0, 1.0, 0.1, subclass, parent)
 
     @property
     def noise_type(self) -> NoiseType:
@@ -2167,42 +1803,15 @@ class ImageNoiser(EffectBase):
         noisy_image = image + random_noise
         return np.clip(noisy_image, 0, 255).astype(np.uint8)
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None,theme=None):
-        with dpg.collapsing_header(label=f"\tNoiser", tag="noiser") as h:
-            dpg.bind_item_theme(h, theme)
-
-            noise_type = RadioButtonRow(
-                "Noise Type", NoiseType, self.params.get("noise_type"), default_font_id
-            )
-
-            noise_intensity = TrackbarRow(
-                "Noise Intensity", self.params.get("noise_intensity"), default_font_id
-            )
-
-            # noise_speed = TrackbarRow(
-            #     "Noise Speed",
-            #     self.params.get("noise_speed"),
-            #     default_font_id)
-
-            # noise_freq_x = TrackbarRow(
-            #     "Noise Freq X",
-            #     self.params.get("noise_freq_x"),
-            #     default_font_id)
-
-            # noise_freq_y = TrackbarRow(
-            #     "Noise Freq Y",
-            #     self.params.get("noise_freq_y"),
-            #     default_font_id)
-
-        dpg.bind_item_font("noiser", global_font_id)
-
 
 class Glitch(EffectBase):   
 
-    def __init__(self, params, toggles):
+    def __init__(self, params, toggles, parent=None):
         self.params = params
         self.glitch_phase_start_frame = 0
         self.glitch_cycle_start_frame = 0
+
+        subclass = self.__class__.__name__
 
         # State for horizontal scroll freeze glitch
         self.current_fixed_y_end = None
@@ -2232,12 +1841,12 @@ class Glitch(EffectBase):
             False,
         )
 
-        self.glitch_duration_frames = params.add("glitch_duration_frames", 1, 300, 60)
-        self.glitch_intensity_max = params.add("glitch_intensity_max", 0, 100, 50)
-        self.glitch_block_size_max = params.add("glitch_block_size_max", 0, 200, 60)
-        self.band_div = params.add("glitch_band_div", 1, 10, 5)
-        self.num_glitches = params.add("num_glitches", 0, 100, 0)
-        self.glitch_size = params.add("glitch_size", 1, 100, 0)
+        self.glitch_duration_frames = params.add("glitch_duration_frames", 1, 300, 60, subclass, parent)
+        self.glitch_intensity_max = params.add("glitch_intensity_max", 0, 100, 50, subclass, parent)
+        self.glitch_block_size_max = params.add("glitch_block_size_max", 0, 200, 60, subclass, parent)
+        self.band_div = params.add("glitch_band_div", 1, 10, 5, subclass, parent)
+        self.num_glitches = params.add("num_glitches", 0, 100, 0, subclass, parent)
+        self.glitch_size = params.add("glitch_size", 1, 100, 0, subclass, parent)
 
         self.frame_count = 0
 
@@ -2614,81 +2223,50 @@ class Glitch(EffectBase):
         self.frame_count += 1
         return frame
 
-    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
-        with dpg.collapsing_header(label=f"\tGlitch", tag="glitch") as h:
-            dpg.bind_item_theme(h, theme)
-            glitch_intensity = TrackbarRow(
-                "Glitch Intensity", self.params.get("glitch_intensity_max"), default_font_id
-            )
-
-            glitch_duration = TrackbarRow(
-                "Glitch Duration", self.params.get("glitch_duration_frames"), default_font_id
-            )
-
-            glitch_block_size = TrackbarRow(
-                "Glitch Block Size",
-                self.params.get("glitch_block_size_max"),
-                default_font_id,
-            )
-
-            glitch_band_div = TrackbarRow(
-                "Glitch Band Divisor", self.params.get("glitch_band_div"), default_font_id
-            )
-
-            num_glitches = TrackbarRow(
-                "Glitch Qty", self.params.get("num_glitches"), default_font_id
-            )
-
-            glitch_size = TrackbarRow(
-                "Glitch Size", self.params.get("glitch_size"), default_font_id
-            )
-
-            self._create_buttons("glitch")
-
-        dpg.bind_item_font("glitch", global_font_id)
-
 
 class ShapeGenerator:
 
-    def __init__(self, params, width, height, shape_x_shift=0, shape_y_shift=0):
+    def __init__(self, params, width, height, shape_x_shift=0, shape_y_shift=0, parent=None):
         self.params = params
         self.width = width
         self.height = height
         self.center_x = width // 2
         self.center_y = height // 2
+        subclass = self.__class__.__name__
+
         
-        self.shape_type = params.add("shape_type", 0, len(Shape)-1, Shape.RECTANGLE)
+        self.shape_type = params.add("shape_type", 0, len(Shape)-1, Shape.RECTANGLE, subclass, parent)  # Shape type enum
         
-        self.line_h = params.add("line_hue", 0, 179, 0)  # Hue range for OpenCV is 0-
-        self.line_s = params.add("line_sat", 0, 255, 255)  # Saturation range
-        self.line_v = params.add("line_val", 0, 255, 255)  # Value range
+        self.line_h = params.add("line_hue", 0, 179, 0, subclass, parent)  # Hue range for OpenCV is 0-
+        self.line_s = params.add("line_sat", 0, 255, 255, subclass, parent)  # Saturation range
+        self.line_v = params.add("line_val", 0, 255, 255, subclass, parent)  # Value range
 
         self.line_hsv = [self.line_h, self.line_s, self.line_v]  # H, S, V (Red) - will be converted to BGR
-        self.line_weight = params.add("line_weight", 1, 20, 2)  # Thickness of the shape outline, must be integer
-        self.line_opacity = params.add("line_opacity", 0.0, 1.0, 0.66)  # Opacity of the shape outline
+        self.line_weight = params.add("line_weight", 1, 20, 2, subclass, parent)  # Thickness of the shape outline, must be integer
+        self.line_opacity = params.add("line_opacity", 0.0, 1.0, 0.66, subclass, parent)  # Opacity of the shape outline
         self.line_color = self._hsv_to_bgr(self.line_hsv)
         
-        self.size_multiplier = params.add("size_multiplier", 0.1, 10.0, 0.9)  # Scale factor for shape size
-        self.aspect_ratio = params.add("aspect_ratio", 0.1, 10.0, 1.0)  # Scale factor for shape size
-        self.rotation_angle = params.add("rotation_angle", 0, 360, 0)  # Rotation angle in degrees
+        self.size_multiplier = params.add("size_multiplier", 0.1, 10.0, 0.9, subclass, parent)  # Scale factor for shape size
+        self.aspect_ratio = params.add("aspect_ratio", 0.1, 10.0, 1.0, subclass, parent)  # Scale factor for shape size
+        self.rotation_angle = params.add("rotation_angle", 0, 360, 0, subclass, parent)  # Rotation angle in degrees
         
-        self.shape_x_shift = params.add("shape_x_shift", -width, width, shape_x_shift)  # Allow negative shifts
-        self.shape_y_shift = params.add("shape_y_shift", -height, height, shape_y_shift)
+        self.shape_x_shift = params.add("shape_x_shift", -width, width, shape_x_shift, subclass, parent)  # Allow negative shifts
+        self.shape_y_shift = params.add("shape_y_shift", -height, height, shape_y_shift, subclass, parent)
 
-        self.multiply_grid_x = params.add("multiply_grid_x", 1, 10, 2)  # Number of shapes in X direction
-        self.multiply_grid_y = params.add("multiply_grid_y", 1, 10, 2)  # Number of shapes in Y direction
-        self.grid_pitch_x = params.add("grid_pitch_x", min=0, max=width, default_val=100)  # Distance between shapes in X direction
-        self.grid_pitch_y = params.add("grid_pitch_y", min=0, max=height, default_val=100)  # Distance between shapes in Y direction
+        self.multiply_grid_x = params.add("multiply_grid_x", 1, 10, 2, subclass, parent)  # Number of shapes in X direction
+        self.multiply_grid_y = params.add("multiply_grid_y", 1, 10, 2, subclass, parent)  # Number of shapes in Y direction
+        self.grid_pitch_x = params.add("grid_pitch_x", min=0, max=width, default_val=100, subclass=subclass, parent=parent)  # Distance between shapes in X direction
+        self.grid_pitch_y = params.add("grid_pitch_y", min=0, max=height, default_val=100, subclass=subclass, parent=parent)  # Distance between shapes in Y direction
         
         self.fill_enabled = True  # Toggle fill on/off
-        self.fill_h = params.add("fill_hue", 0, 179, 120)  # Hue for fill color
-        self.fill_s = params.add("fill_sat", 0, 255, 100)  # Saturation for fill color
-        self.fill_v = params.add("fill_val", 0, 255, 255)  # Value for fill color
+        self.fill_h = params.add("fill_hue", 0, 179, 120, subclass, parent)  # Hue for fill color
+        self.fill_s = params.add("fill_sat", 0, 255, 100, subclass, parent)  # Saturation for fill color
+        self.fill_v = params.add("fill_val", 0, 255, 255, subclass, parent)  # Value for fill color
         self.fill_hsv = [self.fill_h.value, self.fill_s.value, self.fill_v.value]  # H, S, V (Blue) - will be converted to BGR
-        self.fill_opacity = params.add("fill_opacity", 0.0, 1.0, 0.25)
+        self.fill_opacity = params.add("fill_opacity", 0.0, 1.0, 0.25, subclass, parent)
         self.fill_color = self._hsv_to_bgr(self.fill_hsv)
 
-        self.convas_rotation = params.add("canvas_rotation", 0, 360, 0)  # Rotation angle in degrees
+        self.convas_rotation = params.add("canvas_rotation", 0, 360, 0, subclass, parent)  # Rotation angle in degrees
         
         
 
@@ -2879,101 +2457,3 @@ class ShapeGenerator:
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         return frame
-    
-
-    def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
-        with dpg.collapsing_header(label=f"\tShape Generator", tag="shape_generator") as h:
-            dpg.bind_item_theme(h, theme)
-            shape = TrackbarRow("Shape Type",self.shape_type, default_font_id)
-            
-            canvas_rotation = TrackbarRow(
-                "Canvas Rotation", self.convas_rotation, default_font_id
-            )
-
-            size_multiplier = TrackbarRow(
-                "Size Multiplier", self.size_multiplier, default_font_id
-            )
-            
-            aspect_ratio = TrackbarRow(
-                "Aspect Ratio", self.aspect_ratio, default_font_id
-            )
-            
-            rotation = TrackbarRow(
-                "Rotation", self.rotation_angle, default_font_id
-            )
-            
-            multiply_grid_x = TrackbarRow(
-                "Multiply Grid X", self.multiply_grid_x, default_font_id
-            )
-            
-            multiply_grid_y = TrackbarRow(
-                "Multiply Grid Y", self.multiply_grid_y, default_font_id
-            )
-            
-            grid_pitch_x = TrackbarRow(
-                "Grid Pitch X", 
-                self.params.get("grid_pitch_x"), 
-                default_font_id)
-            
-            grid_pitch_y = TrackbarRow(
-                "Grid Pitch Y", 
-                self.params.get("grid_pitch_y"), 
-                default_font_id)
-            
-            shape_y_shift = TrackbarRow(
-                "Shape Y Shift", 
-                self.params.get("shape_y_shift"), 
-                default_font_id)
-            
-            shape_x_shift = TrackbarRow(
-                "Shape X Shift", 
-                self.params.get("shape_x_shift"), 
-                default_font_id)
-
-            with dpg.collapsing_header(label=f"\tLine Generator", tag="line_generator"):
-
-                line_hue = TrackbarRow("Line Hue", self.params.get("line_hue"), default_font_id)
-                
-                line_sat = TrackbarRow(
-                    "Line Sat", 
-                    self.params.get("line_sat"), 
-                        default_font_id)
-                
-                line_val = TrackbarRow(
-                    "Line Val", 
-                    self.params.get("line_val"), 
-                        default_font_id)
-                
-                line_weight = TrackbarRow(
-                    "Line Width", 
-                    self.params.get("line_weight"), 
-                        default_font_id)
-                
-                line_opacity = TrackbarRow(
-                    "Line Opacity", 
-                    self.params.get("line_opacity"), 
-                        default_font_id)
-            dpg.bind_item_font("line_generator", global_font_id)
-
-            with dpg.collapsing_header(label=f"\tFill Generator", tag="fill_generator"):
-                fill_hue = TrackbarRow(
-                    "Fill Hue", 
-                    self.params.get("fill_hue"), 
-                        default_font_id)
-                
-                fill_sat = TrackbarRow(
-                    "Fill Sat", 
-                    self.params.get("fill_sat"), 
-                        default_font_id)
-                
-                fill_val = TrackbarRow(
-                    "Fill Val", 
-                    self.params.get("fill_val"), 
-                        default_font_id)
-                
-                fill_opacity = TrackbarRow(
-                    "Fill Opacity", 
-                    self.params.get("fill_opacity"), 
-                        default_font_id)
-            dpg.bind_item_font("fill_generator", global_font_id)
-        dpg.bind_item_font("shape_generator", global_font_id)
