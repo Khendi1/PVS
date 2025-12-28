@@ -7,6 +7,7 @@ from gui_elements import RadioButtonRow
 import dearpygui.dearpygui as dpg
 import logging
 import math
+from config import WidgetType, enum_names
 
 posc_bank = []  
 
@@ -60,7 +61,7 @@ class Patterns:
         self.X, self.Y = np.meshgrid(self.x_coords, self.y_coords)
 
         # Define pattern-specific parameters (using the global params_table)
-        self.pattern_type = params.add("pattern_type", PatternType.NONE.value, len(PatternType)-1, 0) 
+        self.pattern_type = params.add("pattern_type", PatternType.NONE.value, len(PatternType)-1, 0, WidgetType.DROPDOWN, PatternType) 
         self.prev_pattern_type = self.pattern_type.value 
         self.pattern_alpha = params.add("pattern_alpha", 0.0, 1.0, 0.5, subclass, parent)
 

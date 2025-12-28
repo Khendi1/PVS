@@ -13,7 +13,8 @@ from pathlib import Path
 from effects import LumaMode, EffectManager
 from param import ParamTable
 from luma import *
-from config import ParentClass, SourceIndex
+from config import ParentClass, SourceIndex, WidgetType
+import concurrent.futures # Added for parallel processing
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ class Mixer:
     """Mixer is used to init sources, get frames from each, and blend them"""
 
 
-    def __init__(self, effects, num_devices):
+    def __init__(self, effects, num_devices, width=640, height=480):
 
         self.parent = ParentClass.MIXER
         subclass = self.__class__.__name__
@@ -62,6 +63,9 @@ class Mixer:
 
         self.post_params = self.post_effects.params
         self.post_toggles = self.post_effects.toggles
+        
+        self.width = width
+        self.height = height
 
         # cap variables to store video capture objects or animation instances
         # e.g. self.cap1 can be a cv2.VideoCapture or Metaballs instance
@@ -94,20 +98,20 @@ class Mixer:
 # --------------------------------------------------------------------
         parent = ParentClass.SRC_1_ANIMATIONS
         self.src_1_animations = {
-            MixSources.METABALLS_ANIM.name: Metaballs(self.src_1_effects.params, self.src_1_effects.toggles, width=640, height=480, parent=parent),
-            MixSources.PLASMA_ANIM.name: Plasma(self.src_1_effects.params, self.src_1_effects.toggles, width=640, height=480, parent=parent),
-            MixSources.REACTION_DIFFUSION_ANIM.name: ReactionDiffusion(self.src_1_effects.params, self.src_1_effects.toggles, 640, 480, parent=parent),
-            MixSources.MOIRE_ANIM.name: Moire(self.src_1_effects.params, self.src_1_effects.toggles, width=640, height=480, parent=parent),
-            MixSources.SHADER_ANIM.name: ShaderVisualizer(self.src_1_effects.params, self.src_1_effects.toggles, 640, 480, parent=parent)
+            MixSources.METABALLS_ANIM.name: Metaballs(self.src_1_effects.params, self.src_1_effects.toggles, width=self.width, height=self.height, parent=parent),
+            MixSources.PLASMA_ANIM.name: Plasma(self.src_1_effects.params, self.src_1_effects.toggles, width=self.width, height=self.height, parent=parent),
+            MixSources.REACTION_DIFFUSION_ANIM.name: ReactionDiffusion(self.src_1_effects.params, self.src_1_effects.toggles, self.width, self.height, parent=parent),
+            MixSources.MOIRE_ANIM.name: Moire(self.src_1_effects.params, self.src_1_effects.toggles, width=self.width, height=self.height, parent=parent),
+            MixSources.SHADER_ANIM.name: ShaderVisualizer(self.src_1_effects.params, self.src_1_effects.toggles, self.width, self.height, parent=parent)
         }
 
         parent = ParentClass.SRC_2_ANIMATIONS
         self.src_2_animations = {
-            MixSources.METABALLS_ANIM.name: Metaballs(self.src_2_effects.params, self.src_2_effects.toggles, width=640, height=480, parent=parent),
-            MixSources.PLASMA_ANIM.name: Plasma(self.src_2_effects.params, self.src_2_effects.toggles, width=640, height=480, parent=parent),
-            MixSources.REACTION_DIFFUSION_ANIM.name: ReactionDiffusion(self.src_2_effects.params, self.src_2_effects.toggles, 640, 480, parent=parent),
-            MixSources.MOIRE_ANIM.name: Moire(self.src_2_effects.params, self.src_2_effects.toggles, width=640, height=480, parent=parent),
-            MixSources.SHADER_ANIM.name: ShaderVisualizer(self.src_2_effects.params, self.src_2_effects.toggles, 640, 480, parent=parent)
+            MixSources.METABALLS_ANIM.name: Metaballs(self.src_2_effects.params, self.src_2_effects.toggles, width=self.width, height=self.height, parent=parent),
+            MixSources.PLASMA_ANIM.name: Plasma(self.src_2_effects.params, self.src_2_effects.toggles, width=self.width, height=self.height, parent=parent),
+            MixSources.REACTION_DIFFUSION_ANIM.name: ReactionDiffusion(self.src_2_effects.params, self.src_2_effects.toggles, self.width, self.height, parent=parent),
+            MixSources.MOIRE_ANIM.name: Moire(self.src_2_effects.params, self.src_2_effects.toggles, width=self.width, height=self.height, parent=parent),
+            MixSources.SHADER_ANIM.name: ShaderVisualizer(self.src_2_effects.params, self.src_2_effects.toggles, self.width, self.height, parent=parent)
         }
 # --------------------------------------------------------------------
 
@@ -130,11 +134,11 @@ class Mixer:
 
         # initialize source 1 to use the first hardware device available (probably webcam if on laptop)
         self.selected_source1 = self.post_params.add(
-            "source1", 0, max(self.sources.values()), self.sources[self.device_sources[0]], subclass, self.parent
+            "source1", 0, max(self.sources.values()), self.sources[self.device_sources[0]], subclass, self.parent, WidgetType.DROPDOWN, list(self.sources.keys())
         )
         # init source 2 to metaballs
         self.selected_source2 = self.post_params.add(
-            "source2", 0, max(self.sources.values()), self.sources[MixSources.METABALLS_ANIM.name], subclass, self.parent
+            "source2", 0, max(self.sources.values()), self.sources[MixSources.METABALLS_ANIM.name], subclass, self.parent, WidgetType.DROPDOWN, list(self.sources.keys())
         )
 
         # --- Parameters for blending and keying ---
@@ -284,55 +288,8 @@ class Mixer:
             if index == 2:
                 self.cap2 = self.open_animation(self.cap2, source, index)
 
-
-    def select_source1_callback(self, sender, app_data):
-
-        log.info(
-            f"source1 callback app_data: {app_data}/{self.sources[app_data]}, \
-            selected_source1: {self.selected_source1.value}"
-        )
-
-        source_index = self.sources[app_data]
-    
-        # Abort if the same source is selected
-        if (
-            source_index == self.selected_source1.value
-            or source_index == self.selected_source2.value
-        ):
-            return
-
-        self.selected_source1.value = source_index
-        
-        self.start_video(self.selected_source1.value, 1)
-
-
-    def select_source2_callback(self, sender, app_data):
-        
-        log.info(
-            f"source2 callback app_data: {app_data}/{self.sources[app_data]}, \
-            selected_source2: {self.selected_source2.value}"
-        )
-
-        source_index = self.sources[app_data]
-    
-        # Abort if the same source is selected
-        if (
-            source_index == self.selected_source1.value
-            or source_index == self.selected_source2.value
-        ):
-            return
-
-        self.selected_source2.value = source_index
-        
-        self.start_video(self.selected_source2.value, 2)
-
-
     def blend(self, frame1, frame2):
         alpha = self.alpha_blend.value
-        
-        # if frame1.shape != frame2.shape:
-        #     print(frame1.shape)
-        #     print(frame2.shape)
 
         return cv2.addWeighted(frame1.astype(np.float32), 1-alpha, frame2.astype(np.float32), alpha, 0)
 
@@ -348,65 +305,75 @@ class Mixer:
         result = np.where(mask == 255, frame2, frame1)
         return result.astype(np.float32)
 
+    def _process_single_source(self, source_index):
+        ret, frame = False, None
+        
+        cap = self.cap1 if source_index == 1 else self.cap2
+        selected_source = self.selected_source1 if source_index == 1 else self.selected_source2
+        video_file_name = self.video_file_name1 if source_index == 1 else self.video_file_name2
+        image_file_name = self.image_file_name1 if source_index == 1 else self.image_file_name2
+
+        # Read frame
+        if not isinstance(cap, cv2.VideoCapture):
+            frame = cap.get_frame()
+            ret = True
+        else:
+            ret, frame = cap.read()
+            if not ret:
+                if selected_source.value == self.sources.get(MixSources.VIDEO_FILE_1.name if source_index == 1 else MixSources.VIDEO_FILE_2.name):
+                    log.info(f"Video end reached for source {source_index}. Looping back to start.")
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    ret, frame = cap.read()
+                else:
+                    log.error(f"Source {source_index} '{selected_source.value}' read failed")
+        
+        # Apply effects if frame is successfully read
+        if ret and frame is not None:
+            wet_frame = self.src_1_wet if source_index == 1 else self.src_2_wet
+            prev_frame = self.src_1_prev if source_index == 1 else self.src_2_prev
+            count = self.src_1_count if source_index == 1 else self.src_2_count
+            effects_manager = self.src_1_effects if source_index == 1 else self.src_2_effects
+
+            if wet_frame is None:
+                wet_frame = np.zeros_like(frame)
+            if prev_frame is None:
+                prev_frame = frame.copy()
+            
+            count += 1
+            prev_frame, wet_frame = effects_manager.modify_frames(
+                frame, wet_frame, prev_frame, count
+            )
+            frame = wet_frame
+            
+            # Update instance variables
+            if source_index == 1:
+                self.src_1_wet = wet_frame
+                self.src_1_prev = prev_frame
+                self.src_1_count = count
+            else:
+                self.src_2_wet = wet_frame
+                self.src_2_prev = prev_frame
+                self.src_2_count = count
+                
+        return ret, frame
+
 
     def get_mixed_frame(self):
-        ret1, frame1 = False, None
-        ret2, frame2 = False, None
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            future1 = executor.submit(self._process_single_source, 1)
+            future2 = executor.submit(self._process_single_source, 2)
 
-        # Read from source 1
-        if not isinstance(self.cap1, cv2.VideoCapture):
-            frame1 = self.cap1.get_frame()
-            ret1 = True
-        else:
-            ret1, frame1 = self.cap1.read()
-            if not ret1:
-                if self.selected_source1.value == self.sources.get(MixSources.VIDEO_FILE_1.name):
-                    log.info("Video end reached. Looping back to start.")
-                    self.cap1.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                    ret1, frame1 = self.cap1.read()
-                else:
-                    log.error(f"Source 1 '{self.selected_source1.value}' read failed")
-
-        # Read from source 2
-        if not isinstance(self.cap2, cv2.VideoCapture):
-            frame2 = self.cap2.get_frame()
-            ret2 = True
-        else:
-            ret2, frame2 = self.cap2.read()
-            if not ret2:
-                if self.selected_source2.value == self.sources.get(MixSources.VIDEO_FILE_2.name):
-                    log.info("Video end reached. Looping back to start...")
-                    self.cap2.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                    ret2, frame2 = self.cap2.read()
-                else:
-                    log.error(f"Source 2 '{self.selected_source2.value}' read failed, attempting to reopen.")
+            ret1, frame1 = future1.result()
+            ret2, frame2 = future2.result()
 
         # Process and display frames
         if ret1 and ret2:
             # Ensure frames are the same size for mixing
-            height, width, _ = frame1.shape
-            frame2 = cv2.resize(frame2, (width, height))
-
-            if self.src_1_wet is None:
-                self.src_1_wet = np.zeros_like(frame1)
-            if self.src_2_wet is None:
-                self.src_2_wet = np.zeros_like(frame2)
-            if self.src_1_prev is None:
-                self.src_1_prev = frame1.copy()
-            if self.src_2_prev is None:
-                self.src_2_prev = frame2.copy()
-
-            self.src_1_count += 1
-            self.src_1_prev, self.src_1_wet = self.src_1_effects.modify_frames(
-                frame1, self.src_1_wet, self.src_1_prev, self.src_1_count
-            )
-            frame1 = self.src_1_wet
-
-            self.src_2_count += 1
-            self.src_2_prev, self.src_2_wet = self.src_2_effects.modify_frames(
-                frame2, self.src_2_wet, self.src_2_prev, self.src_2_count
-            )
-            frame2 = self.src_2_wet
+            # Use self.width and self.height which are initialized once
+            if frame1.shape[0] != self.height or frame1.shape[1] != self.width:
+                 frame1 = cv2.resize(frame1, (self.width, self.height))
+            if frame2.shape[0] != self.height or frame2.shape[1] != self.width:
+                 frame2 = cv2.resize(frame2, (self.width, self.height))
 
             if self.swap.value == True:
                 temp = frame1.copy()
@@ -434,92 +401,3 @@ class Mixer:
         else:
             log.error("Could not retrieve frames from both sources.")
             return None
-
-
-    def get_hsv_for_cv2(self, dpg_rgba_value):
-        """Converts Dear PyGui's [R, G, B, A] (0.0-1.0) to OpenCV's [H, S, V] (0-180, 0-255, 0-255)."""
-        
-        r, g, b, a = dpg_rgba_value
-        bgr_float = np.array([b, g, r])
-        bgr_255 = (bgr_float * 255).astype(np.uint8)
-        bgr_image = bgr_255.reshape(1, 1, 3)
-        hsv_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2HSV)
-        h, s, v = hsv_image[0, 0]
-
-        return h, s, v
-
-
-    def color_picker_callback(self, sender, app_data, user_data):
-        """Callback to read RGBA from the color picker and convert it to cv2-compatible HSV."""
-        rgba = dpg.get_value(sender)
-
-        # Convert DPG's RGBA to cv2's HSV
-        h, s, v = self.get_hsv_for_cv2(rgba)
-
-        log.info(f"Color Picker: {user_data}: H={h}, S={s}, V={v}")
-        if 'upper' in user_data:
-            self.upper_hue.value = h
-            self.upper_saturation.value = s
-            self.upper_value.value = v
-        elif 'lower' in user_data:
-            self.lower_hue.value = h
-            self.lower_saturation.value = s
-            self.lower_value.value = v
-
-    def _blend_mode_select_callback(self, sender, app_data, user_data):
-        if MixModes.ALPHA_BLEND.name in app_data:
-            self.blend_mode.value = 0
-            dpg.configure_item("alpha_blend", show=True)
-            dpg.configure_item("alpha_blend_reset", show=False)            
-
-            dpg.configure_item("upper_chroma", show=False)
-            dpg.configure_item("lower_chroma", show=False)
-            dpg.configure_item("luma_threshold", show=False)
-            dpg.configure_item("luma_threshold_reset", show=False)
-            dpg.configure_item("luma_selection", show=False)
-            dpg.configure_item("luma_selection_reset", show=False)
-        elif MixModes.LUMA_KEY.name in app_data:
-            self.blend_mode.value = MixModes.LUMA_KEY.value
-            dpg.configure_item("luma_threshold", show=True)
-            dpg.configure_item("luma_threshold_reset", show=True)
-            dpg.configure_item("luma_selection", show=True)
-            dpg.configure_item("luma_selection_reset", show=True)
-
-            dpg.configure_item("alpha_blend", show=False)
-            dpg.configure_item("alpha_blend_reset", show=False)                        
-            dpg.configure_item("upper_chroma", show=False)
-            dpg.configure_item("lower_chroma", show=False)
-        elif MixModes.CHROMA_KEY.name in app_data:
-            self.blend_mode.value = MixModes.CHROMA_KEY.value
-            dpg.configure_item("upper_chroma", show=True)
-            dpg.configure_item("lower_chroma", show=True)
-            
-            dpg.configure_item("alpha_blend", show=False)
-            dpg.configure_item("alpha_blend_reset", show=False)            
-            dpg.configure_item("luma_threshold", show=False)
-            dpg.configure_item("luma_threshold_reset", show=False)
-            dpg.configure_item("luma_selection", show=False)
-            dpg.configure_item("luma_selection_reset", show=False)
-
-    def _file_select_callback(self, sender, app_data, user_data):
-        file_name, file_extension = os.path.splitext(app_data['file_path_name'])
-
-
-        if "1" in user_data:
-            self.video_file_name1 = file_name
-            if ".mp4" in file_extension:
-                pass
-            else:
-                pass
-        elif "2" in user_data:
-            self.video_file_name2 = file_name
-            if ".mp4" in file_extension:
-                pass
-            else:
-                pass
-
-    def select_source1_file(self, sender, app_data):
-        self.video_file_name1 = app_data
-
-    def select_source2_file(self, sender, app_data):
-        self.video_file_name2 = app_data

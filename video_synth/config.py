@@ -1,10 +1,9 @@
-from effects import EffectManager
 import logging
+from enum import StrEnum, IntEnum, auto
 # from midi_input import *
 
 """Module to store basic global variables and effects manager"""
 
-from enum import StrEnum, auto
 
 class ParentClass(StrEnum):
     """Enumeration for different parent classes of parameters."""
@@ -15,10 +14,19 @@ class ParentClass(StrEnum):
     SRC_2_ANIMATIONS = "#0B5C9C"
     MIXER = "#B53D3D"
 
-class SourceIndex:
+
+class SourceIndex(IntEnum):
     SRC_1 = 0
     SRC_2 = 1
     POST = 2
+
+
+class WidgetType(StrEnum):
+    SLIDER = auto()
+    DROPDOWN = auto()
+    RADIO = auto()
+    SPLIT_ROW_SLIDER = auto()
+    SPLIT_ROW_DROPDOWN = auto()
 
 # default argparse values
 DEFAULT_NUM_OSC = 5 
@@ -37,3 +45,5 @@ ESCAPE_KEYS = [ord('q'), ord('Q'), 27] # 27 is escape key
 
 # effects = EffectManager(ParentClass.SRC_1_EFFECTS) # initialized with params in main.py
 
+def enum_names(enum):
+    return [enum(e).name for e in enum]

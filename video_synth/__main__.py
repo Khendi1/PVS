@@ -77,6 +77,17 @@ def parse_args():
         choices=['dearpygui', 'pyqt'],
         help='Choose which GUI framework to use: dearpygui or pyqt'
     )
+    parser.add_argument(
+        '--fullscreen',
+        action='store_true',  # This makes it a boolean flag
+        help='Launch the video output window in fullscreen mode.'
+    )
+    parser.add_argument(
+        '--layout',
+        default='split',
+        choices=['split', 'tabbed'],
+        help='Choose the GUI layout: "split" for side-by-side top panes, "tabbed" for a single top pane with tabs.'
+    )
     parser.print_help()
     return parser.parse_args()
 
@@ -140,7 +151,7 @@ def identify_midi_ports(params, controller_names):
 
 
 """Video processing loop"""
-def video_loop(mixer, effects, should_quit):
+def video_loop(mixer, effects, should_quit, fullscreen=False):
     wet_frame = dry_frame = mixer.get_mixed_frame()
     if dry_frame is None:
         log.error("Failed to get initial frame from mixer. Exiting video loop.")
@@ -150,7 +161,8 @@ def video_loop(mixer, effects, should_quit):
     frame_count = 0
     
     cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
-    cv2.setWindowProperty("Modified Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    if fullscreen:
+        cv2.setWindowProperty("Modified Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     while not should_quit.is_set():
         dry_frame = mixer.get_mixed_frame()
@@ -177,7 +189,7 @@ def video_loop(mixer, effects, should_quit):
 
 
 """ Main app setup and loop """
-def main(num_osc, devices, controller_names, gui_choice):
+def main(num_osc, devices, controller_names, gui_choice, fullscreen, layout):
 
     log.info("Initializing video synthesizer... Press 'q' or 'ESC' to quit")
 
@@ -198,7 +210,7 @@ def main(num_osc, devices, controller_names, gui_choice):
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     
     app = QApplication(sys.argv)
-    main_window = PyQTGUI(effects)
+    main_window = PyQTGUI(effects, layout)
 
     main_window.show()
     
@@ -206,7 +218,7 @@ def main(num_osc, devices, controller_names, gui_choice):
     
     video_thread = threading.Thread(
         target=video_loop, 
-        args=(mixer, effects, should_quit)
+        args=(mixer, effects, should_quit, fullscreen)
     )
     video_thread.start()
     
@@ -232,4 +244,4 @@ def main(num_osc, devices, controller_names, gui_choice):
 if __name__ == "__main__":
     args = parse_args()
     log = config_log(args.log_level)
-    main(args.osc, args.devices, CONTROLLER_NAMES, args.gui)
+    main(args.osc, args.devices, CONTROLLER_NAMES, args.gui, args.fullscreen, args.layout)

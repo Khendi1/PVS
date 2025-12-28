@@ -33,6 +33,7 @@ from enum import IntEnum, Enum, auto
 from luma import *
 from gui_elements import ButtonsTable
 from generators import OscBank
+from config import WidgetType, enum_names
 
 log = logging.getLogger(__name__)
 
@@ -560,13 +561,13 @@ class Pixels(EffectBase):
         self.image_width = image_width
         self.image_height = image_height
 
-        self.sharpen_type = params.add("sharpen_type", 0, len(SharpenType)-1, 0, subclass, parent)
+        self.sharpen_type = params.add("sharpen_type", 0, len(SharpenType)-1, 0, subclass, parent, WidgetType.RADIO, SharpenType)
         self.sharpen_intensity = params.add("sharpen_intensity", 1.0, 8.0, 4.0, subclass, parent)
         self.mask_blur = params.add("mask_blur", 1, 10, 5, subclass, parent)
         self.k_size = params.add("k_size", 0, 11, 3, subclass, parent)
 
         self.blur_type = params.add(
-            "blur_type", 0, len(BlurType)-1, 1, subclass, parent
+            "blur_type", 0, len(BlurType)-1, 1, subclass, parent, WidgetType.RADIO, BlurType
         )
         self.blur_kernel_size = params.add("blur_kernel_size", 1, 100, 1, subclass, parent)
 
@@ -575,7 +576,7 @@ class Pixels(EffectBase):
             raise ValueError("noise_type must be an instance of NoiseType Enum.")
 
         self._noise_type = params.add(
-            "noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, noise_type.value, subclass, parent
+            "noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, noise_type.value, subclass, parent, WidgetType.RADIO, NoiseType
         )
         self._noise_intensity = params.add("noise_intensity", 0.0, 1.0, 0.1, subclass, parent)
 
@@ -880,7 +881,7 @@ class Warp(EffectBase):
         self.params = params
         self.width = image_width
         self.height = image_height
-        self.warp_type = params.add("warp_type", 0, len(WarpType)-1, 0, subclass, parent)
+        self.warp_type = params.add("warp_type", 0, len(WarpType)-1, 0, subclass, parent, WidgetType.DROPDOWN, WarpType)
         self.warp_angle_amt = params.add("warp_angle_amt", 0, 360, 30, subclass, parent)
         self.warp_radius_amt = params.add("warp_radius_amt", 0, 360, 30, subclass, parent)
         self.warp_speed = params.add("warp_speed", 0, 100, 10, subclass, parent)
@@ -1625,22 +1626,9 @@ class ImageNoiser(EffectBase):
             raise ValueError("noise_type must be an instance of NoiseType Enum.")
 
         self._noise_type = params.add(
-            "noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, noise_type.value, subclass, parent
+            "noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, NoiseType.NONE.value, subclass, parent, WidgetType.RADIO, NoiseType
         )
         self._noise_intensity = params.add("noise_intensity", 0.0, 1.0, 0.1, subclass, parent)
-
-    @property
-    def noise_type(self) -> NoiseType:
-        """Get the current noise type."""
-        return self._noise_type.value
-
-    @noise_type.setter
-    def noise_type(self, new_type: NoiseType):
-        """Set the noise type."""
-        if not isinstance(new_type, NoiseType):
-            raise ValueError("noise_type must be an instance of NoiseType Enum.")
-        self._noise_type.value = new_type
-        log.debug(f"Noise type set to: {self._noise_type.value}")
 
     @property
     def noise_intensity(self) -> float:
@@ -2236,7 +2224,7 @@ class ShapeGenerator:
         subclass = self.__class__.__name__
 
         
-        self.shape_type = params.add("shape_type", 0, len(Shape)-1, Shape.RECTANGLE, subclass, parent)  # Shape type enum
+        self.shape_type = params.add("shape_type", 0, len(Shape)-1, Shape.RECTANGLE, subclass, parent, WidgetType.DROPDOWN, Shape)  # Shape type enum
         
         self.line_h = params.add("line_hue", 0, 179, 0, subclass, parent)  # Hue range for OpenCV is 0-
         self.line_s = params.add("line_sat", 0, 255, 255, subclass, parent)  # Saturation range

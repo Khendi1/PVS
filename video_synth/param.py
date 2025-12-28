@@ -1,5 +1,6 @@
 import random
 import logging
+from config import WidgetType
 
 
 class ParamTable:
@@ -92,7 +93,7 @@ class ParamTable:
         """Returns a view of the Param objects."""
         return self.params.values()
     
-    def add(self, name: str, min: int | float, max: int | float, default_val: int | float, subclass=None, parent=None) -> 'Param':
+    def add(self, name: str, min: int | float, max: int | float, default_val: int | float, subclass=None, parent=None, type=WidgetType.SLIDER, options=None) -> 'Param':
         """
         Adds a new parameter to the table.
         Args:
@@ -107,7 +108,7 @@ class ParamTable:
             ValueError: If a parameter with the given name already exists.
         """
         if name not in self.params:
-            self.params[name] = Param(name, min, max, default_val, family=subclass, parent=parent)
+            self.params[name] = Param(name, min, max, default_val, family=subclass, parent=parent, type=type, options=options)
             return self.params[name]
         else:
             raise ValueError(f"Parameter '{name}' already exists.")
@@ -117,7 +118,7 @@ class Param:
     Represents a single parameter with a name, min/max bounds, default value,
     and its current value. Includes clamping and type conversion.
     """
-    def __init__(self, name, min, max, default_val, family=None, parent=None):
+    def __init__(self, name, min, max, default_val, family=None, parent=None, type=WidgetType.SLIDER, options=None):
         """
         Initializes a Param object.
         Args:
@@ -133,6 +134,9 @@ class Param:
         self.default_val = default_val
         self.family = "None" if family is None else family
         self.parent = parent
+        self.type = type
+        self.options = options
+
         
         # Initialize the internal _value attribute using the setter
         # This ensures initial default_val is clamped and type-casted correctly

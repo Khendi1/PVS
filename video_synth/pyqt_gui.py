@@ -1,10 +1,10 @@
 import sys
 import numpy as np
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QPushButton, QGroupBox, QRadioButton, QScrollArea, QToolButton, QSizePolicy
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QPushButton, QGroupBox, QRadioButton, QScrollArea, QToolButton, QSizePolicy, QLineEdit, QTabWidget, QComboBox
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSignal
 import logging
 from param import ParamTable, Param
-from config import ParentClass, SourceIndex # Import the title from config
+from config import ParentClass, SourceIndex, WidgetType
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class CollapsibleGroupBox(QWidget):
         main_layout.addWidget(self.toggle_button)
         main_layout.addWidget(self.content_area)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        self.content_layout.setContentsMargins(5, 0, 5, 5)
+        self.content_layout.setContentsMargins(0, 0, 5, 5)
 
     def toggle_content(self):
         checked = self.toggle_button.isChecked()
@@ -43,7 +43,7 @@ class CollapsibleGroupBox(QWidget):
 
 
 class PyQTGUI(QMainWindow):
-    def __init__(self, effects):
+    def __init__(self, effects, layout='split'):
         super().__init__()
 
         self.src_1_params = effects[SourceIndex.SRC_1].params
@@ -56,36 +56,61 @@ class PyQTGUI(QMainWindow):
 
         self.setWindowTitle("PyQt Control Panel")
 
-        # Top Section: Two horizontal panes
         # Set up the main layout (root vertical layout)
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.root_layout = QVBoxLayout(self.central_widget)
 
-        self.top_horizontal_layout = QHBoxLayout()
-        self.root_layout.addLayout(self.top_horizontal_layout)
+        if layout == 'tabbed':
+            # Create a tab widget for the top section
+            self.top_tab_widget = QTabWidget()
+            self.root_layout.addWidget(self.top_tab_widget)
 
-        # Left Pane (SRC_1 Animations and Effects)
-        self.left_pane_widget = QWidget()
-        self.layout = QVBoxLayout(self.left_pane_widget) # This will be the layout for the left scroll area
-        self.layout.addStretch(1) # Add stretch to push content to the top
+            # Left Pane (SRC_1) as a tab
+            self.left_pane_widget = QWidget()
+            self.layout = QVBoxLayout(self.left_pane_widget)
+            self.layout.addStretch(1)
+            left_scroll_area = QScrollArea()
+            left_scroll_area.setWidgetResizable(True)
+            left_scroll_area.setWidget(self.left_pane_widget)
+            left_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            self.top_tab_widget.addTab(left_scroll_area, "Source 1")
 
-        self.left_scroll_area = QScrollArea()
-        self.left_scroll_area.setWidgetResizable(True)
-        self.left_scroll_area.setWidget(self.left_pane_widget)
-        self.left_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.top_horizontal_layout.addWidget(self.left_scroll_area)
+            # Right Pane (SRC_2) as a tab
+            self.right_pane_widget = QWidget()
+            self.second_pane_layout = QVBoxLayout(self.right_pane_widget)
+            self.second_pane_layout.addStretch(1)
+            right_scroll_area = QScrollArea()
+            right_scroll_area.setWidgetResizable(True)
+            right_scroll_area.setWidget(self.right_pane_widget)
+            right_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            self.top_tab_widget.addTab(right_scroll_area, "Source 2")
 
-        # Right Pane (SRC_2 Animations and Effects)
-        self.right_pane_widget = QWidget()
-        self.second_pane_layout = QVBoxLayout(self.right_pane_widget) # This will be the layout for the right scroll area
-        self.second_pane_layout.addStretch(1) # Add stretch to push content to the top
+        else: # 'split' layout (default)
+            self.top_horizontal_layout = QHBoxLayout()
+            self.root_layout.addLayout(self.top_horizontal_layout)
 
-        self.right_scroll_area = QScrollArea()
-        self.right_scroll_area.setWidgetResizable(True)
-        self.right_scroll_area.setWidget(self.right_pane_widget)
-        self.right_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.top_horizontal_layout.addWidget(self.right_scroll_area)
+            # Left Pane (SRC_1 Animations and Effects)
+            self.left_pane_widget = QWidget()
+            self.layout = QVBoxLayout(self.left_pane_widget) 
+            self.layout.addStretch(1)
+
+            self.left_scroll_area = QScrollArea()
+            self.left_scroll_area.setWidgetResizable(True)
+            self.left_scroll_area.setWidget(self.left_pane_widget)
+            self.left_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            self.top_horizontal_layout.addWidget(self.left_scroll_area)
+
+            # Right Pane (SRC_2 Animations and Effects)
+            self.right_pane_widget = QWidget()
+            self.second_pane_layout = QVBoxLayout(self.right_pane_widget)
+            self.second_pane_layout.addStretch(1)
+
+            self.right_scroll_area = QScrollArea()
+            self.right_scroll_area.setWidgetResizable(True)
+            self.right_scroll_area.setWidget(self.right_pane_widget)
+            self.right_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            self.top_horizontal_layout.addWidget(self.right_scroll_area)
 
         # Bottom Section: Full width for Mixer, Post Effects, Uncategorized
         self.bottom_pane_widget = QWidget()
@@ -102,9 +127,8 @@ class PyQTGUI(QMainWindow):
 
     def create_ui(self):
         parent_groups = {}
-        print("--- DEBUG: create_ui ---")
-        for params in [self.src_1_params, self.src_2_params, self.post_params]:
-            print(f"DEBUG: Params group: {[param.name for param in params.values()]}")
+        # for params in [self.src_1_params, self.src_2_params, self.post_params]:
+        #     print(f"DEBUG: Params group: {[param.name for param in params.values()]}")
         for params in [self.src_1_params.values(), self.src_2_params.values(), self.post_params.values()]:
             for param in params:
                 # print(f"DEBUG: Processing param: {param}, param.parent: {param.parent}")
@@ -113,10 +137,14 @@ class PyQTGUI(QMainWindow):
                 else:
                     parent_key = param.parent # param.parent is a ParentClass enum member
 
+                if not isinstance(parent_key, (str, int, float, bool, tuple, type(None), ParentClass)):
+                    log.warning(f"Unhashable parent_key for param '{param.name}': type={type(parent_key)}, value={parent_key}. Assigning to 'Uncategorized'.")
+                    parent_key = "Uncategorized"
+
                 if parent_key not in parent_groups:
                     parent_groups[parent_key] = []
                 parent_groups[parent_key].append(param)
-        print(f"DEBUG: parent_groups: {parent_groups.keys()}")
+        # print(f"DEBUG: parent_groups: {parent_groups.keys()}")
 
         for parent_enum_or_str, params_in_group in parent_groups.items():
             if parent_enum_or_str == "Uncategorized":
@@ -165,48 +193,54 @@ class PyQTGUI(QMainWindow):
     def create_param_widget(self, param: Param):
         widget = QWidget()
         layout = QHBoxLayout(widget)
-        layout.setContentsMargins(0, 0, 0, 0) # Remove margins for individual parameter layout
+        layout.setContentsMargins(0, 0, 0, 0)
 
-        # Label
         label = QLabel(param.name)
-        label.setFixedWidth(150)
+        label.setFixedWidth(100)
         layout.addWidget(label)
 
-        # Heuristic for widget type
-        if isinstance(param.default_val, int) and param.max - param.min <= 0:
-            # Radio buttons for small integer ranges
+        if param.type == WidgetType.RADIO:
             radio_button_group = QWidget()
             radio_layout = QHBoxLayout(radio_button_group)
-            for i in range(int(param.min), int(param.max) + 1):
-                radio_button = QRadioButton(str(i))
-                radio_button.toggled.connect(lambda checked, p=param, v=i: self.on_radio_change(p, v, checked))
-                if i == param.value:
+            for option in param.options:
+                radio_button = QRadioButton(str(param.options(option).name))
+                radio_button.toggled.connect(lambda checked, p=param, v=option: self.on_radio_change(p, v, checked))
+                if option == param.value:
                     radio_button.setChecked(True)
                 radio_layout.addWidget(radio_button)
             layout.addWidget(radio_button_group)
-        else:
-            # Slider for other types
+
+        elif param.type == WidgetType.DROPDOWN:
+            combo_box = QComboBox()
+            combo_box.addItems([str(o) for o in param.options])
+            combo_box.setCurrentText(str(param.value))
+            combo_box.currentTextChanged.connect(lambda text, p=param: self.on_dropdown_change(p, text))
+            layout.addWidget(combo_box)
+
+        else:  # Default to SLIDER
             slider = QSlider(Qt.Orientation.Horizontal)
-            value_label = QLabel(str(param.value))
+            value_input = QLineEdit()
+            value_input.setFixedWidth(50)
+
             if isinstance(param.default_val, float):
-                # Scale float to int for slider
                 slider.setRange(int(param.min * 1000), int(param.max * 1000))
                 slider.setValue(int(param.value * 1000))
+                value_input.setText(str(round(param.value, 3)))
             else:
                 slider.setRange(int(param.min), int(param.max))
                 slider.setValue(param.value)
-            
+                value_input.setText(str(param.value))
+
             slider.valueChanged.connect(lambda value, p=param: self.on_slider_change(p, value))
             layout.addWidget(slider)
             
-            # Value Label
-            slider.setProperty("value_label", value_label) # Store reference
-            layout.addWidget(value_label)
+            slider.setProperty("value_input", value_input)
+            value_input.editingFinished.connect(lambda p=param, vi=value_input, s=slider: self.on_text_input_change(p, vi, s))
+            layout.addWidget(value_input)
 
-
-        # Reset Button
-        reset_button = QPushButton("Reset")
-        reset_button.clicked.connect(lambda: self.on_reset_click(param, widget)) # pass widget to find control
+        reset_button = QPushButton("↩️")
+        reset_button.setFixedWidth(25)
+        reset_button.clicked.connect(lambda: self.on_reset_click(param, widget))
         layout.addWidget(reset_button)
 
         return widget
@@ -217,19 +251,48 @@ class PyQTGUI(QMainWindow):
         else:
             param.value = value
         
-        # Find the associated value label and update it
         slider = self.sender()
-        value_label = slider.property("value_label")
-        if value_label:
-            value_label.setText(str(round(param.value, 3)))
+        value_input = slider.property("value_input")
+        if value_input:
+            value_input.setText(str(round(param.value, 3) if isinstance(param.default_val, float) else param.value))
+
+    def on_text_input_change(self, param: Param, value_input: QLineEdit, slider: QSlider):
+        try:
+            new_value_str = value_input.text()
+            if isinstance(param.default_val, float):
+                new_value = float(new_value_str)
+            else:
+                new_value = int(new_value_str)
+
+            new_value = max(param.min, min(param.max, new_value))
+            param.value = new_value
+
+            if isinstance(param.default_val, float):
+                slider.setValue(int(param.value * 1000))
+            else:
+                slider.setValue(param.value)
+            value_input.setText(str(round(param.value, 3) if isinstance(param.default_val, float) else param.value))
+        except ValueError:
+            value_input.setText(str(round(param.value, 3) if isinstance(param.default_val, float) else param.value))
 
     def on_radio_change(self, param: Param, value, checked):
         if checked:
+            param.value = int(param.options(value).value)
+
+    def on_dropdown_change(self, param: Param, text_value):
+        try:
+            if isinstance(param.default_val, int):
+                value = int(text_value)
+            elif isinstance(param.default_val, float):
+                value = float(text_value)
+            else:
+                value = text_value
             param.value = value
+        except (ValueError, TypeError):
+            pass # Ignore if conversion fails
 
     def on_reset_click(self, param: Param, widget: QWidget):
         param.reset()
-        # Find the control and reset it
         slider = widget.findChild(QSlider)
         if slider:
             if isinstance(param.default_val, float):
@@ -237,12 +300,21 @@ class PyQTGUI(QMainWindow):
             else:
                 slider.setValue(param.value)
         
+        value_input = widget.findChild(QLineEdit)
+        if value_input:
+            value_input.setText(str(round(param.value, 3) if isinstance(param.default_val, float) else param.value))
+
         radio_buttons = widget.findChildren(QRadioButton)
         if radio_buttons:
             for rb in radio_buttons:
-                if int(rb.text()) == param.value:
+                if rb.text() == str(param.value):
                     rb.setChecked(True)
                     break
+        
+        combo_box = widget.findChild(QComboBox)
+        if combo_box:
+            combo_box.setCurrentText(str(param.value))
+
 
     def closeEvent(self, event):
         """Handle the window closing event."""
