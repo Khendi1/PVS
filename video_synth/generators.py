@@ -199,6 +199,8 @@ class Oscillator:
         """
         Unlinks the oscillator parameters from the parameter object.
         """
+        if self.linked_param:
+            self.linked_param.linked_oscillator = None
         self.linked_param = None
 
     def update_range(self, min, max):
@@ -252,6 +254,33 @@ class OscBank():
         This method allows deleting elements using the del keyword.
         """
         del self.osc_bank[index]
+
+    def add_oscillator(self, name, frequency=0.5, amplitude=1.0, phase=0.0, shape=1):
+        osc = Oscillator(params=self.params, name=name, frequency=frequency, amplitude=amplitude, phase=phase, shape=shape)
+        self.osc_bank.append(osc)
+        self.len = len(self.osc_bank)
+        return osc
+
+    def remove_oscillator(self, osc):
+        # When removing an oscillator, we need to clean up its parameters from the main param table
+        param_names_to_remove = [
+            f"{osc.name}_frequency",
+            f"{osc.name}_amplitude",
+            f"{osc.name}_phase",
+            f"{osc.name}_seed",
+            f"{osc.name}_shape",
+            f"{osc.name}_noise_octaves",
+            f"{osc.name}_noise_persistence",
+            f"{osc.name}_noise_lacunarity",
+            f"{osc.name}_noise_repeat",
+            f"{osc.name}_noise_base"
+        ]
+        for param_name in param_names_to_remove:
+            if param_name in self.params.params:
+                del self.params.params[param_name]
+
+        self.osc_bank.remove(osc)
+        self.len = len(self.osc_bank)
 
     def _shape_callback(self, sender, app_data, user_data):
         for i in range(len(self.osc_bank)):

@@ -136,6 +136,7 @@ class Param:
         self.parent = parent
         self.type = type
         self.options = options
+        self.linked_oscillator = None
 
         
         # Initialize the internal _value attribute using the setter
@@ -158,21 +159,21 @@ class Param:
         Assigning to `param_instance.value = new_val` will call this method.
         It handles clamping, type casting, and specific logic for certain parameters.
         """
-        # Clamp the new_value within min and max
-        if new_value < self.min:
-            clamped_value = self.min
-        elif new_value > self.max:
-            clamped_value = self.max
-        else:
-            clamped_value = new_value
+        clamped_value = new_value
+        if self.type not in [WidgetType.DROPDOWN, WidgetType.RADIO]:
+            # Clamp the new_value within min and max
+            if new_value < self.min:
+                clamped_value = self.min
+            elif new_value > self.max:
+                clamped_value = self.max
         
         # Type cast the clamped_value to match the default_val's type
         if isinstance(self.default_val, float):
             self._value = float(clamped_value)
-        elif isinstance(self.default_val, int):
-            self._value = int(clamped_value)
+        elif isinstance(self.default_val, int) and not isinstance(clamped_value, str):
+             self._value = int(clamped_value)
         else:
-            # For other types (like bool), directly assign
+            # For other types (like bool or string), directly assign
             self._value = clamped_value
 
         # Apply specific logic for certain params

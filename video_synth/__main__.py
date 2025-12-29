@@ -210,7 +210,7 @@ def main(num_osc, devices, controller_names, gui_choice, fullscreen, layout):
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     
     app = QApplication(sys.argv)
-    main_window = PyQTGUI(effects, layout)
+    main_window = PyQTGUI(effects, layout, mixer)
 
     main_window.show()
     
