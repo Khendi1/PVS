@@ -15,21 +15,19 @@ import sys
 import argparse
 import logging
 import cv2
-import dearpygui.dearpygui as dpg 
+import signal
 import threading
-from config import *
-from generators import OscBank
-from midi_input import *
-from param import ParamTable
-from mix import Mixer
-from gui_elements import ButtonsTable
 import numpy as np
+
+from config import *
+# from generators import OscBank
+from midi_input import *
+from mix import Mixer
 from effects import EffectManager
 
 from PyQt6.QtWidgets import QApplication, QGridLayout
 from PyQt6.QtGui import QImage, QPixmap
 from pyqt_gui import PyQTGUI
-import signal
 
 
 """Creates ArgumentParser, configures arguments, returns parser"""
@@ -69,13 +67,6 @@ def parse_args():
         default= DEFAULT_SAVE_FILE,
         type=str,
         help='Use an alternate save file. Must still be located in the save directory'
-    )
-    parser.add_argument(
-        '-g',
-        '--gui',
-        default='dearpygui',
-        choices=['dearpygui', 'pyqt'],
-        help='Choose which GUI framework to use: dearpygui or pyqt'
     )
     parser.add_argument(
         '--fullscreen',
@@ -202,7 +193,7 @@ def video_loop(mixer, effects, should_quit, gui, fullscreen=False):
 
 
 """ Main app setup and loop """
-def main(num_osc, devices, controller_names, gui_choice, fullscreen, layout):
+def main(num_osc, devices, controller_names, fullscreen, layout):
 
     log.info("Initializing video synthesizer... Press 'q' or 'ESC' to quit")
 
@@ -257,4 +248,4 @@ def main(num_osc, devices, controller_names, gui_choice, fullscreen, layout):
 if __name__ == "__main__":
     args = parse_args()
     log = config_log(args.log_level)
-    main(args.osc, args.devices, CONTROLLER_NAMES, args.gui, args.fullscreen, args.layout)
+    main(args.osc, args.devices, CONTROLLER_NAMES, args.fullscreen, args.layout)
