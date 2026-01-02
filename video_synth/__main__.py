@@ -26,7 +26,7 @@ from gui_elements import ButtonsTable
 import numpy as np
 from effects import EffectManager
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QGridLayout
 from PyQt6.QtGui import QImage, QPixmap
 from pyqt_gui import PyQTGUI
 import signal
@@ -84,9 +84,9 @@ def parse_args():
     )
     parser.add_argument(
         '--layout',
-        default='split',
-        choices=['split', 'tabbed'],
-        help='Choose the GUI layout: "split" for side-by-side top panes, "tabbed" for a single top pane with tabs.'
+        default='quad',
+        choices=['split', 'tabbed', 'quad'],
+        help='Choose the GUI layout: "split" for side-by-side top panes, "tabbed" for a single top pane with tabs, or "quad" for a 2x2 grid.'
     )
     parser.print_help()
     return parser.parse_args()
@@ -151,7 +151,7 @@ def identify_midi_ports(params, controller_names):
 
 
 """Video processing loop"""
-def video_loop(mixer, effects, should_quit, fullscreen=False):
+def video_loop(mixer, effects, should_quit, gui, fullscreen=False):
     wet_frame = dry_frame = mixer.get_mixed_frame()
     if dry_frame is None:
         log.error("Failed to get initial frame from mixer. Exiting video loop.")
@@ -160,9 +160,13 @@ def video_loop(mixer, effects, should_quit, fullscreen=False):
     prev_frame = dry_frame.copy()
     frame_count = 0
     
-    cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
-    if fullscreen:
-        cv2.setWindowProperty("Modified Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    # Using a CV2 window is now conditional
+    use_cv2_window = not isinstance(gui.central_widget.layout(), QGridLayout)
+
+    if use_cv2_window:
+        cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
+        if fullscreen:
+            cv2.setWindowProperty("Modified Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     while not should_quit.is_set():
         dry_frame = mixer.get_mixed_frame()
@@ -179,13 +183,22 @@ def video_loop(mixer, effects, should_quit, fullscreen=False):
             dry_frame, wet_frame, prev_frame, frame_count
         )
         frame_count += 1
-
-        cv2.imshow('Modified Frame', wet_frame.astype(np.uint8))
-        if cv2.waitKey(1) & 0xFF in ESCAPE_KEYS:
-            break
         
-    log.info("Video loop for PyQt has gracefully stopped.")
-    cv2.destroyAllWindows()
+        if use_cv2_window:
+            cv2.imshow('Modified Frame', wet_frame.astype(np.uint8))
+            if cv2.waitKey(1) & 0xFF in ESCAPE_KEYS:
+                break
+        else:
+            # Convert frame to QImage and emit signal
+            rgb_image = cv2.cvtColor(wet_frame.astype(np.uint8), cv2.COLOR_BGR2RGB)
+            h, w, ch = rgb_image.shape
+            bytes_per_line = ch * w
+            qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
+            gui.video_frame_ready.emit(qt_image)
+
+    if use_cv2_window:
+        cv2.destroyAllWindows()
+    log.info("Video loop has gracefully stopped.")
 
 
 """ Main app setup and loop """
@@ -193,12 +206,12 @@ def main(num_osc, devices, controller_names, gui_choice, fullscreen, layout):
 
     log.info("Initializing video synthesizer... Press 'q' or 'ESC' to quit")
 
-    src_1_effects = EffectManager(ParentClass.SRC_1_EFFECTS, 640, 480)
-    src_2_effects = EffectManager(ParentClass.SRC_2_EFFECTS, 640, 480)
-    post_effects = EffectManager(ParentClass.POST_EFFECTS, 640, 480)
+    src_1_effects = EffectManager(ParentClass.SRC_1_EFFECTS, WIDTH, HEIGHT)
+    src_2_effects = EffectManager(ParentClass.SRC_2_EFFECTS, WIDTH, HEIGHT)
+    post_effects = EffectManager(ParentClass.POST_EFFECTS, WIDTH, HEIGHT)
     effects = (src_1_effects, src_2_effects, post_effects)
 
-    mixer = Mixer(effects, devices)
+    mixer = Mixer(effects, devices, WIDTH, HEIGHT)
 
     # Automatically identify and initialize midi controllers before creating the GUI
     CONTROLLER_NAMES = [] # Placeholder for now, assumed to be defined elsewhere
@@ -218,7 +231,7 @@ def main(num_osc, devices, controller_names, gui_choice, fullscreen, layout):
     
     video_thread = threading.Thread(
         target=video_loop, 
-        args=(mixer, effects, should_quit, fullscreen)
+        args=(mixer, effects, should_quit, main_window, fullscreen)
     )
     video_thread.start()
     

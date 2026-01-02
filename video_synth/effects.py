@@ -124,12 +124,12 @@ class EffectManager:
         self.parent = parent
         self.params = ParamTable()
         self.toggles = ButtonsTable()
-        self.oscs = OscBank(self.params, 5)
+        self.oscs = OscBank(self.params, 3)
         
         self.feedback = Feedback(self.params, width, height, self.parent)
         self.color = Color(self.params, self.parent)
         self.pixels = Pixels(self.params, width, height, parent=self.parent)
-        self.shapes = ShapeGenerator(self.params, width, height, parent=self.parent)
+        self.shapes = Shapes(self.params, width, height, parent=self.parent)
         self.patterns = Patterns(self.params, width, height, self.parent)
         self.reflector = Reflector(self.params, parent=self.parent)                    
         self.sync = Sync(self.params, self.parent) 
@@ -561,13 +561,13 @@ class Pixels(EffectBase):
         self.image_width = image_width
         self.image_height = image_height
 
-        self.sharpen_type = params.add("sharpen_type", 0, len(SharpenType)-1, 0, subclass, parent, WidgetType.RADIO, SharpenType)
+        self.sharpen_type = params.add("sharpen_type", 0, len(SharpenType)-1, 0, subclass, parent, WidgetType.DROPDOWN, SharpenType)
         self.sharpen_intensity = params.add("sharpen_intensity", 1.0, 8.0, 4.0, subclass, parent)
         self.mask_blur = params.add("mask_blur", 1, 10, 5, subclass, parent)
         self.k_size = params.add("k_size", 0, 11, 3, subclass, parent)
 
         self.blur_type = params.add(
-            "blur_type", 0, len(BlurType)-1, 1, subclass, parent, WidgetType.RADIO, BlurType
+            "blur_type", 0, len(BlurType)-1, 1, subclass, parent, WidgetType.DROPDOWN, BlurType
         )
         self.blur_kernel_size = params.add("blur_kernel_size", 1, 100, 1, subclass, parent)
 
@@ -576,7 +576,7 @@ class Pixels(EffectBase):
             raise ValueError("noise_type must be an instance of NoiseType Enum.")
 
         self._noise_type = params.add(
-            "noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, noise_type.value, subclass, parent, WidgetType.RADIO, NoiseType
+            "noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, noise_type.value, subclass, parent, WidgetType.DROPDOWN, NoiseType
         )
         self._noise_intensity = params.add("noise_intensity", 0.0, 1.0, 0.1, subclass, parent)
 
@@ -1073,7 +1073,7 @@ class Reflector(EffectBase):
         if not isinstance(mode, ReflectionMode):
             raise ValueError("mode must be an instance of ReflectionMode Enum.")
         self._mode = params.add(
-            "reflection_mode", 0, len(ReflectionMode) - 1, ReflectionMode.NONE.value, subclass, parent
+            "reflection_mode", 0, len(ReflectionMode) - 1, ReflectionMode.NONE.value, subclass, parent, WidgetType.DROPDOWN, ReflectionMode
         )
         self.segments = params.add("reflector_segments",0,10,0,subclass, parent)
         self.zoom = params.add("reflector_z", 0.5, 2, 1.0, subclass, parent)
@@ -1385,7 +1385,7 @@ class Feedback(EffectBase):
         self.temporal_filter = params.add("temporal_filter", 0, 1.0, 0.0, subclass, parent)
         self.feedback_luma_threshold = params.add("feedback_luma_threshold", 0, 255, 0, subclass, parent)
         self.luma_select_mode = params.add(
-            "luma_select_mode", LumaMode.WHITE.value, LumaMode.BLACK.value, LumaMode.WHITE.value, subclass, parent
+            "luma_select_mode", LumaMode.WHITE.value, LumaMode.BLACK.value, LumaMode.WHITE.value, subclass, parent, WidgetType.RADIO, LumaMode
         )
         self.buffer_select = params.add("buffer_frame_select", -1, 20, -1, subclass, parent)
         self.buffer_frame_blend = params.add("buffer_frame_blend", 0.0, 1.0, 0.0, subclass, parent)
@@ -1626,7 +1626,7 @@ class ImageNoiser(EffectBase):
             raise ValueError("noise_type must be an instance of NoiseType Enum.")
 
         self._noise_type = params.add(
-            "noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, NoiseType.NONE.value, subclass, parent, WidgetType.RADIO, NoiseType
+            "noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, NoiseType.NONE.value, subclass, parent, WidgetType.DROPDOWN, NoiseType
         )
         self._noise_intensity = params.add("noise_intensity", 0.0, 1.0, 0.1, subclass, parent)
 
@@ -2213,7 +2213,7 @@ class Glitch(EffectBase):
         return frame
 
 
-class ShapeGenerator:
+class Shapes:
 
     def __init__(self, params, width, height, shape_x_shift=0, shape_y_shift=0, parent=None):
         self.params = params

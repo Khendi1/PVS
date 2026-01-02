@@ -7,6 +7,7 @@ import noise
 from param import Param
 import logging
 import dearpygui.dearpygui as dpg
+from config import ParentClass
 
 log = logging.getLogger(__name__)
 
@@ -67,20 +68,22 @@ class OscillatorShape(Enum):
 class Oscillator:
     def __init__(self, params, name, frequency, amplitude, phase, shape, seed=0, linked_param_name=None, max_amplitude=100, min_amplitude=-100):
         self.name = name
+        parent = ParentClass.GENERAL_LFOS
+        subclass = "Oscillator"
         self.param_max = max_amplitude
         self.param_min = min_amplitude
-        self.frequency = params.add(f"{name}_frequency", 0, 2, frequency)
-        self.amplitude = params.add(f"{name}_amplitude", min_amplitude, max_amplitude, amplitude)
+        self.frequency = params.add(f"{name}_frequency", 0, 2, frequency, parent, subclass)
+        self.amplitude = params.add(f"{name}_amplitude", min_amplitude, max_amplitude, amplitude, parent, subclass)
         # self.amplitude = params.add(f"{name}_amplitude", self.param_min, self.param_max, amplitude)
-        self.phase = params.add(f"{name}_phase", 0, 360, phase)
-        self.seed = params.add(f"{name}_seed", 0, 100, seed) # TODO: Change ambiguous name to something more descriptive
-        self.shape = params.add(f"{name}_shape", 0, len(OscillatorShape)-1, shape)
+        self.phase = params.add(f"{name}_phase", 0, 360, phase, parent, subclass)
+        self.seed = params.add(f"{name}_seed", 0, 100, seed, parent, subclass) # TODO: Change ambiguous name to something more descriptive
+        self.shape = params.add(f"{name}_shape", 0, len(OscillatorShape)-1, shape, parent, subclass)
         
-        self.noise_octaves = params.add(f"{name}_noise_octaves", 1, 10, 6)
-        self.noise_persistence = params.add(f"{name}_noise_persistence", 0.1, 1.0, 0.5)
-        self.noise_lacunarity = params.add(f"{name}_noise_lacunarity", 1.0, 2.0, 2.0)
-        self.noise_repeat = params.add(f"{name}_noise_repeat", 1, 1000, 100)
-        self.noise_base = params.add(f"{name}_noise_base", 0, 1000, 456)
+        self.noise_octaves = params.add(f"{name}_noise_octaves", 1, 10, 6, parent, subclass)
+        self.noise_persistence = params.add(f"{name}_noise_persistence", 0.1, 1.0, 0.5, parent, subclass)
+        self.noise_lacunarity = params.add(f"{name}_noise_lacunarity", 1.0, 2.0, 2.0, parent, subclass)
+        self.noise_repeat = params.add(f"{name}_noise_repeat", 1, 1000, 100, parent, subclass)
+        self.noise_base = params.add(f"{name}_noise_base", 0, 1000, 456, parent, subclass)
 
         self.sample_rate = 30
         self.direction = 1 
@@ -219,14 +222,14 @@ class Oscillator:
 class OscBank():
     def __init__(self, params, num_osc):
         self.len = num_osc
-        self.osc_bank = []
+        self.oscillators = []
         self.params = params
-        temp = [self.osc_bank.append(Oscillator(params=params, name=f"osc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=i%4)) \
+        temp = [self.oscillators.append(Oscillator(params=params, name=f"osc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=i%4)) \
                          for i in range(num_osc)]        
-        log.info(f"Oscillator bank initialized with {len(self.osc_bank)} oscillators.")
+        log.info(f"Oscillator bank initialized with {len(self.oscillators)} oscillators.")
 
     def update(self):
-        for osc in self.osc_bank:
+        for osc in self.oscillators:
             if osc.linked_param is not None:
                 osc.get_next_value()
 
@@ -235,30 +238,30 @@ class OscBank():
         This method allows accessing elements using square bracket notation.
         It delegates the actual access to the internal list.
         """
-        return self.osc_bank[index]
+        return self.oscillators[index]
 
     def __len__(self):
         """
         This method allows using len() on the object.
         """
-        return len(self.osc_bank)
+        return len(self.oscillators)
 
     def __setitem__(self, index, value):
         """
         This method allows modifying elements using square bracket notation.
         """
-        self.osc_bank[index] = value
+        self.oscillators[index] = value
 
     def __delitem__(self, index):
         """
         This method allows deleting elements using the del keyword.
         """
-        del self.osc_bank[index]
+        del self.oscillators[index]
 
     def add_oscillator(self, name, frequency=0.5, amplitude=1.0, phase=0.0, shape=1):
         osc = Oscillator(params=self.params, name=name, frequency=frequency, amplitude=amplitude, phase=phase, shape=shape)
-        self.osc_bank.append(osc)
-        self.len = len(self.osc_bank)
+        self.oscillators.append(osc)
+        self.len = len(self.oscillators)
         return osc
 
     def remove_oscillator(self, osc):
@@ -279,13 +282,13 @@ class OscBank():
             if param_name in self.params.params:
                 del self.params.params[param_name]
 
-        self.osc_bank.remove(osc)
-        self.len = len(self.osc_bank)
+        self.oscillators.remove(osc)
+        self.len = len(self.oscillators)
 
     def _shape_callback(self, sender, app_data, user_data):
-        for i in range(len(self.osc_bank)):
+        for i in range(len(self.oscillators)):
             if str(i) in user_data[:-3]:
-                self.osc_bank[i].shape.value = OscillatorShape[app_data].value
+                self.oscillators[i].shape.value = OscillatorShape[app_data].value
 
     # def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
         
@@ -319,52 +322,52 @@ class OscBank():
     #                     shapes, 
     #                     callback=self._shape_callback, 
     #                     horizontal=True,
-    #                     user_data=f"{self.osc_bank[i].shape}"
+    #                     user_data=f"{self.oscillators[i].shape}"
     #                 )
                     
     #                 osc_freq_sliders.append(TrackbarRow(
     #                     f"Osc {i} Freq", 
-    #                     self.osc_bank[i].frequency, 
+    #                     self.oscillators[i].frequency, 
     #                     default_font_id))
                     
     #                 osc_amp_sliders.append(TrackbarRow(
     #                     f"Osc {i} Amp", 
-    #                     self.osc_bank[i].amplitude, 
+    #                     self.oscillators[i].amplitude, 
     #                     default_font_id))
                     
     #                 osc_phase_sliders.append(TrackbarRow(
     #                     f"Osc {i} Phase", 
-    #                     self.osc_bank[i].phase,
+    #                     self.oscillators[i].phase,
     #                     default_font_id))
                     
     #                 osc_seed_sliders.append(TrackbarRow(
     #                     f"Osc {i} Seed", 
-    #                     self.osc_bank[i].seed, 
+    #                     self.oscillators[i].seed, 
     #                     default_font_id))
                     
     #                 osc_noise_octaves.append(TrackbarRow(
     #                     f"Osc {i} Noise Octaves",
-    #                     self.osc_bank[i].noise_octaves,
+    #                     self.oscillators[i].noise_octaves,
     #                     default_font_id))
                     
     #                 osc_noise_persistence.append(TrackbarRow(
     #                     f"Osc {i} Noise Persistence",
-    #                     self.osc_bank[i].noise_persistence,
+    #                     self.oscillators[i].noise_persistence,
     #                     default_font_id))
                     
     #                 osc_noise_lacunarity.append(TrackbarRow(
     #                     f"Osc {i} Noise Lacunarity",
-    #                     self.osc_bank[i].noise_lacunarity,
+    #                     self.oscillators[i].noise_lacunarity,
     #                     default_font_id))
                     
     #                 osc_noise_repeat.append(TrackbarRow(
     #                     f"Osc {i} Noise Repeat",
-    #                     self.osc_bank[i].noise_repeat,
+    #                     self.oscillators[i].noise_repeat,
     #                     default_font_id))
                     
     #                 osc_noise_base.append(TrackbarRow(
     #                     f"Osc {i} Noise Base",
-    #                     self.osc_bank[i].noise_base,
+    #                     self.oscillators[i].noise_base,
     #                     default_font_id))
                     
     #                 # Create a list of items for the listbox
@@ -389,10 +392,10 @@ class OscBank():
             app_data: A dictionary containing the selected items.  For a listbox,
                     it's  { 'items': [index1, index2, ...] }
         """
-        for i in range(len(self.osc_bank)):
+        for i in range(len(self.oscillators)):
             if f"osc{i}" in sender:
                 param = None
                 for tag, param in self.params.items():
                     if tag == app_data:
-                        self.osc_bank[i].linked_param = param
+                        self.oscillators[i].linked_param = param
                         break

@@ -4,17 +4,16 @@ A single mixed frame is retrieved every iteration of the main loop.
 """
 
 import cv2
-import dearpygui.dearpygui as dpg
 import numpy as np
-from enum import IntEnum, Enum, auto
+from enum import IntEnum, auto
 from animations import *
 import os
 from pathlib import Path
 from effects import LumaMode, EffectManager
-from param import ParamTable
 from luma import *
 from config import ParentClass, SourceIndex, WidgetType
-import concurrent.futures  # Added for parallel processing
+import concurrent.futures 
+
 
 log = logging.getLogger(__name__)
 
@@ -66,7 +65,7 @@ class Mixer:
         
         log.info(f"Sources: {self.sources}")
 
-        self.detect_devices(max_index=num_devices)
+        self._detect_devices(max_index=num_devices)
 
         # --------------------------------------------------------------------
         parent = ParentClass.SRC_1_ANIMATIONS
@@ -89,11 +88,11 @@ class Mixer:
         # --------------------------------------------------------------------
 
         # --- Configure file sources ---
-        self.video_samples = os.listdir(self.find_dir("samples"))
+        self.video_samples = os.listdir(self._find_dir("samples"))
         self.video_file_name1 = self.video_samples[0] if len(self.video_samples) > 0 else None
         self.video_file_name2 = self.video_samples[0] if len(self.video_samples) > 0 else None
 
-        self.images = os.listdir(self.find_dir("images"))
+        self.images = os.listdir(self._find_dir("images"))
         self.default_image_file_path = self.images[0] if len(self.images) > 0 else None
         self.image_file_name1 = self.default_image_file_path
         self.image_file_name2 = self.default_image_file_path
@@ -114,9 +113,9 @@ class Mixer:
 
         # --- Parameters for blending and keying ---
 
-        self.blend_mode = self.post_params.add("blend_mode", 0, 2, 0, subclass, self.parent)
+        self.blend_mode = self.post_params.add("blend_mode", 0, 2, 0, subclass, self.parent, WidgetType.RADIO, MixModes)
         self.luma_threshold = self.post_params.add("luma_threshold", 0, 255, 128, subclass, self.parent)
-        self.luma_selection = self.post_params.add("luma_selection", LumaMode.WHITE.value, LumaMode.BLACK.value, LumaMode.WHITE.value, subclass, self.parent)
+        self.luma_selection = self.post_params.add("luma_selection", LumaMode.WHITE.value, LumaMode.BLACK.value, LumaMode.WHITE.value, subclass, self.parent, WidgetType.RADIO, LumaMode)
         self.upper_hue = self.post_params.add("upper_hue", 0, 179, 80, subclass, self.parent)
         self.upper_saturation = self.post_params.add("upper_sat", 0, 255, 255, subclass, self.parent)
         self.upper_value = self.post_params.add("upper_val", 0, 255, 255, subclass, self.parent)
@@ -142,7 +141,7 @@ class Mixer:
         self.start_video(self.selected_source2.value, SourceIndex.SRC_2)
 
     # find dir one level up from current working directory
-    def find_dir(self, dir_name: str, file_name: str = None):
+    def _find_dir(self, dir_name: str, file_name: str = None):
 
         script_dir = Path(__file__).parent
 
@@ -154,7 +153,8 @@ class Mixer:
 
         return str(video_path_object.resolve().as_posix())
 
-    def detect_devices(self, max_index):
+
+    def _detect_devices(self, max_index):
         log.info(f"Attempting to find video capture sources ({max_index})")
         for index in range(max_index):
             try:
@@ -170,11 +170,13 @@ class Mixer:
             except Exception as e:
                 pass
 
-    def failback_camera(self):
+
+    def _failback_source(self):
         # TODO: implement a fallback camera source if the selected source fails, move to mixer class
         pass
 
-    def open_cv2_capture(self, cap, source_name, index):
+
+    def _open_cv2_capture(self, cap, source_name, index):
         if cap and isinstance(cap, cv2.VideoCapture):
             cap.release()
 
@@ -184,10 +186,10 @@ class Mixer:
 
         if source_name == "VIDEO_FILE":
             file_name = self.video_file_name1 if index == 1 else self.video_file_name2
-            source_val = self.find_dir("samples", file_name)
+            source_val = self._find_dir("samples", file_name)
         elif source_name == "IMAGE_FILE":
             file_name = self.image_file_name1 if index == 1 else self.image_file_name2
-            source_val = self.find_dir("images", file_name)
+            source_val = self._find_dir("images", file_name)
 
         cap = cv2.VideoCapture(source_val)
         self.live_caps.append(cap)
@@ -195,49 +197,38 @@ class Mixer:
 
         if not cap.isOpened():
             log.error(f"Could not open live video source {index}.")
-            # cap = self.failback_camera
+            # cap = self._failback_source()
         return cap
 
-    def open_animation(self, cap, source_name, index):
+
+    def _open_animation(self, cap, source_name, index):
         if cap and isinstance(cap, cv2.VideoCapture):
             cap.release()
         animations = self.src_1_animations if index == 1 else self.src_2_animations
         return animations[source_name]
 
-    def start_video(self, source_name, index):
-        log.info(f"Requested mixer source {index}: {source_name}")
 
-        if "ANIM" not in source_name:  # handle cv2 sources
-            log.info(f"Starting mixer source {index}: with cv2 source name: {source_name}")
-            if index == SourceIndex.SRC_1:
-                self.cap1 = self.open_cv2_capture(self.cap1, source_name, index)
-            elif index == SourceIndex.SRC_2:
-                self.cap2 = self.open_cv2_capture(self.cap2, source_name, index)
-        else:  # handle animation sources
-            log.info(f"Starting mixer source {index}: with animation source name: {source_name}")
-            if index == SourceIndex.SRC_1:
-                self.cap1 = self.open_animation(self.cap1, source_name, index)
-            elif index == SourceIndex.SRC_2:
-                self.cap2 = self.open_animation(self.cap2, source_name, index)
-
-    def blend(self, frame1, frame2):
+    def _alpha_blend(self, frame1, frame2):
         alpha = self.alpha_blend.value
 
         return cv2.addWeighted(
             frame1.astype(np.float32), 1 - alpha, frame2.astype(np.float32), alpha, 0
         )
 
+
     def _luma_key(self, frame1, frame2):
         return luma_key(
             frame1, frame2, self.luma_selection.value, self.luma_threshold.value
         ).astype(np.float32)
 
-    def chroma_key(self, frame1, frame2, lower=(0, 100, 0), upper=(80, 255, 80)):
+
+    def _chroma_key(self, frame1, frame2, lower=(0, 100, 0), upper=(80, 255, 80)):
         hsv = cv2.cvtColor(frame1, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
         mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
         result = np.where(mask == 255, frame2, frame1)
         return result.astype(np.float32)
+
 
     def _process_single_source(self, source_index):
         ret, frame = False, None
@@ -287,6 +278,24 @@ class Mixer:
 
         return ret, frame
 
+
+    def start_video(self, source_name, index):
+        log.info(f"Requested mixer source {index}: {source_name}")
+
+        if "ANIM" not in source_name:  # handle cv2 sources
+            log.info(f"Starting mixer source {index}: with cv2 source name: {source_name}")
+            if index == SourceIndex.SRC_1:
+                self.cap1 = self._open_cv2_capture(self.cap1, source_name, index)
+            elif index == SourceIndex.SRC_2:
+                self.cap2 = self._open_cv2_capture(self.cap2, source_name, index)
+        else:  # handle animation sources
+            log.info(f"Starting mixer source {index}: with animation source name: {source_name}")
+            if index == SourceIndex.SRC_1:
+                self.cap1 = self._open_animation(self.cap1, source_name, index)
+            elif index == SourceIndex.SRC_2:
+                self.cap2 = self._open_animation(self.cap2, source_name, index)
+
+
     def get_mixed_frame(self):
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
             future1 = executor.submit(self._process_single_source, SourceIndex.SRC_1)
@@ -313,9 +322,9 @@ class Mixer:
             elif self.blend_mode.value == MixModes.CHROMA_KEY.value:
                 lower = (self.lower_hue.value, self.lower_saturation.value, self.lower_value.value)
                 upper = (self.upper_hue.value, self.upper_saturation.value, self.upper_value.value)
-                return self.chroma_key(frame1, frame2, lower=lower, upper=upper)
+                return self._chroma_key(frame1, frame2, lower=lower, upper=upper)
             else:
-                return self.blend(frame1, frame2)
+                return self._alpha_blend(frame1, frame2)
         else:
             log.error("Could not retrieve frames from both sources.")
             return None

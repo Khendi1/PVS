@@ -13,6 +13,7 @@ class ParentClass(StrEnum):
     SRC_1_ANIMATIONS = "#2196F3"
     SRC_2_ANIMATIONS = "#0B5C9C"
     MIXER = "#B53D3D"
+    GENERAL_LFOS = "#FF9800"
 
 
 class SourceIndex(IntEnum):
@@ -38,8 +39,8 @@ DEFAULT_SAVE_FILE = "saved_values.yaml"
 CONTROL_WINDOW_TITLE = "Control"
 VIDEO_OUTPUT_WINDOW_TITLE = "Synthesizer Output"
 
-WIDTH = None
-HEIGHT = None
+WIDTH = 640
+HEIGHT = 480
 
 ESCAPE_KEYS = [ord('q'), ord('Q'), 27] # 27 is escape key
 

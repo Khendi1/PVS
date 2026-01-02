@@ -826,7 +826,7 @@ class ShaderVisualizer(Animation):
                     float t = u_time * 0.1;
                     vec3 col = vec3(0.0);
                     
-                    for(float i = 1.0; i <= u_iterations; i++){
+                    for (float i = 1.0; i <= u_iterations; i++) {
                         uv += sin(uv.yx * (2.0 + u_distortion) + t + i) * 0.4;
                         uv *= rot(t * 0.05 + i);
                         float d = length(uv);
@@ -855,13 +855,13 @@ class ShaderVisualizer(Animation):
                     float dist = length(uv);
                     vec3 col = vec3(0.0);
                     
-                    for(float i = 0.0; i < u_iterations; i++){
+                    for (float i = 0.0; i < u_iterations; i++) {
                         float t = u_time * 0.1 * (i + 1.0) * (1.0 + u_distortion * 0.5);
                         float segments = 6.0 + i * 2.0;
                         float a = mod(angle + t, 6.28 / segments) - 3.14 / segments;
                         vec2 p = vec2(cos(a), sin(a)) * dist;
                         float d = sin(length(p - vec2(0.5, 0.0)) * 20.0 - u_time * 2.0);
-                        col += (0.5 + 0.5 * cos(u_time * 0.5 + i + dist + vec3(0,2,4))) * smoothstep(0.1, 0.2, abs(d));
+                        col += (0.5 + 0.5 * cos(u_time * 0.5 + i + dist + vec3(0, 2, 4))) * smoothstep(0.1, 0.2, abs(d));
                     }
                     col *= 1.0 - smoothstep(0.5, 1.5, dist);
                     f_color = vec4(col * u_brightness, 1.0);
@@ -889,7 +889,7 @@ class ShaderVisualizer(Animation):
                     float dist = length(uv);
                     vec3 col = vec3(0.0);
                     
-                    for(float i = 0.0; i < u_iterations; i++){
+                    for (float i = 0.0; i < u_iterations; i++) {
                         float armAngle = angle + dist * (2.0 + u_distortion) - t * (0.3 + i * 0.05);
                         float armDist = sin(armAngle * (3.0 + i)) * 0.3;
                         float arm = smoothstep(0.2, 0.0, abs(dist - 0.5 - armDist));
@@ -897,7 +897,7 @@ class ShaderVisualizer(Animation):
                         vec2 starCoord = vec2(angle * 5.0 + i, dist * 10.0);
                         float stars = smoothstep(0.98, 1.0, hash(floor(starCoord + t * 0.1))) * smoothstep(0.3, 0.8, dist);
                         
-                        col += (0.5 + 0.5 * cos(t * 0.3 + i * 2.0 + vec3(0,2,4))) * arm + vec3(1.0, 0.95, 0.9) * stars;
+                        col += (0.5 + 0.5 * cos(t * 0.3 + i * 2.0 + vec3(0, 2, 4))) * arm + vec3(1.0, 0.95, 0.9) * stars;
                     }
                     col += vec3(1.0, 0.8, 0.6) * exp(-dist * 3.0) * 0.5;
                     f_color = vec4(col * u_brightness, 1.0);
@@ -916,7 +916,7 @@ class ShaderVisualizer(Animation):
                 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5); }
                 float fbm(vec2 p) {
                     float v = 0.0, a = 0.5;
-                    for(int i = 0; i < 6; i++) { v += a * hash(p); p *= 2.0; a *= 0.5; }
+                    for (int i = 0; i < 6; i++) { v += a * hash(p); p *= 2.0; a *= 0.5; }
                     return v;
                 }
 
@@ -925,7 +925,7 @@ class ShaderVisualizer(Animation):
                     float t = u_time * 0.1;
                     vec3 col = vec3(0.0);
                     
-                    for(float i = 0.0; i < u_iterations; i++){
+                    for (float i = 0.0; i < u_iterations; i++) {
                         vec2 drift = vec2(sin(t * 0.2 + i), cos(t * 0.15 + i * 1.5)) * t * 0.05;
                         vec2 pUV = uv + drift;
                         pUV += vec2(fbm(pUV * (2.0 + u_distortion) + t * 0.1), fbm(pUV * (2.0 + u_distortion) + t * 0.1 + 100.0)) * 0.3;
@@ -956,7 +956,7 @@ class ShaderVisualizer(Animation):
                     uv.y += sin(t * 0.1) * 0.3;
                     vec3 col = vec3(0.0, 0.05, 0.15);
                     
-                    for(float i = 0.0; i < u_iterations; i++){
+                    for (float i = 0.0; i < u_iterations; i++) {
                         vec2 c = uv * (5.0 + i * 2.0);
                         c.x += t * (0.1 + i * 0.05);
                         c.y += sin(c.x * 2.0 + t * 0.2) * (0.2 + u_distortion * 0.2);
@@ -967,7 +967,7 @@ class ShaderVisualizer(Animation):
                         float pulse = smoothstep(0.3, 0.8, sin(t * (0.5 + h * 2.0) + h * 6.28) * 0.5 + 0.5);
                         float org = smoothstep(0.3, 0.1, length(gv)) * pulse;
                         
-                        col += (0.5 + 0.5 * cos(h * 6.28 + vec3(0,2,4))) * org / sqrt(i + 1.0);
+                        col += (0.5 + 0.5 * cos(h * 6.28 + vec3(0, 2, 4))) * org / sqrt(i + 1.0);
                     }
                     f_color = vec4(col * u_brightness, 1.0);
                 }
@@ -990,7 +990,7 @@ class ShaderVisualizer(Animation):
                     float season = sin(t * 0.05) * 0.5 + 0.5;
                     vec3 col = vec3(0.01, 0.01, 0.03);
                     
-                    for(float i = 0.0; i < u_iterations; i++){
+                    for (float i = 0.0; i < u_iterations; i++) {
                         float x = uv.x * (3.0 + i);
                         float wave = sin(x + t * (0.3 + i * 0.1)) * (0.5 + u_distortion);
                         float curtain = abs(uv.y - wave);
@@ -998,7 +998,7 @@ class ShaderVisualizer(Animation):
                         float shimmer = hash(vec2(x * 20.0, t * 2.0 + i));
                         intensity *= 0.7 + shimmer * 0.3;
                         
-                        col += (0.5 + 0.5 * cos(t * 0.2 + i * 1.5 + vec3(0,2,4))) * intensity;
+                        col += (0.5 + 0.5 * cos(t * 0.2 + i * 1.5 + vec3(0, 2, 4))) * intensity;
                     }
                     col += smoothstep(0.99, 1.0, hash(uv * 100.0)) * 0.3;
                     f_color = vec4(col * u_brightness, 1.0);
@@ -1024,12 +1024,12 @@ class ShaderVisualizer(Animation):
                     float dist = length(uv);
                     vec3 col = vec3(0.0);
                     
-                    for(float i = 0.0; i < u_iterations; i++){
+                    for (float i = 0.0; i < u_iterations; i++) {
                         float a = mod(angle + t * 0.05 * (i + 1.0), 6.28 / 6.0);
                         float face = abs(sin(a * 3.0 + t * 0.1));
                         float layer = sin(dist * (10.0 + i * 3.0) - t * 0.3 + face * u_distortion) * 0.5 + 0.5;
                         layer *= smoothstep(i * 0.5, i * 0.5 + 2.0, t);
-                        col += (0.5 + 0.5 * cos(dist + i + vec3(0,2,4))) * layer * smoothstep(1.0, 0.5, dist);
+                        col += (0.5 + 0.5 * cos(dist + i + vec3(0, 2, 4))) * layer * smoothstep(1.0, 0.5, dist);
                     }
                     col += vec3(1.0, 1.0, 0.9) * exp(-dist * 5.0);
                     f_color = vec4(col * u_brightness, 1.0);
