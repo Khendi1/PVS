@@ -375,7 +375,8 @@ class PyQTGUI(QMainWindow):
         uncategorized_scroll.setWidget(uncategorized_container)
         bottom_pane_tabs.addTab(uncategorized_scroll, "Uncategorized")
 
-    def _mixer_layout(self, parent_groups, layout_map):
+
+    def _mixer_tab(self, parent_groups, layout_map):
         params_in_group = parent_groups.pop(ParentClass.MIXER)
         target_layout = layout_map[ParentClass.MIXER]
 
@@ -521,7 +522,7 @@ class PyQTGUI(QMainWindow):
         }
 
         if ParentClass.MIXER in parent_groups:
-            self._mixer_layout(parent_groups, layout_map)
+            self._mixer_tab(parent_groups, layout_map)
 
         for parent_enum_or_str, params_in_group in parent_groups.items():
             target_layout = layout_map.get(parent_enum_or_str)
@@ -631,7 +632,7 @@ class PyQTGUI(QMainWindow):
             value_input = QLineEdit()
             value_input.setFixedWidth(50)
 
-            if isinstance(param.default_val, float):
+            if isinstance(param.default, float):
                 slider.setRange(int(param.min * 1000), int(param.max * 1000))
                 slider.setValue(int(param.value * 1000))
                 value_input.setText(str(round(param.value, 3)))
@@ -659,7 +660,7 @@ class PyQTGUI(QMainWindow):
 
 
     def on_slider_change(self, param: Param, value):
-        if isinstance(param.default_val, float):
+        if isinstance(param.default, float):
             param.value = value / 1000.0
         else:
             param.value = value
@@ -669,13 +670,13 @@ class PyQTGUI(QMainWindow):
         slider = self.sender()
         value_input = slider.property("value_input")
         if value_input:
-            value_input.setText(str(round(param.value, 3) if isinstance(param.default_val, float) else param.value))
+            value_input.setText(str(round(param.value, 3) if isinstance(param.default, float) else param.value))
 
 
     def on_text_input_change(self, param: Param, value_input: QLineEdit, slider: QSlider):
         try:
             new_value_str = value_input.text()
-            if isinstance(param.default_val, float):
+            if isinstance(param.default, float):
                 new_value = float(new_value_str)
             else:
                 new_value = int(new_value_str)
@@ -683,13 +684,13 @@ class PyQTGUI(QMainWindow):
             new_value = max(param.min, min(param.max, new_value))
             param.value = new_value
 
-            if isinstance(param.default_val, float):
+            if isinstance(param.default, float):
                 slider.setValue(int(param.value * 1000))
             else:
                 slider.setValue(param.value)
-            value_input.setText(str(round(param.value, 3) if isinstance(param.default_val, float) else param.value))
+            value_input.setText(str(round(param.value, 3) if isinstance(param.default, float) else param.value))
         except ValueError:
-            value_input.setText(str(round(param.value, 3) if isinstance(param.default_val, float) else param.value))
+            value_input.setText(str(round(param.value, 3) if isinstance(param.default, float) else param.value))
 
 
     def on_radio_change(self, param: Param, value, checked):
@@ -719,14 +720,14 @@ class PyQTGUI(QMainWindow):
         param.reset()
         slider = widget.findChild(QSlider)
         if slider:
-            if isinstance(param.default_val, float):
+            if isinstance(param.default, float):
                 slider.setValue(int(param.value * 1000))
             else:
                 slider.setValue(param.value)
         
         value_input = widget.findChild(QLineEdit)
         if value_input:
-            value_input.setText(str(round(param.value, 3) if isinstance(param.default_val, float) else param.value))
+            value_input.setText(str(round(param.value, 3) if isinstance(param.default, float) else param.value))
 
         radio_buttons = widget.findChildren(QRadioButton)
         if radio_buttons:
@@ -787,14 +788,14 @@ class PyQTGUI(QMainWindow):
                 # Update slider and line edit
                 slider = widget.findChild(QSlider)
                 if slider:
-                    if isinstance(param.default_val, float):
+                    if isinstance(param.default, float):
                         slider.setValue(int(param.value * 1000))
                     else:
                         slider.setValue(param.value)
                 
                 value_input = widget.findChild(QLineEdit)
                 if value_input:
-                    if isinstance(param.default_val, float):
+                    if isinstance(param.default, float):
                         value_input.setText(str(round(param.value, 3)))
                     else:
                         value_input.setText(str(param.value))

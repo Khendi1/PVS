@@ -1,6 +1,6 @@
 import random
 import logging
-from config import WidgetType, titleize_items
+from config import WidgetType
 
 
 class ParamTable:
@@ -93,14 +93,14 @@ class ParamTable:
         """Returns a view of the Param objects."""
         return self.params.values()
     
-    def add(self, name: str, min: int | float, max: int | float, default_val: int | float, subclass=None, parent=None, type=WidgetType.SLIDER, options=None) -> 'Param':
+    def add(self, name: str, min: int | float, max: int | float, default: int | float, subclass=None, parent=None, type=WidgetType.SLIDER, options=None) -> 'Param':
         """
         Adds a new parameter to the table.
         Args:
             name (str): The unique name of the parameter.
             min (int/float): The minimum allowed value for the parameter.
             max (int/float): The maximum allowed value for the parameter.
-            default_val (int/float/bool): The default value for the parameter.
+            default (int/float/bool): The default value for the parameter.
             family (str, optional): An optional family/group name for the parameter.
         Returns:
             Param: The newly created Param object.
@@ -108,7 +108,7 @@ class ParamTable:
             ValueError: If a parameter with the given name already exists.
         """
         if name not in self.params:
-            self.params[name] = Param(name, min, max, default_val, family=subclass, parent=parent, type=type, options=options)
+            self.params[name] = Param(name, min, max, default, family=subclass, parent=parent, type=type, options=options)
             return self.params[name]
         else:
             raise ValueError(f"Parameter '{name}' already exists.")
@@ -118,31 +118,30 @@ class Param:
     Represents a single parameter with a name, min/max bounds, default value,
     and its current value. Includes clamping and type conversion.
     """
-    def __init__(self, name, min, max, default_val, family=None, parent=None, type=WidgetType.SLIDER, options=None):
+    def __init__(self, name, min, max, default, family=None, parent=None, type=WidgetType.SLIDER, options=None):
         """
         Initializes a Param object.
         Args:
             name (str): The name of the parameter.
             min (int/float): The minimum allowed value.
             max (int/float): The maximum allowed value.
-            default_val (int/float/bool): The default value.
+            default (int/float/bool): The default value.
             family (str, optional): The family/group the parameter belongs to.
         """
         self.name = name
         self.min = min
         self.max = max
-        self.default_val = default_val
+        self.default = default
         self.family = "None" if family is None else family
         self.parent = parent
         self.type = type
         self.options = options
         self.linked_oscillator = None
 
-        
         # Initialize the internal _value attribute using the setter
-        # This ensures initial default_val is clamped and type-casted correctly
+        # This ensures initial default is clamped and type-casted correctly
         self._value = None # Placeholder for the private/internal value
-        self.value = default_val # Assigning to 'value' calls the setter
+        self.value = default # Assigning to 'value' calls the setter
 
     @property
     def value(self):
@@ -167,10 +166,10 @@ class Param:
             elif new_value > self.max:
                 clamped_value = self.max
         
-        # Type cast the clamped_value to match the default_val's type
-        if isinstance(self.default_val, float):
+        # Type cast the clamped_value to match the default's type
+        if isinstance(self.default, float):
             self._value = float(clamped_value)
-        elif isinstance(self.default_val, int) and not isinstance(clamped_value, str):
+        elif isinstance(self.default, int) and not isinstance(clamped_value, str):
              self._value = int(clamped_value)
         else:
             # For other types (like bool or string), directly assign
@@ -181,21 +180,26 @@ class Param:
         if self.name == "blur_kernel_size":
             self._value = max(1, int(self._value) | 1) # Bitwise OR with 1 ensures it's odd
 
+
     def __repr__(self):
         """"""
-        return f"Param(name={self.name}, min={self.min}, max={self.max}, default_val={self.default_val}, family=None"
+        return f"Param(name={self.name}, min={self.min}, max={self.max}, default={self.default}, family=None"
+
 
     def __str__(self):
         """String representation of the Param object."""
         return f"{self.name}: {self.value}"
 
+
     def __int__(self):
         """Allows casting Param object to an integer."""
         return int(self.value)
 
+
     def __float__(self):
         """Allows casting Param object to a float."""
         return float(self.value)
+
 
     # Arithmetic dunder methods for direct operations with Param objects or numbers
     def __add__(self, other):
@@ -206,6 +210,7 @@ class Param:
         else:
             raise TypeError("Unsupported type for addition")
     
+
     def __sub__(self, other):
         if isinstance(other, Param):
             return self.value - other.value
@@ -213,6 +218,7 @@ class Param:
             return self.value - other
         else:
             raise TypeError("Unsupported type for subtraction")
+
 
     def __mul__(self, other):
         if isinstance(other, Param):
@@ -222,6 +228,7 @@ class Param:
         else:
             raise TypeError(f"Unsupported type '{type(other)}' for multiplication")
     
+
     def __truediv__(self, other):
         if isinstance(other, Param):
             # Handle division by zero for other Param's value
@@ -236,38 +243,20 @@ class Param:
         else:
             raise TypeError("Unsupported type for division")
     
+
     def reset(self):
         """Resets the parameter's value to its default value."""
-        self.value = self.default_val # Assignment calls the setter
+        self.value = self.default # Assignment calls the setter
         return self.value
     
-    def set_max(self, max):
-        """Sets a new maximum value for the parameter and clamps the current value if necessary."""
-        self.max = max
-        # Assigning current value to itself will trigger the setter,
-        # which will re-clamp it if it's now above the new max
-        self.value = self.value
-        return self.value
-    
-    def set_min(self, min):
-        """Sets a new minimum value for the parameter and clamps the current value if necessary."""
-        self.min = min
-        # Assigning current value to itself will trigger the setter,
-        # which will re-clamp it if it's now below the new min
-        self.value = self.value
-        return self.value
 
     def randomize(self):
         """Sets the parameter's value to a random value within its min/max range."""
-        if isinstance(self.default_val, float):
+        if isinstance(self.default, float):
             self.value = random.uniform(self.min, self.max) 
-        elif isinstance(self.default_val, int):
+        elif isinstance(self.default, int):
             self.value = random.randint(self.min, self.max)
         else:
             # For other types (e.g., bool), you might need specific randomization logic
             pass
         return self.value
-    
-    def min_max(self):
-        """Returns a tuple containing the minimum and maximum allowed values."""
-        return (self.min, self.max)

@@ -39,12 +39,12 @@ class RadioButtonRow:
 
 
 class Toggle:
-    def __init__(self, label, tag, default_val=False, font=None):
+    def __init__(self, label, tag, default=False, font=None):
         self.label = label
         self.tag = tag
         self.user_data = tag
         self.callback = None
-        self.value = default_val
+        self.value = default
     
     def val(self):
         return self.value
@@ -65,8 +65,8 @@ class ButtonsTable:
     """
     def __init__(self):
         self.buttons = {
-            "effects_first": Toggle("Effects First", "effects_first", default_val=False),
-            "shapes": Toggle("Shapes", "shapes", default_val=False)
+            "effects_first": Toggle("Effects First", "effects_first", default=False),
+            "shapes": Toggle("Shapes", "shapes", default=False)
         }
 
     def __getitem__(self, key):
@@ -85,8 +85,8 @@ class ButtonsTable:
         else:
             raise TypeError("Key must be a string or an integer")
 
-    def add(self, label, tag, default_val=False):
-        self.buttons[tag] = Toggle(label=label, tag=tag, default_val=default_val)
+    def add(self, label, tag, default=False):
+        self.buttons[tag] = Toggle(label=label, tag=tag, default=default)
         return self.buttons[tag]
         
     def val(self, tag):

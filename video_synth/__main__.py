@@ -63,11 +63,6 @@ def parse_args():
         help='Use an alternate save file. Must still be located in the save directory'
     )
     parser.add_argument(
-        '--fullscreen',
-        action='store_true',  # This makes it a boolean flag
-        help='Launch the video output window in fullscreen mode.'
-    )
-    parser.add_argument(
         '--layout',
         default='quad',
         choices=['tabbed', 'quad'],
@@ -88,7 +83,7 @@ def config_log(log_level):
     return log
 
 
-""" Identifies midi controller ports from controller_names"""
+# """ Identifies midi controller ports from controller_names"""
 def identify_midi_ports(params, controller_names):
     
     # Mido uses a default backend (often python-rtmidi) which handles platform differences.    
@@ -136,7 +131,7 @@ def identify_midi_ports(params, controller_names):
 
 
 """Video processing loop"""
-def video_loop(mixer, effects, should_quit, gui, fullscreen=False):
+def video_loop(mixer, effects, should_quit, gui):
     wet_frame = dry_frame = mixer.get_mixed_frame()
     if dry_frame is None:
         log.error("Failed to get initial frame from mixer. Exiting video loop.")
@@ -149,9 +144,9 @@ def video_loop(mixer, effects, should_quit, gui, fullscreen=False):
     use_cv2_window = not isinstance(gui.central_widget.layout(), QGridLayout)
 
     if use_cv2_window:
-        cv2.namedWindow('Modified Frame', cv2.WINDOW_NORMAL)
-        if fullscreen:
-            cv2.setWindowProperty("Modified Frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        cv2.namedWindow(VIDEO_OUTPUT_WINDOW_TITLE, cv2.WINDOW_NORMAL)
+        # if fullscreen:
+        #     cv2.setWindowProperty(VIDEO_OUTPUT_WINDOW_TITLE, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     while not should_quit.is_set():
         dry_frame = mixer.get_mixed_frame()
@@ -170,7 +165,7 @@ def video_loop(mixer, effects, should_quit, gui, fullscreen=False):
         frame_count += 1
         
         if use_cv2_window:
-            cv2.imshow('Modified Frame', wet_frame.astype(np.uint8))
+            cv2.imshow(VIDEO_OUTPUT_WINDOW_TITLE, wet_frame.astype(np.uint8))
             if cv2.waitKey(1) & 0xFF in ESCAPE_KEYS:
                 break
         else:
@@ -187,7 +182,7 @@ def video_loop(mixer, effects, should_quit, gui, fullscreen=False):
 
 
 """ Main app setup and loop """
-def main(devices, controller_names, fullscreen, layout):
+def main(devices, controller_names, layout):
 
     log.info("Initializing video synthesizer... Press 'q' or 'ESC' to quit")
 
@@ -210,13 +205,13 @@ def main(devices, controller_names, fullscreen, layout):
     app = QApplication(sys.argv)
     main_window = PyQTGUI(effects, layout, mixer)
 
-    main_window.show()
+    main_window.show() 
     
     should_quit = threading.Event()
     
     video_thread = threading.Thread(
         target=video_loop, 
-        args=(mixer, effects, should_quit, main_window, fullscreen)
+        args=(mixer, effects, should_quit, main_window)
     )
     video_thread.start()
     
@@ -242,4 +237,4 @@ def main(devices, controller_names, fullscreen, layout):
 if __name__ == "__main__":
     args = parse_args()
     log = config_log(args.log_level)
-    main(args.devices, CONTROLLER_NAMES, args.fullscreen, args.layout)
+    main(args.devices, CONTROLLER_NAMES, args.layout)

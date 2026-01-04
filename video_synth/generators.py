@@ -148,10 +148,10 @@ class Oscillator:
                 if shape == 5:
                     # TODO: handle perlin noise mapping using the map_value method
                     mapped_sample = self._scale_value(self.linked_param, sample, in_min=-1.0, in_max=1.0)
-                elif isinstance(self.linked_param.default_val, float):
+                elif isinstance(self.linked_param.default, float):
                     # mapped_sample = self._scale_value(self.linked_param, sample, in_min=-1.0, in_max=1.0) #* #self.amplitude.value
                     mapped_sample = map_value(round(sample, 5), -amp + seed, amp + seed, self.linked_param.min, self.linked_param.max, round_down=False)
-                elif isinstance(self.linked_param.default_val, int):
+                elif isinstance(self.linked_param.default, int):
                     mapped_sample = map_value(sample, -amp + seed, amp + seed, self.linked_param.min, self.linked_param.max)
         
                 self.linked_param.value = mapped_sample

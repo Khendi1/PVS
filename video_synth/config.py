@@ -4,6 +4,15 @@ from enum import Enum, StrEnum, IntEnum, auto
 
 """Module to store basic global variables and effects manager"""
 
+class LayoutType(Enum):
+    TABBED = 0
+    QUAD_PREVIEW = 1
+    QUAD_FULL = 2
+
+class OutputMode(Enum):
+    NONE = 0
+    WINDOW = 1
+    FULLSCREEN = 2
 
 class ParentClass(StrEnum):
     """Enumeration for different parent classes of parameters."""
@@ -14,6 +23,7 @@ class ParentClass(StrEnum):
     SRC_2_ANIMATIONS = "#0B5C9C"
     MIXER = "#B53D3D"
     GENERAL_LFOS = "#FF9800"
+    SETTINGS = "#9C27B0"
 
 
 class SourceIndex(IntEnum):
@@ -30,7 +40,6 @@ class WidgetType(StrEnum):
     SPLIT_ROW_DROPDOWN = auto()
 
 # default argparse values
-DEFAULT_NUM_OSC = 5 
 DEFAULT_LOG_LEVEL = logging.INFO
 DEFAULT_NUM_DEVICES = 5
 DEFAULT_PATCH_INDEX = 0

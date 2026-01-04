@@ -4,10 +4,9 @@ from enum import Enum
 import noise 
 from generators import Oscillator, OscillatorShape
 from gui_elements import RadioButtonRow
-import dearpygui.dearpygui as dpg
 import logging
 import math
-from config import WidgetType, enum_names
+from config import WidgetType
 
 posc_bank = []  
 

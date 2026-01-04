@@ -39,7 +39,6 @@ log = logging.getLogger(__name__)
 
 
 """This section stores all local custom enum classes"""
-
 class NoiseType(Enum):
     NONE = 0
     GAUSSIAN = 1
@@ -49,6 +48,7 @@ class NoiseType(Enum):
     SPARSE = 5
     RANDOM = 6
 
+
 class WarpType(Enum):
     NONE = 0
     SINE = auto()
@@ -56,6 +56,7 @@ class WarpType(Enum):
     FRACTAL = auto()
     PERLIN = auto()
     WARP0 = auto()
+
 
 """Enumeration of blur modes"""
 class BlurType(Enum):
@@ -65,6 +66,7 @@ class BlurType(Enum):
     BOX = auto()
     BILATERAL = auto()
 
+
 """Enumeration of sharpening modes"""
 class SharpenType(Enum):
     NONE = 0
@@ -73,11 +75,13 @@ class SharpenType(Enum):
     UNSHARP = auto()
     LAPLACIAN = auto()
 
+
 """Enum to access hsv tuple indicies"""
 class HSV(IntEnum):
     H = 0
     S = 1
     V = 2
+
 
 class ReflectionMode(Enum):
     """Enumeration for different image reflection modes."""
@@ -92,7 +96,6 @@ class ReflectionMode(Enum):
 
 
 class Shape(Enum):
-
     RECTANGLE = 0
     CIRCLE = 1
     TRIANGLE = 2
@@ -2250,8 +2253,8 @@ class Shapes:
 
         self.multiply_grid_x = params.add("multiply_grid_x", 1, 10, 2, subclass, parent)  # Number of shapes in X direction
         self.multiply_grid_y = params.add("multiply_grid_y", 1, 10, 2, subclass, parent)  # Number of shapes in Y direction
-        self.grid_pitch_x = params.add("grid_pitch_x", min=0, max=width, default_val=100, subclass=subclass, parent=parent)  # Distance between shapes in X direction
-        self.grid_pitch_y = params.add("grid_pitch_y", min=0, max=height, default_val=100, subclass=subclass, parent=parent)  # Distance between shapes in Y direction
+        self.grid_pitch_x = params.add("grid_pitch_x", min=0, max=width, default=100, subclass=subclass, parent=parent)  # Distance between shapes in X direction
+        self.grid_pitch_y = params.add("grid_pitch_y", min=0, max=height, default=100, subclass=subclass, parent=parent)  # Distance between shapes in Y direction
         
         self.fill_enabled = True  # Toggle fill on/off
         self.fill_h = params.add("fill_hue", 0, 179, 120, subclass, parent)  # Hue for fill color
