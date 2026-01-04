@@ -1,13 +1,13 @@
 
 import random
 import math
-from enum import Enum
+from enum import Enum, IntEnum
 import numpy as np
 import noise
 from param import Param
 import logging
 import dearpygui.dearpygui as dpg
-from config import ParentClass
+from config import ParentClass, WidgetType
 
 log = logging.getLogger(__name__)
 
@@ -47,23 +47,6 @@ class OscillatorShape(Enum):
     SAWTOOTH = 4
     PERLIN = 5
 
-    @classmethod
-    def from_value(cls, value):
-        if isinstance(value, str):
-            value = value.lower()
-            if value == "sine":
-                return cls.SINE
-            elif value == "square":
-                return cls.SQUARE
-            elif value == "triangle":
-                return cls.TRIANGLE
-            elif value == "sawtooth":
-                return cls.SAWTOOTH
-            elif value == "perlin":
-                return cls.PERLIN
-        return cls(value)
-    
-
 
 class Oscillator:
     def __init__(self, params, name, frequency, amplitude, phase, shape, seed=0, linked_param_name=None, max_amplitude=100, min_amplitude=-100):
@@ -72,12 +55,11 @@ class Oscillator:
         subclass = "Oscillator"
         self.param_max = max_amplitude
         self.param_min = min_amplitude
+        self.shape = params.add(f"{name}_shape", 0, len(OscillatorShape)-1, shape, parent, subclass, WidgetType.DROPDOWN, OscillatorShape)
         self.frequency = params.add(f"{name}_frequency", 0, 2, frequency, parent, subclass)
         self.amplitude = params.add(f"{name}_amplitude", min_amplitude, max_amplitude, amplitude, parent, subclass)
-        # self.amplitude = params.add(f"{name}_amplitude", self.param_min, self.param_max, amplitude)
         self.phase = params.add(f"{name}_phase", 0, 360, phase, parent, subclass)
         self.seed = params.add(f"{name}_seed", 0, 100, seed, parent, subclass) # TODO: Change ambiguous name to something more descriptive
-        self.shape = params.add(f"{name}_shape", 0, len(OscillatorShape)-1, shape, parent, subclass)
         
         self.noise_octaves = params.add(f"{name}_noise_octaves", 1, 10, 6, parent, subclass)
         self.noise_persistence = params.add(f"{name}_noise_persistence", 0.1, 1.0, 0.5, parent, subclass)
@@ -228,10 +210,12 @@ class OscBank():
                          for i in range(num_osc)]        
         log.info(f"Oscillator bank initialized with {len(self.oscillators)} oscillators.")
 
+
     def update(self):
         for osc in self.oscillators:
             if osc.linked_param is not None:
                 osc.get_next_value()
+
 
     def __getitem__(self, index):
         """
@@ -240,11 +224,13 @@ class OscBank():
         """
         return self.oscillators[index]
 
+
     def __len__(self):
         """
         This method allows using len() on the object.
         """
         return len(self.oscillators)
+
 
     def __setitem__(self, index, value):
         """
@@ -252,17 +238,20 @@ class OscBank():
         """
         self.oscillators[index] = value
 
+
     def __delitem__(self, index):
         """
         This method allows deleting elements using the del keyword.
         """
         del self.oscillators[index]
 
+
     def add_oscillator(self, name, frequency=0.5, amplitude=1.0, phase=0.0, shape=1):
         osc = Oscillator(params=self.params, name=name, frequency=frequency, amplitude=amplitude, phase=phase, shape=shape)
         self.oscillators.append(osc)
         self.len = len(self.oscillators)
         return osc
+
 
     def remove_oscillator(self, osc):
         # When removing an oscillator, we need to clean up its parameters from the main param table
@@ -285,117 +274,8 @@ class OscBank():
         self.oscillators.remove(osc)
         self.len = len(self.oscillators)
 
+
     def _shape_callback(self, sender, app_data, user_data):
         for i in range(len(self.oscillators)):
             if str(i) in user_data[:-3]:
                 self.oscillators[i].shape.value = OscillatorShape[app_data].value
-
-    # def create_gui_panel(self, default_font_id=None, global_font_id=None, theme=None):
-        
-    #     osc_freq_sliders = []
-    #     osc_amp_sliders = []
-    #     osc_phase_sliders = []
-    #     osc_seed_sliders = []
-
-    #     osc_noise_octaves = []
-    #     osc_noise_persistence = []
-    #     osc_noise_lacunarity = []
-    #     osc_noise_repeat = []
-    #     osc_noise_base = []
-
-    #     with dpg.collapsing_header(label=f"\tOscillator Bank", tag=f"osc_bank") as h:
-    #         dpg.bind_item_theme(h, theme)
-    #         for i in range(self.len):
-                
-    #             with dpg.collapsing_header(label=f"\t\tOscillator {i}", tag=f"osc{i}"):
-    #                 dpg.bind_item_theme(h, theme)
-
-    #                 shapes = (
-    #                     OscillatorShape.NONE.name, 
-    #                     OscillatorShape.SINE.name,
-    #                     OscillatorShape.TRIANGLE.name,
-    #                     OscillatorShape.SQUARE.name,
-    #                     OscillatorShape.SAWTOOTH.name,
-    #                     OscillatorShape.PERLIN.name
-    #                 )
-    #                 dpg.add_radio_button(
-    #                     shapes, 
-    #                     callback=self._shape_callback, 
-    #                     horizontal=True,
-    #                     user_data=f"{self.oscillators[i].shape}"
-    #                 )
-                    
-    #                 osc_freq_sliders.append(TrackbarRow(
-    #                     f"Osc {i} Freq", 
-    #                     self.oscillators[i].frequency, 
-    #                     default_font_id))
-                    
-    #                 osc_amp_sliders.append(TrackbarRow(
-    #                     f"Osc {i} Amp", 
-    #                     self.oscillators[i].amplitude, 
-    #                     default_font_id))
-                    
-    #                 osc_phase_sliders.append(TrackbarRow(
-    #                     f"Osc {i} Phase", 
-    #                     self.oscillators[i].phase,
-    #                     default_font_id))
-                    
-    #                 osc_seed_sliders.append(TrackbarRow(
-    #                     f"Osc {i} Seed", 
-    #                     self.oscillators[i].seed, 
-    #                     default_font_id))
-                    
-    #                 osc_noise_octaves.append(TrackbarRow(
-    #                     f"Osc {i} Noise Octaves",
-    #                     self.oscillators[i].noise_octaves,
-    #                     default_font_id))
-                    
-    #                 osc_noise_persistence.append(TrackbarRow(
-    #                     f"Osc {i} Noise Persistence",
-    #                     self.oscillators[i].noise_persistence,
-    #                     default_font_id))
-                    
-    #                 osc_noise_lacunarity.append(TrackbarRow(
-    #                     f"Osc {i} Noise Lacunarity",
-    #                     self.oscillators[i].noise_lacunarity,
-    #                     default_font_id))
-                    
-    #                 osc_noise_repeat.append(TrackbarRow(
-    #                     f"Osc {i} Noise Repeat",
-    #                     self.oscillators[i].noise_repeat,
-    #                     default_font_id))
-                    
-    #                 osc_noise_base.append(TrackbarRow(
-    #                     f"Osc {i} Noise Base",
-    #                     self.oscillators[i].noise_base,
-    #                     default_font_id))
-                    
-    #                 # Create a list of items for the listbox
-    #                 items = list(self.params.keys())
-
-    #                 # Create the listbox
-    #                 dpg.add_combo(items=items,
-    #                                 label="Select Parameter",
-    #                                 tag=f"osc{i}_combobox",
-    #                                 default_value=None,
-    #                                 callback=self.listbox_cb)
-
-    #             dpg.bind_item_font(f"osc{i}", global_font_id)
-
-
-    def listbox_cb(self, sender, app_data):
-        """
-        Callback function for the listbox.  Prints the selected items.
-
-        Args:
-            sender: The sender of the event (the listbox).
-            app_data: A dictionary containing the selected items.  For a listbox,
-                    it's  { 'items': [index1, index2, ...] }
-        """
-        for i in range(len(self.oscillators)):
-            if f"osc{i}" in sender:
-                param = None
-                for tag, param in self.params.items():
-                    if tag == app_data:
-                        self.oscillators[i].linked_param = param
-                        break

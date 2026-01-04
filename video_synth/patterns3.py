@@ -18,9 +18,6 @@ class BarMode(Enum):
     GROWING_SPACING = 0
     FIXED_SCROLL = 1
 
-    def __str__(self):
-        return self.name.replace('_', ' ').title()
-
 
 class PatternType(Enum):
     """Enumeration for different visual pattern types."""
@@ -32,9 +29,6 @@ class PatternType(Enum):
     PERLIN_BLOBS = 5
     FRACTAL_SINE = 6 # (sum of sines)
     XY_BARS = 7 
-
-    def __str__(self):
-        return self.name.replace('_', ' ').title()
 
 
 class Patterns:

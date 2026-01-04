@@ -33,23 +33,23 @@ from enum import IntEnum, Enum, auto
 from luma import *
 from gui_elements import ButtonsTable
 from generators import OscBank
-from config import WidgetType, enum_names
+from config import WidgetType
 
 log = logging.getLogger(__name__)
 
 
 """This section stores all local custom enum classes"""
 
-class NoiseType(IntEnum):
+class NoiseType(Enum):
     NONE = 0
-    GAUSSIAN = auto()
-    POISSON = auto()
-    SALT_AND_PEPPER = auto()
-    SPECKLE = auto()
-    SPARSE = auto()
-    RANDOM = auto()
+    GAUSSIAN = 1
+    POISSON = 2
+    SALT_AND_PEPPER = 2
+    SPECKLE = 4
+    SPARSE = 5
+    RANDOM = 6
 
-class WarpType(IntEnum):
+class WarpType(Enum):
     NONE = 0
     SINE = auto()
     RADIAL = auto()
@@ -58,7 +58,7 @@ class WarpType(IntEnum):
     WARP0 = auto()
 
 """Enumeration of blur modes"""
-class BlurType(IntEnum):
+class BlurType(Enum):
     NONE = 0
     GAUSSIAN = auto()
     MEDIAN = auto()
@@ -66,7 +66,7 @@ class BlurType(IntEnum):
     BILATERAL = auto()
 
 """Enumeration of sharpening modes"""
-class SharpenType(IntEnum):
+class SharpenType(Enum):
     NONE = 0
     TEST = auto()
     KERNEL = auto()
@@ -90,11 +90,8 @@ class ReflectionMode(Enum):
     SPLIT = auto()  # Reflect left half onto right half
     KALEIDOSCOPE = auto()
 
-    def __str__(self):
-        return self.name.replace("_", " ").title()
 
-
-class Shape(IntEnum):
+class Shape(Enum):
 
     RECTANGLE = 0
     CIRCLE = 1
@@ -124,7 +121,7 @@ class EffectManager:
         self.parent = parent
         self.params = ParamTable()
         self.toggles = ButtonsTable()
-        self.oscs = OscBank(self.params, 3)
+        self.oscs = OscBank(self.params, 0)
         
         self.feedback = Feedback(self.params, width, height, self.parent)
         self.color = Color(self.params, self.parent)
@@ -179,6 +176,10 @@ class EffectManager:
         del class_with_methods['Feedback']
 
         return class_with_methods, cleaned_methods
+
+
+    def reset_feedback_buffer(self):
+        self.feedback.frame_buffer.clear()
 
 
     def adjust_sequence(self, from_idx, to_idx):
@@ -1380,13 +1381,13 @@ class Feedback(EffectBase):
 
         subclass = self.__class__.__name__
 
-        self.frame_skip = params.add("frame_skip", 0, 10, 0, subclass, parent)
         self.alpha = params.add("alpha", 0.0, 1.0, 0.0, subclass, parent)
         self.temporal_filter = params.add("temporal_filter", 0, 1.0, 0.0, subclass, parent)
         self.feedback_luma_threshold = params.add("feedback_luma_threshold", 0, 255, 0, subclass, parent)
-        self.luma_select_mode = params.add(
-            "luma_select_mode", LumaMode.WHITE.value, LumaMode.BLACK.value, LumaMode.WHITE.value, subclass, parent, WidgetType.RADIO, LumaMode
+        self.luma_mode = params.add(
+            "luma_mode", LumaMode.WHITE.value, LumaMode.BLACK.value, LumaMode.WHITE.value, subclass, parent, WidgetType.RADIO, LumaMode
         )
+        self.frame_skip = params.add("frame_skip", 0, 10, 0, subclass, parent)
         self.buffer_select = params.add("buffer_frame_select", -1, 20, -1, subclass, parent)
         self.buffer_frame_blend = params.add("buffer_frame_blend", 0.0, 1.0, 0.0, subclass, parent)
 
@@ -1501,7 +1502,7 @@ class Feedback(EffectBase):
         return filtered_frame
 
     def apply_luma_feedback2(self, cur_frame, prev_frame):
-        return luma_key(cur_frame, prev_frame, self.luma_select_mode.value, self.feedback_luma_threshold.value)
+        return luma_key(cur_frame, prev_frame, self.luma_mode.value, self.feedback_luma_threshold.value)
     
     # TODO: this is a duplicate function; find way to reuse in mixer
     def apply_luma_feedback(self, prev_frame, cur_frame):
@@ -1512,13 +1513,18 @@ class Feedback(EffectBase):
 
         gray = cv2.cvtColor(cur_frame_int, cv2.COLOR_BGR2GRAY)
 
-        if self.luma_select_mode.value == LumaMode.BLACK.value:
+        if self.luma_mode.value == LumaMode.BLACK.value:
             # Use THRESH_BINARY_INV to key out DARK areas (Luma is low)
             # Pixels with Luma < threshold become white (255) in the mask, meaning they are KEPT
             ret, mask = cv2.threshold(
                 gray, self.feedback_luma_threshold.value, 255, cv2.THRESH_BINARY_INV
             )
-        elif self.luma_select_mode.value == LumaMode.WHITE.value:
+        elif self.luma_mode.value == LumaMode.WHITE.value:
+            ret, mask = cv2.threshold(
+                gray, self.feedback_luma_threshold.value, 255, cv2.THRESH_BINARY
+            )
+        else:
+            log.warning("Invalid luma_mode; defaulting to WHITE.")
             ret, mask = cv2.threshold(
                 gray, self.feedback_luma_threshold.value, 255, cv2.THRESH_BINARY
             )

@@ -52,20 +52,20 @@ class Mixer:
         # flags to skip the first frame after starting a new video source
         self.skip = False
 
-        self.sources = {
-            "VIDEO_FILE": "VIDEO_FILE",
-            "IMAGE_FILE": "IMAGE_FILE",
-            "METABALLS_ANIM": "METABALLS_ANIM",
-            "PLASMA_ANIM": "PLASMA_ANIM",
-            "REACTION_DIFFUSION_ANIM": "REACTION_DIFFUSION_ANIM",
-            "MOIRE_ANIM": "MOIRE_ANIM",
-            "SHADER_ANIM": "SHADER_ANIM",
-        }
-        self.sources.update({f"DEVICE_{i}": i for i in range(num_devices)})
+        num_devices = self._detect_devices(max_index=num_devices)
+        self.sources = {f"DEVICE_{i}": i for i in range(num_devices)}
+        self.sources.update({
+            "VIDEO_FILE": (num_devices:=num_devices+1),
+            "IMAGE_FILE": (num_devices:=num_devices+1),
+            "METABALLS_ANIM": (num_devices:=num_devices+1),
+            "PLASMA_ANIM": (num_devices:=num_devices+1),
+            "REACTION_DIFFUSION_ANIM": (num_devices:=num_devices+1),
+            "MOIRE_ANIM": (num_devices:=num_devices+1),
+            "SHADER_ANIM": (num_devices:=num_devices+1)
+        })
         
         log.info(f"Sources: {self.sources}")
 
-        self._detect_devices(max_index=num_devices)
 
         # --------------------------------------------------------------------
         parent = ParentClass.SRC_1_ANIMATIONS
@@ -74,7 +74,7 @@ class Mixer:
             "PLASMA_ANIM": Plasma(self.src_1_effects.params, self.src_1_effects.toggles, width=self.width, height=self.height, parent=parent),
             "REACTION_DIFFUSION_ANIM": ReactionDiffusion(self.src_1_effects.params, self.src_1_effects.toggles, self.width, self.height, parent=parent),
             "MOIRE_ANIM": Moire(self.src_1_effects.params, self.src_1_effects.toggles, width=self.width, height=self.height, parent=parent),
-            "SHADER_ANIM": ShaderVisualizer(self.src_1_effects.params, self.src_1_effects.toggles, self.width, self.height, parent=parent)
+            "SHADER_ANIM": Shaders(self.src_1_effects.params, self.src_1_effects.toggles, width=self.width, height=self.height, parent=parent)
         }
 
         parent = ParentClass.SRC_2_ANIMATIONS
@@ -83,7 +83,7 @@ class Mixer:
             "PLASMA_ANIM": Plasma(self.src_2_effects.params, self.src_2_effects.toggles, width=self.width, height=self.height, parent=parent),
             "REACTION_DIFFUSION_ANIM": ReactionDiffusion(self.src_2_effects.params, self.src_2_effects.toggles, self.width, self.height, parent=parent),
             "MOIRE_ANIM": Moire(self.src_2_effects.params, self.src_2_effects.toggles, width=self.width, height=self.height, parent=parent),
-            "SHADER_ANIM": ShaderVisualizer(self.src_2_effects.params, self.src_2_effects.toggles, self.width, self.height, parent=parent)
+            "SHADER_ANIM": Shaders(self.src_2_effects.params, self.src_2_effects.toggles, width=self.width, height=self.height, parent=parent)
         }
         # --------------------------------------------------------------------
 
@@ -156,6 +156,7 @@ class Mixer:
 
     def _detect_devices(self, max_index):
         log.info(f"Attempting to find video capture sources ({max_index})")
+        num_success = 0
         for index in range(max_index):
             try:
                 cap = cv2.VideoCapture(index, cv2.CAP_ANY)
@@ -163,12 +164,15 @@ class Mixer:
                     ret, _ = cap.read()
                     if ret:
                         log.info(f"Found video capture device at index {index}")
-                        self.sources[f"DEVICE_{index}"] = index
+                        num_success += 1
                     cap.release()
                 else:
+                    print('\n\nNone found\n\n')
                     log.warning(f"Failed to find capture device at index {index}")
             except Exception as e:
-                pass
+                log.error(f"Error while checking device at index {index}: {e}")
+                # pass
+            return num_success
 
 
     def _failback_source(self):
@@ -185,10 +189,10 @@ class Mixer:
         source_val = self.sources[source_name]
 
         if source_name == "VIDEO_FILE":
-            file_name = self.video_file_name1 if index == 1 else self.video_file_name2
+            file_name = self.video_file_name1 if index == SourceIndex.SRC_1 else self.video_file_name2
             source_val = self._find_dir("samples", file_name)
         elif source_name == "IMAGE_FILE":
-            file_name = self.image_file_name1 if index == 1 else self.image_file_name2
+            file_name = self.image_file_name1 if index == SourceIndex.SRC_1 else self.image_file_name2
             source_val = self._find_dir("images", file_name)
 
         cap = cv2.VideoCapture(source_val)
@@ -204,7 +208,7 @@ class Mixer:
     def _open_animation(self, cap, source_name, index):
         if cap and isinstance(cap, cv2.VideoCapture):
             cap.release()
-        animations = self.src_1_animations if index == 1 else self.src_2_animations
+        animations = self.src_1_animations if index == SourceIndex.SRC_1 else self.src_2_animations
         return animations[source_name]
 
 
@@ -281,6 +285,15 @@ class Mixer:
 
     def start_video(self, source_name, index):
         log.info(f"Requested mixer source {index}: {source_name}")
+
+        if index == SourceIndex.SRC_1:
+            self.src_1_wet = None
+            self.src_1_prev = None
+            self.src_1_effects.reset_feedback_buffer()
+        elif index == SourceIndex.SRC_2:
+            self.src_2_wet = None
+            self.src_2_prev = None
+            self.src_2_effects.reset_feedback_buffer()
 
         if "ANIM" not in source_name:  # handle cv2 sources
             log.info(f"Starting mixer source {index}: with cv2 source name: {source_name}")

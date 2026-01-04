@@ -1,6 +1,6 @@
 import random
 import logging
-from config import WidgetType
+from config import WidgetType, titleize_items
 
 
 class ParamTable:

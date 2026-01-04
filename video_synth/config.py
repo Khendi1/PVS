@@ -1,5 +1,5 @@
 import logging
-from enum import StrEnum, IntEnum, auto
+from enum import Enum, StrEnum, IntEnum, auto
 # from midi_input import *
 
 """Module to store basic global variables and effects manager"""
@@ -48,3 +48,21 @@ ESCAPE_KEYS = [ord('q'), ord('Q'), 27] # 27 is escape key
 
 def enum_names(enum):
     return [enum(e).name for e in enum]
+
+def titleize_items(items):
+    """
+    Takes a list of strings or an Enum class/member and returns title-cased versions.
+    """
+    # If it's an Enum class, iterate through its members
+    if isinstance(items, type) and issubclass(items, Enum):
+        return [member.name.replace('_', ' ').title() for member in items]
+    
+    # If it's a single Enum member
+    if isinstance(items, Enum):
+        return items.name.replace('_', ' ').title()
+    
+    # If it's a list or iterable
+    if isinstance(items, (list, tuple)):
+        return [str(item).title() for item in items]
+    
+    return str(items).title()

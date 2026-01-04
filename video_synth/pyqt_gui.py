@@ -1,3 +1,4 @@
+import enum
 import sys
 import numpy as np
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QPushButton, QGroupBox, QRadioButton, QScrollArea, QToolButton, QSizePolicy, QLineEdit, QTabWidget, QComboBox, QDialog, QGridLayout, QColorDialog
@@ -7,6 +8,7 @@ import logging
 from param import ParamTable, Param
 from config import ParentClass, SourceIndex, WidgetType
 from mix import MixModes # Import MixModes
+from save import SaveController
 
 log = logging.getLogger(__name__)
 
@@ -47,18 +49,29 @@ class ColorPickerWidget(QWidget):
 class VideoWidget(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self._pixmap = None
 
     @pyqtSlot(QImage)
     def set_image(self, image):
-        self.setPixmap(QPixmap.fromImage(image))
+        self._pixmap = QPixmap.fromImage(image)
+        self.setPixmap(self._pixmap)
+        self.updateGeometry()
+
+    def hasHeightForWidth(self):
+        return self._pixmap is not None
+
+    def heightForWidth(self, width: int) -> int:
+        if self._pixmap:
+            if self._pixmap.width() == 0:
+                return self.height()
+            return int(width * (self._pixmap.height() / self._pixmap.width()))
+        return self.height()
 
     def paintEvent(self, event):
-        p = self.pixmap()
-        if p:
-            pm = self.pixmap()
+        if self._pixmap:
+            pm = self._pixmap
             widget_size = self.size()
-            pixmap_size = pm.size()
             
             scaled_pixmap = pm.scaled(widget_size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             
@@ -69,45 +82,6 @@ class VideoWidget(QLabel):
             painter.drawPixmap(int(x), int(y), scaled_pixmap)
         else:
             super().paintEvent(event)
-
-    def sizeHint(self):
-        return QSize(1, 1)
-
-    def minimumSizeHint(self):
-        return QSize(1, 1)
-
-
-# class CollapsibleGroupBox(QWidget): # REMOVED
-#     def __init__(self, title="", header_color="#607D8B", parent=None): # Default grey color
-#         super().__init__(parent)
-#         self.toggle_button = QToolButton(self)
-#         self.toggle_button.setText(title)
-#         self.toggle_button.setCheckable(True)
-#         self.toggle_button.setChecked(False) # Start collapsed
-#         self.toggle_button.setStyleSheet(f"QToolButton {{ border: none; background-color: {header_color}; color: white; padding: 5px; text-align: left; }} QToolButton::hover {{ background-color: {header_color}; }}")
-#         self.toggle_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-#         self.toggle_button.setArrowType(Qt.ArrowType.RightArrow)
-#         self.toggle_button.clicked.connect(self.toggle_content)
-#         self.toggle_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed) # Make button stretch horizontally
-
-#         self.content_area = QWidget(self)
-#         self.content_layout = QVBoxLayout(self.content_area)
-#         self.content_layout.setSpacing(-20) # Reduced spacing between widgets
-#         self.content_area.setVisible(False) # Start hidden
-
-#         main_layout = QVBoxLayout(self)
-#         main_layout.addWidget(self.toggle_button)
-#         main_layout.addWidget(self.content_area)
-#         main_layout.setContentsMargins(0, 0, 0, 0)
-#         self.content_layout.setContentsMargins(0, 0, 5, 5)
-
-#     def toggle_content(self):
-#         checked = self.toggle_button.isChecked()
-#         self.content_area.setVisible(checked)
-#         self.toggle_button.setArrowType(Qt.ArrowType.DownArrow if checked else Qt.ArrowType.RightArrow)
-
-#     def add_widget(self, widget):
-#         self.content_layout.addWidget(widget)
 
 
 class LFOManagerDialog(QDialog):
@@ -146,7 +120,7 @@ class LFOManagerDialog(QDialog):
             
             osc = self.param.linked_oscillator
             # Create widgets for oscillator parameters
-            for param_name in ['frequency', 'amplitude', 'phase', 'shape', 'noise_octaves', 'noise_persistence', 'noise_lacunarity', 'noise_repeat', 'noise_base']:
+            for param_name in ['shape', 'frequency', 'amplitude', 'phase', 'noise_octaves', 'noise_persistence', 'noise_lacunarity', 'noise_repeat', 'noise_base']:
                 if hasattr(osc, param_name):
                     param = getattr(osc, param_name)
                     widget = self.gui_instance.create_param_widget(param)
@@ -176,7 +150,7 @@ class PyQTGUI(QMainWindow):
 
     def __init__(self, effects, layout='quad', mixer=None):
         super().__init__()
-        self.is_quad_layout = (layout == 'quad')
+        self.layout_style = layout
         self.effects = effects
         self.mixer = mixer
         self.src_1_effects = effects[SourceIndex.SRC_1]
@@ -191,6 +165,13 @@ class PyQTGUI(QMainWindow):
         self.src_2_toggles = self.src_2_effects.toggles
         self.post_toggles = self.post_effects.toggles
 
+        self.all_params = ParamTable()
+        self.all_params.params.update(self.src_1_params)
+        self.all_params.params.update(self.src_2_params)
+        self.all_params.params.update(self.post_params)
+        self.save_controller = SaveController(self.all_params)
+        self.save_controller.patch_loaded_callback = self.refresh_all_widgets
+
         self.mixer_widgets = {}
 
         self.osc_banks = [(effect_manager.oscs, effect_manager.parent.name) for effect_manager in effects]
@@ -198,134 +179,208 @@ class PyQTGUI(QMainWindow):
         self.setWindowTitle("PyQt Control Panel")
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
+        self.showMaximized()
 
-        if self.is_quad_layout:
-            self.showMaximized()
-            self.root_layout = QGridLayout(self.central_widget)
-            self.root_layout.setContentsMargins(0, 0, 0, 0) # No margins around the grid
-            self.root_layout.setSpacing(0) # No space between cells in the grid
-
-            # --- Left Column (as a single widget spanning two rows) ---
-            left_column_widget = QWidget()
-            left_column_layout = QVBoxLayout(left_column_widget)
-            
-            # Top-Left Tabs
-            top_left_tabs = QTabWidget()
-            left_column_layout.addWidget(top_left_tabs, 1) # 50% height
-
-            # Src 1 Effects Tab
-            src1_effects_container = QWidget()
-            self.src1_effects_layout = QVBoxLayout(src1_effects_container)
-            src1_effects_scroll = QScrollArea()
-            src1_effects_scroll.setWidgetResizable(True)
-            src1_effects_scroll.setWidget(src1_effects_container)
-            top_left_tabs.addTab(src1_effects_scroll, "Src 1 Effects")
-
-            # Src 1 Animations Tab
-            src1_animations_container = QWidget()
-            self.src1_animations_layout = QVBoxLayout(src1_animations_container)
-            src1_animations_scroll = QScrollArea()
-            src1_animations_scroll.setWidgetResizable(True)
-            src1_animations_scroll.setWidget(src1_animations_container)
-            top_left_tabs.addTab(src1_animations_scroll, "Src 1 Animations")
-
-            # Src 2 Effects Tab
-            src2_effects_container = QWidget()
-            self.src2_effects_layout = QVBoxLayout(src2_effects_container)
-            src2_effects_scroll = QScrollArea()
-            src2_effects_scroll.setWidgetResizable(True)
-            src2_effects_scroll.setWidget(src2_effects_container)
-            top_left_tabs.addTab(src2_effects_scroll, "Src 2 Effects")
-
-            # Src 2 Animations Tab
-            src2_animations_container = QWidget()
-            self.src2_animations_layout = QVBoxLayout(src2_animations_container)
-            src2_animations_scroll = QScrollArea()
-            src2_animations_scroll.setWidgetResizable(True)
-            src2_animations_scroll.setWidget(src2_animations_container)
-            top_left_tabs.addTab(src2_animations_scroll, "Src 2 Animations")
-
-            # Bottom-Left Tabs
-            bottom_left_tabs = QTabWidget()
-            left_column_layout.addWidget(bottom_left_tabs, 1) # 50% height
-            self.post_effects_container = QWidget() # Make it an attribute
-            # self.post_effects_layout will not be created here.
-            bottom_left_tabs.addTab(self.post_effects_container, "Post Effects") # Directly add the container
-
-            uncategorized_container = QWidget()
-            self.uncategorized_layout = QVBoxLayout(uncategorized_container)
-            uncategorized_scroll = QScrollArea()
-            uncategorized_scroll.setWidgetResizable(True)
-            uncategorized_scroll.setWidget(uncategorized_container)
-            bottom_left_tabs.addTab(uncategorized_scroll, "Uncategorized")
-
-            self.root_layout.addWidget(left_column_widget, 0, 0, 2, 1)
-
-            # --- Right Column ---
-            # Top-Right: Video with Buttons
-            top_right_container = QWidget()
-            top_right_layout = QHBoxLayout(top_right_container)
-            top_right_layout.setContentsMargins(0, 0, 0, 0)
-            top_right_layout.setSpacing(0)
-
-            button_column_layout = QVBoxLayout()
-            button_vid_b1 = QPushButton("B1")
-            button_vid_b1.setFixedWidth(30)
-            button_column_layout.addWidget(button_vid_b1)
-
-            button_vid_b2 = QPushButton("B2")
-            button_vid_b2.setFixedWidth(30)
-            button_column_layout.addWidget(button_vid_b2)
-
-            button_vid_b3 = QPushButton("B3")
-            button_vid_b3.setFixedWidth(30)
-            button_column_layout.addWidget(button_vid_b3)
-            button_column_layout.addStretch(1) # Pushes buttons to the top
-            top_right_layout.addLayout(button_column_layout)
-
-            self.video_widget = VideoWidget()
-            top_right_layout.addWidget(self.video_widget, 1) # Add stretch to video widget
-            self.video_frame_ready.connect(self.video_widget.set_image)
-            
-            self.root_layout.addWidget(top_right_container, 0, 1)
-
-            # Bottom-Right: Tabs for Mixer and General LFOs
-            bottom_right_tabs = QTabWidget()
-            
-            # Mixer Tab
-            mixer_container = QWidget()
-            self.mixer_layout = QVBoxLayout(mixer_container)
-            self.mixer_layout.addStretch(1)
-            mixer_scroll = QScrollArea()
-            mixer_scroll.setWidgetResizable(True)
-            mixer_scroll.setWidget(mixer_container)
-            bottom_right_tabs.addTab(mixer_scroll, "Mixer")
-
-            # General LFOs / Oscillators Tab
-            general_lfos_container = QWidget()
-            self.general_lfos_layout = QVBoxLayout(general_lfos_container)
-            self.general_lfos_layout.addStretch(1)
-            general_lfos_scroll = QScrollArea()
-            general_lfos_scroll.setWidgetResizable(True)
-            general_lfos_scroll.setWidget(general_lfos_container)
-            bottom_right_tabs.addTab(general_lfos_scroll, "General LFOs") # Changed tab title here
-
-            self.root_layout.addWidget(bottom_right_tabs, 1, 1)
-            
-            # --- Set Stretch Factors ---
-            self.root_layout.setColumnStretch(0, 1)
-            self.root_layout.setColumnStretch(1, 1)
-        else:
-            # Fallback to original layouts
-            self.root_layout = QVBoxLayout(self.central_widget)
-            self.layout = QVBoxLayout() # Placeholder
-            self.second_pane_layout = QVBoxLayout() # Placeholder
-            self.bottom_layout = QVBoxLayout() # Placeholder
-            self.root_layout.addLayout(self.layout)
-            self.root_layout.addLayout(self.second_pane_layout)
-            self.root_layout.addLayout(self.bottom_layout)
-
+        self._create_layout()
         self.create_ui()
+
+    def _create_layout(self):
+        if self.layout_style == 'quad':
+            self._create_quad_layout()
+        elif self.layout_style == 'split':
+            self._create_split_layout()
+        elif self.layout_style == 'tabbed':
+            self._create_tabbed_layout()
+        else:
+            self._create_fallback_layout()
+
+    def _create_quad_layout(self):
+        self.root_layout = QGridLayout(self.central_widget)
+        self.root_layout.setContentsMargins(0, 0, 0, 0) # No margins around the grid
+        self.root_layout.setSpacing(0) # No space between cells in the grid
+
+        # --- Left Column (as a single widget spanning two rows) ---
+        left_column_widget = QWidget()
+        left_column_layout = QVBoxLayout(left_column_widget)
+        
+        # Top-Left Tabs
+        top_left_tabs = QTabWidget()
+        left_column_layout.addWidget(top_left_tabs, 1) # 50% height
+
+        # Src 1 Effects Tab
+        src1_effects_container = QWidget()
+        self.src1_effects_layout = QVBoxLayout(src1_effects_container)
+        src1_effects_scroll = QScrollArea()
+        src1_effects_scroll.setWidgetResizable(True)
+        src1_effects_scroll.setWidget(src1_effects_container)
+        top_left_tabs.addTab(src1_effects_scroll, "Src 1 Effects")
+
+        # Src 1 Animations Tab
+        src1_animations_container = QWidget()
+        self.src1_animations_layout = QVBoxLayout(src1_animations_container)
+        src1_animations_scroll = QScrollArea()
+        src1_animations_scroll.setWidgetResizable(True)
+        src1_animations_scroll.setWidget(src1_animations_container)
+        top_left_tabs.addTab(src1_animations_scroll, "Src 1 Animations")
+
+        # Src 2 Effects Tab
+        src2_effects_container = QWidget()
+        self.src2_effects_layout = QVBoxLayout(src2_effects_container)
+        src2_effects_scroll = QScrollArea()
+        src2_effects_scroll.setWidgetResizable(True)
+        src2_effects_scroll.setWidget(src2_effects_container)
+        top_left_tabs.addTab(src2_effects_scroll, "Src 2 Effects")
+
+        # Src 2 Animations Tab
+        src2_animations_container = QWidget()
+        self.src2_animations_layout = QVBoxLayout(src2_animations_container)
+        src2_animations_scroll = QScrollArea()
+        src2_animations_scroll.setWidgetResizable(True)
+        src2_animations_scroll.setWidget(src2_animations_container)
+        top_left_tabs.addTab(src2_animations_scroll, "Src 2 Animations")
+
+        # Bottom-Left Tabs
+        bottom_left_tabs = QTabWidget()
+        left_column_layout.addWidget(bottom_left_tabs, 1) # 50% height
+        self.post_effects_container = QWidget() # Make it an attribute
+        # self.post_effects_layout will not be created here.
+        bottom_left_tabs.addTab(self.post_effects_container, "Post Effects") # Directly add the container
+
+        uncategorized_container = QWidget()
+        self.uncategorized_layout = QVBoxLayout(uncategorized_container)
+        uncategorized_scroll = QScrollArea()
+        uncategorized_scroll.setWidgetResizable(True)
+        uncategorized_scroll.setWidget(uncategorized_container)
+        bottom_left_tabs.addTab(uncategorized_scroll, "Uncategorized")
+
+        self.root_layout.addWidget(left_column_widget, 0, 0, 2, 1)
+
+        # --- Right Column ---
+        # Top-Right: Video with Buttons
+        top_right_container = QWidget()
+        top_right_layout = QHBoxLayout(top_right_container)
+        top_right_layout.setContentsMargins(0, 0, 0, 0)
+        top_right_layout.setSpacing(0)
+
+        button_column_layout = QVBoxLayout()
+        
+        button_r1 = QPushButton("R1")
+        button_r1.setFixedWidth(30)
+        button_r1.setToolTip("Reset Source 1 Params")
+        button_r1.clicked.connect(self.reset_src1_params)
+        button_column_layout.addWidget(button_r1)
+
+        button_r2 = QPushButton("R2")
+        button_r2.setFixedWidth(30)
+        button_r2.setToolTip("Reset Source 2 Params")
+        button_r2.clicked.connect(self.reset_src2_params)
+        button_column_layout.addWidget(button_r2)
+
+        button_rp = QPushButton("RP")
+        button_rp.setFixedWidth(30)
+        button_rp.setToolTip("Reset Post-Processing Params")
+        button_rp.clicked.connect(self.reset_post_params)
+        button_column_layout.addWidget(button_rp)
+
+        button_ra = QPushButton("RA")
+        button_ra.setFixedWidth(30)
+        button_ra.setToolTip("Reset All Params")
+        button_ra.clicked.connect(self.reset_all_params)
+        button_column_layout.addWidget(button_ra)
+
+        button_column_layout.addStretch(1) # Pushes buttons to the top
+        top_right_layout.addLayout(button_column_layout)
+
+        self.video_widget = VideoWidget()
+        top_right_layout.addWidget(self.video_widget, 1) # Add stretch to video widget
+        self.video_frame_ready.connect(self.video_widget.set_image)
+        
+        self.root_layout.addWidget(top_right_container, 0, 1)
+
+        # Bottom-Right: Tabs for Mixer and patch recall buttons
+        bottom_right_tabs = QTabWidget()
+        
+        # Mixer Tab
+        mixer_container = QWidget()
+        self.mixer_layout = QVBoxLayout(mixer_container)
+        mixer_scroll = QScrollArea()
+        mixer_scroll.setWidgetResizable(True)
+        mixer_scroll.setWidget(mixer_container)
+        bottom_right_tabs.addTab(mixer_scroll, "Mixer")
+
+        self.root_layout.addWidget(bottom_right_tabs, 1, 1)
+        
+        # --- Set Stretch Factors ---
+        self.root_layout.setColumnStretch(0, 1)
+        self.root_layout.setColumnStretch(1, 1)
+
+    def _create_split_layout(self):
+        self._create_fallback_layout()
+
+    def _create_tabbed_layout(self):
+        self.root_layout = QVBoxLayout(self.central_widget)
+
+        # Top Pane
+        top_pane_tabs = QTabWidget()
+        self.root_layout.addWidget(top_pane_tabs)
+
+        # Src 1 Effects Tab
+        src1_effects_container = QWidget()
+        self.src1_effects_layout = QVBoxLayout(src1_effects_container)
+        src1_effects_scroll = QScrollArea()
+        src1_effects_scroll.setWidgetResizable(True)
+        src1_effects_scroll.setWidget(src1_effects_container)
+        top_pane_tabs.addTab(src1_effects_scroll, "Src 1 Effects")
+
+        # Src 1 Animations Tab
+        src1_animations_container = QWidget()
+        self.src1_animations_layout = QVBoxLayout(src1_animations_container)
+        src1_animations_scroll = QScrollArea()
+        src1_animations_scroll.setWidgetResizable(True)
+        src1_animations_scroll.setWidget(src1_animations_container)
+        top_pane_tabs.addTab(src1_animations_scroll, "Src 1 Animations")
+
+        # Src 2 Effects Tab
+        src2_effects_container = QWidget()
+        self.src2_effects_layout = QVBoxLayout(src2_effects_container)
+        src2_effects_scroll = QScrollArea()
+        src2_effects_scroll.setWidgetResizable(True)
+        src2_effects_scroll.setWidget(src2_effects_container)
+        top_pane_tabs.addTab(src2_effects_scroll, "Src 2 Effects")
+
+        # Src 2 Animations Tab
+        src2_animations_container = QWidget()
+        self.src2_animations_layout = QVBoxLayout(src2_animations_container)
+        src2_animations_scroll = QScrollArea()
+        src2_animations_scroll.setWidgetResizable(True)
+        src2_animations_scroll.setWidget(src2_animations_container)
+        top_pane_tabs.addTab(src2_animations_scroll, "Src 2 Animations")
+
+        # Bottom Pane
+        bottom_pane_tabs = QTabWidget()
+        self.root_layout.addWidget(bottom_pane_tabs)
+
+        # Mixer Tab
+        mixer_container = QWidget()
+        self.mixer_layout = QVBoxLayout(mixer_container)
+        mixer_scroll = QScrollArea()
+        mixer_scroll.setWidgetResizable(True)
+        mixer_scroll.setWidget(mixer_container)
+        bottom_pane_tabs.addTab(mixer_scroll, "Mixer")
+
+        # Post Effects Tab
+        self.post_effects_container = QWidget()
+        bottom_pane_tabs.addTab(self.post_effects_container, "Post Effects")
+
+        # Uncategorized Tab
+        uncategorized_container = QWidget()
+        self.uncategorized_layout = QVBoxLayout(uncategorized_container)
+        uncategorized_scroll = QScrollArea()
+        uncategorized_scroll.setWidgetResizable(True)
+        uncategorized_scroll.setWidget(uncategorized_container)
+        bottom_pane_tabs.addTab(uncategorized_scroll, "Uncategorized")
+
+
 
     def open_lfo_dialog(self, param, button):
         if param.parent in [ParentClass.SRC_1_ANIMATIONS, ParentClass.SRC_1_EFFECTS]:
@@ -347,29 +402,7 @@ class PyQTGUI(QMainWindow):
     def create_ui(self):
         """
         Dynamically creates and arranges the user interface elements based on the application's parameters
-        and the chosen layout (quad in this case).
-
-        This function performs the following steps:
-        1. Gathers all tunable parameters from Source 1 Effects, Source 2 Effects, and Post Effects.
-        2. Categorizes these parameters into groups based on their 'parent' attribute.
-        3. Initializes a layout_map to direct parameter groups to their respective QVBoxLayouts
-           within the quad layout (Src 1 Effects, Src 1 Animations, Src 2 Effects, Src 2 Animations, Mixer, Uncategorized).
-        4. Explicitly handles the 'POST_EFFECTS' group: it creates a QTabWidget where each family of
-           post-effects is presented as a separate tab. The parameters within each family are added
-           directly to their respective family_widget.
-        5. Explicitly handles the 'MIXER' group: it presents parameters grouped by family, with each
-           family having a non-collapsible QLabel header, followed by its parameters.
-        6. Processes remaining parameter groups (like Source 1/2 Effects/Animations, and Uncategorized)
-           for the left column tabs. For Effects/Animations, it creates a QTabWidget for families,
-           with each family getting its own tab containing parameters. For Uncategorized, it uses
-           CollapsibleGroupBoxes.
-        7. Explicitly populates the 'General LFOs' tab in the bottom-right quad. It iterates through
-           each oscillator in the osc_banks, creating a tab for each, containing its specific parameters
-           (frequency, amplitude, phase, etc.).
-
-        No parameters are directly passed to this function, as it operates on the instance's attributes.
-        It modifies the central_widget's layout by adding various QWidgets, QScrollAreas, QTabWidgets,
-        and parameter-specific controls (sliders, radio buttons, dropdowns).
+        and the chosen layout.
         """
         all_params_list = list(self.src_1_params.values()) + \
                           list(self.src_2_params.values()) + \
@@ -385,35 +418,49 @@ class PyQTGUI(QMainWindow):
                 parent_groups[parent_key] = []
             parent_groups[parent_key].append(param)
         
-        layout_map = {
-            ParentClass.SRC_1_EFFECTS: self.src1_effects_layout,
-            ParentClass.SRC_1_ANIMATIONS: self.src1_animations_layout,
-            ParentClass.SRC_2_EFFECTS: self.src2_effects_layout,
-            ParentClass.SRC_2_ANIMATIONS: self.src2_animations_layout,
-            ParentClass.MIXER: self.mixer_layout,
-            "Uncategorized": self.uncategorized_layout,
-        }
+        layout_map = {}
+        if self.layout_style == 'quad':
+            layout_map = {
+                ParentClass.SRC_1_EFFECTS: self.src1_effects_layout,
+                ParentClass.SRC_1_ANIMATIONS: self.src1_animations_layout,
+                ParentClass.SRC_2_EFFECTS: self.src2_effects_layout,
+                ParentClass.SRC_2_ANIMATIONS: self.src2_animations_layout,
+                ParentClass.MIXER: self.mixer_layout,
+                "Uncategorized": self.uncategorized_layout,
+            }
+        elif self.layout_style == 'tabbed':
+            layout_map = {
+                ParentClass.SRC_1_EFFECTS: self.src1_effects_layout,
+                ParentClass.SRC_1_ANIMATIONS: self.src1_animations_layout,
+                ParentClass.SRC_2_EFFECTS: self.src2_effects_layout,
+                ParentClass.SRC_2_ANIMATIONS: self.src2_animations_layout,
+                ParentClass.POST_EFFECTS: self.post_effects_container,
+                ParentClass.MIXER: self.mixer_layout,
+                "Uncategorized": self.uncategorized_layout,
+            }
+        else: # Fallback
+            self.video_widget = VideoWidget()
+            self.video_frame_ready.connect(self.video_widget.set_image)
+            self.root_layout.addWidget(self.video_widget)
+            layout_map = {
+                ParentClass.SRC_1_EFFECTS: self.layout,
+                ParentClass.SRC_1_ANIMATIONS: self.layout,
+                ParentClass.SRC_2_EFFECTS: self.second_pane_layout,
+                ParentClass.SRC_2_ANIMATIONS: self.second_pane_layout,
+                ParentClass.POST_EFFECTS: self.bottom_layout,
+                ParentClass.MIXER: self.bottom_layout,
+                "Uncategorized": self.bottom_layout,
+            }
 
-        # The first duplicate POST_EFFECTS handling block has been removed.
-        
-        # Explicitly handle POST_EFFECTS and MIXER first to prevent duplication
-        log.info(f"--- create_ui started ---")
-        log.info(f"Initial parent_groups keys: {list(parent_groups.keys())}")
-        log.info(f"layout_map: {layout_map}")
-
-        # Explicitly handle POST_EFFECTS and MIXER first to prevent duplication
-        if self.is_quad_layout:
+        if self.layout_style in ['quad', 'tabbed']:
             if ParentClass.POST_EFFECTS in parent_groups:
-                log.info(f"Processing ParentClass.POST_EFFECTS explicitly.")
-                params_in_group = parent_groups[ParentClass.POST_EFFECTS]
+                params_in_group = parent_groups.pop(ParentClass.POST_EFFECTS)
                 
-                # Create a QVBoxLayout for self.post_effects_container
                 post_effects_layout_for_tab = QVBoxLayout(self.post_effects_container)
                 post_effects_layout_for_tab.setContentsMargins(0,0,0,0)
-                # post_effects_layout_for_tab.addStretch(1) # REMOVED
 
                 family_tab_widget = QTabWidget()
-                post_effects_layout_for_tab.addWidget(family_tab_widget) # Add the family tab widget to this layout
+                post_effects_layout_for_tab.addWidget(family_tab_widget)
 
                 family_groups = {}
                 for param in params_in_group:
@@ -424,7 +471,6 @@ class PyQTGUI(QMainWindow):
                 for family_name, params_in_family in family_groups.items():
                     family_widget = QWidget()
                     family_layout = QVBoxLayout(family_widget)
-                    # family_layout.addStretch(1) # REMOVED
 
                     for param in params_in_family:
                         widget = self.create_param_widget(param)
@@ -436,14 +482,29 @@ class PyQTGUI(QMainWindow):
                     
                     tab_title = family_name.replace("_", " ").title()
                     family_tab_widget.addTab(family_scroll, tab_title)
-                
-                del parent_groups[ParentClass.POST_EFFECTS] # Remove after processing
-                log.info(f"ParentClass.POST_EFFECTS deleted. parent_groups keys now: {list(parent_groups.keys())}")
-
 
             if ParentClass.MIXER in parent_groups:
-                params_in_group = parent_groups[ParentClass.MIXER]
+                params_in_group = parent_groups.pop(ParentClass.MIXER)
                 target_layout = layout_map[ParentClass.MIXER]
+
+                save_button = QPushButton("Save Patch")
+                save_button.clicked.connect(self.save_controller.save_patch)
+                target_layout.addWidget(save_button)
+
+                patch_recall_layout = QHBoxLayout()
+                load_prev_button = QPushButton("Load Previous Patch")
+                load_prev_button.clicked.connect(self.save_controller.load_prev_patch)
+                patch_recall_layout.addWidget(load_prev_button)
+
+                load_random_button = QPushButton("Load Random Patch")
+                load_random_button.clicked.connect(self.save_controller.load_random_patch)
+                patch_recall_layout.addWidget(load_random_button)
+
+                load_next_button = QPushButton("Load Next Patch")
+                load_next_button.clicked.connect(self.save_controller.load_next_patch)
+                patch_recall_layout.addWidget(load_next_button)
+                
+                target_layout.addLayout(patch_recall_layout)
 
                 family_groups = {}
                 for param in params_in_group:
@@ -452,16 +513,29 @@ class PyQTGUI(QMainWindow):
                     family_groups[param.family].append(param)
                 
                 for family_name, params_in_family in family_groups.items():
-                    # Add a non-collapsible header for the family
-                    family_header = QLabel(family_name.replace("_", " ").title())
-                    font = family_header.font()
-                    font.setBold(True)
-                    family_header.setFont(font)
-                    family_header.setStyleSheet("QLabel { padding: 5px; background-color: #546E7A; color: white; }")
-                    target_layout.addWidget(family_header)
+                    if family_name.upper() != "MIXER":
+                        family_header = QLabel(family_name.replace("_", " ").title())
+                        font = family_header.font()
+                        font.setBold(True)
+                        family_header.setFont(font)
+                        family_header.setStyleSheet("QLabel { padding: 5px; background-color: #546E7A; color: white; }")
+                        target_layout.addWidget(family_header)
 
-                    # Add parameters directly to the layout
-                    source_params = {p.name: p for p in params_in_family if p.name in ['source_1', 'source_2']}
+                    blend_mode_param, chroma_key_hue_sat_val_params, source_params = None, [], {}
+                    
+                    all_mixer_family_params = list(params_in_family)
+                    params_in_family = []
+                    
+                    for param in all_mixer_family_params:
+                        if param.name == 'blend_mode':
+                            blend_mode_param = param
+                        elif param.name in ['upper_hue', 'upper_sat', 'upper_val', 'lower_hue', 'lower_sat', 'lower_val']:
+                            chroma_key_hue_sat_val_params.append(param)
+                        elif param.name in ['source_1', 'source_2']:
+                            source_params[param.name] = param
+                        else:
+                            params_in_family.append(param)
+                    
                     if len(source_params) == 2:
                         source_layout = QHBoxLayout()
                         
@@ -482,144 +556,108 @@ class PyQTGUI(QMainWindow):
                         s2_combo.currentTextChanged.connect(lambda text, p=s2_param: self.on_dropdown_change(p, text))
                         source_layout.addWidget(s2_label)
                         source_layout.addWidget(s2_combo)
+
+                        swap_button = QPushButton("Swap")
+                        swap_button.clicked.connect(self.mixer.swap.toggle)
+                        source_layout.addWidget(swap_button)
                         
                         target_layout.addLayout(source_layout)
-                        params_in_family = [p for p in params_in_family if p.name not in source_params]
+                    
+                    if blend_mode_param:
+                        widget = self.create_param_widget(blend_mode_param)
+                        target_layout.addWidget(widget)
 
-
-                    chroma_key_params = {p.name: p for p in params_in_family if p.name in ['upper_hue', 'upper_sat', 'upper_val', 'lower_hue', 'lower_sat', 'lower_val']}
-                    if len(chroma_key_params) == 6:
-                        upper_picker = ColorPickerWidget('Upper Color', chroma_key_params['upper_hue'], chroma_key_params['upper_sat'], chroma_key_params['upper_val'])
-                        lower_picker = ColorPickerWidget('Lower Color', chroma_key_params['lower_hue'], chroma_key_params['lower_sat'], chroma_key_params['lower_val'])
-                        target_layout.addWidget(upper_picker)
-                        target_layout.addWidget(lower_picker)
+                    if len(chroma_key_hue_sat_val_params) == 6:
+                        chroma_key_dict = {p.name: p for p in chroma_key_hue_sat_val_params}
+                        color_pickers_layout = QHBoxLayout()
+                        
+                        upper_picker = ColorPickerWidget('Upper Color', chroma_key_dict['upper_hue'], chroma_key_dict['upper_sat'], chroma_key_dict['upper_val'])
+                        lower_picker = ColorPickerWidget('Lower Color', chroma_key_dict['lower_hue'], chroma_key_dict['lower_sat'], chroma_key_dict['lower_val'])
+                        
+                        color_pickers_layout.addWidget(upper_picker)
+                        color_pickers_layout.addWidget(lower_picker)
+                        
+                        target_layout.addLayout(color_pickers_layout)
+                        
                         self.mixer_widgets['upper_color_picker'] = upper_picker
                         self.mixer_widgets['lower_color_picker'] = lower_picker
-                        # Remove the chroma key params from the list to avoid creating individual sliders
-                        params_in_family = [p for p in params_in_family if p.name not in chroma_key_params]
 
                     for param in params_in_family:
                         widget = self.create_param_widget(param)
                         target_layout.addWidget(widget)
-                del parent_groups[ParentClass.MIXER] # Remove after processing
-        
-        # Process remaining parent groups
+                
+                target_layout.addStretch(1)
+
         for parent_enum_or_str, params_in_group in parent_groups.items():
-            target_layout = None
-            if self.is_quad_layout:
-                if parent_enum_or_str in layout_map:
-                    target_layout = layout_map[parent_enum_or_str]
-            else: 
-                if parent_enum_or_str in [ParentClass.SRC_1_ANIMATIONS, ParentClass.SRC_1_EFFECTS]:
-                    target_layout = self.layout
-                elif parent_enum_or_str in [ParentClass.SRC_2_ANIMATIONS, ParentClass.SRC_2_EFFECTS]:
-                    target_layout = self.second_pane_layout
-                else:
-                    target_layout = self.bottom_layout
+            target_layout = layout_map.get(parent_enum_or_str)
 
             if target_layout is None:
                 log.warning(f"No target layout found for parameter group '{parent_enum_or_str}'. Skipping.")
                 continue
 
-            else: # Standard handling for all other groups
-                # For SRC_1_EFFECTS, SRC_1_ANIMATIONS, SRC_2_EFFECTS, SRC_2_ANIMATIONS
-                # Replace collapsible groups with tab groups for families
-                if self.is_quad_layout and parent_enum_or_str in [
-                    ParentClass.SRC_1_EFFECTS, ParentClass.SRC_1_ANIMATIONS,
-                    ParentClass.SRC_2_EFFECTS, ParentClass.SRC_2_ANIMATIONS
-                ]:
-                    family_tab_widget = QTabWidget()
-                    target_layout.addWidget(family_tab_widget)
+            if self.layout_style in ['quad', 'tabbed'] and parent_enum_or_str in [
+                ParentClass.SRC_1_EFFECTS, ParentClass.SRC_1_ANIMATIONS,
+                ParentClass.SRC_2_EFFECTS, ParentClass.SRC_2_ANIMATIONS,
+                "Uncategorized"
+            ]:
+                family_tab_widget = QTabWidget()
+                target_layout.addWidget(family_tab_widget)
 
-                    family_groups = {}
-                    for param in params_in_group:
-                        if param.family not in family_groups:
-                            family_groups[param.family] = []
-                        family_groups[param.family].append(param)
-                    
-                    for family_name, params_in_family in family_groups.items():
-                        family_widget = QWidget()
-                        family_layout = QVBoxLayout(family_widget)
-                        # family_layout.addStretch(1) # REMOVED
-
-                        for param in params_in_family:
-                            widget = self.create_param_widget(param)
-                            family_layout.addWidget(widget)
-
-                        family_scroll = QScrollArea()
-                        family_scroll.setWidgetResizable(True)
-                        family_scroll.setWidget(family_widget)
-                        
-                        tab_title = family_name.replace("_", " ").title()
-                        family_tab_widget.addTab(family_scroll, tab_title)
-                else: # Fallback to collapsible groups for other uncategorized groups
-                    # if parent_enum_or_str == "Uncategorized": # This is handled directly in __init__ now
-                    #     title = "Uncategorized"
-                    #     header_color = "#AAAAAA"
-                    # else:
-                    #     title = parent_enum_or_str.name.replace("_", " ")
-                    #     header_color = parent_enum_or_str.value
-
-                    parent_tab_widget = QTabWidget() # Renamed to be clearer
-                    
-                    family_groups = {}
-                    for param in params_in_group:
-                        if param.family not in family_groups:
-                            family_groups[param.family] = []
-                        family_groups[param.family].append(param)
-                    
-                    for family_name, params_in_family in family_groups.items():
-                        # Each family becomes a tab within the parent_tab_widget
-                        family_widget = QWidget()
-                        family_layout = QVBoxLayout(family_widget)
-                        for param in params_in_family:
-                            widget = self.create_param_widget(param)
-                            family_layout.addWidget(widget)
-
-                        family_scroll = QScrollArea()
-                        family_scroll.setWidgetResizable(True)
-                        family_scroll.setWidget(family_widget)
-                        
-                        tab_title = family_name.replace("_", " ").title()
-                        parent_tab_widget.addTab(family_scroll, tab_title)
-                    
-                    target_layout.addWidget(parent_tab_widget) # Add the QTabWidget to the target_layout
-        
-        # Explicitly populate the General LFOs tab outside the parent_groups loop
-        general_lfos_family_tab_widget = QTabWidget()
-        self.general_lfos_layout.addWidget(general_lfos_family_tab_widget) # Add the family tab widget to the general lfos layout
-
-        for osc_bank, osc_bank_name in self.osc_banks:
-            for i, osc in enumerate(osc_bank.oscillators):
-                osc_title = f"{osc_bank_name.replace('_EFFECTS', '').replace('_', ' ').title()} Oscillator {i+1}"
+                family_groups = {}
+                for param in params_in_group:
+                    if param.family not in family_groups:
+                        family_groups[param.family] = []
+                    family_groups[param.family].append(param)
                 
-                osc_widget = QWidget()
-                osc_layout = QVBoxLayout(osc_widget)
-                # osc_layout.addStretch(1) # REMOVED
+                for family_name, params_in_family in family_groups.items():
+                    family_widget = QWidget()
+                    family_layout = QVBoxLayout(family_widget)
 
-                osc_params = [
-                    osc.frequency, osc.amplitude, osc.phase, osc.shape,
-                    osc.noise_octaves, osc.noise_persistence, osc.noise_lacunarity,
-                    osc.noise_repeat, osc.noise_base
-                ]
-                for param in osc_params:
-                    widget = self.create_param_widget(param)
-                    osc_layout.addWidget(widget)
+                    for param in params_in_family:
+                        widget = self.create_param_widget(param)
+                        family_layout.addWidget(widget)
 
-                osc_scroll = QScrollArea()
-                osc_scroll.setWidgetResizable(True)
-                osc_scroll.setWidget(osc_widget)
+                    family_scroll = QScrollArea()
+                    family_scroll.setWidgetResizable(True)
+                    family_scroll.setWidget(family_widget)
+                    
+                    tab_title = family_name.replace("_", " ").title()
+                    family_tab_widget.addTab(family_scroll, tab_title)
+            else:
+                # Fallback for other layouts
+                parent_tab_widget = QTabWidget()
                 
-                general_lfos_family_tab_widget.addTab(osc_scroll, osc_title)
+                family_groups = {}
+                for param in params_in_group:
+                    if param.family not in family_groups:
+                        family_groups[param.family] = []
+                    family_groups[param.family].append(param)
+                
+                for family_name, params_in_family in family_groups.items():
+                    family_widget = QWidget()
+                    family_layout = QVBoxLayout(family_widget)
+                    for param in params_in_family:
+                        widget = self.create_param_widget(param)
+                        family_layout.addWidget(widget)
+
+                    family_scroll = QScrollArea()
+                    family_scroll.setWidgetResizable(True)
+                    family_scroll.setWidget(family_widget)
+                    
+                    tab_title = family_name.replace("_", " ").title()
+                    parent_tab_widget.addTab(family_scroll, tab_title)
+                
+                target_layout.addWidget(parent_tab_widget)
 
         self.update_mixer_visibility()
 
     def create_param_widget(self, param: Param):
         widget = QWidget()
+        widget.setProperty("param_name", param.name)
         layout = QHBoxLayout(widget)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        label = QLabel(param.name)
+        label = QLabel(param.name.replace("_", " ").title())
         label.setFixedWidth(100)
         layout.addWidget(label)
 
@@ -627,22 +665,52 @@ class PyQTGUI(QMainWindow):
             radio_button_group = QWidget()
             radio_layout = QHBoxLayout(radio_button_group)
             for option in param.options:
-                radio_button = QRadioButton(str(param.options(option).name))
-                radio_button.toggled.connect(lambda checked, p=param, v=option: self.on_radio_change(p, v, checked))
-                if option == param.value:
+                radio_button = QRadioButton(option.name.replace('_', ' ').title())
+                radio_button.toggled.connect(lambda checked, p=param, v=option.value: self.on_radio_change(p, v, checked))
+                if option.value == param.value:
                     radio_button.setChecked(True)
                 radio_layout.addWidget(radio_button)
             layout.addWidget(radio_button_group)
 
         elif param.type == WidgetType.DROPDOWN:
             combo_box = QComboBox()
-            combo_box.addItems([str(o) for o in param.options])
-            combo_box.setCurrentText(str(param.value))
-            combo_box.currentTextChanged.connect(lambda text, p=param: self.on_dropdown_change(p, text))
+            if isinstance(param.options, dict):
+                for key, value in param.options.items():
+                    combo_box.addItem(key.replace('_', ' ').title(), value)
+            else: # Enum or list of strings
+                for option in param.options:
+                    if isinstance(option, str):
+                        combo_box.addItem(option.replace('_', ' ').title(), option)
+                    else: # Enum member
+                        combo_box.addItem(option.name.replace('_', ' ').title(), option)
+
+            # Find the index of the current value and set it
+            if isinstance(param.options, dict):
+                # Find the index corresponding to the param's value in the dict's values
+                try:
+                    idx = list(param.options.values()).index(param.value)
+                    combo_box.setCurrentIndex(idx)
+                except ValueError:
+                    pass # Value not in dict
+            else: # Enum or list of strings
+                try:
+                    # Check if the options are enum members
+                    if param.options and hasattr(list(param.options)[0], 'value'):
+                        idx = [option.value for option in param.options].index(param.value)
+                    else: # It's a list of strings (or other values)
+                        idx = list(param.options).index(param.value)
+                    combo_box.setCurrentIndex(idx)
+                except (ValueError, IndexError):
+                    log.warning(f"Could not set dropdown index for {param.name} with value {param.value}")
+                    pass
+
+
+            combo_box.currentIndexChanged.connect(lambda index, p=param, c=combo_box: self.on_dropdown_change(p, c.itemData(index)))
             layout.addWidget(combo_box)
 
         else:  # Default to SLIDER
             mod_button = QPushButton("LFO")
+            mod_button.setProperty("param_name", param.name)
             mod_button.setFixedWidth(35)
             mod_button.clicked.connect(lambda: self.open_lfo_dialog(param, mod_button))
             
@@ -720,26 +788,24 @@ class PyQTGUI(QMainWindow):
 
     def on_radio_change(self, param: Param, value, checked):
         if checked:
-            param.value = int(param.options(value).value)
+            param.value = value
             if param.name == 'blend_mode':
                 self.update_mixer_visibility()
 
 
-    def on_dropdown_change(self, param: Param, text_value):
+    def on_dropdown_change(self, param: Param, data):
         try:
-            if isinstance(param.default_val, int) and not isinstance(text_value, str):
-                value = int(text_value)
-            elif isinstance(param.default_val, float):
-                value = float(text_value)
+            if isinstance(data, enum.Enum):
+                param.value = data.value
             else:
-                value = text_value
-            param.value = value
+                param.value = data
+            log.info(f"Dropdown changed: {param.name} = {param.value}")
 
             if self.mixer:
                 if param.name == "source_1":
-                    self.mixer.start_video(value, SourceIndex.SRC_1)
+                    self.mixer.start_video(data, SourceIndex.SRC_1)
                 elif param.name == "source_2":
-                    self.mixer.start_video(value, SourceIndex.SRC_2)
+                    self.mixer.start_video(data, SourceIndex.SRC_2)
         except (ValueError, TypeError):
             pass
 
@@ -767,6 +833,27 @@ class PyQTGUI(QMainWindow):
         if combo_box:
             combo_box.setCurrentText(str(param.value))
 
+    def reset_src1_params(self):
+        for param in self.src_1_params.values():
+            param.reset()
+        self.refresh_all_widgets()
+
+    def reset_src2_params(self):
+        for param in self.src_2_params.values():
+            param.reset()
+        self.refresh_all_widgets()
+
+    def reset_post_params(self):
+        for param in self.post_params.values():
+            param.reset()
+        self.refresh_all_widgets()
+
+    def reset_all_params(self):
+        for param in self.all_params.values():
+            param.reset()
+        self.refresh_all_widgets()
+
+
     def update_mixer_visibility(self):
         blend_mode = self.mixer.blend_mode.value
 
@@ -783,6 +870,51 @@ class PyQTGUI(QMainWindow):
                 widget.setVisible(widgets_visibility[name])
             elif name == 'blend_mode':
                 widget.setVisible(True) # Always show the blend mode selector
+
+    def refresh_all_widgets(self):
+        for widget in self.findChildren(QWidget):
+            param_name = widget.property("param_name")
+            if param_name and param_name in self.all_params:
+                param = self.all_params[param_name]
+                
+                # Update slider and line edit
+                slider = widget.findChild(QSlider)
+                if slider:
+                    if isinstance(param.default_val, float):
+                        slider.setValue(int(param.value * 1000))
+                    else:
+                        slider.setValue(param.value)
+                
+                value_input = widget.findChild(QLineEdit)
+                if value_input:
+                    if isinstance(param.default_val, float):
+                        value_input.setText(str(round(param.value, 3)))
+                    else:
+                        value_input.setText(str(param.value))
+
+                # Update radio buttons
+                radio_buttons = widget.findChildren(QRadioButton)
+                if radio_buttons:
+                    for rb in radio_buttons:
+                        if rb.text().replace(' ', '_').lower() == param.value.name.lower():
+                            rb.setChecked(True)
+                            break
+                
+                # Update combo box
+                combo_box = widget.findChild(QComboBox)
+                if combo_box:
+                    if isinstance(param.options, dict):
+                        try:
+                            idx = list(param.options.values()).index(param.value)
+                            combo_box.setCurrentIndex(idx)
+                        except ValueError:
+                            pass
+                    else: # Enum
+                        try:
+                            idx = [option for option in param.options].index(param.value)
+                            combo_box.setCurrentIndex(idx)
+                        except ValueError:
+                            pass
 
     def closeEvent(self, event):
         QApplication.instance().quit()

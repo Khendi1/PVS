@@ -34,12 +34,6 @@ from pyqt_gui import PyQTGUI
 def parse_args():
     parser = argparse.ArgumentParser(description='Video Synthesizer initialization arguments')
     parser.add_argument(
-        '-o',
-        '--osc', 
-        type=int, 
-        default=DEFAULT_NUM_OSC, 
-        help='Number of general purpose oscillators')
-    parser.add_argument(
         '-l',
         '--log-level',
         default=DEFAULT_LOG_LEVEL,  
@@ -76,8 +70,8 @@ def parse_args():
     parser.add_argument(
         '--layout',
         default='quad',
-        choices=['split', 'tabbed', 'quad'],
-        help='Choose the GUI layout: "split" for side-by-side top panes, "tabbed" for a single top pane with tabs, or "quad" for a 2x2 grid.'
+        choices=['tabbed', 'quad'],
+        help='Choose the GUI layout: "tabbed" for 1x2 grid, or "quad" for a 2x2 grid.'
     )
     parser.print_help()
     return parser.parse_args()
@@ -193,7 +187,7 @@ def video_loop(mixer, effects, should_quit, gui, fullscreen=False):
 
 
 """ Main app setup and loop """
-def main(num_osc, devices, controller_names, fullscreen, layout):
+def main(devices, controller_names, fullscreen, layout):
 
     log.info("Initializing video synthesizer... Press 'q' or 'ESC' to quit")
 
@@ -248,4 +242,4 @@ def main(num_osc, devices, controller_names, fullscreen, layout):
 if __name__ == "__main__":
     args = parse_args()
     log = config_log(args.log_level)
-    main(args.osc, args.devices, CONTROLLER_NAMES, args.fullscreen, args.layout)
+    main(args.devices, CONTROLLER_NAMES, args.fullscreen, args.layout)
