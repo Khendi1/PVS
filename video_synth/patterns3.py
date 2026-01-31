@@ -3,7 +3,6 @@ import cv2
 from enum import Enum
 import noise 
 from generators import Oscillator, OscillatorShape
-from gui_elements import RadioButtonRow
 import logging
 import math
 from config import WidgetType
@@ -35,7 +34,7 @@ class Patterns:
     Generates various animated patterns using OpenCV and modulates them
     with its own bank of Oscillators.
     """
-    def __init__(self, params, width, height, parent=None):
+    def __init__(self, params, oscs, width, height, parent=None):
         """
         Initializes the PatternGenerator.
         Args:
@@ -44,6 +43,7 @@ class Patterns:
             height (int): Height of the generated pattern image.
         """
         self.params = params
+        self.oscs = oscs
         self.width = width
         self.height = height
         subclass = self.__class__.__name__
@@ -112,57 +112,87 @@ class Patterns:
         self.y_perturb = params.add("y_perturb", 0, 50, 25.0, subclass, parent)
         self.phase_speed = params.add("phase_speed", 0.01, 10.0, 1.0, subclass, parent) 
 
-        self.num_osc = 5
-        self.posc_bank = [] # List to hold Oscillator instances
-
-        for i in range(self.num_osc):
-            self.posc_bank.append(Oscillator(params, name=f"posc{i}", frequency=0.1, 
-                                             amplitude=100.0, phase=0.0, shape=4,
-                                             max_amplitude=self.width, min_amplitude=-self.width
-                                             )) 
-
+        self.pattern_oscs = []
         self.prev = None
+
+    def _cleanup_pattern_oscs(self):
+        for osc in self.pattern_oscs:
+            if osc.linked_param:
+                osc.unlink_param()
+            self.oscs.remove_oscillator(osc)
+        self.pattern_oscs = []
 
     def _set_osc_params(self):
         if self.pattern_type.value != self.prev_pattern_type:
+            self._cleanup_pattern_oscs()
             log.info(f"Pattern type changed from {self.prev_pattern_type} to {self.pattern_type.value}.")
             self.prev_pattern_type = self.pattern_type.value
             if self.pattern_type.value == PatternType.BARS.value:
-                # log.info("PatternType is set to BARS; Linking bar frequency to osc 0.")
-                self.posc_bank[0].link_param(self.bar_x_offset, True)
-                self.posc_bank[1].link_param(self.rotation, True)
-                self.posc_bank[1].frequency.value = 0 # stop auto oscillation
+                osc1 = self.oscs.add_oscillator(name=f"p_{self.bar_x_offset.name}")
+                osc1.link_param(self.bar_x_offset)
+                self.bar_x_offset.linked_oscillator = osc1
+                self.pattern_oscs.append(osc1)
+                
+                osc2 = self.oscs.add_oscillator(name=f"p_{self.rotation.name}")
+                osc2.link_param(self.rotation)
+                self.rotation.linked_oscillator = osc2
+                osc2.frequency.value = 0
+                self.pattern_oscs.append(osc2)
 
             elif self.pattern_type.value == PatternType.WAVES.value:
-                # log.info("PatternType is set to WAVES; Linking wave frequencies to osc 0, 1.")
-                self.posc_bank[0].link_param(self.wave_freq_x)
-                self.posc_bank[1].link_param(self.wave_freq_y)
-                self.posc_bank[2].link_param(self.rotation)
-            elif self.pattern_type.value == PatternType.CHECKERS.value:
-                # log.info("PatternType is set to CHECKERS; Linking grid size to osc 0.")
-                self.posc_bank[0].link_param(self.grid_size, True)
-                self.posc_bank[1].link_param(self.color_shift, True)
-                self.posc_bank[2].link_param(self.color_blend, True)
-            elif self.pattern_type.value == PatternType.RADIAL.value:
-                log.info("PatternType is set to RADIAL; Linking radial parameters to osc 0.")
-                # self.posc_bank[0].link_param(self.radial_freq)
-                # self.posc_bank[1].link_param(self.angular_freq)
-                # self.posc_bank[2].link_param(self.radial_mod)
-                # self.posc_bank[3].link_param(self.angle_mod)
-            elif self.pattern_type.value == PatternType.PERLIN_BLOBS.value:
-                pass
-                # log.info("PatternType is set to PERLIN BLOBS; Linking Perlin noise parameters to oscillators.")
-                # Link Perlin noise parameters to oscillators if needed
-            elif self.pattern_type.value == PatternType.FRACTAL_SINE.value:
-                # log.info("PatternType is set to FRACTAL SINE; Linking fractal sine parameters to oscillators.")
-                self.posc_bank[0].link_param(self.bar_x_offset)
-                self.posc_bank[1].link_param(self.bar_y_offset)
-            elif self.pattern_type.value == PatternType.XY_BARS.value:
-                # log.info("PatternType is set to XY_BARS; Linking XY bar parameters to oscillators.")
-                self.posc_bank[0].link_param(self.bar_x_offset)
-                self.posc_bank[1].link_param(self.bar_y_offset)
-                
+                osc1 = self.oscs.add_oscillator(name=f"p_{self.wave_freq_x.name}")
+                osc1.link_param(self.wave_freq_x)
+                self.wave_freq_x.linked_oscillator = osc1
+                self.pattern_oscs.append(osc1)
 
+                osc2 = self.oscs.add_oscillator(name=f"p_{self.wave_freq_y.name}")
+                osc2.link_param(self.wave_freq_y)
+                self.wave_freq_y.linked_oscillator = osc2
+                self.pattern_oscs.append(osc2)
+
+                osc3 = self.oscs.add_oscillator(name=f"p_{self.rotation.name}")
+                osc3.link_param(self.rotation)
+                self.rotation.linked_oscillator = osc3
+                self.pattern_oscs.append(osc3)
+
+            elif self.pattern_type.value == PatternType.CHECKERS.value:
+                osc1 = self.oscs.add_oscillator(name=f"p_{self.grid_size.name}")
+                osc1.link_param(self.grid_size)
+                self.grid_size.linked_oscillator = osc1
+                self.pattern_oscs.append(osc1)
+
+                osc2 = self.oscs.add_oscillator(name=f"p_{self.color_shift.name}")
+                osc2.link_param(self.color_shift)
+                self.color_shift.linked_oscillator = osc2
+                self.pattern_oscs.append(osc2)
+
+                osc3 = self.oscs.add_oscillator(name=f"p_{self.color_blend.name}")
+                osc3.link_param(self.color_blend)
+                self.color_blend.linked_oscillator = osc3
+                self.pattern_oscs.append(osc3)
+
+            elif self.pattern_type.value == PatternType.FRACTAL_SINE.value:
+                osc1 = self.oscs.add_oscillator(name=f"p_{self.bar_x_offset.name}")
+                osc1.link_param(self.bar_x_offset)
+                self.bar_x_offset.linked_oscillator = osc1
+                self.pattern_oscs.append(osc1)
+
+                osc2 = self.oscs.add_oscillator(name=f"p_{self.bar_y_offset.name}")
+                osc2.link_param(self.bar_y_offset)
+                self.bar_y_offset.linked_oscillator = osc2
+                self.pattern_oscs.append(osc2)
+
+            elif self.pattern_type.value == PatternType.XY_BARS.value:
+                osc1 = self.oscs.add_oscillator(name=f"p_{self.bar_x_offset.name}")
+                osc1.link_param(self.bar_x_offset)
+                self.bar_x_offset.linked_oscillator = osc1
+                self.pattern_oscs.append(osc1)
+
+                osc2 = self.oscs.add_oscillator(name=f"p_{self.bar_y_offset.name}")
+                osc2.link_param(self.bar_y_offset)
+                self.bar_y_offset.linked_oscillator = osc2
+                self.pattern_oscs.append(osc2)
+                
     def generate_pattern_frame(self, frame: np.ndarray):
         """
         Generates a single frame of the current pattern.
@@ -174,32 +204,62 @@ class Patterns:
         # Initialize a black image
         pattern = np.zeros((self.height, self.width, 3), dtype=np.uint8)
 
-        self._set_osc_params() # TODO: use conditional to compare current/last setting so not calling every time
-        posc_vals = [osc.get_next_value() for osc in self.posc_bank if osc.linked_param is not None]
+        self._set_osc_params()
+
+        # log.debug(f"Generating pattern frame for type: {self.pattern_type.value}")
 
         # Dispatch to the appropriate pattern generation function
         if self.pattern_type.value == PatternType.NONE.value:
             return frame
         elif self.pattern_type.value == PatternType.BARS.value:
-            pattern = self._generate_bars(pattern)
+            try:
+                log.debug("Calling _generate_bars")
+                pattern = self._generate_bars(pattern)
+            except Exception as e:
+                log.error(f"Error generating BARS pattern: {e}")
+                return frame # Return original frame on error
         elif self.pattern_type.value == PatternType.WAVES.value:
-            pattern = self._generate_waves(pattern, self.X, self.Y)
+            try:
+                log.debug("Calling _generate_waves")
+                pattern = self._generate_waves(pattern, self.X, self.Y)
+            except Exception as e:
+                log.error(f"Error generating WAVES pattern: {e}")
+                return frame
         elif self.pattern_type.value == PatternType.CHECKERS.value:
-            pattern = self._generate_checkers(pattern, self.X, self.Y)
+            try:
+                log.debug("Calling _generate_checkers")
+                pattern = self._generate_checkers(pattern, self.X, self.Y)
+            except Exception as e:
+                log.error(f"Error generating CHECKERS pattern: {e}")
+                return frame
         elif self.pattern_type.value == PatternType.RADIAL.value:
-            pattern = self._generate_radial(pattern, self.X, self.Y)
+            try:
+                log.debug("Calling _generate_radial")
+                pattern = self._generate_radial(pattern, self.X, self.Y)
+            except Exception as e:
+                log.error(f"Error generating RADIAL pattern: {e}")
+                return frame
         elif self.pattern_type.value == PatternType.PERLIN_BLOBS.value:
-            pass
-            # pattern = self._generate_perlin_blobs(norm_osc_vals, frame_time)
-        elif self.pattern_type == PatternType.FRACTAL_SINE.value:
-            pass
-            # pattern = self._generate_fractal_sine(pattern, self.X, self.Y, norm_osc_vals, frame_time)
-        elif self.pattern_type == PatternType.XY_BARS.value:
-            pattern = self._generate_xy_bars(pattern, self.X, self.Y)
-        else:
-            log.warning(f"Unknown pattern type {self.pattern_type.value}. Returning black frame.")
-
-        # return pattern
+            try:
+                log.debug("Calling _generate_perlin_blobs")
+                pattern = self._generate_perlin_blobs(0) # frame_time not available here, using 0
+            except Exception as e:
+                log.error(f"Error generating PERLIN_BLOBS pattern: {e}")
+                return frame
+        elif self.pattern_type.value == PatternType.FRACTAL_SINE.value:
+            try:
+                log.debug("Calling _generate_fractal_sine")
+                pattern = self._generate_fractal_sine(pattern, self.X, self.Y, 0) # frame_time not available here, using 0
+            except Exception as e:
+                log.error(f"Error generating FRACTAL_SINE pattern: {e}")
+                return frame
+        elif self.pattern_type.value == PatternType.XY_BARS.value:
+            try:
+                log.debug("Calling _generate_xy_bars")
+                pattern = self._generate_xy_bars(pattern, self.X, self.Y)
+            except Exception as e:
+                log.error(f"Error generating XY_BARS pattern: {e}")
+                return frame
         alpha = self.pattern_alpha.value
         blended_frame = cv2.addWeighted(frame.astype(np.float32), 1 - alpha, pattern.astype(np.float32), alpha, 0)
         return blended_frame.astype('uint8')
@@ -208,39 +268,49 @@ class Patterns:
         """
         Generates bars that can be rotated, shifting color and position based on oscillator values.
         """
+        log.debug("Entering _generate_bars")
         height, width, _ = pattern.shape
 
         density = self.bar_x_freq.value
+        log.debug(f"bar_x_freq.value (density): {density}")
         offset = self.bar_x_offset.value / 4  # linked to posc 0 for scrolling
+        log.debug(f"bar_x_offset.value (offset): {self.bar_x_offset.value}, calculated offset: {offset}")
         mod = self.mod.value # gradient modulation for stripy bar patterns
+        log.debug(f"mod.value (mod): {mod}")
         
         rotation_rad = math.radians(self.rotation.value)
-        # log.debug(f'pattern rotation: {self.rotation.value}\u00b0->{rotation_rad}')
+        log.debug(f"rotation.value: {self.rotation.value}, rotation_rad: {rotation_rad}")
 
         # Create normalized X and Y coordinate grids (e.g., from -1 to 1 or 0 to 1)
         # This example uses normalized coordinates from 0 to 1, then scales/centers them
         x = np.linspace(-1, 1, width)
         y = np.linspace(-1, 1, height)
         xx, yy = np.meshgrid(x, y)
+        log.debug("Generated xx and yy meshgrids")
         
         # Combine the new coordinates into a single axis for modulation
         rotated_axis = (
             xx * math.cos(rotation_rad) - yy * math.sin(rotation_rad)
         )
+        log.debug("Calculated rotated_axis")
 
         # color modulation: clamp bar_mod to avoid overflow errors
         bar_mod = (np.sin(rotated_axis * density * width + offset) + 1) / mod
+        log.debug(f"Calculated bar_mod (before clip): min={np.min(bar_mod)}, max={np.max(bar_mod)}")
         bar_mod = np.clip(bar_mod, 0, 1)
+        log.debug(f"Calculated bar_mod (after clip): min={np.min(bar_mod)}, max={np.max(bar_mod)}")
 
         # Apply colors based on modulated brightness and other oscillators
         # BGR format for OpenCV
         blue_channel = (bar_mod * 255 * self.b.value / 255).astype(np.uint8)
         green_channel = (bar_mod * 255 * self.g.value / 255).astype(np.uint8)
         red_channel = (bar_mod * 255 * self.r.value / 255).astype(np.uint8)
+        log.debug("Calculated color channels")
 
         pattern[:, :, 0] = blue_channel
         pattern[:, :, 1] = green_channel
         pattern[:, :, 2] = red_channel
+        log.debug("Exiting _generate_bars successfully")
         return pattern
 
     def _generate_xy_bars(self, pattern: np.ndarray, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
@@ -306,43 +376,54 @@ class Patterns:
         """
         Generates a checkerboard pattern whose square size and colors shift.
         """
+        log.debug("Entering _generate_checkers")
         # posc0: controls grid size
         # posc1: controls color blend
         # posc2: controls color shift
 
         grid_size_base = 30 # Base size in pixels
+        log.debug(f"grid_size_base: {grid_size_base}")
         grid_size_mod = self.grid_size.value * 40 # Modulation amount
+        log.debug(f"grid_size.value: {self.grid_size.value}, grid_size_mod: {grid_size_mod}")
         grid_size_x = grid_size_base + grid_size_mod
         grid_size_y = grid_size_base + grid_size_mod
+        log.debug(f"grid_size_x: {grid_size_x}, grid_size_y: {grid_size_y}")
 
         # Create checkerboard mask
         # Ensure grid_size is at least 1 to prevent division by zero
         grid_size_x = max(1, grid_size_x)
         grid_size_y = max(1, grid_size_y)
+        log.debug(f"grid_size_x (after max(1)): {grid_size_x}, grid_size_y (after max(1)): {grid_size_y}")
 
         checker_mask = ((X // grid_size_x).astype(int) % 2 == (Y // grid_size_y).astype(int) % 2)
+        log.debug("Calculated checker_mask")
         
         # Define two colors, modulated by oscillators
         # color_shift = norm_osc_vals[2] * 255
         color_shift = self.color_shift.value # Modulation for color shift
+        log.debug(f"color_shift.value: {color_shift}")
         color_blend = self.color_blend.value / 255 # Modulation for color blending
+        log.debug(f"color_blend.value: {self.color_blend.value}, calculated color_blend: {color_blend}")
 
         # Color 1: Changes based on osc2 (color_shift)
         c1_b = int(color_shift)
         c1_g = int(255 - color_shift)
         c1_r = int(127 + color_shift / 2)
+        log.debug(f"Color 1: c1_b={c1_b}, c1_g={c1_g}, c1_r={c1_r}")
 
         # Color 2: Inverse or complementary to Color 1, also blended by osc1
         c2_b = int((255 - color_shift) * color_blend)
         c2_g = int(color_shift * color_blend)
         c2_r = int((127 - color_shift / 2) * color_blend)
+        log.debug(f"Color 2: c2_b={c2_b}, c2_g={c2_g}, c2_r={c2_r}")
         
         # Apply colors based on the mask
         # Use np.where for efficient assignment
         pattern[:, :, 0] = np.where(checker_mask, c1_b, c2_b).astype(np.uint8) # Blue
         pattern[:, :, 1] = np.where(checker_mask, c1_g, c2_g).astype(np.uint8) # Green
         pattern[:, :, 2] = np.where(checker_mask, c1_r, c2_r).astype(np.uint8) # Red
-
+        log.debug("Applied colors to pattern channels")
+        log.debug("Exiting _generate_checkers successfully")
         return pattern
 
     def _generate_radial(self, pattern: np.ndarray, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
@@ -380,7 +461,7 @@ class Patterns:
         pattern[:, :, 2] = red_channel
         return pattern
 
-    def _generate_perlin_blobs(self, norm_osc_vals: tuple, frame_time: float) -> np.ndarray:
+    def _generate_perlin_blobs(self, frame_time: float) -> np.ndarray:
         """
         Generates evolving Perlin noise blobs, modulated by oscillators.
         """
@@ -391,14 +472,14 @@ class Patterns:
         # posc1: modulates Y spatial scale
         # posc2: modulates persistence and time evolution speed
 
-        scale_x = self.x_scale + norm_osc_vals[0] * 0.02
-        scale_y = self.y_scale + norm_osc_vals[1] * 0.02
+        scale_x = self.x_scale.value
+        scale_y = self.y_scale.value
         octaves = int(self.octaves.value)
-        persistence = self.persistence.value + norm_osc_vals[2] * 0.2
+        persistence = self.persistence.value
         lacunarity = self.lacunarity.value
         
         # Use time as a Z-axis for 3D Perlin noise to ensure continuous evolution
-        time_speed = self.time_speed.value + norm_osc_vals[2] * 0.2
+        time_speed = self.time_speed.value
         time_factor = frame_time * time_speed
 
         # Pre-calculate noise for the entire grid for efficiency
@@ -489,10 +570,10 @@ class Patterns:
             brightness = np.zeros_like(X, dtype=np.uint8) # Default to black if no meaningful range
         
         # Create a color based on brightness and hue shift
-        # For simplicity, let's mix colors based on hue_shift
-        blue_channel = (brightness * (1 - hue_shift)).astype(np.uint8)
-        green_channel = (brightness * hue_shift).astype(np.uint8)
-        red_channel = (brightness * (1 - np.abs(hue_shift - 0.5) * 2)).astype(np.uint8) # Peaks in middle
+        # For simplicity, let's mix colors based on self.r.value
+        blue_channel = (brightness * (1 - self.r.value)).astype(np.uint8)
+        green_channel = (brightness * self.r.value).astype(np.uint8)
+        red_channel = (brightness * (1 - np.abs(self.r.value - 0.5) * 2)).astype(np.uint8) # Peaks in middle
 
         pattern[:, :, 0] = blue_channel # Blue
         pattern[:, :, 1] = green_channel # Green

@@ -3,7 +3,7 @@ import sys
 import numpy as np
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QPushButton, QGroupBox, QRadioButton, QScrollArea, QToolButton, QSizePolicy, QLineEdit, QTabWidget, QComboBox, QDialog, QGridLayout, QColorDialog
 from PyQt6.QtGui import QGuiApplication, QImage, QPixmap, QPainter, QColor
-from PyQt6.QtCore import Qt, QSize, QThread, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import Qt, QSize, QThread, pyqtSignal, pyqtSlot, QTimer
 import logging
 from param import ParamTable, Param
 from config import ParentClass, SourceIndex, WidgetType
@@ -173,6 +173,7 @@ class PyQTGUI(QMainWindow):
         self.save_controller.patch_loaded_callback = self.refresh_all_widgets
 
         self.mixer_widgets = {}
+        self.param_widgets = {}
 
         self.osc_banks = [(effect_manager.oscs, effect_manager.parent.name) for effect_manager in effects]
 
@@ -183,6 +184,25 @@ class PyQTGUI(QMainWindow):
 
         self._create_layout()
         self.create_ui()
+
+        self.lfo_refresh_timer = QTimer(self)
+        self.lfo_refresh_timer.timeout.connect(self.refresh_lfo_buttons)
+        self.lfo_refresh_timer.start(250)
+        
+    def refresh_lfo_buttons(self):
+        self.all_params = ParamTable()
+        self.all_params.params.update(self.src_1_effects.params)
+        self.all_params.params.update(self.src_2_effects.params)
+        self.all_params.params.update(self.post_effects.params)
+        for param_name, widget in self.param_widgets.items():
+            param = self.all_params.get(param_name)
+            if param:
+                mod_button = widget.findChild(QPushButton)
+                if mod_button and mod_button.text() == "LFO":
+                    if param.linked_oscillator:
+                        mod_button.setStyleSheet(PyQTGUI.LFO_BUTTON_LINKED_STYLE)
+                    else:
+                        mod_button.setStyleSheet(PyQTGUI.LFO_BUTTON_UNLINKED_STYLE)
 
     def _create_layout(self):
         if self.layout_style == 'quad':
@@ -655,6 +675,8 @@ class PyQTGUI(QMainWindow):
 
         if param.parent == ParentClass.MIXER:
             self.mixer_widgets[param.name] = widget
+        else:
+            self.param_widgets[param.name] = widget
 
         return widget
 

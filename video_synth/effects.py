@@ -130,7 +130,7 @@ class EffectManager:
         self.color = Color(self.params, self.parent)
         self.pixels = Pixels(self.params, width, height, parent=self.parent)
         self.shapes = Shapes(self.params, width, height, parent=self.parent)
-        self.patterns = Patterns(self.params, width, height, self.parent)
+        self.patterns = Patterns(self.params, self.oscs, width, height, self.parent)
         self.reflector = Reflector(self.params, parent=self.parent)                    
         self.sync = Sync(self.params, self.parent) 
         self.warp = Warp(self.params, width, height, self.parent)

@@ -17,6 +17,16 @@ import concurrent.futures
 
 log = logging.getLogger(__name__)
 
+class Source(Enum):
+    VIDEO = auto()
+    IMAGE = auto()
+    METABALLS = auto()
+    PLASMA = auto()
+    REACTION_DIFFUSION = auto()
+    MOIRE = auto()
+    SHADER = auto()
+    LORRENZ_ATTRACTOR = auto()
+
 
 class MixModes(IntEnum):
     ALPHA_BLEND = 0
@@ -52,8 +62,11 @@ class Mixer:
         # flags to skip the first frame after starting a new video source
         self.skip = False
 
+        # search for available video capture devices
         num_devices = self._detect_devices(max_index=num_devices)
+        # add devices to sources dict if found
         self.sources = {f"DEVICE_{i}": i for i in range(num_devices)}
+        # add animation and file sources to sources dict
         self.sources.update({
             "VIDEO_FILE": (num_devices:=num_devices+1),
             "IMAGE_FILE": (num_devices:=num_devices+1),
@@ -61,7 +74,9 @@ class Mixer:
             "PLASMA_ANIM": (num_devices:=num_devices+1),
             "REACTION_DIFFUSION_ANIM": (num_devices:=num_devices+1),
             "MOIRE_ANIM": (num_devices:=num_devices+1),
-            "SHADER_ANIM": (num_devices:=num_devices+1)
+            "SHADER_ANIM": (num_devices:=num_devices+1),
+            "LORRENZ_ATTRACTOR_ANIM": (num_devices:=num_devices+1),
+            "PHYSARUM_ANIM": (num_devices:=num_devices+1)
         })
         
         log.info(f"Sources: {self.sources}")
@@ -74,7 +89,9 @@ class Mixer:
             "PLASMA_ANIM": Plasma(self.src_1_effects.params, self.src_1_effects.toggles, width=self.width, height=self.height, parent=parent),
             "REACTION_DIFFUSION_ANIM": ReactionDiffusion(self.src_1_effects.params, self.src_1_effects.toggles, self.width, self.height, parent=parent),
             "MOIRE_ANIM": Moire(self.src_1_effects.params, self.src_1_effects.toggles, width=self.width, height=self.height, parent=parent),
-            "SHADER_ANIM": Shaders(self.src_1_effects.params, self.src_1_effects.toggles, width=self.width, height=self.height, parent=parent)
+            "SHADER_ANIM": Shaders(self.src_1_effects.params, self.src_1_effects.toggles, width=self.width, height=self.height, parent=parent),
+            "LORRENZ_ATTRACTOR_ANIM": StrangeAttractor(self.src_1_effects.params, self.src_1_effects.toggles, width=self.width, height=self.height, parent=parent),
+            "PHYSARUM_ANIM": Physarum(self.src_1_effects.params, self.src_1_effects.toggles, width=self.width, height=self.height, parent=parent)
         }
 
         parent = ParentClass.SRC_2_ANIMATIONS
@@ -83,7 +100,9 @@ class Mixer:
             "PLASMA_ANIM": Plasma(self.src_2_effects.params, self.src_2_effects.toggles, width=self.width, height=self.height, parent=parent),
             "REACTION_DIFFUSION_ANIM": ReactionDiffusion(self.src_2_effects.params, self.src_2_effects.toggles, self.width, self.height, parent=parent),
             "MOIRE_ANIM": Moire(self.src_2_effects.params, self.src_2_effects.toggles, width=self.width, height=self.height, parent=parent),
-            "SHADER_ANIM": Shaders(self.src_2_effects.params, self.src_2_effects.toggles, width=self.width, height=self.height, parent=parent)
+            "SHADER_ANIM": Shaders(self.src_2_effects.params, self.src_2_effects.toggles, width=self.width, height=self.height, parent=parent),
+            "LORRENZ_ATTRACTOR_ANIM": StrangeAttractor(self.src_2_effects.params, self.src_2_effects.toggles, width=self.width, height=self.height, parent=parent),
+            "PHYSARUM_ANIM": Physarum(self.src_2_effects.params, self.src_2_effects.toggles, width=self.width, height=self.height, parent=parent)
         }
         # --------------------------------------------------------------------
 

@@ -6,7 +6,6 @@ import numpy as np
 import noise
 from param import Param
 import logging
-import dearpygui.dearpygui as dpg
 from config import ParentClass, WidgetType
 
 log = logging.getLogger(__name__)
@@ -160,7 +159,7 @@ class Oscillator:
             t += 1 / self.sample_rate  # Increment time by sample period 
             yield sample
         
-    def link_param(self, param: Param, update=False):
+    def link_param(self, param: Param):
         """
         Links the oscillator parameters to a parameter object.
 
@@ -176,10 +175,6 @@ class Oscillator:
         self.seed.max = param.max
         self.seed.min = param.min
 
-        if update:
-            self.update_range(param.min, param.max)
-
-    
     def unlink_param(self):
         """
         Unlinks the oscillator parameters from the parameter object.
@@ -188,17 +183,7 @@ class Oscillator:
             self.linked_param.linked_oscillator = None
         self.linked_param = None
 
-    def update_range(self, min, max):
-        """
-        This function uses dpg.set_item_config to update the slider's min and max.
-        """
 
-        # update slider properties
-        dpg.configure_item(
-            f"{self.name}_amplitude", 
-            min_value=min, 
-            max_value=max
-        )
 
 
 class OscBank():
@@ -208,7 +193,6 @@ class OscBank():
         self.params = params
         temp = [self.oscillators.append(Oscillator(params=params, name=f"osc{i}", frequency=0.5, amplitude=1.0, phase=0.0, shape=i%4)) \
                          for i in range(num_osc)]        
-        log.info(f"Oscillator bank initialized with {len(self.oscillators)} oscillators.")
 
 
     def update(self):

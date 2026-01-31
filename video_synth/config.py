@@ -9,10 +9,12 @@ class LayoutType(Enum):
     QUAD_PREVIEW = 1
     QUAD_FULL = 2
 
+
 class OutputMode(Enum):
     NONE = 0
     WINDOW = 1
     FULLSCREEN = 2
+
 
 class ParentClass(StrEnum):
     """Enumeration for different parent classes of parameters."""
@@ -51,27 +53,4 @@ VIDEO_OUTPUT_WINDOW_TITLE = "Synthesizer Output"
 WIDTH = 640
 HEIGHT = 480
 
-ESCAPE_KEYS = [ord('q'), ord('Q'), 27] # 27 is escape key
-
-# effects = EffectManager(ParentClass.SRC_1_EFFECTS) # initialized with params in main.py
-
-def enum_names(enum):
-    return [enum(e).name for e in enum]
-
-def titleize_items(items):
-    """
-    Takes a list of strings or an Enum class/member and returns title-cased versions.
-    """
-    # If it's an Enum class, iterate through its members
-    if isinstance(items, type) and issubclass(items, Enum):
-        return [member.name.replace('_', ' ').title() for member in items]
-    
-    # If it's a single Enum member
-    if isinstance(items, Enum):
-        return items.name.replace('_', ' ').title()
-    
-    # If it's a list or iterable
-    if isinstance(items, (list, tuple)):
-        return [str(item).title() for item in items]
-    
-    return str(items).title()
+ESCAPE_KEYS = [ord('q'), ord('Q'), 27] # 27 is esc key
