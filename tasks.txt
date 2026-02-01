@@ -1,9 +1,5 @@
-- widget type arg for param, default to slider
-- refactor mixer source name handling
-- allow mixer sources to use same source mode
-- parallelize oscillators
-- create osc for each param
-- create general purpose osc panel in bottom pane
+misc:
+- default source 1 to an animation if no devices detected
 
 mixer:
 - load image
@@ -29,7 +25,7 @@ patterns:
 - hide gui sliders when unused by current warp mode
 
 shaders:
-- begin implementation
+- fix implementation; broken after migrating to pyqt
 
 lissajous:
 - tune params
