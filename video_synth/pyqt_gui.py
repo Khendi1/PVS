@@ -6,13 +6,17 @@ from PyQt6.QtGui import QGuiApplication, QImage, QPixmap, QPainter, QColor
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSignal, pyqtSlot, QTimer
 import logging
 from param import ParamTable, Param
-from config import ParentClass, SourceIndex, WidgetType
+from common import ParentClass, SourceIndex, WidgetType, LayoutType
 from mix import MixModes # Import MixModes
 from save import SaveController
+
 
 log = logging.getLogger(__name__)
 
 
+"""
+Custom color picker widget for selecting HSV colors.
+"""
 class ColorPickerWidget(QWidget):
     def __init__(self, name, h_param, s_param, v_param, parent=None):
         super().__init__(parent)
@@ -46,6 +50,9 @@ class ColorPickerWidget(QWidget):
         color = self.get_current_color()
         self.color_button.setStyleSheet(f"background-color: {color.name()}")
 
+"""
+Widget to display video frames with aspect ratio preservation.
+"""
 class VideoWidget(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -148,7 +155,7 @@ class PyQTGUI(QMainWindow):
     LFO_BUTTON_LINKED_STYLE = "QPushButton { background-color: #4CAF50; color: white; }" # Green
     video_frame_ready = pyqtSignal(QImage)
 
-    def __init__(self, effects, layout='quad', mixer=None):
+    def __init__(self, effects, layout, mixer=None):
         super().__init__()
         self.layout_style = layout
         self.effects = effects
@@ -165,6 +172,7 @@ class PyQTGUI(QMainWindow):
         self.src_2_toggles = self.src_2_effects.toggles
         self.post_toggles = self.post_effects.toggles
 
+        # TODO: test if this works
         self.all_params = ParamTable()
         self.all_params.params.update(self.src_1_params)
         self.all_params.params.update(self.src_2_params)
@@ -205,9 +213,10 @@ class PyQTGUI(QMainWindow):
                         mod_button.setStyleSheet(PyQTGUI.LFO_BUTTON_UNLINKED_STYLE)
 
     def _create_layout(self):
-        if self.layout_style == 'quad':
+        print(f"Creating layout: {self.layout_style}")
+        if self.layout_style == LayoutType.QUAD_PREVIEW.value:
             self._create_quad_layout()
-        elif self.layout_style == 'tabbed':
+        elif self.layout_style == LayoutType.SPLIT.value:
             self._create_tabbed_layout()
 
     def _create_quad_layout(self):

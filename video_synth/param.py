@@ -1,6 +1,6 @@
 import random
 import logging
-from config import WidgetType
+from common import WidgetType
 
 
 class ParamTable:
@@ -8,8 +8,9 @@ class ParamTable:
     Manages a collection of Param objects, allowing access and manipulation
     of parameters by name or index.
     """
-    def __init__(self):
+    def __init__(self, parent: str = "Global"):
         """Initializes an empty dictionary to store parameters."""
+        self.parent = parent
         self.params = {}
 
     def __repr__(self):

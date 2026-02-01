@@ -6,7 +6,7 @@ import numpy as np
 import noise
 from param import Param
 import logging
-from config import ParentClass, WidgetType
+from common import ParentClass, WidgetType
 
 log = logging.getLogger(__name__)
 
@@ -182,8 +182,6 @@ class Oscillator:
         if self.linked_param:
             self.linked_param.linked_oscillator = None
         self.linked_param = None
-
-
 
 
 class OscBank():

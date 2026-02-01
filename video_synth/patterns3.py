@@ -5,7 +5,7 @@ import noise
 from generators import Oscillator, OscillatorShape
 import logging
 import math
-from config import WidgetType
+from common import WidgetType
 
 posc_bank = []  
 

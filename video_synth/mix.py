@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 from effects import LumaMode, EffectManager
 from luma import *
-from config import ParentClass, SourceIndex, WidgetType
+from common import ParentClass, SourceIndex, WidgetType
 import concurrent.futures 
 
 
@@ -173,10 +173,10 @@ class Mixer:
         return str(video_path_object.resolve().as_posix())
 
 
-    def _detect_devices(self, max_index):
+    def _detect_devices(self, max_index: int):
         log.info(f"Attempting to find video capture sources ({max_index})")
         num_success = 0
-        for index in range(max_index):
+        for index in range(int(max_index)):
             try:
                 cap = cv2.VideoCapture(index, cv2.CAP_ANY)
                 if cap.isOpened():
@@ -286,7 +286,7 @@ class Mixer:
                 prev_frame = frame.copy()
 
             count += 1
-            prev_frame, wet_frame = effects_manager.modify_frames(frame, wet_frame, prev_frame, count)
+            prev_frame, wet_frame = effects_manager.get_frames(frame, wet_frame, prev_frame, count)
             frame = wet_frame
 
             # Update instance variables

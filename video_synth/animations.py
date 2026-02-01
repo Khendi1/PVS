@@ -9,7 +9,7 @@ from enum import IntEnum, auto
 from gui_elements import *
 import logging
 import math
-from config import WidgetType
+from common import WidgetType
 import moderngl
 
 
@@ -54,6 +54,7 @@ class MoireBlend(IntEnum):
     ADD = auto()
     SUB = auto()
 
+
 class ShaderType(IntEnum):
     FRACTAL_0 = 0
     FRACTAL = auto()
@@ -66,6 +67,7 @@ class ShaderType(IntEnum):
     BIOLUMINESCENT = auto()
     AURORA = auto()
     CRYSTAL = auto()
+
 
 class AnimationType(IntEnum):
     NONE = 0

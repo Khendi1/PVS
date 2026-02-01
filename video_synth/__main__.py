@@ -19,8 +19,8 @@ import signal
 import threading
 import numpy as np
 
-from config import *
-# from generators import OscBank
+from settings import UserSettings
+from common import *
 from midi_input import *
 from mix import Mixer
 from effects import EffectManager
@@ -29,6 +29,25 @@ from PyQt6.QtWidgets import QApplication, QGridLayout
 from PyQt6.QtGui import QImage, QPixmap
 from pyqt_gui import PyQTGUI
 
+
+# List of MIDI controller class names to identify and initialize
+CONTROLLER_NAMES = [SMC_Mixer.__name__, MidiMix.__name__]
+
+# Number of USB video devices to search for on boot, 
+# will safely ignore extra devices if not found
+DEFAULT_NUM_DEVICES = 5 
+
+DEFAULT_LOG_LEVEL = logging.INFO
+DEFAULT_SAVE_FILE = "saved_values.yaml"
+DEFAULT_PATCH_INDEX = 0
+
+VIDEO_OUTPUT_WINDOW_TITLE = "Synthesizer Output"
+
+WIDTH = 640
+HEIGHT = 480
+
+# Quit keys: 'q', 'Q', or 'ESC'
+ESCAPE_KEYS = [ord('q'), ord('Q'), 27]
 
 """Creates ArgumentParser, configures arguments, returns parser"""
 def parse_args():
@@ -63,10 +82,18 @@ def parse_args():
         help='Use an alternate save file. Must still be located in the save directory'
     )
     parser.add_argument(
-        '--layout',
-        default='quad',
-        choices=['tabbed', 'quad'],
+        '-c',
+        '--control-layout',
+        default=LayoutType.QUAD_PREVIEW.name,
+        choices=[item.name for item in LayoutType],
         help='Choose the GUI layout: "tabbed" for 1x2 grid, or "quad" for a 2x2 grid.'
+    )
+    parser.add_argument(
+        '-o',
+        '--output-mode',
+        default=OutputMode.NONE.name,
+        choices=[item.name for item in OutputMode],
+        help='Use an external window for video output'
     )
     parser.print_help()
     return parser.parse_args()
@@ -83,55 +110,8 @@ def config_log(log_level):
     return log
 
 
-# """ Identifies midi controller ports from controller_names"""
-def identify_midi_ports(params, controller_names):
-    
-    # Mido uses a default backend (often python-rtmidi) which handles platform differences.    
-    controllers = []
-    ports_found = False
-    
-    try:
-        # List all available MIDI input ports. Ex: ["MIDI Mix 0", "SMC Mixer 1"]
-        input_ports = mido.get_input_names()
-        # Note that the controller_names list should follow a similar naming convention,
-        # with the port number omitted
-
-        if input_ports:
-            string = "\nFound MIDI Input Devices:"
-
-            # attempt to match found ports with known controller names
-            for i, port_name in enumerate(input_ports):
-                for name in controller_names:
-                    if name in port_name:
-                        found_controller = MidiControllerInterface(params, name=name, port_name=port_name)
-                        # add to list of controllers so threads can be gracefully stopped on exit
-                        controllers.append(found_controller)
-                        # build output string with formatting so we only have to log once
-                        string += f"\n\tInitialized midi controller: {name}"
-        
-            log.info(string)
-            ports_found = True
-        
-        # List all available MIDI output ports
-        output_ports = mido.get_output_names()
-        if output_ports:
-            string = "\nFound MIDI Output Devices:"
-            for i, name in enumerate(output_ports):
-                string += (f"\n\t[{i+1}] {name}")
-            ports_found = True
-            log.info(string)
-            
-    except Exception as e:
-        log.exception(f"\nAn unexpected error occurred during port scan: {e}")
-        return    
-    if not ports_found:
-        log.warning("No MIDI ports found by the operating system.")
-
-    return controllers
-
-
 """Video processing loop"""
-def video_loop(mixer, effects, should_quit, gui):
+def video_loop(mixer, effects, should_quit, gui, settings):
     wet_frame = dry_frame = mixer.get_mixed_frame()
     if dry_frame is None:
         log.error("Failed to get initial frame from mixer. Exiting video loop.")
@@ -139,14 +119,11 @@ def video_loop(mixer, effects, should_quit, gui):
 
     prev_frame = dry_frame.copy()
     frame_count = 0
-    
-    # Using a CV2 window is now conditional
-    use_cv2_window = not isinstance(gui.central_widget.layout(), QGridLayout)
 
-    if use_cv2_window:
+    if settings.output_mode.value != OutputMode.NONE.value:
         cv2.namedWindow(VIDEO_OUTPUT_WINDOW_TITLE, cv2.WINDOW_NORMAL)
-        # if fullscreen:
-        #     cv2.setWindowProperty(VIDEO_OUTPUT_WINDOW_TITLE, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        if settings.output_mode.value == OutputMode.FULLSCREEN.value:  # Fullscreen mode
+            cv2.setWindowProperty(VIDEO_OUTPUT_WINDOW_TITLE, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     while not should_quit.is_set():
         dry_frame = mixer.get_mixed_frame()
@@ -159,12 +136,12 @@ def video_loop(mixer, effects, should_quit, gui):
         for effect_manager in effects:
             effect_manager.oscs.update()
 
-        prev_frame, wet_frame = effects[2].modify_frames(
+        prev_frame, wet_frame = effects[2].get_frames(
             dry_frame, wet_frame, prev_frame, frame_count
         )
         frame_count += 1
         
-        if use_cv2_window:
+        if settings.output_mode.value != OutputMode.NONE.value:
             cv2.imshow(VIDEO_OUTPUT_WINDOW_TITLE, wet_frame.astype(np.uint8))
             if cv2.waitKey(1) & 0xFF in ESCAPE_KEYS:
                 break
@@ -176,13 +153,13 @@ def video_loop(mixer, effects, should_quit, gui):
             qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
             gui.video_frame_ready.emit(qt_image)
 
-    if use_cv2_window:
+    if settings.output_mode.value != OutputMode.NONE.value:
         cv2.destroyAllWindows()
     log.info("Video loop has gracefully stopped.")
 
 
 """ Main app setup and loop """
-def main(devices, controller_names, layout):
+def main(settings, controller_names):
 
     log.info("Initializing video synthesizer... Press 'q' or 'ESC' to quit")
 
@@ -191,11 +168,14 @@ def main(devices, controller_names, layout):
     post_effects = EffectManager(ParentClass.POST_EFFECTS, WIDTH, HEIGHT)
     effects = (src_1_effects, src_2_effects, post_effects)
 
-    mixer = Mixer(effects, devices, WIDTH, HEIGHT)
+    mixer = Mixer(effects, settings.num_devices, WIDTH, HEIGHT)
 
     # Automatically identify and initialize midi controllers before creating the GUI
-    CONTROLLER_NAMES = [] # Placeholder for now, assumed to be defined elsewhere
-    controllers = [] #identify_midi_ports(src_1_params, CONTROLLER_NAMES) # TODO: which params to use?
+    CONTROLLER_NAMES = [SMC_Mixer.__name__, MidiMix.__name__]
+    controllers = identify_midi_ports(controller_names, 
+                                      src_1_effects.params, 
+                                      src_2_effects.params, 
+                                      post_effects.params)
 
     # log.info(f'Starting program with {len(params.keys())} tunable parameters')
 
@@ -203,15 +183,15 @@ def main(devices, controller_names, layout):
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     
     app = QApplication(sys.argv)
-    main_window = PyQTGUI(effects, layout, mixer)
+    main_window = PyQTGUI(effects, settings.layout.value, mixer)
 
     main_window.show() 
     
     should_quit = threading.Event()
     
     video_thread = threading.Thread(
-        target=video_loop, 
-        args=(mixer, effects, should_quit, main_window)
+        target=video_loop,
+        args=(mixer, effects, should_quit, main_window, settings)
     )
     video_thread.start()
     
@@ -234,7 +214,9 @@ def main(devices, controller_names, layout):
 
     log.info("Goodbye!")
 
+
 if __name__ == "__main__":
     args = parse_args()
     log = config_log(args.log_level)
-    main(args.devices, CONTROLLER_NAMES, args.layout)
+    settings = UserSettings(**args.__dict__)
+    main(settings, CONTROLLER_NAMES)

@@ -33,7 +33,7 @@ from enum import IntEnum, Enum, auto
 from luma import *
 from gui_elements import ButtonsTable
 from generators import OscBank
-from config import WidgetType
+from common import WidgetType
 
 log = logging.getLogger(__name__)
 
@@ -115,14 +115,13 @@ class EffectBase:
     _instance = None
     
 
-
 class EffectManager:
     """
     A central class to aggregate all singleton effect objects and simplify dependencies, arg len
     """
     def __init__(self, parent, width, height):
         self.parent = parent
-        self.params = ParamTable()
+        self.params = ParamTable(parent=f"EffectManager_{parent}")
         self.toggles = ButtonsTable()
         self.oscs = OscBank(self.params, 0)
         
@@ -150,10 +149,10 @@ class EffectManager:
             self.ptz,
         ]
 
-        self.class_with_methods, self.all_methods = self.get_effect_methods()
+        self.class_with_methods, self.all_methods = self._get_effect_methods()
 
 
-    def get_effect_methods(self):
+    def _get_effect_methods(self):
         """
         Collects all unique public method names from a list of effect objects.
         Any public method will be included in the list
@@ -178,6 +177,9 @@ class EffectManager:
         cleaned_methods = [m for m in methods if m not in class_with_methods['Feedback']]
         del class_with_methods['Feedback']
 
+        # log.debug(f"EffectManager found {len(cleaned_methods)} effect methods from {len(class_with_methods)} classes.")
+        # log.debug(f"EffectManager methods: {[m.__name__ for m in cleaned_methods]}")
+
         return class_with_methods, cleaned_methods
 
 
@@ -193,7 +195,7 @@ class EffectManager:
     obsolete after implementing the effects sequencer.
     default sequence of effects for future reference; 
     """
-    def default_effect_sequence(self, frame):
+    def _default_effect_sequence(self, frame):
         frame = self.ptz.shift_frame(frame)
         frame = self.patterns.generate_pattern_frame(frame)
         frame = self.sync.sync(frame)
@@ -221,7 +223,8 @@ class EffectManager:
 
         return frame
 
-    def apply_effects(self, frame, frame_count):
+
+    def _apply_effect_chain(self, frame, frame_count):
         """ 
         Applies a sequence of visual effects to the input frame based on current parameters.
         Each effect is modular and can be enabled/disabled via the GUI.
@@ -242,16 +245,16 @@ class EffectManager:
         return frame
 
     
-    def modify_frames(self, dry_frame, wet_frame, prev_frame, frame_count):
+    def get_frames(self, dry_frame, wet_frame, prev_frame, frame_count):
 
         # Blend the current dry frame with the previous wet frame using the alpha param
         if self.toggles.val("effects_first") == True:
-            wet_frame = self.apply_effects(wet_frame, frame_count)
+            wet_frame = self._apply_effect_chain(wet_frame, frame_count)
             wet_frame = cv2.addWeighted(dry_frame.astype(np.float32), 1 - self.feedback.alpha.value, wet_frame.astype(np.float32), self.feedback.alpha.value, 0)
         else:
             wet_frame = cv2.addWeighted(dry_frame.astype(np.float32), 1 - self.feedback.alpha.value, wet_frame.astype(np.float32), self.feedback.alpha.value, 0)
-            wet_frame = self.apply_effects(wet_frame, frame_count)
-            # wet_frame = self.default_effect_sequence(wet_frame)
+            wet_frame = self._apply_effect_chain(wet_frame, frame_count)
+            # wet_frame = self._default_effect_sequence(wet_frame)
 
         # Apply feedback effects
         wet_frame = self.feedback.apply_temporal_filter(prev_frame, wet_frame)
@@ -479,7 +482,7 @@ class Color(EffectBase):
             image = image.astype(np.float32)
             
         # Perform the calculation in float32.
-        # Clipping will be handled once at the end of the modify_frames function.
+        # Clipping will be handled once at the end of the get_frames function.
         # return image * self.contrast.value + self.brightness.value
         return cv2.convertScaleAbs(
                 image, alpha=self.contrast.value, beta=self.brightness.value
@@ -756,7 +759,7 @@ class Pixels(EffectBase):
         return np.clip(noisy_image, 0, 255).astype(np.uint8)
 
     def blur(self, frame: np.ndarray):
-        mode = self.blur_type.value
+        mode = BlurType(self.blur_type.value)
         if mode == BlurType.NONE:
             pass
         elif mode == BlurType.GAUSSIAN:
