@@ -3,9 +3,9 @@ See notes on Program Architecture in README.md
 
 Classes stored here:
     - enumeration classes for effect modes, etc.
-    - EffectBase singleton class; extended by each Effect subclass (EX: Color, Feedback, etc.)
-    - Effect subclasses; require Control Structures as args, instantiates and adds Control Objects (Parameters, Toggles) to approp structures
-    - EffectManager to init, manage, and sequence Effect subclasses
+    - EffectBase singleton class; extended by each Effect subgroup (EX: Color, Feedback, etc.)
+    - Effect subgroupes; require Control Structures as args, instantiates and adds Control Objects (Parameters) to approp structures
+    - EffectManager to init, manage, and sequence Effect subgroupes
 
 Contribution guide:
     - each new effect class should extend the EffectsBase class
@@ -31,12 +31,17 @@ from patterns3 import Patterns
 from param import ParamTable
 from enum import IntEnum, Enum, auto
 from luma import *
-from gui_elements import ButtonsTable
-from generators import OscBank
-from common import WidgetType
+from lfo import OscBank
+from common import *
 
 log = logging.getLogger(__name__)
 
+""""""
+class BlendModes(Enum):
+    NONE = 0
+    REPLACE = 1
+    BLEND = 2
+    ADD = 3
 
 """This section stores all local custom enum classes"""
 class NoiseType(Enum):
@@ -119,22 +124,21 @@ class EffectManager:
     """
     A central class to aggregate all singleton effect objects and simplify dependencies, arg len
     """
-    def __init__(self, parent, width, height):
-        self.parent = parent
-        self.params = ParamTable(parent=f"EffectManager_{parent}")
-        self.toggles = ButtonsTable()
+    def __init__(self, group, width, height):
+        self.group = group
+        self.params = ParamTable(group=f"EffectManager_{group}")
         self.oscs = OscBank(self.params, 0)
         
-        self.feedback = Feedback(self.params, width, height, self.parent)
-        self.color = Color(self.params, self.parent)
-        self.pixels = Pixels(self.params, width, height, parent=self.parent)
-        self.shapes = Shapes(self.params, width, height, parent=self.parent)
-        self.patterns = Patterns(self.params, self.oscs, width, height, self.parent)
-        self.reflector = Reflector(self.params, parent=self.parent)                    
-        self.sync = Sync(self.params, self.parent) 
-        self.warp = Warp(self.params, width, height, self.parent)
-        self.glitch = Glitch(self.params, self.toggles, self.parent)
-        self.ptz = PTZ(self.params, width, height, self.parent)
+        self.feedback = Feedback(self.params, width, height, self.group)
+        self.color = Color(self.params, self.group)
+        self.pixels = Pixels(self.params, width, height, group=self.group)
+        self.shapes = Shapes(self.params, width, height, group=self.group)
+        self.patterns = Patterns(self.params, self.oscs, width, height, self.group)
+        self.reflector = Reflector(self.params, group=self.group)                    
+        self.sync = Sync(self.params, self.group) 
+        self.warp = Warp(self.params, width, height, self.group)
+        self.glitch = Glitch(self.params, self.group)
+        self.ptz = PTZ(self.params, width, height, self.group)
 
         self._all_services = [
             self.feedback,
@@ -238,7 +242,7 @@ class EffectManager:
             for method in self.all_methods:
                 processed_frame = method(frame)
                 if processed_frame is None:
-                    log.warning(f"Method {method.__name__} in EffectManager ({self.parent}) returned None. Recovering with previous frame.")
+                    log.warning(f"Method {method.__name__} in EffectManager ({self.group}) returned None. Recovering with previous frame.")
                     frame = original_frame_for_recovery # Use the original frame for the next effect
                 else:
                     frame = processed_frame
@@ -248,7 +252,7 @@ class EffectManager:
     def get_frames(self, dry_frame, wet_frame, prev_frame, frame_count):
 
         # Blend the current dry frame with the previous wet frame using the alpha param
-        if self.toggles.val("effects_first") == True:
+        if True: #self.feedback.apply_effects_before_blend.value:
             wet_frame = self._apply_effect_chain(wet_frame, frame_count)
             wet_frame = cv2.addWeighted(dry_frame.astype(np.float32), 1 - self.feedback.alpha.value, wet_frame.astype(np.float32), self.feedback.alpha.value, 0)
         else:
@@ -271,29 +275,57 @@ class EffectManager:
 
 class Color(EffectBase):
 
-    def __init__(self, params, parent):
-        subclass = self.__class__.__name__
+    def __init__(self, params, group):
+        subgroup = self.__class__.__name__
         self.params = params
-        self.parent = parent
+        self.group = group
 
-        self.hue_shift = params.add("hue_shift", 0, 180, 0, subclass, parent)
-        self.sat_shift = params.add("sat_shift", 0, 255, 0, subclass, parent)
-        self.val_shift = params.add("val_shift", 0, 255, 0, subclass, parent)
+        self.hue_shift = params.add("hue_shift",
+                                    min=0, max=180, default=0,
+                                    subgroup=subgroup, group=group)
+        self.sat_shift = params.add("sat_shift",
+                                    min=0, max=255, default=0,
+                                    subgroup=subgroup, group=group)
+        self.val_shift = params.add("val_shift",
+                                    min=0, max=255, default=0,
+                                    subgroup=subgroup, group=group)
 
-        self.levels_per_channel = params.add("posterize_levels", 0, 100, 0.0, subclass, parent)
-        self.num_hues = params.add("num_hues", 2, 10, 8, subclass, parent)
+        self.levels_per_channel = params.add("posterize_levels",
+                                             min=0, max=100, default=0.0,
+                                             subgroup=subgroup, group=group)
+        self.num_hues = params.add("num_hues",
+                                   min=2, max=10, default=8,
+                                   subgroup=subgroup, group=group)
 
-        self.val_threshold = params.add("val_threshold", 0, 255, 0, subclass, parent)
-        self.val_hue_shift = params.add("val_hue_shift", 0, 255, 0, subclass, parent)
+        self.val_threshold = params.add("val_threshold",
+                                        min=0, max=255, default=0,
+                                        subgroup=subgroup, group=group)
+        self.val_hue_shift = params.add("val_hue_shift",
+                                        min=0, max=255, default=0,
+                                        subgroup=subgroup, group=group)
 
-        self.solarize_threshold = params.add("solarize_threshold", 0, 100, 0.0, subclass, parent)
-        self.hue_invert_angle = params.add("hue_invert_angle", 0, 360, 0, subclass, parent)
-        self.hue_invert_strength = params.add("hue_invert_strength", 0.0, 1.0, 0.0, subclass, parent)
+        self.solarize_threshold = params.add("solarize_threshold",
+                                             min=0, max=100, default=0.0,
+                                             subgroup=subgroup, group=group)
+        self.hue_invert_angle = params.add("hue_invert_angle",
+                                           min=0, max=360, default=0,
+                                           subgroup=subgroup, group=group)
+        self.hue_invert_strength = params.add("hue_invert_strength",
+                                              min=0.0, max=1.0, default=0.0,
+                                              subgroup=subgroup, group=group)
 
-        self.contrast = params.add("contrast", 0.5, 3.0, 1.0, subclass, parent)
-        self.brightness = params.add("brightness", 0, 100, 0, subclass, parent)
-        self.gamma = params.add("gamma", 0.1, 3.0, 1.0, subclass, parent)
-        self.highlight_compression = params.add("highlight_compression", 0.0, 1.0, 0.0, subclass, parent)
+        self.contrast = params.add("contrast",
+                                   min=0.5, max=3.0, default=1.0,
+                                   subgroup=subgroup, group=group)
+        self.brightness = params.add("brightness",
+                                     min=0, max=100, default=0,
+                                     subgroup=subgroup, group=group)
+        self.gamma = params.add("gamma",
+                                min=0.1, max=3.0, default=1.0,
+                                subgroup=subgroup, group=group)
+        self.highlight_compression = params.add("highlight_compression",
+                                                min=0.0, max=1.0, default=0.0,
+                                                subgroup=subgroup, group=group)
 
     def _shift_hue(self, hue: int):
         """
@@ -562,56 +594,41 @@ class Color(EffectBase):
 
 class Pixels(EffectBase):
 
-    def __init__(self, params, image_width: int, image_height: int, noise_type=NoiseType.NONE, parent=None):
-        subclass = self.__class__.__name__
+    def __init__(self, params, image_width: int, image_height: int, group=None):
+        subgroup = self.__class__.__name__
         self.params = params
         self.image_width = image_width
         self.image_height = image_height
 
-        self.sharpen_type = params.add("sharpen_type", 0, len(SharpenType)-1, 0, subclass, parent, WidgetType.DROPDOWN, SharpenType)
-        self.sharpen_intensity = params.add("sharpen_intensity", 1.0, 8.0, 4.0, subclass, parent)
-        self.mask_blur = params.add("mask_blur", 1, 10, 5, subclass, parent)
-        self.k_size = params.add("k_size", 0, 11, 3, subclass, parent)
+        self.sharpen_type = params.add("sharpen_type",
+                                        min=0, max=len(SharpenType)-1, default=0,
+                                        group=group, subgroup=subgroup,
+                                        type=Widget.DROPDOWN, options=SharpenType)
+        self.sharpen_intensity = params.add("sharpen_intensity",
+                                            min=1.0, max=8.0, default=4.0,
+                                            subgroup=subgroup, group=group)
+        self.mask_blur = params.add("mask_blur",
+                                    min=1, max=10, default=5,
+                                    subgroup=subgroup, group=group)
+        self.k_size = params.add("k_size",
+                                 min=0, max=11, default=3,
+                                 subgroup=subgroup, group=group)
 
-        self.blur_type = params.add(
-            "blur_type", 0, len(BlurType)-1, 1, subclass, parent, WidgetType.DROPDOWN, BlurType
-        )
-        self.blur_kernel_size = params.add("blur_kernel_size", 1, 100, 1, subclass, parent)
+        self.blur_type = params.add("blur_type",
+                                    min=0, max=len(BlurType)-1, default=1,
+                                    group=group, subgroup=subgroup,
+                                    type=Widget.DROPDOWN, options=BlurType)
+        self.blur_kernel_size = params.add("blur_kernel_size",
+                                           min=1, max=100, default=1,
+                                           subgroup=subgroup, group=group)
 
-
-        if not isinstance(noise_type, NoiseType):
-            raise ValueError("noise_type must be an instance of NoiseType Enum.")
-
-        self._noise_type = params.add(
-            "noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, noise_type.value, subclass, parent, WidgetType.DROPDOWN, NoiseType
-        )
-        self._noise_intensity = params.add("noise_intensity", 0.0, 1.0, 0.1, subclass, parent)
-
-    @property
-    def noise_type(self) -> NoiseType:
-        """Get the current noise type."""
-        return self._noise_type.value
-
-    @noise_type.setter
-    def noise_type(self, new_type: NoiseType):
-        """Set the noise type."""
-        if not isinstance(new_type, NoiseType):
-            raise ValueError("noise_type must be an instance of NoiseType Enum.")
-        self._noise_type.value = new_type
-        log.debug(f"Noise type set to: {self._noise_type.value}")
-
-    @property
-    def noise_intensity(self) -> float:
-        """Get the current noise intensity."""
-        return self._noise_intensity.value
-
-    @noise_intensity.setter
-    def noise_intensity(self, new_intensity: float):
-        """Set the noise intensity."""
-        if not (0.0 <= new_intensity <= 1.0):
-            log.warning("Warning: noise_intensity should ideally be between 0.0 and 1.0.")
-        self._noise_intensity.value = new_intensity
-        log.debug(f"Noise intensity set to: {self._noise_intensity}")
+        self.noise_type = params.add("noise_type",
+                                     min=NoiseType.NONE.value, max=NoiseType.RANDOM.value, default=NoiseType.NONE.value,
+                                     group=group, subgroup=subgroup,
+                                     type=Widget.DROPDOWN, options=NoiseType)
+        self.noise_intensity = params.add("noise_intensity",
+                                          min=0.0, max=1.0, default=0.1,
+                                          subgroup=subgroup, group=group)
 
     def apply_noise(self, image: np.ndarray) -> np.ndarray:
         """
@@ -631,23 +648,23 @@ class Pixels(EffectBase):
         noisy_image = image.astype(np.float32)
 
         # Dispatch to the appropriate noise function based on noise_type
-        if self._noise_type.value == NoiseType.NONE.value:
+        if self.noise_type.value == NoiseType.NONE.value:
             return self._apply_none_noise(noisy_image)
-        elif self._noise_type.value == NoiseType.GAUSSIAN.value:
+        elif self.noise_type.value == NoiseType.GAUSSIAN.value:
             return self._apply_gaussian_noise(noisy_image)
-        elif self._noise_type.value == NoiseType.POISSON.value:
+        elif self.noise_type.value == NoiseType.POISSON.value:
             return self._apply_poisson_noise(noisy_image)
-        elif self._noise_type.value == NoiseType.SALT_AND_PEPPER.value:
+        elif self.noise_type.value == NoiseType.SALT_AND_PEPPER.value:
             return self._apply_salt_and_pepper_noise(noisy_image)
-        elif self._noise_type.value == NoiseType.SPECKLE.value:
+        elif self.noise_type.value == NoiseType.SPECKLE.value:
             return self._apply_speckle_noise(noisy_image)
-        elif self._noise_type.value == NoiseType.SPARSE.value:
+        elif self.noise_type.value == NoiseType.SPARSE.value:
             return self._apply_sparse_noise(noisy_image)
-        elif self._noise_type.value == NoiseType.RANDOM.value:
+        elif self.noise_type.value == NoiseType.RANDOM.value:
             return self._apply_random_noise(noisy_image)
         else:
             log.warning(
-                f"Unknown noise type: {self._noise_type.value}. Returning original image."
+                f"Unknown noise type: {self.noise_type.value}. Returning original image."
             )
             return image.copy()  # Return original if type is unknown
 
@@ -662,7 +679,7 @@ class Pixels(EffectBase):
         """
         mean = 0
         # Standard deviation scales with intensity, up to a max of ~50 for uint8 range
-        std_dev = self._noise_intensity * 50
+        std_dev = self.noise_intensity * 50
         gaussian_noise = np.random.normal(mean, std_dev, image.shape).astype(np.float32)
         noisy_image = image + gaussian_noise
         # Clip values to 0-255 range and convert back to uint8
@@ -678,7 +695,7 @@ class Pixels(EffectBase):
         # Scale to a range suitable for Poisson (e.g., 0-100), Then add noise and scale back
         scaled_image = (image / 255.0 * 100.0)
         poisson_noise = np.random.poisson(
-            scaled_image * self._noise_intensity.value * 2
+            scaled_image * self.noise_intensity.value * 2
         ).astype(np.float32)
         noisy_image = image + (poisson_noise / 100.0 * 255.0)  # Scale noise back to 0-255 range
         return np.clip(noisy_image, 0, 255).astype(np.uint8)
@@ -688,7 +705,7 @@ class Pixels(EffectBase):
         Applies Salt & Pepper noise to the image.
         Intensity controls the proportion of pixels affected.
         """
-        amount = self._noise_intensity  # Proportion of pixels to affect
+        amount = self.noise_intensity  # Proportion of pixels to affect
         s_vs_p = 0.5  # Ratio of salt vs. pepper (0.5 means equal)
 
         # Apply salt noise (white pixels)
@@ -709,7 +726,7 @@ class Pixels(EffectBase):
         Intensity controls the standard deviation of the noise.
         """
         mean = 0
-        std_dev = self._noise_intensity * 0.5  # Scale std_dev for multiplicative noise
+        std_dev = self.noise_intensity * 0.5  # Scale std_dev for multiplicative noise
         speckle_noise = np.random.normal(mean, std_dev, image.shape).astype(np.float32)
         noisy_image = image + image * speckle_noise
         return np.clip(noisy_image, 0, 255).astype(np.uint8)
@@ -720,7 +737,7 @@ class Pixels(EffectBase):
         and setting them to a random value within the 0-255 range.
         Intensity controls the proportion of pixels affected.
         """
-        amount = self._noise_intensity  # Proportion of pixels to affect
+        amount = self.noise_intensity  # Proportion of pixels to affect
 
         num_pixels_to_affect = np.ceil(
             amount * image.size / image.shape[-1] if image.ndim == 3 else image.size
@@ -751,7 +768,7 @@ class Pixels(EffectBase):
         Intensity controls the maximum range of the random noise added.
         """
         # Generate random noise in the range [-intensity*127.5, intensity*127.5]
-        noise_range = (self._noise_intensity * 127.5)  
+        noise_range = (self.noise_intensity * 127.5)  
         random_noise = np.random.uniform(-noise_range, noise_range, image.shape).astype(
             np.float32
         )
@@ -832,15 +849,27 @@ class Pixels(EffectBase):
 
 class Sync(EffectBase):
 
-    def __init__(self, params, parent):
-        subclass = self.__class__.__name__
+    def __init__(self, params, group):
+        subgroup = self.__class__.__name__
         self.params = params
-        self.x_sync_freq = params.add("x_sync_freq", 0.1, 100.0, 1.0, subclass, parent)
-        self.x_sync_amp = params.add("x_sync_amp", -200, 200, 0.0, subclass, parent)
-        self.x_sync_speed = params.add("x_sync_speed", 5.0, 10.0, 9.0, subclass, parent)
-        self.y_sync_freq = params.add("y_sync_freq", 0.1, 100.0, 1.0, subclass, parent)
-        self.y_sync_amp = params.add("y_sync_amp", -200, 200, 00.0, subclass, parent)
-        self.y_sync_speed = params.add("y_sync_speed", 5.0, 10.0, 9.0, subclass, parent)
+        self.x_sync_freq = params.add("x_sync_freq",
+                                       min=0.1, max=100.0, default=1.0,
+                                       subgroup=subgroup, group=group)
+        self.x_sync_amp = params.add("x_sync_amp",
+                                     min=-200, max=200, default=0.0,
+                                     subgroup=subgroup, group=group)
+        self.x_sync_speed = params.add("x_sync_speed",
+                                       min=5.0, max=10.0, default=9.0,
+                                       subgroup=subgroup, group=group)
+        self.y_sync_freq = params.add("y_sync_freq",
+                                      min=0.1, max=100.0, default=1.0,
+                                      subgroup=subgroup, group=group)
+        self.y_sync_amp = params.add("y_sync_amp",
+                                     min=-200, max=200, default=0.0,
+                                     subgroup=subgroup, group=group)
+        self.y_sync_speed = params.add("y_sync_speed",
+                                       min=5.0, max=10.0, default=9.0,
+                                       subgroup=subgroup, group=group)
 
     def sync(self, frame: np.ndarray):
         """
@@ -883,23 +912,48 @@ class Sync(EffectBase):
 PERLIN_SCALE=1700 #???
 class Warp(EffectBase):
 
-    def __init__(self, params, image_width: int, image_height: int, parent=None):
-        subclass = self.__class__.__name__
+    def __init__(self, params, image_width: int, image_height: int, group=None):
+        subgroup = self.__class__.__name__
         self.params = params
         self.width = image_width
         self.height = image_height
-        self.warp_type = params.add("warp_type", 0, len(WarpType)-1, 0, subclass, parent, WidgetType.DROPDOWN, WarpType)
-        self.warp_angle_amt = params.add("warp_angle_amt", 0, 360, 30, subclass, parent)
-        self.warp_radius_amt = params.add("warp_radius_amt", 0, 360, 30, subclass, parent)
-        self.warp_speed = params.add("warp_speed", 0, 100, 10, subclass, parent)
-        self.warp_use_fractal = params.add("warp_use_fractal", 0, 1, 0, subclass, parent)
-        self.warp_octaves = params.add("warp_octaves", 1, 8, 4, subclass, parent)
-        self.warp_gain = params.add("warp_gain", 0.0, 1.0, 0.5, subclass, parent)
-        self.warp_lacunarity = params.add("warp_lacunarity", 1.0, 4.0, 2.0, subclass, parent)
-        self.x_speed = params.add("x_speed", 0.0, 100.0, 1.0, subclass, parent)
-        self.x_size = params.add("x_size", 0.25, 100.0, 20.0, subclass, parent)
-        self.y_speed = params.add("y_speed", 0.0, 10.0, 1.0, subclass, parent)
-        self.y_size = params.add("y_size", 0.25, 100.0, 10.0, subclass, parent)
+        self.warp_type = params.add("warp_type",
+                                    min=0, max=len(WarpType)-1, default=0,
+                                    group=group, subgroup=subgroup,
+                                    type=Widget.DROPDOWN, options=WarpType)
+        self.warp_angle_amt = params.add("warp_angle_amt",
+                                         min=0, max=360, default=30,
+                                         subgroup=subgroup, group=group)
+        self.warp_radius_amt = params.add("warp_radius_amt",
+                                          min=0, max=360, default=30,
+                                          subgroup=subgroup, group=group)
+        self.warp_speed = params.add("warp_speed",
+                                     min=0, max=100, default=10,
+                                     subgroup=subgroup, group=group)
+        self.warp_use_fractal = params.add("warp_use_fractal",
+                                           min=0, max=1, default=0,
+                                           subgroup=subgroup, group=group)
+        self.warp_octaves = params.add("warp_octaves",
+                                       min=1, max=8, default=4,
+                                       subgroup=subgroup, group=group)
+        self.warp_gain = params.add("warp_gain",
+                                    min=0.0, max=1.0, default=0.5,
+                                    subgroup=subgroup, group=group)
+        self.warp_lacunarity = params.add("warp_lacunarity",
+                                          min=1.0, max=4.0, default=2.0,
+                                          subgroup=subgroup, group=group)
+        self.x_speed = params.add("x_speed",
+                                  min=0.0, max=100.0, default=1.0,
+                                  subgroup=subgroup, group=group)
+        self.x_size = params.add("x_size",
+                                 min=0.25, max=100.0, default=20.0,
+                                 subgroup=subgroup, group=group)
+        self.y_speed = params.add("y_speed",
+                                  min=0.0, max=10.0, default=1.0,
+                                  subgroup=subgroup, group=group)
+        self.y_size = params.add("y_size",
+                                 min=0.25, max=100.0, default=10.0,
+                                 subgroup=subgroup, group=group)
 
         self.t = 0
 
@@ -1068,23 +1122,30 @@ class Reflector(EffectBase):
     A class to apply reflection transformations to image frames from a stream.
     """
 
-    def __init__(self, params, mode: ReflectionMode = ReflectionMode.NONE, parent=None):
+    def __init__(self, params, mode: ReflectionMode = ReflectionMode.NONE, group=None):
         """
         Initializes the Reflector with a specified reflection mode.
 
         Args:
             mode (ReflectionMode): The reflection mode to apply. Defaults to NONE.
         """
-        subclass = self.__class__.__name__
+        subgroup = self.__class__.__name__
         self.params = params
         if not isinstance(mode, ReflectionMode):
             raise ValueError("mode must be an instance of ReflectionMode Enum.")
-        self._mode = params.add(
-            "reflection_mode", 0, len(ReflectionMode) - 1, ReflectionMode.NONE.value, subclass, parent, WidgetType.DROPDOWN, ReflectionMode
-        )
-        self.segments = params.add("reflector_segments",0,10,0,subclass, parent)
-        self.zoom = params.add("reflector_z", 0.5, 2, 1.0, subclass, parent)
-        self.rotation = params.add("reflector_r", -360,360,0.0,subclass, parent)
+        self._mode = params.add("reflection_mode",
+                                min=0, max=len(ReflectionMode) - 1, default=ReflectionMode.NONE.value,
+                                group=group, subgroup=subgroup,
+                                type=Widget.DROPDOWN, options=ReflectionMode)
+        self.segments = params.add("reflector_segments",
+                                   min=0, max=10, default=0,
+                                   subgroup=subgroup, group=group)
+        self.zoom = params.add("reflector_z",
+                               min=0.5, max=2, default=1.0,
+                               subgroup=subgroup, group=group)
+        self.rotation = params.add("reflector_r",
+                                   min=-360, max=360, default=0.0,
+                                   subgroup=subgroup, group=group)
         self.width = None 
         self.height = None
 
@@ -1232,40 +1293,54 @@ class Reflector(EffectBase):
 
 
 class PTZ(EffectBase):
-    def __init__(self, params, image_width: int, image_height: int, parent=None):
-        subclass = self.__class__.__name__
+    def __init__(self, params, image_width: int, image_height: int, group=None):
+        subgroup = self.__class__.__name__
         self.params = params
         self.height = image_height
         self.width = image_width
 
-        self.x_shift = params.add(
-            "x_shift", -image_width, image_width, 0, subclass, parent
-        )  # min/max depends on image size
-        self.y_shift = params.add(
-            "y_shift", -image_height, image_height, 0, subclass, parent
-        )  # min/max depends on image size
-        self.zoom = params.add("zoom", 0.75, 3, 1.0, subclass, parent)
-        self.r_shift = params.add("r_shift", -360, 360, 0.0, subclass, parent)
-        
-        
-        self.prev_x_shift = params.add(
-            "prev_x_shift", -image_width, image_width, 0, subclass, parent
-        )  # min/max depends on image size
-        self.prev_y_shift = params.add(
-            "prev_y_shift", -image_height, image_height, 0, subclass, parent
-        )  # min/max depends on image size
-        self.prev_zoom = params.add("prev_zoom", 0.75, 3, 1.0, subclass, parent)
-        self.prev_r_shift = params.add("prev_r_shift", -360, 360, 0.0, subclass, parent)
+        self.x_shift = params.add("x_shift",
+                                   min=-image_width, max=image_width, default=0,
+                                   subgroup=subgroup, group=group)  # min/max depends on image size
+        self.y_shift = params.add("y_shift",
+                                  min=-image_height, max=image_height, default=0,
+                                  subgroup=subgroup, group=group)  # min/max depends on image size
+        self.zoom = params.add("zoom",
+                               min=0.75, max=3, default=1.0,
+                               subgroup=subgroup, group=group)
+        self.r_shift = params.add("r_shift",
+                                  min=-360, max=360, default=0.0,
+                                  subgroup=subgroup, group=group)
 
-        self.prev_cx = params.add(
-            "prev_cx", -image_width/2, image_width/2, 0, subclass, parent
-        )
-        self.prev_cy = params.add(
-            "prev_cy", -image_height/2, image_height/2, 0, subclass, parent
-        )
-        self.polar_x = params.add("polar_x", -image_width // 2, image_width // 2, 0, subclass, parent)
-        self.polar_y = params.add("polar_y", -image_height // 2, image_height // 2, 0, subclass, parent)
-        self.polar_radius = params.add("polar_radius", 0.1, 100, 1.0, subclass, parent)
+
+        self.prev_x_shift = params.add("prev_x_shift",
+                                       min=-image_width, max=image_width, default=0,
+                                       subgroup=subgroup, group=group)  # min/max depends on image size
+        self.prev_y_shift = params.add("prev_y_shift",
+                                       min=-image_height, max=image_height, default=0,
+                                       subgroup=subgroup, group=group)  # min/max depends on image size
+        self.prev_zoom = params.add("prev_zoom",
+                                    min=0.75, max=3, default=1.0,
+                                    subgroup=subgroup, group=group)
+        self.prev_r_shift = params.add("prev_r_shift",
+                                       min=-360, max=360, default=0.0,
+                                       subgroup=subgroup, group=group)
+
+        self.prev_cx = params.add("prev_cx",
+                                  min=-image_width/2, max=image_width/2, default=0,
+                                  subgroup=subgroup, group=group)
+        self.prev_cy = params.add("prev_cy",
+                                  min=-image_height/2, max=image_height/2, default=0,
+                                  subgroup=subgroup, group=group)
+        self.polar_x = params.add("polar_x",
+                                  min=-image_width // 2, max=image_width // 2, default=0,
+                                  subgroup=subgroup, group=group)
+        self.polar_y = params.add("polar_y",
+                                  min=-image_height // 2, max=image_height // 2, default=0,
+                                  subgroup=subgroup, group=group)
+        self.polar_radius = params.add("polar_radius",
+                                       min=0.1, max=100, default=1.0,
+                                       subgroup=subgroup, group=group)
 
     def shift_frame(self, frame: np.ndarray):
         """
@@ -1380,27 +1455,44 @@ class PTZ(EffectBase):
 
 class Feedback(EffectBase):
 
-    def __init__(self, params: ParamTable, image_width: int, image_height: int, parent=None):
+    def __init__(self, params: ParamTable, image_width: int, image_height: int, group=None):
         self.params = params
         self.height = image_height
         self.width = image_width
 
-        subclass = self.__class__.__name__
+        subgroup = self.__class__.__name__
 
-        self.alpha = params.add("alpha", 0.0, 1.0, 0.0, subclass, parent)
-        self.temporal_filter = params.add("temporal_filter", 0, 1.0, 0.0, subclass, parent)
-        self.feedback_luma_threshold = params.add("feedback_luma_threshold", 0, 255, 0, subclass, parent)
-        self.luma_mode = params.add(
-            "luma_mode", LumaMode.WHITE.value, LumaMode.BLACK.value, LumaMode.WHITE.value, subclass, parent, WidgetType.RADIO, LumaMode
-        )
-        self.frame_skip = params.add("frame_skip", 0, 10, 0, subclass, parent)
-        self.buffer_select = params.add("buffer_frame_select", -1, 20, -1, subclass, parent)
-        self.buffer_frame_blend = params.add("buffer_frame_blend", 0.0, 1.0, 0.0, subclass, parent)
+        self.alpha = params.add("alpha",
+                                min=0.0, max=1.0, default=0.0,
+                                subgroup=subgroup, group=group)
+        self.temporal_filter = params.add("temporal_filter",
+                                          min=0, max=1.0, default=0.0,
+                                          subgroup=subgroup, group=group)
+        self.feedback_luma_threshold = params.add("feedback_luma_threshold",
+                                                  min=0, max=255, default=0,
+                                                  subgroup=subgroup, group=group)
+        self.luma_mode = params.add("luma_mode",
+                                    min=LumaMode.WHITE.value, max=LumaMode.BLACK.value, default=LumaMode.WHITE.value,
+                                    group=group, subgroup=subgroup,
+                                    type=Widget.RADIO, options=LumaMode)
+        self.frame_skip = params.add("frame_skip",
+                                     min=0, max=10, default=0,
+                                     subgroup=subgroup, group=group)
+        self.buffer_select = params.add("buffer_frame_select",
+                                        min=-1, max=20, default=-1,
+                                        subgroup=subgroup, group=group)
+        self.buffer_frame_blend = params.add("buffer_frame_blend",
+                                             min=0.0, max=1.0, default=0.0,
+                                             subgroup=subgroup, group=group)
 
-        self.prev_frame_scale = params.add("prev_frame_scale", 90, 110, 100, subclass, parent)
+        self.prev_frame_scale = params.add("prev_frame_scale",
+                                           min=90, max=110, default=100,
+                                           subgroup=subgroup, group=group)
 
         self.max_buffer_size = 30
-        self.buffer_size = params.add("buffer_size", 0, self.max_buffer_size, 0, subclass, parent)
+        self.buffer_size = params.add("buffer_size",
+                                      min=0, max=self.max_buffer_size, default=0,
+                                      subgroup=subgroup, group=group)
         # this should probably be initialized in reset() to avoid issues with reloading config
         self.frame_buffer = deque(maxlen=self.max_buffer_size)
 
@@ -1586,14 +1678,24 @@ class Feedback(EffectBase):
 
 
 class Lissajous(EffectBase):
-    def __init__(self, params, parent=None):
+    def __init__(self, params, group=None):
         self.params = params
-        subclass = self.__class__.__name__
-        self.lissajous_A = params.add("lissajous_A", 0, 100, 50, subclass, parent)
-        self.lissajous_B = params.add("lissajous_B", 0, 100, 50, subclass, parent)
-        self.lissajous_a = params.add("lissajous_a", 0, 100, 50, subclass, parent)
-        self.lissajous_b = params.add("lissajous_b", 0, 100, 50, subclass, parent)
-        self.lissajous_delta = params.add("lissajous_delta", 0, 360, subclass, parent)
+        subgroup = self.__class__.__name__
+        self.lissajous_A = params.add("lissajous_A",
+                                       min=0, max=100, default=50,
+                                       subgroup=subgroup, group=group)
+        self.lissajous_B = params.add("lissajous_B",
+                                       min=0, max=100, default=50,
+                                       subgroup=subgroup, group=group)
+        self.lissajous_a = params.add("lissajous_a",
+                                       min=0, max=100, default=50,
+                                       subgroup=subgroup, group=group)
+        self.lissajous_b = params.add("lissajous_b",
+                                       min=0, max=100, default=50,
+                                       subgroup=subgroup, group=group)
+        self.lissajous_delta = params.add("lissajous_delta",
+                                          min=0, max=360, default=0,
+                                          subgroup=subgroup, group=group)
     
     # TODO: make this more engaging
     def lissajous_pattern(self, frame, t):
@@ -1621,7 +1723,7 @@ class Lissajous(EffectBase):
 class ImageNoiser(EffectBase):
 
     def __init__(
-        self, params, noise_type: NoiseType = NoiseType.NONE, parent=None
+        self, params, noise_type: NoiseType = NoiseType.NONE, group=None
     ):
         """
         Initializes the ImageNoiser with a default noise type and intensity.
@@ -1632,28 +1734,31 @@ class ImageNoiser(EffectBase):
                                      Its interpretation varies by noise type. Defaults to 0.1.
         """
         self.params = params
-        subclass = self.__class__.__name__
+        subgroup = self.__class__.__name__
 
         if not isinstance(noise_type, NoiseType):
             raise ValueError("noise_type must be an instance of NoiseType Enum.")
 
-        self._noise_type = params.add(
-            "noise_type", NoiseType.NONE.value, NoiseType.RANDOM.value, NoiseType.NONE.value, subclass, parent, WidgetType.DROPDOWN, NoiseType
-        )
-        self._noise_intensity = params.add("noise_intensity", 0.0, 1.0, 0.1, subclass, parent)
+        self.noise_type = params.add("noise_type",
+                                     min=NoiseType.NONE.value, max=NoiseType.RANDOM.value, default=NoiseType.NONE.value,
+                                     group=group, subgroup=subgroup,
+                                     type=Widget.DROPDOWN, options=NoiseType)
+        self.noise_intensity = params.add("noise_intensity",
+                                          min=0.0, max=1.0, default=0.1,
+                                          subgroup=subgroup, group=group)
 
     @property
     def noise_intensity(self) -> float:
         """Get the current noise intensity."""
-        return self._noise_intensity.value
+        return self.noise_intensity.value
 
     @noise_intensity.setter
     def noise_intensity(self, new_intensity: float):
         """Set the noise intensity."""
         if not (0.0 <= new_intensity <= 1.0):
             log.warning("Warning: noise_intensity should ideally be between 0.0 and 1.0.")
-        self._noise_intensity.value = new_intensity
-        log.debug(f"Noise intensity set to: {self._noise_intensity}")
+        self.noise_intensity.value = new_intensity
+        log.debug(f"Noise intensity set to: {self.noise_intensity}")
 
     def apply_noise(self, image: np.ndarray) -> np.ndarray:
         """
@@ -1673,23 +1778,23 @@ class ImageNoiser(EffectBase):
         noisy_image = image.astype(np.float32)
 
         # Dispatch to the appropriate noise function based on noise_type
-        if self._noise_type.value == NoiseType.NONE.value:
+        if self.noise_type.value == NoiseType.NONE.value:
             return self._apply_none_noise(noisy_image)
-        elif self._noise_type.value == NoiseType.GAUSSIAN.value:
+        elif self.noise_type.value == NoiseType.GAUSSIAN.value:
             return self._apply_gaussian_noise(noisy_image)
-        elif self._noise_type.value == NoiseType.POISSON.value:
+        elif self.noise_type.value == NoiseType.POISSON.value:
             return self._apply_poisson_noise(noisy_image)
-        elif self._noise_type.value == NoiseType.SALT_AND_PEPPER.value:
+        elif self.noise_type.value == NoiseType.SALT_AND_PEPPER.value:
             return self._apply_salt_and_pepper_noise(noisy_image)
-        elif self._noise_type.value == NoiseType.SPECKLE.value:
+        elif self.noise_type.value == NoiseType.SPECKLE.value:
             return self._apply_speckle_noise(noisy_image)
-        elif self._noise_type.value == NoiseType.SPARSE.value:
+        elif self.noise_type.value == NoiseType.SPARSE.value:
             return self._apply_sparse_noise(noisy_image)
-        elif self._noise_type.value == NoiseType.RANDOM.value:
+        elif self.noise_type.value == NoiseType.RANDOM.value:
             return self._apply_random_noise(noisy_image)
         else:
             log.warning(
-                f"Unknown noise type: {self._noise_type.value}. Returning original image."
+                f"Unknown noise type: {self.noise_type.value}. Returning original image."
             )
             return image.copy()  # Return original if type is unknown
 
@@ -1704,7 +1809,7 @@ class ImageNoiser(EffectBase):
         """
         mean = 0
         # Standard deviation scales with intensity, up to a max of ~50 for uint8 range
-        std_dev = self._noise_intensity * 50
+        std_dev = self.noise_intensity * 50
         gaussian_noise = np.random.normal(mean, std_dev, image.shape).astype(np.float32)
         noisy_image = image + gaussian_noise
         # Clip values to 0-255 range and convert back to uint8
@@ -1722,7 +1827,7 @@ class ImageNoiser(EffectBase):
             image / 255.0 * 100.0
         )  # Scale to 0-100 for better Poisson distribution
         poisson_noise = np.random.poisson(
-            scaled_image * self._noise_intensity.value * 2
+            scaled_image * self.noise_intensity.value * 2
         ).astype(np.float32)
         noisy_image = image + (
             poisson_noise / 100.0 * 255.0
@@ -1734,7 +1839,7 @@ class ImageNoiser(EffectBase):
         Applies Salt & Pepper noise to the image.
         Intensity controls the proportion of pixels affected.
         """
-        amount = self._noise_intensity  # Proportion of pixels to affect
+        amount = self.noise_intensity  # Proportion of pixels to affect
         s_vs_p = 0.5  # Ratio of salt vs. pepper (0.5 means equal)
 
         # Apply salt noise (white pixels)
@@ -1755,7 +1860,7 @@ class ImageNoiser(EffectBase):
         Intensity controls the standard deviation of the noise.
         """
         mean = 0
-        std_dev = self._noise_intensity * 0.5  # Scale std_dev for multiplicative noise
+        std_dev = self.noise_intensity * 0.5  # Scale std_dev for multiplicative noise
         speckle_noise = np.random.normal(mean, std_dev, image.shape).astype(np.float32)
         noisy_image = image + image * speckle_noise
         return np.clip(noisy_image, 0, 255).astype(np.uint8)
@@ -1766,7 +1871,7 @@ class ImageNoiser(EffectBase):
         and setting them to a random value within the 0-255 range.
         Intensity controls the proportion of pixels affected.
         """
-        amount = self._noise_intensity  # Proportion of pixels to affect
+        amount = self.noise_intensity  # Proportion of pixels to affect
 
         num_pixels_to_affect = np.ceil(
             amount * image.size / image.shape[-1] if image.ndim == 3 else image.size
@@ -1797,7 +1902,7 @@ class ImageNoiser(EffectBase):
         Intensity controls the maximum range of the random noise added.
         """
         # Generate random noise in the range [-intensity*127.5, intensity*127.5]
-        noise_range = (self._noise_intensity * 127.5)  
+        noise_range = (self.noise_intensity * 127.5)  
         random_noise = np.random.uniform(-noise_range, noise_range, image.shape).astype(
             np.float32
         )
@@ -1807,12 +1912,12 @@ class ImageNoiser(EffectBase):
 
 class Glitch(EffectBase):   
 
-    def __init__(self, params, toggles, parent=None):
+    def __init__(self, params, group=None):
         self.params = params
         self.glitch_phase_start_frame = 0
         self.glitch_cycle_start_frame = 0
 
-        subclass = self.__class__.__name__
+        subgroup = self.__class__.__name__
 
         # State for horizontal scroll freeze glitch
         self.current_fixed_y_end = None
@@ -1824,30 +1929,86 @@ class Glitch(EffectBase):
         self.glitch_phase_start_frame_color = 0
         self.glitch_phase_start_frame_block = 0
 
-        self.enable_pixel_shift = toggles.add(
-            "Enable Pixel Shift Glitch", "enable_pixel_shift", False
-        )
-        self.enable_color_split = toggles.add(
-            "Enable Color Split Glitch", "enable_color_split", False
-        )
-        self.enable_block_corruption = toggles.add(
-            "Enable Block Corruption Glitch", "enable_block_corruption", False
-        )
-        self.enable_random_rectangles = toggles.add(
-            "Enable Random Rectangles Glitch", "enable_random_rectangles", False
-        )
-        self.enable_horizontal_scroll_freeze = toggles.add(
-            "Enable Horizontal Scroll Freeze Glitch",
-            "enable_horizontal_scroll_freeze",
-            False,
-        )
+        self.enable_pixel_shift = params.add("enable_pixel_shift",
+                                              group=group, subgroup=subgroup,
+                                              type=Widget.RADIO, options=Toggle)
+        self.enable_color_split = params.add("enable_color_split",
+                                             group=group, subgroup=subgroup,
+                                             type=Widget.RADIO, options=Toggle)
+        self.enable_block_corruption = params.add("enable_block_corruption",
+                                                  group=group, subgroup=subgroup,
+                                                  type=Widget.RADIO, options=Toggle)
+        self.enable_random_rectangles = params.add("enable_random_rectangles",
+                                                   group=group, subgroup=subgroup,
+                                                   type=Widget.RADIO, options=Toggle)
+        self.enable_horizontal_scroll_freeze = params.add("enable_horizontal_scroll_freeze",
+                                                          group=group, subgroup=subgroup,
+                                                          type=Widget.RADIO, options=Toggle)
+        self.enable_slitscan = params.add("enable_slitscan",
+                                          group=group, subgroup=subgroup,
+                                          type=Widget.RADIO, options=Toggle)
 
-        self.glitch_duration_frames = params.add("glitch_duration_frames", 1, 300, 60, subclass, parent)
-        self.glitch_intensity_max = params.add("glitch_intensity_max", 0, 100, 50, subclass, parent)
-        self.glitch_block_size_max = params.add("glitch_block_size_max", 0, 200, 60, subclass, parent)
-        self.band_div = params.add("glitch_band_div", 1, 10, 5, subclass, parent)
-        self.num_glitches = params.add("num_glitches", 0, 100, 0, subclass, parent)
-        self.glitch_size = params.add("glitch_size", 1, 100, 0, subclass, parent)
+        self.glitch_duration_frames = params.add("glitch_duration_frames",
+                                                 min=1, max=300, default=60,
+                                                 subgroup=subgroup, group=group)
+        self.glitch_intensity_max = params.add("glitch_intensity_max",
+                                               min=0, max=100, default=50,
+                                               subgroup=subgroup, group=group)
+        self.glitch_block_size_max = params.add("glitch_block_size_max",
+                                                min=0, max=200, default=60,
+                                                subgroup=subgroup, group=group)
+        self.band_div = params.add("glitch_band_div",
+                                   min=1, max=10, default=5,
+                                   subgroup=subgroup, group=group)
+        self.num_glitches = params.add("num_glitches",
+                                       min=0, max=100, default=0,
+                                       group=group, subgroup=subgroup)
+        self.glitch_size = params.add("glitch_size",
+                                      min=1, max=100, default=0,
+                                      group=group, subgroup=subgroup)
+
+        # Slitscan parameters
+        self.ss_dir = params.add("slitscan_direction",
+                                 min=0, max=1, default=0,
+                                 group=group, subgroup=subgroup,
+                                 type=Widget.RADIO, options=Toggle)
+        self.ss_slice_width = params.add("slitscan_slice_width",
+                                         min=1, max=50, default=5,
+                                         group=group, subgroup=subgroup)
+        self.ss_time_offset = params.add("slitscan_time_offset",
+                                         min=1, max=60, default=10,
+                                         group=group, subgroup=subgroup)
+        self.ss_speed = params.add("slitscan_speed",
+                                   min=0.1, max=10.0, default=1.0,
+                                   group=group, subgroup=subgroup)
+        self.ss_reverse = params.add("slitscan_reverse",
+                                     min=0, max=1, default=0,
+                                     group=group, subgroup=subgroup,
+                                     type=Widget.RADIO, options=Toggle)
+        self.ss_buffer_size = params.add("slitscan_buffer_size",
+                                         min=10, max=120, default=60,
+                                         group=group, subgroup=subgroup)
+        self.ss_blend_mode = params.add("slitscan_blend_mode",
+                                        min=0, max=2, default=0,
+                                        group=group, subgroup=subgroup,
+                                        type=Widget.DROPDOWN, options=BlendModes)
+        self.ss_blend_alpha = params.add("slitscan_blend_alpha",
+                                         min=0.0, max=1.0, default=1.0,
+                                         group=group, subgroup=subgroup,
+                                         type=Widget.SLIDER)
+        self.ss_position_offset = params.add("slitscan_position_offset",
+                                             min=-100, max=100, default=0,
+                                             group=group, subgroup=subgroup)
+        self.ss_wobble_amount = params.add("slitscan_wobble_amount",
+                                           min=0, max=50, default=0,
+                                           group=group, subgroup=subgroup)
+        self.ss_wobble_freq = params.add("slitscan_wobble_freq",
+                                         min=0.1, max=10.0, default=1.0,
+                                         group=group, subgroup=subgroup)
+
+        # Slitscan frame buffer
+        self.ss_buffer = []
+        self.ss_position = 0
 
         self.frame_count = 0
 
@@ -1855,27 +2016,32 @@ class Glitch(EffectBase):
         dpg.add_button(
             label=self.enable_pixel_shift.label,
             callback=self.enable_pixel_shift.toggle,
-            parent=gui,
+            group=gui,
         )
         dpg.add_button(
             label=self.enable_color_split.label,
             callback=self.enable_color_split.toggle,
-            parent=gui,
+            group=gui,
         )
         dpg.add_button(
             label=self.enable_block_corruption.label,
             callback=self.enable_block_corruption.toggle,
-            parent=gui,
+            group=gui,
         )
         dpg.add_button(
             label=self.enable_random_rectangles.label,
             callback=self.enable_random_rectangles.toggle,
-            parent=gui,
+            group=gui,
         )
         dpg.add_button(
             label=self.enable_horizontal_scroll_freeze.label,
             callback=self.enable_horizontal_scroll_freeze.toggle,
-            parent=gui,
+            group=gui,
+        )
+        dpg.add_button(
+            label=self.enable_slitscan.label,
+            callback=self.enable_slitscan.toggle,
+            group=gui,
         )
 
     def _reset(self):
@@ -2165,6 +2331,131 @@ class Glitch(EffectBase):
     def scanline_distortion(self, frame):
         return frame
 
+    def _apply_slitscan(self, frame):
+        """
+        Applies a slitscan effect by compositing slices from different frames in the buffer.
+
+        Slitscan works by taking horizontal or vertical slices from frames at different points
+        in time and combining them into a single output frame, creating time-displacement effects.
+        """
+        height, width, _ = frame.shape
+
+        # Add current frame to buffer
+        self.ss_buffer.append(frame.copy())
+
+        # Maintain buffer size
+        max_buffer_size = int(self.ss_buffer_size.value)
+        if len(self.ss_buffer) > max_buffer_size:
+            self.ss_buffer.pop(0)
+
+        # If buffer isn't full yet, return original frame
+        if len(self.ss_buffer) < 2:
+            return frame
+
+        # Create output frame
+        output = np.zeros_like(frame)
+
+        # Get parameters
+        direction = int(self.ss_dir.value)  # 0=horizontal, 1=vertical
+        slice_width = int(self.ss_slice_width.value)
+        time_offset = int(self.ss_time_offset.value)
+        speed = self.ss_speed.value
+        reverse = bool(self.ss_reverse.value)
+        blend_mode = int(self.ss_blend_mode.value)
+        blend_alpha = self.ss_blend_alpha.value
+        position_offset = int(self.ss_position_offset.value)
+        wobble_amount = int(self.ss_wobble_amount.value)
+        wobble_freq = self.ss_wobble_freq.value
+
+        # Update scanning position
+        self.ss_position += speed
+
+        buffer_len = len(self.ss_buffer)
+
+        if direction == 0:  # Horizontal slitscan
+            num_slices = height // slice_width + 1
+
+            for i in range(num_slices):
+                # Calculate slice position with wobble
+                slice_y = int(i * slice_width)
+                if wobble_amount > 0:
+                    wobble_offset = int(wobble_amount * np.sin(self.ss_position * wobble_freq * 0.1 + i * 0.5))
+                    slice_y = max(0, min(height - slice_width, slice_y + wobble_offset))
+
+                slice_y_end = min(slice_y + slice_width, height)
+
+                # Calculate which frame to pull this slice from
+                if reverse:
+                    time_index = (i * time_offset + int(self.ss_position) + position_offset) % buffer_len
+                else:
+                    time_index = (num_slices - i - 1) * time_offset + int(self.ss_position) + position_offset
+                    time_index = time_index % buffer_len
+
+                # Clamp to buffer bounds
+                time_index = max(0, min(buffer_len - 1, time_index))
+
+                # Get slice from historical frame
+                source_frame = self.ss_buffer[time_index]
+                slice_data = source_frame[slice_y:slice_y_end, :]
+
+                # Apply blend mode
+                if blend_mode == 0:  # Replace
+                    output[slice_y:slice_y_end, :] = slice_data
+                elif blend_mode == 1:  # Blend
+                    output[slice_y:slice_y_end, :] = cv2.addWeighted(
+                        output[slice_y:slice_y_end, :], 1 - blend_alpha,
+                        slice_data, blend_alpha, 0
+                    )
+                elif blend_mode == 2:  # Additive
+                    output[slice_y:slice_y_end, :] = np.clip(
+                        output[slice_y:slice_y_end, :].astype(np.int16) +
+                        (slice_data.astype(np.int16) * blend_alpha).astype(np.int16),
+                        0, 255
+                    ).astype(np.uint8)
+
+        else:  # Vertical slitscan
+            num_slices = width // slice_width + 1
+
+            for i in range(num_slices):
+                # Calculate slice position with wobble
+                slice_x = int(i * slice_width)
+                if wobble_amount > 0:
+                    wobble_offset = int(wobble_amount * np.sin(self.ss_position * wobble_freq * 0.1 + i * 0.5))
+                    slice_x = max(0, min(width - slice_width, slice_x + wobble_offset))
+
+                slice_x_end = min(slice_x + slice_width, width)
+
+                # Calculate which frame to pull this slice from
+                if reverse:
+                    time_index = (i * time_offset + int(self.ss_position) + position_offset) % buffer_len
+                else:
+                    time_index = (num_slices - i - 1) * time_offset + int(self.ss_position) + position_offset
+                    time_index = time_index % buffer_len
+
+                # Clamp to buffer bounds
+                time_index = max(0, min(buffer_len - 1, time_index))
+
+                # Get slice from historical frame
+                source_frame = self.ss_buffer[time_index]
+                slice_data = source_frame[:, slice_x:slice_x_end]
+
+                # Apply blend mode
+                if blend_mode == 0:  # Replace
+                    output[:, slice_x:slice_x_end] = slice_data
+                elif blend_mode == 1:  # Blend
+                    output[:, slice_x:slice_x_end] = cv2.addWeighted(
+                        output[:, slice_x:slice_x_end], 1 - blend_alpha,
+                        slice_data, blend_alpha, 0
+                    )
+                elif blend_mode == 2:  # Additive
+                    output[:, slice_x:slice_x_end] = np.clip(
+                        output[:, slice_x:slice_x_end].astype(np.int16) +
+                        (slice_data.astype(np.int16) * blend_alpha).astype(np.int16),
+                        0, 255
+                    ).astype(np.uint8)
+
+        return output
+
     def apply_glitch_effects(self, frame):
 
         # Get frame dimensions for dynamic calculations
@@ -2220,6 +2511,8 @@ class Glitch(EffectBase):
                 self.current_fixed_y_end,
                 self.current_growth_duration,
             )
+        if self.enable_slitscan.value:
+            frame = self._apply_slitscan(frame)
 
         self.frame_count += 1
         return frame
@@ -2227,47 +2520,88 @@ class Glitch(EffectBase):
 
 class Shapes:
 
-    def __init__(self, params, width, height, shape_x_shift=0, shape_y_shift=0, parent=None):
+    def __init__(self, params, width, height, shape_x_shift=0, shape_y_shift=0, group=None):
         self.params = params
         self.width = width
         self.height = height
         self.center_x = width // 2
         self.center_y = height // 2
-        subclass = self.__class__.__name__
+        subgroup = self.__class__.__name__
 
         
-        self.shape_type = params.add("shape_type", 0, len(Shape)-1, Shape.RECTANGLE, subclass, parent, WidgetType.DROPDOWN, Shape)  # Shape type enum
-        
-        self.line_h = params.add("line_hue", 0, 179, 0, subclass, parent)  # Hue range for OpenCV is 0-
-        self.line_s = params.add("line_sat", 0, 255, 255, subclass, parent)  # Saturation range
-        self.line_v = params.add("line_val", 0, 255, 255, subclass, parent)  # Value range
+        self.shape_type = params.add("shape_type",
+                                      min=0, max=len(Shape)-1, default=Shape.RECTANGLE.value,
+                                      group=group, subgroup=subgroup,
+                                      type=Widget.DROPDOWN, options=Shape)  # Shape type enum
+
+        self.line_h = params.add("line_hue",
+                                 min=0, max=179, default=0,
+                                 subgroup=subgroup, group=group)  # Hue range for OpenCV is 0-
+        self.line_s = params.add("line_sat",
+                                 min=0, max=255, default=255,
+                                 subgroup=subgroup, group=group)  # Saturation range
+        self.line_v = params.add("line_val",
+                                 min=0, max=255, default=255,
+                                 subgroup=subgroup, group=group)  # Value range
 
         self.line_hsv = [self.line_h, self.line_s, self.line_v]  # H, S, V (Red) - will be converted to BGR
-        self.line_weight = params.add("line_weight", 1, 20, 2, subclass, parent)  # Thickness of the shape outline, must be integer
-        self.line_opacity = params.add("line_opacity", 0.0, 1.0, 0.66, subclass, parent)  # Opacity of the shape outline
+        self.line_weight = params.add("line_weight",
+                                      min=1, max=20, default=2,
+                                      subgroup=subgroup, group=group)  # Thickness of the shape outline, must be integer
+        self.line_opacity = params.add("line_opacity",
+                                       min=0.0, max=1.0, default=0.66,
+                                       subgroup=subgroup, group=group)  # Opacity of the shape outline
         self.line_color = self._hsv_to_bgr(self.line_hsv)
-        
-        self.size_multiplier = params.add("size_multiplier", 0.1, 10.0, 0.9, subclass, parent)  # Scale factor for shape size
-        self.aspect_ratio = params.add("aspect_ratio", 0.1, 10.0, 1.0, subclass, parent)  # Scale factor for shape size
-        self.rotation_angle = params.add("rotation_angle", 0, 360, 0, subclass, parent)  # Rotation angle in degrees
-        
-        self.shape_x_shift = params.add("shape_x_shift", -width, width, shape_x_shift, subclass, parent)  # Allow negative shifts
-        self.shape_y_shift = params.add("shape_y_shift", -height, height, shape_y_shift, subclass, parent)
 
-        self.multiply_grid_x = params.add("multiply_grid_x", 1, 10, 2, subclass, parent)  # Number of shapes in X direction
-        self.multiply_grid_y = params.add("multiply_grid_y", 1, 10, 2, subclass, parent)  # Number of shapes in Y direction
-        self.grid_pitch_x = params.add("grid_pitch_x", min=0, max=width, default=100, subclass=subclass, parent=parent)  # Distance between shapes in X direction
-        self.grid_pitch_y = params.add("grid_pitch_y", min=0, max=height, default=100, subclass=subclass, parent=parent)  # Distance between shapes in Y direction
-        
+        self.size_multiplier = params.add("size_multiplier",
+                                          min=0.1, max=10.0, default=0.9,
+                                          subgroup=subgroup, group=group)  # Scale factor for shape size
+        self.aspect_ratio = params.add("aspect_ratio",
+                                       min=0.1, max=10.0, default=1.0,
+                                       subgroup=subgroup, group=group)  # Scale factor for shape size
+        self.rotation_angle = params.add("rotation_angle",
+                                         min=0, max=360, default=0,
+                                         subgroup=subgroup, group=group)  # Rotation angle in degrees
+
+        self.shape_x_shift = params.add("shape_x_shift",
+                                        min=-width, max=width, default=shape_x_shift,
+                                        subgroup=subgroup, group=group)  # Allow negative shifts
+        self.shape_y_shift = params.add("shape_y_shift",
+                                        min=-height, max=height, default=shape_y_shift,
+                                        subgroup=subgroup, group=group)
+
+        self.multiply_grid_x = params.add("multiply_grid_x",
+                                          min=1, max=10, default=2,
+                                          subgroup=subgroup, group=group)  # Number of shapes in X direction
+        self.multiply_grid_y = params.add("multiply_grid_y",
+                                          min=1, max=10, default=2,
+                                          subgroup=subgroup, group=group)  # Number of shapes in Y direction
+        self.grid_pitch_x = params.add("grid_pitch_x",
+                                       min=0, max=width, default=100,
+                                       subgroup=subgroup, group=group)  # Distance between shapes in X direction
+        self.grid_pitch_y = params.add("grid_pitch_y",
+                                       min=0, max=height, default=100,
+                                       subgroup=subgroup, group=group)  # Distance between shapes in Y direction
+
         self.fill_enabled = True  # Toggle fill on/off
-        self.fill_h = params.add("fill_hue", 0, 179, 120, subclass, parent)  # Hue for fill color
-        self.fill_s = params.add("fill_sat", 0, 255, 100, subclass, parent)  # Saturation for fill color
-        self.fill_v = params.add("fill_val", 0, 255, 255, subclass, parent)  # Value for fill color
+        self.fill_h = params.add("fill_hue",
+                                 min=0, max=179, default=120,
+                                 subgroup=subgroup, group=group)  # Hue for fill color
+        self.fill_s = params.add("fill_sat",
+                                 min=0, max=255, default=100,
+                                 subgroup=subgroup, group=group)  # Saturation for fill color
+        self.fill_v = params.add("fill_val",
+                                 min=0, max=255, default=255,
+                                 subgroup=subgroup, group=group)  # Value for fill color
         self.fill_hsv = [self.fill_h.value, self.fill_s.value, self.fill_v.value]  # H, S, V (Blue) - will be converted to BGR
-        self.fill_opacity = params.add("fill_opacity", 0.0, 1.0, 0.25, subclass, parent)
+        self.fill_opacity = params.add("fill_opacity",
+                                       min=0.0, max=1.0, default=0.25,
+                                       subgroup=subgroup, group=group)
         self.fill_color = self._hsv_to_bgr(self.fill_hsv)
 
-        self.convas_rotation = params.add("canvas_rotation", 0, 360, 0, subclass, parent)  # Rotation angle in degrees
+        self.convas_rotation = params.add("canvas_rotation",
+                                          min=0, max=360, default=0,
+                                          subgroup=subgroup, group=group)  # Rotation angle in degrees
         
         
 

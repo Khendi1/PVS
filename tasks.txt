@@ -1,5 +1,10 @@
-misc:
-- default source 1 to an animation if no devices detected
+mixer paramtables
+    - currently uses paramtables in post params 
+    - should use its own paramtables
+    
+
+patch save:
+- save and recall buttons havent been updateed to use the new multiple paramtables
 
 mixer:
 - load image

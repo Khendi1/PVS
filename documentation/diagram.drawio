@@ -246,7 +246,7 @@
         <mxCell id="kAF0l4YlWFacwhJHd3Re-547" value="Perlin Noise" style="rounded=1;whiteSpace=wrap;html=1;" parent="kAF0l4YlWFacwhJHd3Re-541" vertex="1">
           <mxGeometry x="32.5" y="170" width="120" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="kAF0l4YlWFacwhJHd3Re-548" value="&lt;h1&gt;Oscillators&lt;/h1&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" parent="kAF0l4YlWFacwhJHd3Re-541" vertex="1">
+        <mxCell id="kAF0l4YlWFacwhJHd3Re-548" value="&lt;h1&gt;LFOs&lt;/h1&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" parent="kAF0l4YlWFacwhJHd3Re-541" vertex="1">
           <mxGeometry x="45" y="10" width="100" height="30" as="geometry" />
         </mxCell>
         <mxCell id="kAF0l4YlWFacwhJHd3Re-549" value="" style="group;fillColor=default;" parent="1" vertex="1" connectable="0">
@@ -795,7 +795,7 @@
         <mxCell id="dSnv0WfbyLthvF4rif75-66" value="Perlin Noise" style="rounded=1;whiteSpace=wrap;html=1;" parent="dSnv0WfbyLthvF4rif75-60" vertex="1">
           <mxGeometry x="32.5" y="170" width="120" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="dSnv0WfbyLthvF4rif75-67" value="&lt;h1&gt;Oscillators&lt;/h1&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" parent="dSnv0WfbyLthvF4rif75-60" vertex="1">
+        <mxCell id="dSnv0WfbyLthvF4rif75-67" value="&lt;h1&gt;LFOs&lt;/h1&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" parent="dSnv0WfbyLthvF4rif75-60" vertex="1">
           <mxGeometry x="45" y="10" width="100" height="30" as="geometry" />
         </mxCell>
         <mxCell id="acCK0oONIXdgHGkuolO0-59" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="dSnv0WfbyLthvF4rif75-81" target="tsxarfvfpo1-gq6XZQbR-32" edge="1">
@@ -1070,7 +1070,7 @@
         <mxCell id="acCK0oONIXdgHGkuolO0-60" value="2x1 Composite Switch" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" parent="1" vertex="1">
           <mxGeometry x="520" y="2227.48" width="80" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="acCK0oONIXdgHGkuolO0-65" value="&lt;h2&gt;&lt;div&gt;&lt;span style=&quot;font-weight: 400;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;ul&gt;&lt;li style=&quot;&quot;&gt;&lt;span style=&quot;font-weight: normal;&quot;&gt;Trackbars and buttons for each parameter&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot;&quot;&gt;&lt;span style=&quot;font-weight: normal;&quot;&gt;All Params can be modified by Oscillators&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot;&quot;&gt;&lt;span style=&quot;font-weight: normal;&quot;&gt;Patches can be saved and recalled&lt;/span&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/h2&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=left;" parent="1" vertex="1">
+        <mxCell id="acCK0oONIXdgHGkuolO0-65" value="&lt;h2&gt;&lt;div&gt;&lt;span style=&quot;font-weight: 400;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;ul&gt;&lt;li style=&quot;&quot;&gt;&lt;span style=&quot;font-weight: normal;&quot;&gt;Trackbars and buttons for each parameter&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot;&quot;&gt;&lt;span style=&quot;font-weight: normal;&quot;&gt;All Params can be modified by LFOs&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot;&quot;&gt;&lt;span style=&quot;font-weight: normal;&quot;&gt;Patches can be saved and recalled&lt;/span&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/h2&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=left;" parent="1" vertex="1">
           <mxGeometry x="-20" y="870" width="330" height="200" as="geometry" />
         </mxCell>
         <mxCell id="acCK0oONIXdgHGkuolO0-68" value="&lt;h1&gt;GUI&lt;/h1&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" parent="1" vertex="1">
@@ -1381,7 +1381,7 @@
         <mxCell id="rVYP4_xKBBUVtlq0-gE4-66" value="Perlin Noise" style="rounded=1;whiteSpace=wrap;html=1;" parent="rVYP4_xKBBUVtlq0-gE4-60" vertex="1">
           <mxGeometry x="32.5" y="170" width="120" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="rVYP4_xKBBUVtlq0-gE4-67" value="&lt;h1&gt;Oscillators&lt;/h1&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" parent="rVYP4_xKBBUVtlq0-gE4-60" vertex="1">
+        <mxCell id="rVYP4_xKBBUVtlq0-gE4-67" value="&lt;h1&gt;LFOs&lt;/h1&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;" parent="rVYP4_xKBBUVtlq0-gE4-60" vertex="1">
           <mxGeometry x="45" y="10" width="100" height="30" as="geometry" />
         </mxCell>
         <mxCell id="rVYP4_xKBBUVtlq0-gE4-68" value="" style="group;fillColor=default;" parent="1" vertex="1" connectable="0">

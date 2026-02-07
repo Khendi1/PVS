@@ -1,6 +1,6 @@
 import random
 import logging
-from common import WidgetType
+from common import *
 
 
 class ParamTable:
@@ -8,9 +8,9 @@ class ParamTable:
     Manages a collection of Param objects, allowing access and manipulation
     of parameters by name or index.
     """
-    def __init__(self, parent: str = "Global"):
+    def __init__(self, group: str = "Global"):
         """Initializes an empty dictionary to store parameters."""
-        self.parent = parent
+        self.group = group
         self.params = {}
 
     def __repr__(self):
@@ -25,7 +25,7 @@ class ParamTable:
             if key in self.params:
                 return self.params[key]
             else:
-                raise KeyError(f"Parameter '{key}' does not exist.")
+                raise KeyError(f"Parameter '{key}' does not exist in ParamTable.group {self.group}.")
         elif isinstance(key, int):
             # Allows indexing by integer for specific keys
             keys_list = list(self.params.keys())
@@ -94,55 +94,67 @@ class ParamTable:
         """Returns a view of the Param objects."""
         return self.params.values()
     
-    def add(self, name: str, min: int | float, max: int | float, default: int | float, subclass=None, parent=None, type=WidgetType.SLIDER, options=None) -> 'Param':
+    def add(self, name: str, min: int | float = 0, max: int | float = 1,
+            default: int | float = 0, subgroup=None, group=None, 
+            type=Widget.SLIDER, options=None) -> 'Param':
         """
-        Adds a new parameter to the table.
+        Add a new Param to the table. Defaults to a slider widget type if not specified.
         Args:
             name (str): The unique name of the parameter.
             min (int/float): The minimum allowed value for the parameter.
             max (int/float): The maximum allowed value for the parameter.
             default (int/float/bool): The default value for the parameter.
-            family (str, optional): An optional family/group name for the parameter.
+            subgroup (str, optional): An optional subgroup/subgroup name for the parameter.
         Returns:
             Param: The newly created Param object.
         Raises:
             ValueError: If a parameter with the given name already exists.
         """
         if name not in self.params:
-            self.params[name] = Param(name, min, max, default, family=subclass, parent=parent, type=type, options=options)
+            self.params[name] = Param(name, min, max, default, group=group, subgroup=subgroup, type=type, options=options)
             return self.params[name]
         else:
             raise ValueError(f"Parameter '{name}' already exists.")
         
+
 class Param:
     """
     Represents a single parameter with a name, min/max bounds, default value,
-    and its current value. Includes clamping and type conversion.
+    and its current value. Includes clamping, type conversion, randomize, and reset methods.
     """
-    def __init__(self, name, min, max, default, family=None, parent=None, type=WidgetType.SLIDER, options=None):
+    def __init__(self, name, min=None, max=None, default=None, 
+                 subgroup=None, group=None, 
+                 type=Widget.SLIDER, options=None):
         """
         Initializes a Param object.
         Args:
-            name (str): The name of the parameter.
-            min (int/float): The minimum allowed value.
-            max (int/float): The maximum allowed value.
-            default (int/float/bool): The default value.
-            family (str, optional): The family/group the parameter belongs to.
+            name (str): The name of the parameter. Must be unique within a ParamTable.
+            min (int/float): The minimum allowed value. If None, defaults to 0.
+            max (int/float): The maximum allowed value. If None, defaults to 1.
+            default (int/float/bool): The default value. 
+            group (str, optional): The group this parameter belongs to.
+            subgroup (str, optional): The subgroup/subgroup the parameter belongs to.
+            type (Widget): The type of widget to use for this parameter. Defaults to Widget.SLIDER.
         """
         self.name = name
-        self.min = min
-        self.max = max
-        self.default = default
-        self.family = "None" if family is None else family
-        self.parent = parent
+
+        self.min = min if min is not None else 0
+        self.max = max if max is not None else 1
+        self.default = default if default is not None else int(0)
+
+        self.group = group if group is not None else Groups.UNCATEGORIZED.name
+        self.subgroup = subgroup if subgroup is not None else self.group
+
         self.type = type
         self.options = options
+
         self.linked_oscillator = None
 
         # Initialize the internal _value attribute using the setter
         # This ensures initial default is clamped and type-casted correctly
         self._value = None # Placeholder for the private/internal value
-        self.value = default # Assigning to 'value' calls the setter
+        self.value = self.default # Assigning to 'value' calls the setter
+
 
     @property
     def value(self):
@@ -152,6 +164,7 @@ class Param:
         """
         return self._value
 
+
     @value.setter
     def value(self, new_value):
         """
@@ -160,7 +173,7 @@ class Param:
         It handles clamping, type casting, and specific logic for certain parameters.
         """
         clamped_value = new_value
-        if self.type not in [WidgetType.DROPDOWN, WidgetType.RADIO]:
+        if self.type not in [Widget.DROPDOWN, Widget.RADIO]:
             # Clamp the new_value within min and max
             if new_value < self.min:
                 clamped_value = self.min
@@ -184,7 +197,7 @@ class Param:
 
     def __repr__(self):
         """"""
-        return f"Param(name={self.name}, min={self.min}, max={self.max}, default={self.default}, family=None"
+        return f"Param(name={self.name}, min={self.min}, max={self.max}, default={self.default}, subgroup=None"
 
 
     def __str__(self):

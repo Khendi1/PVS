@@ -1,28 +1,37 @@
 from param import Param, ParamTable
-from common import ParentClass, WidgetType, LayoutType, OutputMode
+from common import *
+
 
 class UserSettings():
-    def __init__(self, **kwargs):
-        self.params = ParamTable(parent=ParentClass.SETTINGS)
-        print(kwargs)
-        self.layout = self.params.add("layout", 0, 10, LayoutType[kwargs['control_layout']].value, subclass="Settings", parent=ParentClass.SETTINGS)
-        self.output_mode = self.params.add(
-            "output_mode", 0, 2, OutputMode[kwargs['output_mode']].value, subclass="Settings", parent=ParentClass.SETTINGS,
-            type=WidgetType.DROPDOWN,
-            options={
-                0: "No Output",
-                1: "Windowed Output",
-                2: "Fullscreen Output"
-            }
-        )
-        self.num_devices = self.params.add(
-            "num_devices", 1, 10, kwargs['devices'], subclass="Settings", parent=ParentClass.SETTINGS,
-            type=WidgetType.DROPDOWN,
-            options={i: str(i) for i in range(1, 11)}
-        )
-        self.patch_index = self.params.add(
-            "patch_index", 0, 100, kwargs['patch'], subclass="Settings", parent=ParentClass.SETTINGS
-        )
+    def __init__(self, control_layout: str, output_mode: str, devices: int, patch: int, log_level: str, file: str):
+        """Initialize user settings with given parameters."""
+        group = Groups.USER_SETTINGS
+        subgroup = group.name
+        self.params = ParamTable(group=group)
 
-        # self.
-
+        self.layout = self.params.add("layout",
+                                       min=0, max=len(Layout), default=Layout[control_layout].value,
+                                       group=group, subgroup=subgroup,
+                                       type=Widget.SLIDER)
+        self.output_mode = self.params.add("output_mode",
+                                           min=0, max=len(OutputMode), default=OutputMode[output_mode].value,
+                                           group=group, subgroup=subgroup,
+                                           type=Widget.DROPDOWN, options=OutputMode)
+        self.num_devices = self.params.add("num_devices",
+                                           min=1, max=MAX_DEVICES, default=devices,
+                                           group=group, subgroup=subgroup,
+                                           type=Widget.DROPDOWN, options={str(i): str(i) for i in range(1, MAX_DEVICES + 1)})
+        self.patch_index = self.params.add("patch_index",
+                                           min=0, max=100, default=patch,
+                                           group=group, subgroup=subgroup,
+                                           type=Widget.SLIDER)
+        self.log_level = self.params.add("log_level",
+                                         min=0, max=len(logging._nameToLevel), default=logging._nameToLevel[log_level],
+                                         group=group, subgroup=subgroup,
+                                         type=Widget.DROPDOWN, options=logging._nameToLevel)
+        self.save_file = self.params.add("save_file",
+                                         min=0, max=0, default=0,
+                                         group=group, subgroup=subgroup,
+                                         type=Widget.DROPDOWN, options={"saved_values.yaml": "saved_values.yaml", "alternate_values.yaml": "alternate_values.yaml"})
+        
+        

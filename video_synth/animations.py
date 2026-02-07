@@ -3,23 +3,17 @@ import numpy as np
 import time
 import noise
 import random
-from generators import Oscillator
+from lfo import LFO
 from abc import ABC, abstractmethod
 from enum import IntEnum, auto
-from gui_elements import *
 import logging
 import math
-from common import WidgetType
+from common import *
 import moderngl
+from enum import Enum, IntEnum, auto
 
 
 log = logging.getLogger(__name__)
-
-
-class Toggle(Enum):
-    OFF = 0
-    ON = 1
-
 
 class Colormap(IntEnum):
     JET = 0
@@ -69,8 +63,15 @@ class ShaderType(IntEnum):
     CRYSTAL = auto()
 
 
-class AnimationType(IntEnum):
-    NONE = 0
+class AttractorType(IntEnum):
+    LORENZ = 0
+    CLIFFORD = auto()
+    DE_JONG = auto()
+    AIZAWA = auto()
+    THOMAS = auto()
+
+
+class AnimSource(IntEnum):
     PLASMA = 1
     REACTION_DIFFUSION = 2
     METABALLS = 3
@@ -78,6 +79,9 @@ class AnimationType(IntEnum):
     STRANGE_ATTRACTOR = 5
     PHYSARUM = 6
     SHADERS = 7
+    DLA = 8
+    CHLADNI = 9
+    VORONOI = 10
 
 # ---- End Enum classes, begin animation base&concrete classes
 
@@ -85,34 +89,40 @@ class Animation(ABC):
     """
     Abstract class to help unify animation frame retrieval
     """
-    def __init__(self, params, toggles, width=640, height=480, parent=None):
+    def __init__(self, params, width=640, height=480, group=None):
         self.params = params
-        self.toggles = toggles
         self.width = width
         self.height = height
-        self.parent = parent
+        self.group = group
 
 
     @abstractmethod
     def get_frame(self, frame: np.ndarray = None) -> np.ndarray:
         """
         """
-        raise NotImplementedError("Subclasses should implement this method.")
+        raise NotImplementedError("subgroupes should implement this method.")
 
 
 class Plasma(Animation):
-    def __init__(self, params, toggles, width=800, height=600, parent=None):
-        super().__init__(params, toggles, parent=parent)
-        subclass = self.__class__.__name__
-        p_name = parent.name.lower()
+    def __init__(self, params, width=800, height=600, group=None):
+        super().__init__(params, group=group)
+        subgroup = self.__class__.__name__
         self.params = params
         self.width = width
         self.height = height
 
-        self.plasma_speed = params.add("plasma_speed", 0.01, 10, 1.0, subclass, parent)
-        self.plasma_distance = params.add("plasma_distance", 0.01, 10, 1.0, subclass, parent)
-        self.plasma_color_speed = params.add("plasma_color_speed", 0.01, 10, 1.0, subclass, parent)
-        self.plasma_flow_speed = params.add("plasma_flow_speed", 0.01, 10, 1.0, subclass, parent)
+        self.plasma_speed = params.add("plasma_speed",
+                                       min=0.01, max=10, default=1.0,
+                                       subgroup=subgroup, group=group)
+        self.plasma_distance = params.add("plasma_distance",
+                                          min=0.01, max=10, default=1.0,
+                                          subgroup=subgroup, group=group)
+        self.plasma_color_speed = params.add("plasma_color_speed",
+                                             min=0.01, max=10, default=1.0,
+                                             subgroup=subgroup, group=group)
+        self.plasma_flow_speed = params.add("plasma_flow_speed",
+                                            min=0.01, max=10, default=1.0,
+                                            subgroup=subgroup, group=group)
 
         self.plasma_params = [
             "plasma_speed",
@@ -121,7 +131,7 @@ class Plasma(Animation):
             "plasma_flow_speed",
         ]
 
-        self.oscillators = [Oscillator(params, name=f"{self.plasma_params[i]}", frequency=0.5, amplitude=1.0, phase=0.0, shape=1) for i in range(4)]
+        self.oscillators = [LFO(params, name=f"{self.plasma_params[i]}", frequency=0.5, amplitude=1.0, phase=0.0, shape=1) for i in range(4)]
 
         self.oscillators[0].link_param(self.plasma_speed)
         self.oscillators[1].link_param(self.plasma_distance)
@@ -195,10 +205,10 @@ class Plasma(Animation):
 
 class ReactionDiffusion(Animation):
 
-    def __init__(self, params, toggles, width=500, height=500, parent=None):
-        super().__init__(params, toggles, parent=parent)
-        subclass = self.__class__.__name__
-        p_name = parent.name.lower()
+    def __init__(self, params, width=500, height=500, group=None):
+        super().__init__(params, group=group)
+        subgroup = self.__class__.__name__
+        p_name = group.name.lower()
         da=1.0
         db=0.5
         feed=0.055
@@ -207,12 +217,22 @@ class ReactionDiffusion(Animation):
         max_seed_size=50
         num_seeds=15
 
-        self.da = params.add("da", 0, 2.0, da, subclass, parent)
-        self.db = params.add("db", 0, 2.0, db, subclass, parent)
+        self.da = params.add("da",
+                             min=0, max=2.0, default=da,
+                             subgroup=subgroup, group=group)
+        self.db = params.add("db",
+                             min=0, max=2.0, default=db,
+                             subgroup=subgroup, group=group)
 
-        self.feed = params.add("feed", 0, 0.1, feed, subclass, parent)
-        self.kill = params.add("kill", 0, 0.1, kill, subclass, parent)
-        self.iterations_per_frame = params.add("iterations_per_frame", 5, 100, 50, subclass, parent)
+        self.feed = params.add("feed",
+                               min=0, max=0.1, default=feed,
+                               subgroup=subgroup, group=group)
+        self.kill = params.add("kill",
+                               min=0, max=0.1, default=kill,
+                               subgroup=subgroup, group=group)
+        self.iterations_per_frame = params.add("iterations_per_frame",
+                                               min=5, max=100, default=50,
+                                               subgroup=subgroup, group=group)
         
         self.dt = 0.15
         self.current_A = np.ones((height, width), dtype=np.float32)
@@ -292,57 +312,84 @@ class ReactionDiffusion(Animation):
 
 
 class Metaballs(Animation):
-    def __init__(self, params, toggles, width=800, height=600, parent=None):
-        super().__init__(params, toggles, parent=parent)
-        subclass=self.__class__.__name__
-        p_name = parent.name.lower()
+    def __init__(self, params, width=800, height=600, group=None):
+        super().__init__(params, group=group)
+        subgroup=self.__class__.__name__
+        p_name = group.name.lower()
         self.metaballs = []
         
-        self.num_metaballs_param = params.add("num_metaballs", 2, 10, 5, subclass, parent)
-        self.min_radius_param = params.add("min_radius", 20, 100, 40, subclass, parent)
-        self.max_radius_param = params.add("max_radius", 40, 200, 80, subclass, parent)
-        self.radius_multiplier_param = params.add("radius_multiplier", 1.0, 3.0, 1.0, subclass, parent)
-        self.max_speed_param = params.add("max_speed", 1, 10, 3, subclass, parent)
-        self.speed_multiplier_param = params.add("speed_multiplier", 1.0, 3.0, 1.0, subclass, parent)
-        self.threshold_param = params.add("threshold", 0.5, 3.0, 1.6, subclass, parent)
-        self.smooth_coloring_max_field_param = params.add("smooth_coloring_max_field", 1.0, 3.0, 1.5, subclass, parent)
-        self.skew_angle_param = params.add("metaball_skew_angle", 0.0, 360.0, 0.0, subclass, parent)
-        self.skew_intensity_param = params.add("metaball_skew_intensity", 0.0, 1.0, 0.0, subclass, parent)
-        self.zoom_param = params.add("metaball_zoom", 1.0, 3.0, 1.0, subclass, parent)
-        self.colormap_param = params.add("metaball_colormap", 0, len(COLORMAP_OPTIONS) - 1, 0, subclass, parent, WidgetType.DROPDOWN, Colormap)
-        self.feedback_alpha_param = params.add("metaballs_feedback", 0.0, 1.0, 0.95, subclass, parent)
+        self.num_metaballs = params.add("num_metaballs",
+                                        min=2, max=10, default=5,
+                                        subgroup=subgroup, group=group)
+        self.min_radius = params.add("min_radius",
+                                     min=20, max=100, default=40,
+                                     subgroup=subgroup, group=group)
+        self.max_radius = params.add("max_radius",
+                                     min=40, max=200, default=80,
+                                     subgroup=subgroup, group=group)
+        self.radius_multiplier = params.add("radius_multiplier",
+                                            min=1.0, max=3.0, default=1.0,
+                                            subgroup=subgroup, group=group)
+        self.max_speed = params.add("max_speed",
+                                    min=1, max=10, default=3,
+                                    subgroup=subgroup, group=group)
+        self.speed_multiplier = params.add("speed_multiplier",
+                                           min=1.0, max=3.0, default=1.0,
+                                           subgroup=subgroup, group=group)
+        self.threshold = params.add("threshold",
+                                    min=0.5, max=3.0, default=1.6,
+                                    subgroup=subgroup, group=group)
+        self.smooth_coloring_max_field = params.add("smooth_coloring_max_field",
+                                                    min=1.0, max=3.0, default=1.5,
+                                                    subgroup=subgroup, group=group)
+        self.skew_angle = params.add("metaball_skew_angle",
+                                     min=0.0, max=360.0, default=0.0,
+                                     subgroup=subgroup, group=group)
+        self.skew_intensity = params.add("metaball_skew_intensity",
+                                         min=0.0, max=1.0, default=0.0,
+                                         subgroup=subgroup, group=group)
+        self.zoom = params.add("metaball_zoom",
+                               min=1.0, max=3.0, default=1.0,
+                               subgroup=subgroup, group=group)
+        self.colormap = params.add("metaball_colormap",
+                                   min=0, max=len(COLORMAP_OPTIONS)-1, default=0,
+                                   group=group, subgroup=subgroup,
+                                   type=Widget.DROPDOWN, options=Colormap)
+        self.feedback_alpha = params.add("metaballs_feedback",
+                                         min=0.0, max=1.0, default=0.95,
+                                         subgroup=subgroup, group=group)
 
-        self.current_num_metaballs = self.num_metaballs_param.value
-        self.current_radius_multiplier = self.radius_multiplier_param.value
-        self.current_speed_multiplier = self.speed_multiplier_param.value
+        self.current_num_metaballs = self.num_metaballs.value
+        self.current_radius_multiplier = self.radius_multiplier.value
+        self.current_speed_multiplier = self.speed_multiplier.value
         self.previous_frame = None
 
         self.setup_metaballs()
 
-    def adjust_parameters(self):
-        if self.current_radius_multiplier != self.radius_multiplier_param.value:
+    def adjusteters(self):
+        if self.current_radius_multiplier != self.radius_multiplier.value:
             for ball in self.metaballs:
-                ball['radius'] = int(ball['radius'] * self.radius_multiplier_param.value / self.current_radius_multiplier)
-            self.current_radius_multiplier = self.radius_multiplier_param.value
+                ball['radius'] = int(ball['radius'] * self.radius_multiplier.value / self.current_radius_multiplier)
+            self.current_radius_multiplier = self.radius_multiplier.value
 
-        if self.current_speed_multiplier != self.speed_multiplier_param.value:
+        if self.current_speed_multiplier != self.speed_multiplier.value:
             for ball in self.metaballs:
-                ball['vx'] *= (self.speed_multiplier_param.value / self.current_speed_multiplier)
-                ball['vy'] *= (self.speed_multiplier_param.value / self.current_speed_multiplier)
-            self.current_speed_multiplier = self.speed_multiplier_param.value
+                ball['vx'] *= (self.speed_multiplier.value / self.current_speed_multiplier)
+                ball['vy'] *= (self.speed_multiplier.value / self.current_speed_multiplier)
+            self.current_speed_multiplier = self.speed_multiplier.value
 
     def setup_metaballs(self):
-        num_metaballs = self.num_metaballs_param.value
+        num_metaballs = self.num_metaballs.value
         if len(self.metaballs) > num_metaballs:
             self.metaballs = self.metaballs[:num_metaballs]
         else:
             delta = num_metaballs - len(self.metaballs)
             for _ in range(delta):
-                r = np.random.randint(self.min_radius_param.value, self.max_radius_param.value) * self.radius_multiplier_param.value
-                x = np.random.randint(self.max_radius_param.value, self.width - self.max_radius_param.value)
-                y = np.random.randint(self.max_radius_param.value, self.height - self.max_radius_param.value)
-                vx = np.random.uniform(-self.max_speed_param.value, self.max_speed_param.value) * self.speed_multiplier_param.value
-                vy = np.random.uniform(-self.max_speed_param.value, self.max_speed_param.value) * self.speed_multiplier_param.value
+                r = np.random.randint(self.min_radius.value, self.max_radius.value) * self.radius_multiplier.value
+                x = np.random.randint(self.max_radius.value, self.width - self.max_radius.value)
+                y = np.random.randint(self.max_radius.value, self.height - self.max_radius.value)
+                vx = np.random.uniform(-self.max_speed.value, self.max_speed.value) * self.speed_multiplier.value
+                vy = np.random.uniform(-self.max_speed.value, self.max_speed.value) * self.speed_multiplier.value
                 self.metaballs.append({'x': x, 'y': y, 'radius': r, 'vx': vx, 'vy': vy})
         self.current_num_metaballs = num_metaballs
 
@@ -354,12 +401,12 @@ class Metaballs(Animation):
         center_x, center_y = self.width / 2, self.height / 2
         X_centered = X - center_x
         Y_centered = Y - center_y
-        X_processed = X_centered / self.zoom_param.value
-        Y_processed = Y_centered / self.zoom_param.value
-        if self.skew_intensity_param.value > 0:
-            angle_rad = np.radians(self.skew_angle_param.value)
-            X_processed += Y_processed * self.skew_intensity_param.value * np.cos(angle_rad)
-            Y_processed += X_processed * self.skew_intensity_param.value * np.sin(angle_rad)
+        X_processed = X_centered / self.zoom.value
+        Y_processed = Y_centered / self.zoom.value
+        if self.skew_intensity.value > 0:
+            angle_rad = np.radians(self.skew_angle.value)
+            X_processed += Y_processed * self.skew_intensity.value * np.cos(angle_rad)
+            Y_processed += X_processed * self.skew_intensity.value * np.sin(angle_rad)
         X_transformed = X_processed + center_x
         Y_transformed = Y_processed + center_y
         
@@ -372,7 +419,7 @@ class Metaballs(Animation):
         if max_field_strength is not None:
             normalized_field = np.clip(field_strength / max_field_strength, 0, 1)
             grayscale_image = (normalized_field * 255).astype(np.uint8)
-            image = cv2.applyColorMap(grayscale_image, COLORMAP_OPTIONS[self.colormap_param.value])
+            image = cv2.applyColorMap(grayscale_image, COLORMAP_OPTIONS[self.colormap.value])
         else:
             image = ((field_strength >= threshold) * 255).astype(np.uint8)
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
@@ -380,11 +427,11 @@ class Metaballs(Animation):
         return image
 
     def do_metaballs(self, frame: np.ndarray):
-        if self.num_metaballs_param.value != self.current_num_metaballs:
+        if self.num_metaballs.value != self.current_num_metaballs:
             self.setup_metaballs()
         
-        if self.current_radius_multiplier != self.radius_multiplier_param.value or self.current_speed_multiplier != self.speed_multiplier_param.value:
-            self.adjust_parameters()
+        if self.current_radius_multiplier != self.radius_multiplier.value or self.current_speed_multiplier != self.speed_multiplier.value:
+            self.adjusteters()
 
         for ball in self.metaballs:
             ball['x'] += ball['vx']
@@ -396,14 +443,14 @@ class Metaballs(Animation):
                 ball['vy'] *= -1
 
         current_frame = self.create_metaball_frame(self.metaballs,
-                                                threshold=self.threshold_param.value,
-                                                max_field_strength=self.smooth_coloring_max_field_param.value)
+                                                threshold=self.threshold.value,
+                                                max_field_strength=self.smooth_coloring_max_field.value)
         
         if self.previous_frame is None:
             self.previous_frame = current_frame.astype(np.float32)
         else:
-            current_frame = cv2.addWeighted(current_frame.astype(np.float32), 1-self.feedback_alpha_param.value, 
-                                            self.previous_frame, self.feedback_alpha_param.value, 0)
+            current_frame = cv2.addWeighted(current_frame.astype(np.float32), 1-self.feedback_alpha.value, 
+                                            self.previous_frame, self.feedback_alpha.value, 0)
             self.previous_frame = current_frame
 
         return current_frame
@@ -413,28 +460,67 @@ class Metaballs(Animation):
 
 
 class Moire(Animation):
-    def __init__(self, params, toggles, width=800, height=600, parent=None):
-        super().__init__(params, toggles, parent=parent)
-        subclass = self.__class__.__name__
-        p_name = parent.name.lower()
+    def __init__(self, params, width=800, height=600, group=None):
+        super().__init__(params, group=group)
+        subgroup = self.__class__.__name__
+        p_name = group.name.lower()
         
-        self.blend_mode_param = params.add("moire_blend", 0, len(MoireBlend)-1, 0, subclass, parent, WidgetType.DROPDOWN, MoireBlend)
-        
+        self.blend_mode = params.add("moire_blend",
+                                      min=0, max=len(MoireBlend)-1, default=0,
+                                      group=group, subgroup=subgroup,
+                                      type=Widget.DROPDOWN, options=MoireBlend)
+
         center_x, center_y = self.width//2, self.height//2
 
-        self.pattern_1_param = params.add("moire_type_1", 0, len(MoirePattern)-1, 0, subclass, parent, WidgetType.DROPDOWN, MoirePattern)
-        self.freq_1_param = params.add("spatial_freq_1", 0.01, 25, 10.0, subclass, parent, WidgetType.SLIDER)
-        self.angle_1_param = params.add("angle_1", 0, 360, 90.0, subclass, parent, WidgetType.SLIDER)
-        self.zoom_1_param = params.add("zoom_1", 0.05, 1.5, 1.0, subclass, parent, WidgetType.SLIDER)
-        self.center_x_1_param = params.add("moire_center_x_1", 0, self.width, center_x, subclass, parent, WidgetType.SLIDER)
-        self.center_y_1_param = params.add("moire_center_y_1", 0, self.height, center_y, subclass, parent, WidgetType.SLIDER)
+        self.pattern_1 = params.add("moire_type_1",
+                                    min=0, max=len(MoirePattern)-1, default=0,
+                                    group=group, subgroup=subgroup,
+                                    type=Widget.DROPDOWN, options=MoirePattern)
+        self.freq_1 = params.add("spatial_freq_1",
+                                 min=0.01, max=25, default=10.0,
+                                 group=group, subgroup=subgroup,
+                                 type=Widget.SLIDER)
+        self.angle_1 = params.add("angle_1",
+                                  min=0, max=360, default=90.0,
+                                  group=group, subgroup=subgroup,
+                                  type=Widget.SLIDER)
+        self.zoom_1 = params.add("zoom_1",
+                                 min=0.05, max=1.5, default=1.0,
+                                 group=group, subgroup=subgroup,
+                                 type=Widget.SLIDER)
+        self.center_x_1 = params.add("moire_center_x_1",
+                                     min=0, max=self.width, default=center_x,
+                                     group=group, subgroup=subgroup,
+                                     type=Widget.SLIDER)
+        self.center_y_1 = params.add("moire_center_y_1",
+                                     min=0, max=self.height, default=center_y,
+                                     group=group, subgroup=subgroup,
+                                     type=Widget.SLIDER)
 
-        self.pattern_2_param = params.add("moire_type_2", 0, len(MoirePattern)-1, 0, subclass, parent, WidgetType.DROPDOWN, MoirePattern)
-        self.freq_2_param = params.add("spatial_freq_2", 0.01, 25, 1.0, subclass, parent, WidgetType.SLIDER)
-        self.angle_2_param = params.add("angle_2", 0, 360, 0.0, subclass, parent, WidgetType.SLIDER)
-        self.zoom_2_param = params.add("zoom_2", 0.05, 1.5, 1.0, subclass, parent, WidgetType.SLIDER)
-        self.center_x_2_param = params.add("moire_center_x_2", 0, self.width, center_x, subclass, parent, WidgetType.SLIDER)
-        self.center_y_2_param = params.add("moire_center_y_2", 0, self.height, center_y, subclass, parent, WidgetType.SLIDER)
+        self.pattern_2 = params.add("moire_type_2",
+                                    min=0, max=len(MoirePattern)-1, default=0,
+                                    group=group, subgroup=subgroup,
+                                    type=Widget.DROPDOWN, options=MoirePattern)
+        self.freq_2 = params.add("spatial_freq_2",
+                                 min=0.01, max=25, default=1.0,
+                                 group=group, subgroup=subgroup,
+                                 type=Widget.SLIDER)
+        self.angle_2 = params.add("angle_2",
+                                  min=0, max=360, default=0.0,
+                                  group=group, subgroup=subgroup,
+                                  type=Widget.SLIDER)
+        self.zoom_2 = params.add("zoom_2",
+                                 min=0.05, max=1.5, default=1.0,
+                                 group=group, subgroup=subgroup,
+                                 type=Widget.SLIDER)
+        self.center_x_2 = params.add("moire_center_x_2",
+                                     min=0, max=self.width, default=center_x,
+                                     group=group, subgroup=subgroup,
+                                     type=Widget.SLIDER)
+        self.center_y_2 = params.add("moire_center_y_2",
+                                     min=0, max=self.height, default=center_y,
+                                     group=group, subgroup=subgroup,
+                                     type=Widget.SLIDER)
 
     def _generate_single_pattern(self, X_shifted, Y_shifted, frequency, angle_rad, zoom, pattern_type):
         angle_rad = math.radians(angle_rad)
@@ -459,17 +545,17 @@ class Moire(Animation):
     def get_frame(self, frame):
         X, Y = np.meshgrid(np.arange(self.width), np.arange(self.height))
 
-        x1, y1 = X - self.center_x_1_param.value, Y - self.center_y_1_param.value
-        x2, y2 = X - self.center_x_2_param.value, Y - self.center_y_2_param.value
+        x1, y1 = X - self.center_x_1.value, Y - self.center_y_1.value
+        x2, y2 = X - self.center_x_2.value, Y - self.center_y_2.value
 
         pattern1_float = self._generate_single_pattern(
-            x1, y1, self.freq_1_param.value, self.angle_1_param.value, self.zoom_1_param.value, self.pattern_1_param.value
+            x1, y1, self.freq_1.value, self.angle_1.value, self.zoom_1.value, self.pattern_1.value
         )
         pattern2_float = self._generate_single_pattern(
-            x2, y2, self.freq_2_param.value, self.angle_2_param.value, self.zoom_2_param.value, self.pattern_2_param.value
+            x2, y2, self.freq_2.value, self.angle_2.value, self.zoom_2.value, self.pattern_2.value
         )
 
-        blend_mode = self.blend_mode_param.value
+        blend_mode = self.blend_mode.value
         if blend_mode == MoireBlend.MULTIPLY.value:
             combined_pattern = (pattern1_float / 255.0) * (pattern2_float / 255.0)
             moire_image = (combined_pattern * 255).astype(np.uint8)
@@ -487,153 +573,398 @@ class Moire(Animation):
 
 
 class StrangeAttractor(Animation):
-    def __init__(self, params, toggles, width=640, height=480, parent=None):
-        super().__init__(params, toggles, width, height, parent)
-        subclass = self.__class__.__name__
+    def __init__(self, params, width=640, height=480, group=None):
+        super().__init__(params, width, height, group)
+        subgroup = self.__class__.__name__
 
-        # Lorenz Attractor parameters
-        self.lorenz_sigma = params.add("lorenz_sigma", 1.0, 20.0, 10.0, subclass, parent)
-        self.lorenz_rho = params.add("lorenz_rho", 1.0, 50.0, 28.0, subclass, parent)
-        self.lorenz_beta = params.add("lorenz_beta", 0.1, 5.0, 2.667, subclass, parent)
-        self.lorenz_dt = params.add("lorenz_dt", 0.001, 0.02, 0.01, subclass, parent)
-        self.lorenz_num_steps = params.add("lorenz_num_steps", 1, 20, 10, subclass, parent)
-        self.lorenz_scale = params.add("lorenz_scale", 1.0, 20.0, 5.0, subclass, parent)
-        self.lorenz_line_width = params.add("lorenz_line_width", 1, 5, 1, subclass, parent)
-        self.lorenz_fade = params.add("lorenz_fade", 0.0, 1.0, 0.9, subclass, parent)
-        self.lorenz_initial_x = params.add("lorenz_initial_x", -20.0, 20.0, 0.1, subclass, parent)
-        self.lorenz_initial_y = params.add("lorenz_initial_y", -20.0, 20.0, 0.0, subclass, parent)
-        self.lorenz_initial_z = params.add("lorenz_initial_z", -20.0, 20.0, 0.0, subclass, parent)
-        
-        self.lorenz_x = self.lorenz_initial_x.value
-        self.lorenz_y = self.lorenz_initial_y.value
-        self.lorenz_z = self.lorenz_initial_z.value
+        # Attractor type selector
+        self.attractor_type = params.add("attractor_type",
+                                         min=0, max=len(AttractorType)-1, default=0,
+                                         group=group, subgroup=subgroup,
+                                         type=Widget.DROPDOWN, options=AttractorType)
+        self.prev_attractor_type = self.attractor_type.value
 
-        # Color parameters for the attractor
-        self.attractor_r = params.add("attractor_r", 0, 255, 255, subclass, parent)
-        self.attractor_g = params.add("attractor_g", 0, 255, 255, subclass, parent)
-        self.attractor_b = params.add("attractor_b", 0, 255, 255, subclass, parent)
+        # Common parameters
+        self.dt = params.add("attractor_dt",
+                             min=0.001, max=0.05, default=0.01,
+                             subgroup=subgroup, group=group)
+        self.num_steps = params.add("attractor_num_steps",
+                                    min=1, max=50, default=10,
+                                    subgroup=subgroup, group=group)
+        self.scale = params.add("attractor_scale",
+                                min=1.0, max=20.0, default=5.0,
+                                subgroup=subgroup, group=group)
+        self.line_width = params.add("attractor_line_width",
+                                     min=1, max=5, default=1,
+                                     subgroup=subgroup, group=group)
+        self.fade = params.add("attractor_fade",
+                               min=0.0, max=1.0, default=0.95,
+                               subgroup=subgroup, group=group)
 
-        # Store previous initial values to detect changes
-        self.prev_lorenz_initial_x = self.lorenz_initial_x.value
-        self.prev_lorenz_initial_y = self.lorenz_initial_y.value
-        self.prev_lorenz_initial_z = self.lorenz_initial_z.value
+        # Color parameters
+        self.attractor_r = params.add("attractor_r",
+                                      min=0, max=255, default=255,
+                                      subgroup=subgroup, group=group)
+        self.attractor_g = params.add("attractor_g",
+                                      min=0, max=255, default=255,
+                                      subgroup=subgroup, group=group)
+        self.attractor_b = params.add("attractor_b",
+                                      min=0, max=255, default=255,
+                                      subgroup=subgroup, group=group)
 
-    def _reset_attractor_state(self):
-        self.lorenz_x = self.lorenz_initial_x.value
-        self.lorenz_y = self.lorenz_initial_y.value
-        self.lorenz_z = self.lorenz_initial_z.value
-        log.debug(f"Lorenz Attractor state reset to ({self.lorenz_x}, {self.lorenz_y}, {self.lorenz_z})")
+        # Lorenz Attractor parameters (3D)
+        self.lorenz_sigma = params.add("lorenz_sigma",
+                                       min=1.0, max=20.0, default=10.0,
+                                       subgroup=subgroup, group=group)
+        self.lorenz_rho = params.add("lorenz_rho",
+                                     min=1.0, max=50.0, default=28.0,
+                                     subgroup=subgroup, group=group)
+        self.lorenz_beta = params.add("lorenz_beta",
+                                      min=0.1, max=5.0, default=2.667,
+                                      subgroup=subgroup, group=group)
 
-    @staticmethod
-    def _lorenz_deriv(x, y, z, sigma, rho, beta):
+        # Clifford Attractor parameters (2D) - Beautiful spiraling patterns
+        self.clifford_a = params.add("clifford_a",
+                                     min=-3.0, max=3.0, default=-1.4,
+                                     subgroup=subgroup, group=group)
+        self.clifford_b = params.add("clifford_b",
+                                     min=-3.0, max=3.0, default=1.6,
+                                     subgroup=subgroup, group=group)
+        self.clifford_c = params.add("clifford_c",
+                                     min=-3.0, max=3.0, default=1.0,
+                                     subgroup=subgroup, group=group)
+        self.clifford_d = params.add("clifford_d",
+                                     min=-3.0, max=3.0, default=0.7,
+                                     subgroup=subgroup, group=group)
+
+        # De Jong Attractor parameters (2D) - Similar elegance, different character
+        self.dejong_a = params.add("dejong_a",
+                                   min=-3.0, max=3.0, default=-2.0,
+                                   subgroup=subgroup, group=group)
+        self.dejong_b = params.add("dejong_b",
+                                   min=-3.0, max=3.0, default=-2.0,
+                                   subgroup=subgroup, group=group)
+        self.dejong_c = params.add("dejong_c",
+                                   min=-3.0, max=3.0, default=-1.2,
+                                   subgroup=subgroup, group=group)
+        self.dejong_d = params.add("dejong_d",
+                                   min=-3.0, max=3.0, default=2.0,
+                                   subgroup=subgroup, group=group)
+
+        # Aizawa Attractor parameters (3D) - Organic chaotic system
+        self.aizawa_a = params.add("aizawa_a",
+                                   min=0.1, max=1.5, default=0.95,
+                                   subgroup=subgroup, group=group)
+        self.aizawa_b = params.add("aizawa_b",
+                                   min=0.1, max=1.5, default=0.7,
+                                   subgroup=subgroup, group=group)
+        self.aizawa_c = params.add("aizawa_c",
+                                   min=0.1, max=1.0, default=0.6,
+                                   subgroup=subgroup, group=group)
+        self.aizawa_d = params.add("aizawa_d",
+                                   min=0.1, max=5.0, default=3.5,
+                                   subgroup=subgroup, group=group)
+        self.aizawa_e = params.add("aizawa_e",
+                                   min=0.0, max=1.0, default=0.25,
+                                   subgroup=subgroup, group=group)
+        self.aizawa_f = params.add("aizawa_f",
+                                   min=0.0, max=0.5, default=0.1,
+                                   subgroup=subgroup, group=group)
+
+        # Thomas Attractor parameters (3D) - Smooth, ribbon-like trajectories
+        self.thomas_b = params.add("thomas_b",
+                                   min=0.1, max=0.3, default=0.208186,
+                                   subgroup=subgroup, group=group)
+
+        # State variables for each attractor
+        self._init_attractor_states()
+
+    def _init_attractor_states(self):
+        """Initialize state variables for all attractors."""
+        # Lorenz state (3D)
+        self.lorenz_x, self.lorenz_y, self.lorenz_z = 0.1, 0.0, 0.0
+        # Clifford state (2D)
+        self.clifford_x, self.clifford_y = 0.1, 0.1
+        # De Jong state (2D)
+        self.dejong_x, self.dejong_y = 0.1, 0.1
+        # Aizawa state (3D)
+        self.aizawa_x, self.aizawa_y, self.aizawa_z = 0.1, 0.0, 0.0
+        # Thomas state (3D)
+        self.thomas_x, self.thomas_y, self.thomas_z = 1.0, 1.0, 1.0
+
+    def _reset_current_attractor(self):
+        """Reset only the current attractor's state."""
+        atype = self.attractor_type.value
+        if atype == AttractorType.LORENZ:
+            self.lorenz_x, self.lorenz_y, self.lorenz_z = 0.1, 0.0, 0.0
+        elif atype == AttractorType.CLIFFORD:
+            self.clifford_x, self.clifford_y = 0.1, 0.1
+        elif atype == AttractorType.DE_JONG:
+            self.dejong_x, self.dejong_y = 0.1, 0.1
+        elif atype == AttractorType.AIZAWA:
+            self.aizawa_x, self.aizawa_y, self.aizawa_z = 0.1, 0.0, 0.0
+        elif atype == AttractorType.THOMAS:
+            self.thomas_x, self.thomas_y, self.thomas_z = 1.0, 1.0, 1.0
+
+    # --- Lorenz Attractor (3D) ---
+    def _lorenz_deriv(self, x, y, z):
         """Lorenz Attractor derivatives."""
-        dx_dt = sigma * (y - x)
-        dy_dt = x * (rho - z) - y
-        dz_dt = x * y - beta * z
-        return dx_dt, dy_dt, dz_dt
-
-    def _map_lorenz_to_screen(self, x, y, scale):
-        """Maps Lorenz coordinates to screen coordinates."""
-        # Lorenz attractor typically ranges about -20 to 20 or -30 to 30 for x and y
-        # We want to map this to our screen width and height
-        # A simple linear mapping: (value - min_val) / (max_val - min_val) * screen_dim
-
-        # Approximate bounds for Lorenz (can be adjusted)
-        x_min, x_max = -30.0, 30.0
-        y_min, y_max = -30.0, 30.0
-
-        # Normalize and scale to screen dimensions
-        screen_x = int((x - x_min) / (x_max - x_min) * self.width * scale / 5 + self.width * (1 - scale/5) / 2)
-        screen_y = int((y - y_min) / (y_max - y_min) * self.height * scale / 5 + self.height * (1 - scale/5) / 2)
-        
-        return screen_x, screen_y
-
-    def get_frame(self, frame: np.ndarray = None) -> np.ndarray:
-        """
-        Generates a Lorenz Attractor pattern.
-        """
-        log.debug("Entering StrangeAttractor.get_frame")
-
-        # Check if initial parameters have changed
-        if (self.lorenz_initial_x.value != self.prev_lorenz_initial_x or
-            self.lorenz_initial_y.value != self.prev_lorenz_initial_y or
-            self.lorenz_initial_z.value != self.prev_lorenz_initial_z):
-            
-            self.lorenz_x = self.lorenz_initial_x.value
-            self.lorenz_y = self.lorenz_initial_y.value
-            self.lorenz_z = self.lorenz_initial_z.value
-            log.debug(f"Lorenz Attractor state reset due to initial parameter change to ({self.lorenz_x}, {self.lorenz_y}, {self.lorenz_z})")
-
-            # Update previous values
-            self.prev_lorenz_initial_x = self.lorenz_initial_x.value
-            self.prev_lorenz_initial_y = self.lorenz_initial_y.value
-            self.prev_lorenz_initial_z = self.lorenz_initial_z.value
-
-        if frame is None:
-            # If no frame is provided, create a black one
-            pattern = np.zeros((self.height, self.width, 3), dtype=np.uint8)
-        else:
-            # Fade the previous frame to create trails
-            pattern = (frame * self.lorenz_fade.value).astype(np.uint8)
-
         sigma = self.lorenz_sigma.value
         rho = self.lorenz_rho.value
         beta = self.lorenz_beta.value
-        dt = self.lorenz_dt.value
-        num_steps = self.lorenz_num_steps.value
-        scale = self.lorenz_scale.value
-        line_width = self.lorenz_line_width.value
+        dx = sigma * (y - x)
+        dy = x * (rho - z) - y
+        dz = x * y - beta * z
+        return dx, dy, dz
 
-        prev_x, prev_y = self._map_lorenz_to_screen(self.lorenz_x, self.lorenz_y, scale)
+    def _step_lorenz(self, dt):
+        """Runge-Kutta 4 integration for Lorenz."""
+        x, y, z = self.lorenz_x, self.lorenz_y, self.lorenz_z
+        k1x, k1y, k1z = self._lorenz_deriv(x, y, z)
+        k2x, k2y, k2z = self._lorenz_deriv(x + 0.5*dt*k1x, y + 0.5*dt*k1y, z + 0.5*dt*k1z)
+        k3x, k3y, k3z = self._lorenz_deriv(x + 0.5*dt*k2x, y + 0.5*dt*k2y, z + 0.5*dt*k2z)
+        k4x, k4y, k4z = self._lorenz_deriv(x + dt*k3x, y + dt*k3y, z + dt*k3z)
+        self.lorenz_x += (dt/6.0) * (k1x + 2*k2x + 2*k3x + k4x)
+        self.lorenz_y += (dt/6.0) * (k1y + 2*k2y + 2*k3y + k4y)
+        self.lorenz_z += (dt/6.0) * (k1z + 2*k2z + 2*k3z + k4z)
+        return self.lorenz_x, self.lorenz_y
+
+    def _map_lorenz(self, x, y, scale):
+        """Map Lorenz coordinates to screen."""
+        x_min, x_max = -30.0, 30.0
+        y_min, y_max = -30.0, 30.0
+        sx = int((x - x_min) / (x_max - x_min) * self.width * scale / 5 + self.width * (1 - scale/5) / 2)
+        sy = int((y - y_min) / (y_max - y_min) * self.height * scale / 5 + self.height * (1 - scale/5) / 2)
+        return sx, sy
+
+    # --- Clifford Attractor (2D) ---
+    def _step_clifford(self):
+        """Clifford attractor iteration: x' = sin(a*y) + c*cos(a*x), y' = sin(b*x) + d*cos(b*y)"""
+        a = self.clifford_a.value
+        b = self.clifford_b.value
+        c = self.clifford_c.value
+        d = self.clifford_d.value
+        x, y = self.clifford_x, self.clifford_y
+        new_x = math.sin(a * y) + c * math.cos(a * x)
+        new_y = math.sin(b * x) + d * math.cos(b * y)
+        self.clifford_x, self.clifford_y = new_x, new_y
+        return new_x, new_y
+
+    def _map_clifford(self, x, y, scale):
+        """Map Clifford coordinates to screen (typically in [-3, 3] range)."""
+        x_min, x_max = -3.0, 3.0
+        y_min, y_max = -3.0, 3.0
+        sx = int((x - x_min) / (x_max - x_min) * self.width * scale / 5 + self.width * (1 - scale/5) / 2)
+        sy = int((y - y_min) / (y_max - y_min) * self.height * scale / 5 + self.height * (1 - scale/5) / 2)
+        return sx, sy
+
+    # --- De Jong Attractor (2D) ---
+    def _step_dejong(self):
+        """De Jong attractor iteration: x' = sin(a*y) - cos(b*x), y' = sin(c*x) - cos(d*y)"""
+        a = self.dejong_a.value
+        b = self.dejong_b.value
+        c = self.dejong_c.value
+        d = self.dejong_d.value
+        x, y = self.dejong_x, self.dejong_y
+        new_x = math.sin(a * y) - math.cos(b * x)
+        new_y = math.sin(c * x) - math.cos(d * y)
+        self.dejong_x, self.dejong_y = new_x, new_y
+        return new_x, new_y
+
+    def _map_dejong(self, x, y, scale):
+        """Map De Jong coordinates to screen (typically in [-2.5, 2.5] range)."""
+        x_min, x_max = -2.5, 2.5
+        y_min, y_max = -2.5, 2.5
+        sx = int((x - x_min) / (x_max - x_min) * self.width * scale / 5 + self.width * (1 - scale/5) / 2)
+        sy = int((y - y_min) / (y_max - y_min) * self.height * scale / 5 + self.height * (1 - scale/5) / 2)
+        return sx, sy
+
+    # --- Aizawa Attractor (3D) ---
+    def _aizawa_deriv(self, x, y, z):
+        """Aizawa attractor derivatives."""
+        a = self.aizawa_a.value
+        b = self.aizawa_b.value
+        c = self.aizawa_c.value
+        d = self.aizawa_d.value
+        e = self.aizawa_e.value
+        f = self.aizawa_f.value
+        dx = (z - b) * x - d * y
+        dy = d * x + (z - b) * y
+        dz = c + a * z - (z**3) / 3.0 - (x**2 + y**2) * (1 + e * z) + f * z * (x**3)
+        return dx, dy, dz
+
+    def _step_aizawa(self, dt):
+        """Runge-Kutta 4 integration for Aizawa."""
+        x, y, z = self.aizawa_x, self.aizawa_y, self.aizawa_z
+        k1x, k1y, k1z = self._aizawa_deriv(x, y, z)
+        k2x, k2y, k2z = self._aizawa_deriv(x + 0.5*dt*k1x, y + 0.5*dt*k1y, z + 0.5*dt*k1z)
+        k3x, k3y, k3z = self._aizawa_deriv(x + 0.5*dt*k2x, y + 0.5*dt*k2y, z + 0.5*dt*k2z)
+        k4x, k4y, k4z = self._aizawa_deriv(x + dt*k3x, y + dt*k3y, z + dt*k3z)
+        self.aizawa_x += (dt/6.0) * (k1x + 2*k2x + 2*k3x + k4x)
+        self.aizawa_y += (dt/6.0) * (k1y + 2*k2y + 2*k3y + k4y)
+        self.aizawa_z += (dt/6.0) * (k1z + 2*k2z + 2*k3z + k4z)
+        return self.aizawa_x, self.aizawa_y
+
+    def _map_aizawa(self, x, y, scale):
+        """Map Aizawa coordinates to screen (typically in [-2, 2] range)."""
+        x_min, x_max = -2.0, 2.0
+        y_min, y_max = -2.0, 2.0
+        sx = int((x - x_min) / (x_max - x_min) * self.width * scale / 5 + self.width * (1 - scale/5) / 2)
+        sy = int((y - y_min) / (y_max - y_min) * self.height * scale / 5 + self.height * (1 - scale/5) / 2)
+        return sx, sy
+
+    # --- Thomas Attractor (3D) ---
+    def _thomas_deriv(self, x, y, z):
+        """Thomas attractor derivatives: smooth, ribbon-like trajectories."""
+        b = self.thomas_b.value
+        dx = math.sin(y) - b * x
+        dy = math.sin(z) - b * y
+        dz = math.sin(x) - b * z
+        return dx, dy, dz
+
+    def _step_thomas(self, dt):
+        """Runge-Kutta 4 integration for Thomas."""
+        x, y, z = self.thomas_x, self.thomas_y, self.thomas_z
+        k1x, k1y, k1z = self._thomas_deriv(x, y, z)
+        k2x, k2y, k2z = self._thomas_deriv(x + 0.5*dt*k1x, y + 0.5*dt*k1y, z + 0.5*dt*k1z)
+        k3x, k3y, k3z = self._thomas_deriv(x + 0.5*dt*k2x, y + 0.5*dt*k2y, z + 0.5*dt*k2z)
+        k4x, k4y, k4z = self._thomas_deriv(x + dt*k3x, y + dt*k3y, z + dt*k3z)
+        self.thomas_x += (dt/6.0) * (k1x + 2*k2x + 2*k3x + k4x)
+        self.thomas_y += (dt/6.0) * (k1y + 2*k2y + 2*k3y + k4y)
+        self.thomas_z += (dt/6.0) * (k1z + 2*k2z + 2*k3z + k4z)
+        return self.thomas_x, self.thomas_y
+
+    def _map_thomas(self, x, y, scale):
+        """Map Thomas coordinates to screen (typically in [-5, 5] range)."""
+        x_min, x_max = -5.0, 5.0
+        y_min, y_max = -5.0, 5.0
+        sx = int((x - x_min) / (x_max - x_min) * self.width * scale / 5 + self.width * (1 - scale/5) / 2)
+        sy = int((y - y_min) / (y_max - y_min) * self.height * scale / 5 + self.height * (1 - scale/5) / 2)
+        return sx, sy
+
+    def get_frame(self, frame: np.ndarray = None) -> np.ndarray:
+        """Generates a Strange Attractor pattern based on selected type."""
+        log.debug("Entering StrangeAttractor.get_frame")
+
+        # Check if attractor type changed - reset state if so
+        if self.attractor_type.value != self.prev_attractor_type:
+            self._reset_current_attractor()
+            self.prev_attractor_type = self.attractor_type.value
+            frame = None  # Clear frame on type change
+
+        if frame is None:
+            pattern = np.zeros((self.height, self.width, 3), dtype=np.uint8)
+        else:
+            pattern = (frame * self.fade.value).astype(np.uint8)
+
+        dt = self.dt.value
+        num_steps = int(self.num_steps.value)
+        scale = self.scale.value
+        line_width = int(self.line_width.value)
+        color = (int(self.attractor_b.value), int(self.attractor_g.value), int(self.attractor_r.value))
+
+        atype = self.attractor_type.value
+
+        # Get initial screen position based on attractor type
+        if atype == AttractorType.LORENZ:
+            prev_sx, prev_sy = self._map_lorenz(self.lorenz_x, self.lorenz_y, scale)
+        elif atype == AttractorType.CLIFFORD:
+            prev_sx, prev_sy = self._map_clifford(self.clifford_x, self.clifford_y, scale)
+        elif atype == AttractorType.DE_JONG:
+            prev_sx, prev_sy = self._map_dejong(self.dejong_x, self.dejong_y, scale)
+        elif atype == AttractorType.AIZAWA:
+            prev_sx, prev_sy = self._map_aizawa(self.aizawa_x, self.aizawa_y, scale)
+        elif atype == AttractorType.THOMAS:
+            prev_sx, prev_sy = self._map_thomas(self.thomas_x, self.thomas_y, scale)
+        else:
+            prev_sx, prev_sy = self.width // 2, self.height // 2
 
         for _ in range(num_steps):
-            # Runge-Kutta 4 integration
-            k1x, k1y, k1z = self._lorenz_deriv(self.lorenz_x, self.lorenz_y, self.lorenz_z, sigma, rho, beta)
-            k2x, k2y, k2z = self._lorenz_deriv(self.lorenz_x + 0.5 * dt * k1x, self.lorenz_y + 0.5 * dt * k1y, self.lorenz_z + 0.5 * dt * k1z, sigma, rho, beta)
-            k3x, k3y, k3z = self._lorenz_deriv(self.lorenz_x + 0.5 * dt * k2x, self.lorenz_y + 0.5 * dt * k2y, self.lorenz_z + 0.5 * dt * k2z, sigma, rho, beta)
-            k4x, k4y, k4z = self._lorenz_deriv(self.lorenz_x + dt * k3x, self.lorenz_y + dt * k3y, self.lorenz_z + dt * k3z, sigma, rho, beta)
+            # Step the attractor and get new screen coordinates
+            if atype == AttractorType.LORENZ:
+                x, y = self._step_lorenz(dt)
+                curr_sx, curr_sy = self._map_lorenz(x, y, scale)
+            elif atype == AttractorType.CLIFFORD:
+                x, y = self._step_clifford()
+                curr_sx, curr_sy = self._map_clifford(x, y, scale)
+            elif atype == AttractorType.DE_JONG:
+                x, y = self._step_dejong()
+                curr_sx, curr_sy = self._map_dejong(x, y, scale)
+            elif atype == AttractorType.AIZAWA:
+                x, y = self._step_aizawa(dt)
+                curr_sx, curr_sy = self._map_aizawa(x, y, scale)
+            elif atype == AttractorType.THOMAS:
+                x, y = self._step_thomas(dt)
+                curr_sx, curr_sy = self._map_thomas(x, y, scale)
+            else:
+                curr_sx, curr_sy = prev_sx, prev_sy
 
-            self.lorenz_x += (dt / 6.0) * (k1x + 2 * k2x + 2 * k3x + k4x)
-            self.lorenz_y += (dt / 6.0) * (k1y + 2 * k2y + 2 * k3y + k4y)
-            self.lorenz_z += (dt / 6.0) * (k1z + 2 * k2z + 2 * k3z + k4z)
+            cv2.line(pattern, (prev_sx, prev_sy), (curr_sx, curr_sy), color, line_width)
+            prev_sx, prev_sy = curr_sx, curr_sy
 
-            curr_x, curr_y = self._map_lorenz_to_screen(self.lorenz_x, self.lorenz_y, scale)
-
-            color = (int(self.attractor_b.value), int(self.attractor_g.value), int(self.attractor_r.value))
-            
-            cv2.line(pattern, (int(prev_x), int(prev_y)), (int(curr_x), int(curr_y)), color, line_width)
-            
-            prev_x, prev_y = curr_x, curr_y
-        
-        log.debug("Exiting StrangeAttractor.get_frame successfully")
         return pattern
 
 
 class Physarum(Animation):
-    def __init__(self, params, toggles, width=640, height=480, parent=None):
-        super().__init__(params, toggles, width, height, parent)
-        subclass = self.__class__.__name__
+    def __init__(self, params, width=640, height=480, group=None):
+        super().__init__(params, width, height, group)
+        subgroup = self.__class__.__name__
 
         # Simulation parameters
-        self.num_agents = params.add("phys_num_agents", 1000, 10000, 1000, subclass, parent)
-        self.sensor_angle_spacing = params.add("phys_sensor_angle_spacing", 0.0, np.pi/2, np.pi/8, subclass, parent) # Radians
-        self.sensor_distance = params.add("phys_sensor_distance", 1, 20, 9, subclass, parent)
-        self.turn_angle = params.add("phys_turn_angle", 0.0, np.pi/2, np.pi/4, subclass, parent) # Radians
-        self.step_distance = params.add("phys_step_distance", 1, 10, 1, subclass, parent)
-        self.decay_factor = params.add("phys_decay_factor", 0.0, 1.0, 0.1, subclass, parent)
-        self.diffuse_factor = params.add("phys_diffuse_factor", 0.0, 1.0, 0.5, subclass, parent)
-        self.deposit_amount = params.add("phys_deposit_amount", 0.1, 5.0, 1.0, subclass, parent)
-        self.grid_resolution_scale = params.add("phys_grid_res_scale", 0.1, 1.0, 0.5, subclass, parent)
-        self.wrap_around = params.add("phys_wrap_around", 0, 1, 1, subclass, parent, WidgetType.RADIO, Toggle) # Boolean as int
+        self.num_agents = params.add("phys_num_agents",
+                                     min=1000, max=10000, default=1000,
+                                     subgroup=subgroup, group=group)
+        self.sensor_angle_spacing = params.add("phys_sensor_angle_spacing",
+                                               min=0.0, max=np.pi/2, default=np.pi/8,
+                                               subgroup=subgroup, group=group) # Radians
+        self.sensor_distance = params.add("phys_sensor_distance",
+                                          min=1, max=20, default=9,
+                                          subgroup=subgroup, group=group)
+        self.turn_angle = params.add("phys_turn_angle",
+                                     min=0.0, max=np.pi/2, default=np.pi/4,
+                                     subgroup=subgroup, group=group) # Radians
+        self.step_distance = params.add("phys_step_distance",
+                                        min=1, max=10, default=1,
+                                        subgroup=subgroup, group=group)
+        self.decay_factor = params.add("phys_decay_factor",
+                                       min=0.0, max=1.0, default=0.1,
+                                       subgroup=subgroup, group=group)
+        self.diffuse_factor = params.add("phys_diffuse_factor",
+                                         min=0.0, max=1.0, default=0.5,
+                                         subgroup=subgroup, group=group)
+        self.deposit_amount = params.add("phys_deposit_amount",
+                                         min=0.1, max=5.0, default=1.0,
+                                         subgroup=subgroup, group=group)
+        self.grid_resolution_scale = params.add("phys_grid_res_scale",
+                                                min=0.1, max=1.0, default=0.5,
+                                                subgroup=subgroup, group=group)
+        self.wrap_around = params.add("phys_wrap_around",
+                                      min=0, max=1, default=1,
+                                      group=group, subgroup=subgroup,
+                                      type=Widget.RADIO, options=Toggle) # Boolean as int
 
         # Color parameters
-        self.trail_r = params.add("phys_trail_r", 0, 255, 0, subclass, parent)
-        self.trail_g = params.add("phys_trail_g", 0, 255, 255, subclass, parent)
-        self.trail_b = params.add("phys_trail_b", 0, 255, 0, subclass, parent)
-        self.agent_r = params.add("phys_agent_r", 0, 255, 255, subclass, parent)
-        self.agent_g = params.add("phys_agent_g", 0, 255, 0, subclass, parent)
-        self.agent_b = params.add("phys_agent_b", 0, 255, 0, subclass, parent)
-        self.agent_size = params.add("phys_agent_size", 1, 5, 1, subclass, parent)
+        self.trail_r = params.add("phys_trail_r",
+                                  min=0, max=255, default=0,
+                                  subgroup=subgroup, group=group)
+        self.trail_g = params.add("phys_trail_g",
+                                  min=0, max=255, default=255,
+                                  subgroup=subgroup, group=group)
+        self.trail_b = params.add("phys_trail_b",
+                                  min=0, max=255, default=0,
+                                  subgroup=subgroup, group=group)
+        self.agent_r = params.add("phys_agent_r",
+                                  min=0, max=255, default=255,
+                                  subgroup=subgroup, group=group)
+        self.agent_g = params.add("phys_agent_g",
+                                  min=0, max=255, default=0,
+                                  subgroup=subgroup, group=group)
+        self.agent_b = params.add("phys_agent_b",
+                                  min=0, max=255, default=0,
+                                  subgroup=subgroup, group=group)
+        self.agent_size = params.add("phys_agent_size",
+                                     min=1, max=5, default=1,
+                                     subgroup=subgroup, group=group)
 
 
         self.grid_width = int(self.width * self.grid_resolution_scale.value)
@@ -757,16 +1088,16 @@ class Physarum(Animation):
         log.debug("Entering Physarum.get_frame")
 
         # Check for re-initialization based on parameters
-        current_num_agents_param = self.num_agents.value
-        current_grid_res_scale_param = self.grid_resolution_scale.value
+        current_num_agents = self.num_agents.value
+        current_grid_res_scale = self.grid_resolution_scale.value
 
-        if (current_num_agents_param != self.prev_num_agents or
-            current_grid_res_scale_param != self.prev_grid_resolution_scale):
+        if (current_num_agents != self.prev_num_agents or
+            current_grid_res_scale != self.prev_grid_resolution_scale):
             
             self._reinitialize_simulation()
             # Update previous values
-            self.prev_num_agents = current_num_agents_param
-            self.prev_grid_resolution_scale = current_grid_res_scale_param
+            self.prev_num_agents = current_num_agents
+            self.prev_grid_resolution_scale = current_grid_res_scale
 
         # Update simulation
         self._move_agents()
@@ -801,31 +1132,55 @@ class Physarum(Animation):
             display_y = int(agent[1] / self.grid_resolution_scale.value)
             cv2.circle(output_frame, (display_x, display_y), agent_radius, agent_color_bgr, -1)
         
-        log.debug("Exiting Physarum.get_frame successfully")
         return output_frame
 
 
 class Shaders(Animation):
-    def __init__(self, params, toggles, width=1280, height=720, parent=None):
-        super().__init__(params, toggles, parent=parent)
-        subclass = self.__class__.__name__
-        p_name = parent.name.lower()
+    def __init__(self, params, width=1280, height=720, group=None):
+        super().__init__(params, group=group)
+        subgroup = self.__class__.__name__
+        p_name = group.name.lower()
         self.width, self.height = width, height
         self.ctx = moderngl.create_context(standalone=True)
         self.time = time.time()
 
-        self.current_shader = params.add("s_type", 0, len(ShaderType)-1, 0, subclass, parent, WidgetType.DROPDOWN, ShaderType)
-        self.zoom = params.add("s_zoom", 0.1, 5.0, 1.5, subclass, parent)
-        self.distortion = params.add("s_distortion", 0.0, 1.0, 0.5, subclass, parent)
-        self.iterations = params.add("s_iterations", 1.0, 10.0, 4.0, subclass, parent)
-        self.color_shift = params.add("s_color_shift", 0.5, 3.0, 1.0, subclass, parent)
-        self.brightness = params.add("s_brightness", 0.0, 2.0, 1.0, subclass, parent)
-        self.hue_shift = params.add("s_hue_shift", 0.0, 7, 0.0, subclass, parent)
-        self.saturation = params.add("s_saturation", 0.0, 2.0, 1.0, subclass, parent)
-        self.x_shift = params.add("s_x_shift", -5.0, 5.0, 0.0, subclass, parent)
-        self.y_shift = params.add("s_y_shift", -5.0, 5.0, 0.0, subclass, parent)
-        self.rotation = params.add("s_rotation", -3.14, 3.14, 0.0, subclass, parent)
-        self.speed = params.add("s_speed", 0.0, 2.0, 1.0, subclass, parent)
+        self.current_shader = params.add("s_type",
+                                         min=0, max=len(ShaderType)-1, default=0,
+                                         group=group, subgroup=subgroup,
+                                         type=Widget.DROPDOWN, options=ShaderType)
+        self.zoom = params.add("s_zoom",
+                               min=0.1, max=5.0, default=1.5,
+                               subgroup=subgroup, group=group)
+        self.distortion = params.add("s_distortion",
+                                     min=0.0, max=1.0, default=0.5,
+                                     subgroup=subgroup, group=group)
+        self.iterations = params.add("s_iterations",
+                                     min=1.0, max=10.0, default=4.0,
+                                     subgroup=subgroup, group=group)
+        self.color_shift = params.add("s_color_shift",
+                                      min=0.5, max=3.0, default=1.0,
+                                      subgroup=subgroup, group=group)
+        self.brightness = params.add("s_brightness",
+                                     min=0.0, max=2.0, default=1.0,
+                                     subgroup=subgroup, group=group)
+        self.hue_shift = params.add("s_hue_shift",
+                                    min=0.0, max=7, default=0.0,
+                                    subgroup=subgroup, group=group)
+        self.saturation = params.add("s_saturation",
+                                     min=0.0, max=2.0, default=1.0,
+                                     subgroup=subgroup, group=group)
+        self.x_shift = params.add("s_x_shift",
+                                  min=-5.0, max=5.0, default=0.0,
+                                  subgroup=subgroup, group=group)
+        self.y_shift = params.add("s_y_shift",
+                                  min=-5.0, max=5.0, default=0.0,
+                                  subgroup=subgroup, group=group)
+        self.rotation = params.add("s_rotation",
+                                   min=-3.14, max=3.14, default=0.0,
+                                   subgroup=subgroup, group=group)
+        self.speed = params.add("s_speed",
+                                min=0.0, max=2.0, default=1.0,
+                                subgroup=subgroup, group=group)
         self.prev_shader = self.current_shader.value
         
         vertex_shader, code = self.get_shader_code()
@@ -1236,11 +1591,11 @@ class Shaders(Animation):
                     float t = u_time * 0.2;
                     float growth = smoothstep(0.0, 10.0, t) * (1.0 + sin(t * 0.1) * 0.2);
                     uv *= u_zoom * (1.0 + growth * 0.5);
-                    
+
                     float angle = atan(uv.y, uv.x);
                     float dist = length(uv);
                     vec3 col = vec3(0.0);
-                    
+
                     for (float i = 0.0; i < u_iterations; i++) {
                         float a = mod(angle + t * 0.05 * (i + 1.0), 6.28 / 6.0);
                         float face = abs(sin(a * 3.0 + t * 0.1));
@@ -1254,3 +1609,574 @@ class Shaders(Animation):
             '''
         }
         return vertex_shader, code
+
+
+class DLA(Animation):
+    """
+    Diffusion-Limited Aggregation - particles random-walk until they stick
+    to a growing crystal structure, creating organic dendrite-like fractals.
+    """
+    def __init__(self, params, width=640, height=480, group=None):
+        super().__init__(params, width, height, group)
+        subgroup = self.__class__.__name__
+
+        # Growth parameters
+        self.num_particles = params.add("dla_num_particles",
+                                        min=10, max=500, default=100,
+                                        subgroup=subgroup, group=group)
+        self.stickiness = params.add("dla_stickiness",
+                                     min=0.1, max=1.0, default=1.0,
+                                     subgroup=subgroup, group=group)
+        self.spawn_radius_ratio = params.add("dla_spawn_radius",
+                                             min=1.1, max=2.0, default=1.3,
+                                             subgroup=subgroup, group=group)
+        self.particle_speed = params.add("dla_particle_speed",
+                                         min=1, max=10, default=3,
+                                         subgroup=subgroup, group=group)
+        self.branch_bias = params.add("dla_branch_bias",
+                                      min=-1.0, max=1.0, default=0.0,
+                                      subgroup=subgroup, group=group)
+        self.fade = params.add("dla_fade",
+                               min=0.0, max=1.0, default=0.99,
+                               subgroup=subgroup, group=group)
+
+        # Color parameters
+        self.crystal_r = params.add("dla_crystal_r",
+                                    min=0, max=255, default=100,
+                                    subgroup=subgroup, group=group)
+        self.crystal_g = params.add("dla_crystal_g",
+                                    min=0, max=255, default=200,
+                                    subgroup=subgroup, group=group)
+        self.crystal_b = params.add("dla_crystal_b",
+                                    min=0, max=255, default=255,
+                                    subgroup=subgroup, group=group)
+        self.particle_r = params.add("dla_particle_r",
+                                     min=0, max=255, default=255,
+                                     subgroup=subgroup, group=group)
+        self.particle_g = params.add("dla_particle_g",
+                                     min=0, max=255, default=255,
+                                     subgroup=subgroup, group=group)
+        self.particle_b = params.add("dla_particle_b",
+                                     min=0, max=255, default=255,
+                                     subgroup=subgroup, group=group)
+
+        # Reset trigger
+        self.reset_trigger = params.add("dla_reset",
+                                        min=0, max=1, default=0,
+                                        subgroup=subgroup, group=group,
+                                        type=Widget.RADIO, options=Toggle)
+
+        self._initialize_simulation()
+
+    def _initialize_simulation(self):
+        """Initialize the DLA simulation state."""
+        # Crystal grid - True where crystal exists
+        self.crystal = np.zeros((self.height, self.width), dtype=bool)
+        # Age map for color variation
+        self.crystal_age = np.zeros((self.height, self.width), dtype=np.float32)
+        # Seed crystal at center
+        cx, cy = self.width // 2, self.height // 2
+        self.crystal[cy-2:cy+2, cx-2:cx+2] = True
+        self.crystal_age[cy-2:cy+2, cx-2:cx+2] = 1.0
+        # Current growth radius
+        self.max_radius = 5
+        self.age_counter = 1.0
+        # Particles: [x, y] positions
+        self._spawn_particles()
+        self.prev_reset = 0
+
+    def _spawn_particles(self):
+        """Spawn particles at random positions on spawn circle."""
+        n = int(self.num_particles.value)
+        spawn_r = self.max_radius * self.spawn_radius_ratio.value
+        spawn_r = max(spawn_r, 20)
+        angles = np.random.uniform(0, 2 * np.pi, n)
+        cx, cy = self.width // 2, self.height // 2
+        self.particles = np.zeros((n, 2), dtype=np.float32)
+        self.particles[:, 0] = cx + spawn_r * np.cos(angles)
+        self.particles[:, 1] = cy + spawn_r * np.sin(angles)
+
+    def _respawn_particle(self, idx):
+        """Respawn a single particle on the spawn circle."""
+        spawn_r = self.max_radius * self.spawn_radius_ratio.value
+        spawn_r = max(spawn_r, 20)
+        angle = np.random.uniform(0, 2 * np.pi)
+        cx, cy = self.width // 2, self.height // 2
+        self.particles[idx, 0] = cx + spawn_r * np.cos(angle)
+        self.particles[idx, 1] = cy + spawn_r * np.sin(angle)
+
+    def _check_neighbors(self, x, y):
+        """Check if position has neighboring crystal."""
+        xi, yi = int(x), int(y)
+        if xi < 1 or xi >= self.width - 1 or yi < 1 or yi >= self.height - 1:
+            return False
+        # Check 8-connected neighbors
+        return np.any(self.crystal[yi-1:yi+2, xi-1:xi+2])
+
+    def get_frame(self, frame: np.ndarray = None) -> np.ndarray:
+        log.debug("Entering DLA.get_frame")
+
+        # Check for reset trigger
+        if self.reset_trigger.value == 1 and self.prev_reset == 0:
+            self._initialize_simulation()
+        self.prev_reset = self.reset_trigger.value
+
+        # Apply fade to previous frame
+        if frame is None:
+            pattern = np.zeros((self.height, self.width, 3), dtype=np.uint8)
+        else:
+            pattern = (frame * self.fade.value).astype(np.uint8)
+
+        speed = int(self.particle_speed.value)
+        bias = self.branch_bias.value
+        cx, cy = self.width // 2, self.height // 2
+
+        # Move particles with random walk
+        for i in range(len(self.particles)):
+            for _ in range(speed):
+                # Random walk with optional bias toward/away from center
+                dx = np.random.choice([-1, 0, 1])
+                dy = np.random.choice([-1, 0, 1])
+
+                # Apply radial bias
+                if bias != 0:
+                    px, py = self.particles[i]
+                    to_center_x = cx - px
+                    to_center_y = cy - py
+                    dist = math.sqrt(to_center_x**2 + to_center_y**2) + 0.001
+                    if np.random.random() < abs(bias):
+                        if bias > 0:  # Bias toward center
+                            dx += int(np.sign(to_center_x))
+                            dy += int(np.sign(to_center_y))
+                        else:  # Bias away
+                            dx -= int(np.sign(to_center_x))
+                            dy -= int(np.sign(to_center_y))
+
+                self.particles[i, 0] += dx
+                self.particles[i, 1] += dy
+
+                x, y = self.particles[i]
+
+                # Check if stuck to crystal
+                if self._check_neighbors(x, y):
+                    if np.random.random() < self.stickiness.value:
+                        xi, yi = int(x), int(y)
+                        if 0 <= xi < self.width and 0 <= yi < self.height:
+                            self.crystal[yi, xi] = True
+                            self.age_counter += 0.001
+                            self.crystal_age[yi, xi] = self.age_counter
+                            # Update max radius
+                            dist = math.sqrt((x - cx)**2 + (y - cy)**2)
+                            self.max_radius = max(self.max_radius, dist + 5)
+                        self._respawn_particle(i)
+                        break
+
+                # Respawn if too far or out of bounds
+                dist_from_center = math.sqrt((x - cx)**2 + (y - cy)**2)
+                kill_radius = self.max_radius * self.spawn_radius_ratio.value * 1.5
+                if (dist_from_center > kill_radius or
+                    x < 0 or x >= self.width or y < 0 or y >= self.height):
+                    self._respawn_particle(i)
+                    break
+
+        # Render crystal with age-based coloring
+        crystal_color = np.array([self.crystal_b.value, self.crystal_g.value, self.crystal_r.value])
+        # Normalize ages for color variation
+        max_age = self.age_counter if self.age_counter > 0 else 1.0
+        normalized_age = self.crystal_age / max_age
+
+        for c in range(3):
+            # Vary color based on age
+            color_val = crystal_color[c] * (0.5 + 0.5 * normalized_age)
+            pattern[:, :, c] = np.where(self.crystal, color_val.astype(np.uint8), pattern[:, :, c])
+
+        # Render particles
+        particle_color = (int(self.particle_b.value), int(self.particle_g.value), int(self.particle_r.value))
+        for px, py in self.particles:
+            xi, yi = int(px), int(py)
+            if 0 <= xi < self.width and 0 <= yi < self.height:
+                cv2.circle(pattern, (xi, yi), 1, particle_color, -1)
+
+        return pattern
+
+
+class Chladni(Animation):
+    """
+    Chladni Patterns - standing wave patterns on a vibrating plate.
+    Particles accumulate at nodal lines where vibration amplitude is zero.
+    """
+    def __init__(self, params, width=640, height=480, group=None):
+        super().__init__(params, width, height, group)
+        subgroup = self.__class__.__name__
+
+        # Wave parameters
+        self.freq_m = params.add("chladni_freq_m",
+                                 min=1, max=20, default=5,
+                                 subgroup=subgroup, group=group)
+        self.freq_n = params.add("chladni_freq_n",
+                                 min=1, max=20, default=3,
+                                 subgroup=subgroup, group=group)
+        self.amplitude = params.add("chladni_amplitude",
+                                    min=0.1, max=2.0, default=1.0,
+                                    subgroup=subgroup, group=group)
+        self.animation_speed = params.add("chladni_speed",
+                                          min=0.0, max=2.0, default=0.5,
+                                          subgroup=subgroup, group=group)
+        self.pattern_blend = params.add("chladni_blend",
+                                        min=0.0, max=1.0, default=0.5,
+                                        subgroup=subgroup, group=group)
+
+        # Particle simulation
+        self.num_particles = params.add("chladni_particles",
+                                        min=1000, max=50000, default=10000,
+                                        subgroup=subgroup, group=group)
+        self.particle_speed = params.add("chladni_particle_speed",
+                                         min=0.1, max=5.0, default=1.0,
+                                         subgroup=subgroup, group=group)
+        self.friction = params.add("chladni_friction",
+                                   min=0.8, max=0.99, default=0.95,
+                                   subgroup=subgroup, group=group)
+
+        # Visual parameters
+        self.show_wave = params.add("chladni_show_wave",
+                                    min=0, max=1, default=1,
+                                    subgroup=subgroup, group=group,
+                                    type=Widget.RADIO, options=Toggle)
+        self.colormap = params.add("chladni_colormap",
+                                   min=0, max=len(COLORMAP_OPTIONS)-1, default=2,
+                                   subgroup=subgroup, group=group,
+                                   type=Widget.DROPDOWN, options=Colormap)
+        self.particle_r = params.add("chladni_particle_r",
+                                     min=0, max=255, default=255,
+                                     subgroup=subgroup, group=group)
+        self.particle_g = params.add("chladni_particle_g",
+                                     min=0, max=255, default=255,
+                                     subgroup=subgroup, group=group)
+        self.particle_b = params.add("chladni_particle_b",
+                                     min=0, max=255, default=200,
+                                     subgroup=subgroup, group=group)
+
+        self.time = 0.0
+        self._init_particles()
+        self.prev_num_particles = self.num_particles.value
+
+    def _init_particles(self):
+        """Initialize particle positions and velocities."""
+        n = int(self.num_particles.value)
+        self.particles = np.random.uniform(0, 1, (n, 2)).astype(np.float32)
+        self.particles[:, 0] *= self.width
+        self.particles[:, 1] *= self.height
+        self.velocities = np.zeros((n, 2), dtype=np.float32)
+
+    def _chladni_value(self, x, y, m, n, t):
+        """
+        Calculate Chladni pattern value at position.
+        Uses superposition of two wave modes.
+        """
+        # Normalize coordinates to [-1, 1]
+        nx = (2.0 * x / self.width - 1.0)
+        ny = (2.0 * y / self.height - 1.0)
+
+        # Two orthogonal modes with phase offset
+        phase = t * self.animation_speed.value
+        mode1 = np.cos(m * np.pi * nx) * np.cos(n * np.pi * ny + phase)
+        mode2 = np.cos(n * np.pi * nx + phase * 0.7) * np.cos(m * np.pi * ny)
+
+        # Blend between modes
+        blend = self.pattern_blend.value
+        return mode1 * (1 - blend) + mode2 * blend
+
+    def _chladni_gradient(self, x, y, m, n, t):
+        """Calculate gradient of Chladni pattern for particle movement."""
+        eps = 1.0
+        val_c = self._chladni_value(x, y, m, n, t)
+        val_x = self._chladni_value(x + eps, y, m, n, t)
+        val_y = self._chladni_value(x, y + eps, m, n, t)
+        dx = (val_x - val_c) / eps
+        dy = (val_y - val_c) / eps
+        return dx, dy
+
+    def get_frame(self, frame: np.ndarray = None) -> np.ndarray:
+        log.debug("Entering Chladni.get_frame")
+
+        # Check for particle count change
+        if self.num_particles.value != self.prev_num_particles:
+            self._init_particles()
+            self.prev_num_particles = self.num_particles.value
+
+        self.time += 0.016  # ~60fps
+
+        m = int(self.freq_m.value)
+        n = int(self.freq_n.value)
+        amp = self.amplitude.value
+
+        # Generate wave pattern
+        x_coords = np.linspace(0, self.width - 1, self.width)
+        y_coords = np.linspace(0, self.height - 1, self.height)
+        X, Y = np.meshgrid(x_coords, y_coords)
+
+        wave = self._chladni_value(X, Y, m, n, self.time)
+        wave = np.abs(wave) * amp
+
+        # Normalize to 0-255
+        wave_normalized = (wave / wave.max() * 255).astype(np.uint8) if wave.max() > 0 else np.zeros_like(wave, dtype=np.uint8)
+
+        # Create output frame
+        if self.show_wave.value:
+            pattern = cv2.applyColorMap(wave_normalized, COLORMAP_OPTIONS[int(self.colormap.value)])
+        else:
+            pattern = np.zeros((self.height, self.width, 3), dtype=np.uint8)
+
+        # Update particles - they move toward nodal lines (where wave = 0)
+        speed = self.particle_speed.value
+        friction = self.friction.value
+
+        # Vectorized gradient calculation for all particles
+        px = self.particles[:, 0]
+        py = self.particles[:, 1]
+
+        # Calculate gradients at particle positions
+        eps = 2.0
+        val_c = self._chladni_value(px, py, m, n, self.time)
+        val_xp = self._chladni_value(px + eps, py, m, n, self.time)
+        val_yp = self._chladni_value(px, py + eps, m, n, self.time)
+
+        grad_x = (val_xp - val_c) / eps
+        grad_y = (val_yp - val_c) / eps
+
+        # Particles move along gradient toward zero (nodal lines)
+        # The force is proportional to the value and direction is along gradient
+        force_x = -val_c * grad_x * speed
+        force_y = -val_c * grad_y * speed
+
+        # Update velocities with friction
+        self.velocities[:, 0] = self.velocities[:, 0] * friction + force_x
+        self.velocities[:, 1] = self.velocities[:, 1] * friction + force_y
+
+        # Update positions
+        self.particles[:, 0] += self.velocities[:, 0]
+        self.particles[:, 1] += self.velocities[:, 1]
+
+        # Wrap around boundaries
+        self.particles[:, 0] = np.mod(self.particles[:, 0], self.width)
+        self.particles[:, 1] = np.mod(self.particles[:, 1], self.height)
+
+        # Render particles
+        particle_color = (int(self.particle_b.value), int(self.particle_g.value), int(self.particle_r.value))
+        for px, py in self.particles:
+            xi, yi = int(px), int(py)
+            if 0 <= xi < self.width and 0 <= yi < self.height:
+                pattern[yi, xi] = particle_color
+
+        return pattern
+
+
+class Voronoi(Animation):
+    """
+    Voronoi Relaxation - points iteratively move toward cell centroids,
+    creating organic, cell-like tessellations that breathe and flow.
+    """
+    def __init__(self, params, width=640, height=480, group=None):
+        super().__init__(params, width, height, group)
+        subgroup = self.__class__.__name__
+
+        # Point parameters
+        self.num_points = params.add("voronoi_num_points",
+                                     min=5, max=200, default=50,
+                                     subgroup=subgroup, group=group)
+        self.relaxation_speed = params.add("voronoi_relax_speed",
+                                           min=0.01, max=0.5, default=0.1,
+                                           subgroup=subgroup, group=group)
+        self.jitter = params.add("voronoi_jitter",
+                                 min=0.0, max=5.0, default=0.5,
+                                 subgroup=subgroup, group=group)
+
+        # Visual parameters
+        self.show_edges = params.add("voronoi_show_edges",
+                                     min=0, max=1, default=1,
+                                     subgroup=subgroup, group=group,
+                                     type=Widget.RADIO, options=Toggle)
+        self.show_points = params.add("voronoi_show_points",
+                                      min=0, max=1, default=1,
+                                      subgroup=subgroup, group=group,
+                                      type=Widget.RADIO, options=Toggle)
+        self.fill_cells = params.add("voronoi_fill_cells",
+                                     min=0, max=1, default=1,
+                                     subgroup=subgroup, group=group,
+                                     type=Widget.RADIO, options=Toggle)
+        self.edge_thickness = params.add("voronoi_edge_thickness",
+                                         min=1, max=5, default=2,
+                                         subgroup=subgroup, group=group)
+        self.point_size = params.add("voronoi_point_size",
+                                     min=2, max=10, default=5,
+                                     subgroup=subgroup, group=group)
+
+        # Color parameters
+        self.edge_r = params.add("voronoi_edge_r",
+                                 min=0, max=255, default=255,
+                                 subgroup=subgroup, group=group)
+        self.edge_g = params.add("voronoi_edge_g",
+                                 min=0, max=255, default=255,
+                                 subgroup=subgroup, group=group)
+        self.edge_b = params.add("voronoi_edge_b",
+                                 min=0, max=255, default=255,
+                                 subgroup=subgroup, group=group)
+        self.colormap = params.add("voronoi_colormap",
+                                   min=0, max=len(COLORMAP_OPTIONS)-1, default=0,
+                                   subgroup=subgroup, group=group,
+                                   type=Widget.DROPDOWN, options=Colormap)
+
+        # Animation
+        self.color_cycle_speed = params.add("voronoi_color_speed",
+                                            min=0.0, max=2.0, default=0.2,
+                                            subgroup=subgroup, group=group)
+
+        self.time = 0.0
+        self._init_points()
+        self.prev_num_points = self.num_points.value
+
+    def _init_points(self):
+        """Initialize Voronoi seed points."""
+        n = int(self.num_points.value)
+        # Random initial positions with margin
+        margin = 20
+        self.points = np.random.uniform(
+            [margin, margin],
+            [self.width - margin, self.height - margin],
+            (n, 2)
+        ).astype(np.float32)
+        # Generate random colors for each cell
+        self.cell_colors = np.random.randint(0, 256, (n, 3), dtype=np.uint8)
+
+    def _compute_voronoi_image(self):
+        """Compute Voronoi diagram using distance transform."""
+        # Create coordinate grids
+        y_coords, x_coords = np.ogrid[:self.height, :self.width]
+
+        # Calculate distance from each pixel to each point
+        # Use broadcasting: points shape (n, 2), coords shape (h, w)
+        n = len(self.points)
+        min_dist = np.full((self.height, self.width), np.inf, dtype=np.float32)
+        cell_indices = np.zeros((self.height, self.width), dtype=np.int32)
+
+        for i, (px, py) in enumerate(self.points):
+            dist = (x_coords - px) ** 2 + (y_coords - py) ** 2
+            mask = dist < min_dist
+            min_dist = np.where(mask, dist, min_dist)
+            cell_indices = np.where(mask, i, cell_indices)
+
+        return cell_indices, np.sqrt(min_dist)
+
+    def _compute_centroids(self, cell_indices):
+        """Compute centroid of each Voronoi cell."""
+        n = len(self.points)
+        centroids = np.zeros((n, 2), dtype=np.float32)
+        counts = np.zeros(n, dtype=np.float32)
+
+        # Create coordinate arrays
+        y_coords, x_coords = np.mgrid[:self.height, :self.width]
+
+        for i in range(n):
+            mask = cell_indices == i
+            if np.any(mask):
+                centroids[i, 0] = np.mean(x_coords[mask])
+                centroids[i, 1] = np.mean(y_coords[mask])
+                counts[i] = np.sum(mask)
+            else:
+                # Keep current position if cell is empty
+                centroids[i] = self.points[i]
+
+        return centroids
+
+    def _detect_edges(self, cell_indices):
+        """Detect edges between Voronoi cells."""
+        # Shift and compare to detect boundaries
+        edges = np.zeros((self.height, self.width), dtype=bool)
+
+        # Compare with shifted versions
+        if self.height > 1:
+            edges[:-1, :] |= cell_indices[:-1, :] != cell_indices[1:, :]
+        if self.width > 1:
+            edges[:, :-1] |= cell_indices[:, :-1] != cell_indices[:, 1:]
+
+        return edges
+
+    def get_frame(self, frame: np.ndarray = None) -> np.ndarray:
+        log.debug("Entering Voronoi.get_frame")
+
+        # Check for point count change
+        if self.num_points.value != self.prev_num_points:
+            self._init_points()
+            self.prev_num_points = self.num_points.value
+
+        self.time += 0.016
+
+        # Add jitter to points
+        jitter_amount = self.jitter.value
+        if jitter_amount > 0:
+            jitter = np.random.normal(0, jitter_amount, self.points.shape).astype(np.float32)
+            jittered_points = self.points + jitter
+        else:
+            jittered_points = self.points.copy()
+
+        # Temporarily use jittered points for rendering
+        original_points = self.points.copy()
+        self.points = jittered_points
+
+        # Compute Voronoi diagram
+        cell_indices, distances = self._compute_voronoi_image()
+
+        # Create output frame
+        pattern = np.zeros((self.height, self.width, 3), dtype=np.uint8)
+
+        # Fill cells with colors
+        if self.fill_cells.value:
+            # Color offset for animation
+            color_offset = int(self.time * self.color_cycle_speed.value * 50) % 256
+
+            for i in range(len(self.points)):
+                mask = cell_indices == i
+                # Cycle colors over time
+                color_idx = (i * 5 + color_offset) % 256
+                # Use colormap for coloring
+                base_color = cv2.applyColorMap(
+                    np.array([[color_idx]], dtype=np.uint8),
+                    COLORMAP_OPTIONS[int(self.colormap.value)]
+                )[0, 0]
+                pattern[mask] = base_color
+
+        # Restore original points for relaxation
+        self.points = original_points
+
+        # Draw edges
+        if self.show_edges.value:
+            edges = self._detect_edges(cell_indices)
+            edge_color = (int(self.edge_b.value), int(self.edge_g.value), int(self.edge_r.value))
+            thickness = int(self.edge_thickness.value)
+
+            if thickness == 1:
+                pattern[edges] = edge_color
+            else:
+                # Dilate edges for thicker lines
+                kernel = np.ones((thickness, thickness), np.uint8)
+                edges_thick = cv2.dilate(edges.astype(np.uint8), kernel, iterations=1)
+                pattern[edges_thick > 0] = edge_color
+
+        # Draw points
+        if self.show_points.value:
+            point_size = int(self.point_size.value)
+            for px, py in self.points:
+                cv2.circle(pattern, (int(px), int(py)), point_size, (255, 255, 255), -1)
+                cv2.circle(pattern, (int(px), int(py)), point_size, (0, 0, 0), 1)
+
+        # Lloyd's relaxation - move points toward cell centroids
+        centroids = self._compute_centroids(cell_indices)
+        relax_speed = self.relaxation_speed.value
+        self.points += (centroids - self.points) * relax_speed
+
+        # Keep points within bounds
+        margin = 10
+        self.points[:, 0] = np.clip(self.points[:, 0], margin, self.width - margin)
+        self.points[:, 1] = np.clip(self.points[:, 1], margin, self.height - margin)
+
+        return pattern

@@ -2,10 +2,10 @@ import numpy as np
 import cv2
 from enum import Enum
 import noise 
-from generators import Oscillator, OscillatorShape
+from lfo import LFO, LFOShape
 import logging
 import math
-from common import WidgetType
+from common import Widget
 
 posc_bank = []  
 
@@ -32,9 +32,9 @@ class PatternType(Enum):
 class Patterns:
     """
     Generates various animated patterns using OpenCV and modulates them
-    with its own bank of Oscillators.
+    with its own bank of LFOs.
     """
-    def __init__(self, params, oscs, width, height, parent=None):
+    def __init__(self, params, oscs, width, height, group=None):
         """
         Initializes the PatternGenerator.
         Args:
@@ -46,7 +46,7 @@ class Patterns:
         self.oscs = oscs
         self.width = width
         self.height = height
-        subclass = self.__class__.__name__
+        subgroup = self.__class__.__name__
 
         # Create coordinate grids for vectorized operations (much faster than loops)
         self.x_coords = np.linspace(0, self.width - 1, self.width, dtype=np.float32)
@@ -54,63 +54,138 @@ class Patterns:
         self.X, self.Y = np.meshgrid(self.x_coords, self.y_coords)
 
         # Define pattern-specific parameters (using the global params_table)
-        self.pattern_type = params.add("pattern_type", PatternType.NONE.value, len(PatternType)-1, 0, subclass, parent, WidgetType.DROPDOWN, PatternType) 
-        self.prev_pattern_type = self.pattern_type.value 
-        self.pattern_alpha = params.add("pattern_alpha", 0.0, 1.0, 0.5, subclass, parent)
+        self.pattern_type = params.add("pattern_type",
+                                       min=PatternType.NONE.value, max=len(PatternType)-1, default=0,
+                                       group=group, subgroup=subgroup,
+                                       type=Widget.DROPDOWN, options=PatternType)
+        self.prev_pattern_type = self.pattern_type.value
+        self.pattern_alpha = params.add("pattern_alpha",
+                                        min=0.0, max=1.0, default=0.5,
+                                        subgroup=subgroup, group=group)
 
         # perlin params
-        self.octaves = params.add("pattern_octaves", 1, 8, 4, subclass, parent) # Number of octaves for fractal noise
-        self.gain = params.add("pattern_gain", 0.0, 1.0, 0.2, subclass, parent) # Gain for fractal noise
-        self.lacunarity = params.add("pattern_lacunarity", 1.0, 4.0, 2.0, subclass, parent) # Lacunarity for fractal noise
+        self.octaves = params.add("pattern_octaves",
+                                  min=1, max=8, default=4,
+                                  subgroup=subgroup, group=group) # Number of octaves for fractal noise
+        self.gain = params.add("pattern_gain",
+                               min=0.0, max=1.0, default=0.2,
+                               subgroup=subgroup, group=group) # Gain for fractal noise
+        self.lacunarity = params.add("pattern_lacunarity",
+                                     min=1.0, max=4.0, default=2.0,
+                                     subgroup=subgroup, group=group) # Lacunarity for fractal noise
 
         # controls density of bars
-        self.bar_x_freq = params.add("bar_x_freq", 0.01, 0.75, 0.01, subclass, parent)
-        self.bar_y_freq = params.add("bar_y_freq", 0.01, 0.75, 0.01, subclass, parent)
+        self.bar_x_freq = params.add("bar_x_freq",
+                                     min=0.01, max=0.75, default=0.01,
+                                     subgroup=subgroup, group=group)
+        self.bar_y_freq = params.add("bar_y_freq",
+                                     min=0.01, max=0.75, default=0.01,
+                                     subgroup=subgroup, group=group)
         # controls bar scrolling speed
-        self.bar_x_offset = params.add("bar_x_offset", -100, 100, 2.0, subclass, parent) # Offset for X bars
-        self.bar_y_offset = params.add("bar_y_offset", -10, 10, 1.0, subclass, parent) # Offset for Y bars
+        self.bar_x_offset = params.add("bar_x_offset",
+                                       min=-100, max=100, default=2.0,
+                                       subgroup=subgroup, group=group) # Offset for X bars
+        self.bar_y_offset = params.add("bar_y_offset",
+                                       min=-10, max=10, default=1.0,
+                                       subgroup=subgroup, group=group) # Offset for Y bars
 
-        self.rotation = params.add("pattern_rotation", -360, 360, 0.0, subclass, parent)
+        self.rotation = params.add("pattern_rotation",
+                                   min=-360, max=360, default=0.0,
+                                   subgroup=subgroup, group=group)
 
         # creates interesting color patterns
-        self.mod = params.add("pattern_mod", 0.1, 2.0, 1.0, subclass, parent) # Modulation factor for bar patterns
+        self.mod = params.add("pattern_mod",
+                              min=0.1, max=2.0, default=1.0,
+                              subgroup=subgroup, group=group) # Modulation factor for bar patterns
 
         # Color parameters for patterns # TODO: mapping seems off
-        self.r = params.add("pattern_r", 0, 180, 127, subclass, parent)
-        self.g = params.add("pattern_g", 0, 180, 127, subclass, parent)
-        self.b = params.add("pattern_b", 0, 180, 127, subclass, parent)
+        self.r = params.add("pattern_r",
+                            min=0, max=180, default=127,
+                            subgroup=subgroup, group=group)
+        self.g = params.add("pattern_g",
+                            min=0, max=180, default=127,
+                            subgroup=subgroup, group=group)
+        self.b = params.add("pattern_b",
+                            min=0, max=180, default=127,
+                            subgroup=subgroup, group=group)
 
-        self.grid_size = params.add("pattern_grid_size", 10, 100, 30, subclass, parent) # Base grid size for checkers
-        self.color_shift = params.add("pattern_color_shift", 0, 255, 127, subclass, parent)
-        self.color_blend = params.add("pattern_color_blend", 0, 255, 127, subclass, parent)
+        self.grid_size = params.add("pattern_grid_size",
+                                    min=10, max=100, default=30,
+                                    subgroup=subgroup, group=group) # Base grid size for checkers
+        self.color_shift = params.add("pattern_color_shift",
+                                      min=0, max=255, default=127,
+                                      subgroup=subgroup, group=group)
+        self.color_blend = params.add("pattern_color_blend",
+                                      min=0, max=255, default=127,
+                                      subgroup=subgroup, group=group)
 
-        self.wave_freq_x = params.add("pattern_wave_freq_x", 0.0, 100, 0.05, subclass, parent)
-        self.wave_freq_y = params.add("pattern_wave_freq_y", 0.0, 100, 0.05, subclass, parent)
-        self.brightness = params.add("pattern_brightness", 0.0, 100.0, 50.0, subclass, parent) 
+        self.wave_freq_x = params.add("pattern_wave_freq_x",
+                                      min=0.0, max=100, default=0.05,
+                                      subgroup=subgroup, group=group)
+        self.wave_freq_y = params.add("pattern_wave_freq_y",
+                                      min=0.0, max=100, default=0.05,
+                                      subgroup=subgroup, group=group)
+        self.brightness = params.add("pattern_brightness",
+                                     min=0.0, max=100.0, default=50.0,
+                                     subgroup=subgroup, group=group)
 
-        self.radial_freq = params.add("pattern_radial_freq", 1, 100, 30, subclass, parent) # Angle amount for polar warp
-        self.angular_freq = params.add("pattern_angular_freq", 1, 40, 1, subclass, parent) # Radius amount for polar warp
-        self.radial_mod = params.add("pattern_radial_mod", 0.1, 10.0, 1.0, subclass, parent) # Modulation factor for radial patterns
-        self.angle_mod = params.add("pattern_angle_mod", 0.1, 10.0, 1.0, subclass, parent) # Modulation factor for angle patterns
+        self.radial_freq = params.add("pattern_radial_freq",
+                                      min=1, max=100, default=30,
+                                      subgroup=subgroup, group=group) # Angle amount for polar warp
+        self.angular_freq = params.add("pattern_angular_freq",
+                                       min=1, max=40, default=1,
+                                       subgroup=subgroup, group=group) # Radius amount for polar warp
+        self.radial_mod = params.add("pattern_radial_mod",
+                                     min=0.1, max=10.0, default=1.0,
+                                     subgroup=subgroup, group=group) # Modulation factor for radial patterns
+        self.angle_mod = params.add("pattern_angle_mod",
+                                    min=0.1, max=10.0, default=1.0,
+                                    subgroup=subgroup, group=group) # Modulation factor for angle patterns
 
-        self.x_hue = params.add("x_hue", 0.0, 1.0, 0.5, subclass, parent) # Hue for X bars
-        self.y_hue = params.add("y_hue", 0.0, 1.0, 0.5, subclass, parent) # Hue for Y bars
+        self.x_hue = params.add("x_hue",
+                                min=0.0, max=1.0, default=0.5,
+                                subgroup=subgroup, group=group) # Hue for X bars
+        self.y_hue = params.add("y_hue",
+                                min=0.0, max=1.0, default=0.5,
+                                subgroup=subgroup, group=group) # Hue for Y bars
 
-        self.x_scale = params.add("pperlin_scale_x", 0.001, 0.05, 0.005, subclass, parent)
-        self.y_scale = params.add("pperlin_scale_y", 0.001, 0.05, 0.005, subclass, parent)
+        self.x_scale = params.add("pperlin_scale_x",
+                                  min=0.001, max=0.05, default=0.005,
+                                  subgroup=subgroup, group=group)
+        self.y_scale = params.add("pperlin_scale_y",
+                                  min=0.001, max=0.05, default=0.005,
+                                  subgroup=subgroup, group=group)
 
-        self.octaves = params.add("pperlin_octaves", 1, 10, 6, subclass, parent)
-        self.persistence = params.add("pperlin_persistence", 0.1, 1.0, 0.5, subclass, parent)
-        self.lacunarity= params.add("pperlin_lacunarity", 1.0, 4.0, 2.0, subclass, parent)
-        self.time_speed=params.add("pperlin_time_speed", 0.01, 1.0, 0.1, subclass, parent)
+        self.octaves = params.add("pperlin_octaves",
+                                  min=1, max=10, default=6,
+                                  subgroup=subgroup, group=group)
+        self.persistence = params.add("pperlin_persistence",
+                                      min=0.1, max=1.0, default=0.5,
+                                      subgroup=subgroup, group=group)
+        self.lacunarity = params.add("pperlin_lacunarity",
+                                     min=1.0, max=4.0, default=2.0,
+                                     subgroup=subgroup, group=group)
+        self.time_speed = params.add("pperlin_time_speed",
+                                     min=0.01, max=1.0, default=0.1,
+                                     subgroup=subgroup, group=group)
 
-        self.famp=params.add("pfractal_amplitude", 0.5, 5.0, 1.5, subclass, parent)
-        self.foct=params.add("pfractal_octaves", 1, 8, 4, subclass, parent)
+        self.famp = params.add("pfractal_amplitude",
+                               min=0.5, max=5.0, default=1.5,
+                               subgroup=subgroup, group=group)
+        self.foct = params.add("pfractal_octaves",
+                               min=1, max=8, default=4,
+                               subgroup=subgroup, group=group)
 
         # Fractal Sine parameters
-        self.x_perturb = params.add("x_perturb", 0, 50, 25.0, subclass, parent)
-        self.y_perturb = params.add("y_perturb", 0, 50, 25.0, subclass, parent)
-        self.phase_speed = params.add("phase_speed", 0.01, 10.0, 1.0, subclass, parent) 
+        self.x_perturb = params.add("x_perturb",
+                                    min=0, max=50, default=25.0,
+                                    subgroup=subgroup, group=group)
+        self.y_perturb = params.add("y_perturb",
+                                    min=0, max=50, default=25.0,
+                                    subgroup=subgroup, group=group)
+        self.phase_speed = params.add("phase_speed",
+                                      min=0.01, max=10.0, default=1.0,
+                                      subgroup=subgroup, group=group) 
 
         self.pattern_oscs = []
         self.prev = None
@@ -310,7 +385,6 @@ class Patterns:
         pattern[:, :, 0] = blue_channel
         pattern[:, :, 1] = green_channel
         pattern[:, :, 2] = red_channel
-        log.debug("Exiting _generate_bars successfully")
         return pattern
 
     def _generate_xy_bars(self, pattern: np.ndarray, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
@@ -422,8 +496,6 @@ class Patterns:
         pattern[:, :, 0] = np.where(checker_mask, c1_b, c2_b).astype(np.uint8) # Blue
         pattern[:, :, 1] = np.where(checker_mask, c1_g, c2_g).astype(np.uint8) # Green
         pattern[:, :, 2] = np.where(checker_mask, c1_r, c2_r).astype(np.uint8) # Red
-        log.debug("Applied colors to pattern channels")
-        log.debug("Exiting _generate_checkers successfully")
         return pattern
 
     def _generate_radial(self, pattern: np.ndarray, X: np.ndarray, Y: np.ndarray) -> np.ndarray:

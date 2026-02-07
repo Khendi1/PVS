@@ -14,15 +14,15 @@ Author: Kyle Henderson
 import sys
 import argparse
 import logging
-import cv2
 import signal
 import threading
+import cv2
 import numpy as np
 
 from settings import UserSettings
 from common import *
-from midi_input import *
-from mix import Mixer
+from midi import *
+from mixer import Mixer
 from effects import EffectManager
 
 from PyQt6.QtWidgets import QApplication, QGridLayout
@@ -33,21 +33,6 @@ from pyqt_gui import PyQTGUI
 # List of MIDI controller class names to identify and initialize
 CONTROLLER_NAMES = [SMC_Mixer.__name__, MidiMix.__name__]
 
-# Number of USB video devices to search for on boot, 
-# will safely ignore extra devices if not found
-DEFAULT_NUM_DEVICES = 5 
-
-DEFAULT_LOG_LEVEL = logging.INFO
-DEFAULT_SAVE_FILE = "saved_values.yaml"
-DEFAULT_PATCH_INDEX = 0
-
-VIDEO_OUTPUT_WINDOW_TITLE = "Synthesizer Output"
-
-WIDTH = 640
-HEIGHT = 480
-
-# Quit keys: 'q', 'Q', or 'ESC'
-ESCAPE_KEYS = [ord('q'), ord('Q'), 27]
 
 """Creates ArgumentParser, configures arguments, returns parser"""
 def parse_args():
@@ -84,8 +69,8 @@ def parse_args():
     parser.add_argument(
         '-c',
         '--control-layout',
-        default=LayoutType.QUAD_PREVIEW.name,
-        choices=[item.name for item in LayoutType],
+        default=Layout.QUAD_PREVIEW.name,
+        choices=[item.name for item in Layout],
         help='Choose the GUI layout: "tabbed" for 1x2 grid, or "quad" for a 2x2 grid.'
     )
     parser.add_argument(
@@ -103,7 +88,7 @@ def parse_args():
 def config_log(log_level):
     logging.basicConfig(
         level=log_level,
-        format='[%(asctime)s,%(msecs)03d] %(levelname)s: %(message)s',
+        format=f'%(levelname).1s | %(module)s | %(message)s',
         datefmt='%H:%M:%S'
     )
     log = logging.getLogger(__name__)
@@ -112,7 +97,7 @@ def config_log(log_level):
 
 """Video processing loop"""
 def video_loop(mixer, effects, should_quit, gui, settings):
-    wet_frame = dry_frame = mixer.get_mixed_frame()
+    wet_frame = dry_frame = mixer.get_frame()
     if dry_frame is None:
         log.error("Failed to get initial frame from mixer. Exiting video loop.")
         return
@@ -126,7 +111,7 @@ def video_loop(mixer, effects, should_quit, gui, settings):
             cv2.setWindowProperty(VIDEO_OUTPUT_WINDOW_TITLE, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     while not should_quit.is_set():
-        dry_frame = mixer.get_mixed_frame()
+        dry_frame = mixer.get_frame()
 
         if mixer.skip or dry_frame is None:
             mixer.skip = False
@@ -141,17 +126,18 @@ def video_loop(mixer, effects, should_quit, gui, settings):
         )
         frame_count += 1
         
+        # Always emit frame to GUI preview
+        rgb_image = cv2.cvtColor(wet_frame.astype(np.uint8), cv2.COLOR_BGR2RGB)
+        h, w, ch = rgb_image.shape
+        bytes_per_line = ch * w
+        qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
+        gui.video_frame_ready.emit(qt_image)
+
+        # Also show in external window if output mode is set
         if settings.output_mode.value != OutputMode.NONE.value:
             cv2.imshow(VIDEO_OUTPUT_WINDOW_TITLE, wet_frame.astype(np.uint8))
             if cv2.waitKey(1) & 0xFF in ESCAPE_KEYS:
                 break
-        else:
-            # Convert frame to QImage and emit signal
-            rgb_image = cv2.cvtColor(wet_frame.astype(np.uint8), cv2.COLOR_BGR2RGB)
-            h, w, ch = rgb_image.shape
-            bytes_per_line = ch * w
-            qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
-            gui.video_frame_ready.emit(qt_image)
 
     if settings.output_mode.value != OutputMode.NONE.value:
         cv2.destroyAllWindows()
@@ -163,15 +149,15 @@ def main(settings, controller_names):
 
     log.info("Initializing video synthesizer... Press 'q' or 'ESC' to quit")
 
-    src_1_effects = EffectManager(ParentClass.SRC_1_EFFECTS, WIDTH, HEIGHT)
-    src_2_effects = EffectManager(ParentClass.SRC_2_EFFECTS, WIDTH, HEIGHT)
-    post_effects = EffectManager(ParentClass.POST_EFFECTS, WIDTH, HEIGHT)
+    # Initialize effect managers for each source and for post-processing
+    src_1_effects = EffectManager(Groups.SRC_1_EFFECTS, WIDTH, HEIGHT)
+    src_2_effects = EffectManager(Groups.SRC_2_EFFECTS, WIDTH, HEIGHT)
+    post_effects = EffectManager(Groups.POST_EFFECTS, WIDTH, HEIGHT)
     effects = (src_1_effects, src_2_effects, post_effects)
 
     mixer = Mixer(effects, settings.num_devices, WIDTH, HEIGHT)
 
-    # Automatically identify and initialize midi controllers before creating the GUI
-    CONTROLLER_NAMES = [SMC_Mixer.__name__, MidiMix.__name__]
+    # Identify and initialize midi controllers before creating the GUI
     controllers = identify_midi_ports(controller_names, 
                                       src_1_effects.params, 
                                       src_2_effects.params, 
@@ -183,12 +169,12 @@ def main(settings, controller_names):
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     
     app = QApplication(sys.argv)
-    main_window = PyQTGUI(effects, settings.layout.value, mixer)
-
+    main_window = PyQTGUI(effects, settings, mixer)
     main_window.show() 
     
     should_quit = threading.Event()
     
+    # Start main application thread to run the PyQt and video event loop
     video_thread = threading.Thread(
         target=video_loop,
         args=(mixer, effects, should_quit, main_window, settings)
@@ -197,8 +183,8 @@ def main(settings, controller_names):
     
     log.info("Starting PyQt event loop.")
     exit_code = app.exec()
+
     log.info("PyQt event loop finished.")
-    
     should_quit.set()
     video_thread.join()
     sys.exit(exit_code)
@@ -212,7 +198,6 @@ def main(settings, controller_names):
             else:
                 log.info("MIDI thread stopped successfully.")
 
-    log.info("Goodbye!")
 
 
 if __name__ == "__main__":

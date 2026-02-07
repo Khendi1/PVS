@@ -1,14 +1,12 @@
 import enum
-import sys
-import numpy as np
+import logging
+from param import ParamTable, Param
+from common import Groups, MixerSource, Widget, Layout
+from mixer import MixModes
+from save import SaveController
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QPushButton, QGroupBox, QRadioButton, QScrollArea, QToolButton, QSizePolicy, QLineEdit, QTabWidget, QComboBox, QDialog, QGridLayout, QColorDialog
 from PyQt6.QtGui import QGuiApplication, QImage, QPixmap, QPainter, QColor
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSignal, pyqtSlot, QTimer
-import logging
-from param import ParamTable, Param
-from common import ParentClass, SourceIndex, WidgetType, LayoutType
-from mix import MixModes # Import MixModes
-from save import SaveController
 
 
 log = logging.getLogger(__name__)
@@ -18,8 +16,8 @@ log = logging.getLogger(__name__)
 Custom color picker widget for selecting HSV colors.
 """
 class ColorPickerWidget(QWidget):
-    def __init__(self, name, h_param, s_param, v_param, parent=None):
-        super().__init__(parent)
+    def __init__(self, name, h_param, s_param, v_param, group=None):
+        super().__init__(group)
         self.h_param = h_param
         self.s_param = s_param
         self.v_param = v_param
@@ -54,8 +52,8 @@ class ColorPickerWidget(QWidget):
 Widget to display video frames with aspect ratio preservation.
 """
 class VideoWidget(QLabel):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self, group=None):
+        super().__init__(group)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self._pixmap = None
 
@@ -90,10 +88,12 @@ class VideoWidget(QLabel):
         else:
             super().paintEvent(event)
 
-
+"""
+Dialog for managing LFO linkage to a parameter and editing LFO settings.
+"""
 class LFOManagerDialog(QDialog):
-    def __init__(self, param, osc_bank, gui_instance, mod_button, parent=None):
-        super().__init__(parent)
+    def __init__(self, param, osc_bank, gui_instance, mod_button, group=None):
+        super().__init__(group)
         self.param = param
         self.osc_bank = osc_bank
         self.gui_instance = gui_instance
@@ -130,7 +130,7 @@ class LFOManagerDialog(QDialog):
             for param_name in ['shape', 'frequency', 'amplitude', 'phase', 'noise_octaves', 'noise_persistence', 'noise_lacunarity', 'noise_repeat', 'noise_base']:
                 if hasattr(osc, param_name):
                     param = getattr(osc, param_name)
-                    widget = self.gui_instance.create_param_widget(param)
+                    widget = self.gui_instance._create_param_widget(param)
                     self.controls_layout.addWidget(widget)
 
     def link_new_lfo(self):
@@ -150,40 +150,39 @@ class LFOManagerDialog(QDialog):
             self.mod_button.setStyleSheet(PyQTGUI.LFO_BUTTON_UNLINKED_STYLE) # Update button style
             self.rebuild_ui()
 
+"""Main PyQt GUI class for the video synthesizer application."""
 class PyQTGUI(QMainWindow):
     LFO_BUTTON_UNLINKED_STYLE = "QPushButton { background-color: #607D8B; color: white; }" # Default grey
     LFO_BUTTON_LINKED_STYLE = "QPushButton { background-color: #4CAF50; color: white; }" # Green
     video_frame_ready = pyqtSignal(QImage)
 
-    def __init__(self, effects, layout, mixer=None):
+    def __init__(self, effects, settings, mixer=None):
         super().__init__()
-        self.layout_style = layout
+        self.layout_style = settings.layout.value
         self.effects = effects
         self.mixer = mixer
-        self.src_1_effects = effects[SourceIndex.SRC_1]
-        self.src_2_effects = effects[SourceIndex.SRC_2]
-        self.post_effects = effects[SourceIndex.POST]
+        self.src_1_effects = effects[MixerSource.SRC_1]
+        self.src_2_effects = effects[MixerSource.SRC_2]
+        self.post_effects = effects[MixerSource.POST]
 
         self.src_1_params = self.src_1_effects.params
         self.src_2_params = self.src_2_effects.params
         self.post_params = self.post_effects.params
-
-        self.src_1_toggles = self.src_1_effects.toggles
-        self.src_2_toggles = self.src_2_effects.toggles
-        self.post_toggles = self.post_effects.toggles
+        self.settings_params = settings.params
 
         # TODO: test if this works
         self.all_params = ParamTable()
         self.all_params.params.update(self.src_1_params)
         self.all_params.params.update(self.src_2_params)
         self.all_params.params.update(self.post_params)
+        self.all_params.params.update(self.settings_params)
         self.save_controller = SaveController(self.all_params)
-        self.save_controller.patch_loaded_callback = self.refresh_all_widgets
+        self.save_controller.patch_loaded_callback = self._refresh_all_widgets
 
         self.mixer_widgets = {}
         self.param_widgets = {}
 
-        self.osc_banks = [(effect_manager.oscs, effect_manager.parent.name) for effect_manager in effects]
+        self.osc_banks = [(effect_manager.oscs, effect_manager.group.name) for effect_manager in effects]
 
         self.setWindowTitle("PyQt Control Panel")
         self.central_widget = QWidget()
@@ -194,14 +193,16 @@ class PyQTGUI(QMainWindow):
         self.create_ui()
 
         self.lfo_refresh_timer = QTimer(self)
-        self.lfo_refresh_timer.timeout.connect(self.refresh_lfo_buttons)
+        self.lfo_refresh_timer.timeout.connect(self._refresh_lfo_buttons)
         self.lfo_refresh_timer.start(250)
+  
         
-    def refresh_lfo_buttons(self):
+    def _refresh_lfo_buttons(self):
         self.all_params = ParamTable()
         self.all_params.params.update(self.src_1_effects.params)
         self.all_params.params.update(self.src_2_effects.params)
         self.all_params.params.update(self.post_effects.params)
+        self.all_params.params.update(self.settings_params)
         for param_name, widget in self.param_widgets.items():
             param = self.all_params.get(param_name)
             if param:
@@ -212,12 +213,18 @@ class PyQTGUI(QMainWindow):
                     else:
                         mod_button.setStyleSheet(PyQTGUI.LFO_BUTTON_UNLINKED_STYLE)
 
+
     def _create_layout(self):
-        print(f"Creating layout: {self.layout_style}")
-        if self.layout_style == LayoutType.QUAD_PREVIEW.value:
-            self._create_quad_layout()
-        elif self.layout_style == LayoutType.SPLIT.value:
-            self._create_tabbed_layout()
+        log.debug(f"Creating layout: {self.layout_style}/{Layout(self.layout_style).name}")
+        match Layout(self.layout_style):
+            case Layout.QUAD_FULL:
+                log.error("QUAD_FULL layout is not yet implemented. Defaulting to QUAD_PREVIEW.")
+                self._create_quad_layout()
+            case Layout.QUAD_PREVIEW:
+                self._create_quad_layout()
+            case Layout.SPLIT:
+                self._create_tabbed_layout()
+
 
     def _create_quad_layout(self):
         self.root_layout = QGridLayout(self.central_widget)
@@ -292,25 +299,25 @@ class PyQTGUI(QMainWindow):
         button_r1 = QPushButton("R1")
         button_r1.setFixedWidth(30)
         button_r1.setToolTip("Reset Source 1 Params")
-        button_r1.clicked.connect(self.reset_src1_params)
+        button_r1.clicked.connect(self._reset_src1_params)
         button_column_layout.addWidget(button_r1)
 
         button_r2 = QPushButton("R2")
         button_r2.setFixedWidth(30)
         button_r2.setToolTip("Reset Source 2 Params")
-        button_r2.clicked.connect(self.reset_src2_params)
+        button_r2.clicked.connect(self._reset_src2_params)
         button_column_layout.addWidget(button_r2)
 
         button_rp = QPushButton("RP")
         button_rp.setFixedWidth(30)
         button_rp.setToolTip("Reset Post-Processing Params")
-        button_rp.clicked.connect(self.reset_post_params)
+        button_rp.clicked.connect(self._reset_post_params)
         button_column_layout.addWidget(button_rp)
 
         button_ra = QPushButton("RA")
         button_ra.setFixedWidth(30)
         button_ra.setToolTip("Reset All Params")
-        button_ra.clicked.connect(self.reset_all_params)
+        button_ra.clicked.connect(self._reset_all_params)
         button_column_layout.addWidget(button_ra)
 
         button_column_layout.addStretch(1) # Pushes buttons to the top
@@ -333,11 +340,21 @@ class PyQTGUI(QMainWindow):
         mixer_scroll.setWidget(mixer_container)
         bottom_right_tabs.addTab(mixer_scroll, "Mixer")
 
+        # User Settings Tab
+        user_settings_container = QWidget()
+        self.user_settings_layout = QVBoxLayout(user_settings_container)
+        user_settings_scroll = QScrollArea()
+        user_settings_scroll.setWidgetResizable(True)
+        user_settings_scroll.setWidget(user_settings_container)
+        bottom_right_tabs.addTab(user_settings_scroll, "User Settings")
+
         self.root_layout.addWidget(bottom_right_tabs, 1, 1)
-        
+
         # --- Set Stretch Factors ---
         self.root_layout.setColumnStretch(0, 1)
         self.root_layout.setColumnStretch(1, 1)
+        self.root_layout.setRowStretch(0, 1)
+        self.root_layout.setRowStretch(1, 1)
 
 
     def _create_tabbed_layout(self):
@@ -405,109 +422,10 @@ class PyQTGUI(QMainWindow):
         bottom_pane_tabs.addTab(uncategorized_scroll, "Uncategorized")
 
 
-    def _mixer_tab(self, parent_groups, layout_map):
-        params_in_group = parent_groups.pop(ParentClass.MIXER)
-        target_layout = layout_map[ParentClass.MIXER]
-
-        save_button = QPushButton("Save Patch")
-        save_button.clicked.connect(self.save_controller.save_patch)
-        target_layout.addWidget(save_button)
-
-        patch_recall_layout = QHBoxLayout()
-        load_prev_button = QPushButton("Load Previous Patch")
-        load_prev_button.clicked.connect(self.save_controller.load_prev_patch)
-        patch_recall_layout.addWidget(load_prev_button)
-
-        load_random_button = QPushButton("Load Random Patch")
-        load_random_button.clicked.connect(self.save_controller.load_random_patch)
-        patch_recall_layout.addWidget(load_random_button)
-
-        load_next_button = QPushButton("Load Next Patch")
-        load_next_button.clicked.connect(self.save_controller.load_next_patch)
-        patch_recall_layout.addWidget(load_next_button)
-        
-        target_layout.addLayout(patch_recall_layout)
-
-        family_groups = {}
-        for param in params_in_group:
-            if param.family not in family_groups:
-                family_groups[param.family] = []
-            family_groups[param.family].append(param)
-        
-        for family_name, params_in_family in family_groups.items():
-
-            blend_mode_param, chroma_key_hue_sat_val_params, source_params = None, [], {}
-            
-            all_mixer_family_params = list(params_in_family)
-            params_in_family = []
-            
-            for param in all_mixer_family_params:
-                if param.name == 'blend_mode':
-                    blend_mode_param = param
-                elif param.name in ['upper_hue', 'upper_sat', 'upper_val', 'lower_hue', 'lower_sat', 'lower_val']:
-                    chroma_key_hue_sat_val_params.append(param)
-                elif param.name in ['source_1', 'source_2']:
-                    source_params[param.name] = param
-                else:
-                    params_in_family.append(param)
-            
-            if len(source_params) == 2:
-                source_layout = QHBoxLayout()
-                
-                s1_param = source_params['source_1']
-                s1_label = QLabel(s1_param.name)
-                s1_combo = QComboBox()
-                s1_combo.addItems([str(o) for o in s1_param.options])
-                s1_combo.setCurrentText(str(s1_param.value))
-                s1_combo.currentTextChanged.connect(lambda text, p=s1_param: self.on_dropdown_change(p, text))
-                source_layout.addWidget(s1_label)
-                source_layout.addWidget(s1_combo)
-
-                s2_param = source_params['source_2']
-                s2_label = QLabel(s2_param.name)
-                s2_combo = QComboBox()
-                s2_combo.addItems([str(o) for o in s2_param.options])
-                s2_combo.setCurrentText(str(s2_param.value))
-                s2_combo.currentTextChanged.connect(lambda text, p=s2_param: self.on_dropdown_change(p, text))
-                source_layout.addWidget(s2_label)
-                source_layout.addWidget(s2_combo)
-
-                swap_button = QPushButton("Swap")
-                swap_button.clicked.connect(self.mixer.swap.toggle)
-                source_layout.addWidget(swap_button)
-                
-                target_layout.addLayout(source_layout)
-            
-            if blend_mode_param:
-                widget = self.create_param_widget(blend_mode_param)
-                target_layout.addWidget(widget)
-
-            if len(chroma_key_hue_sat_val_params) == 6:
-                chroma_key_dict = {p.name: p for p in chroma_key_hue_sat_val_params}
-                color_pickers_layout = QHBoxLayout()
-                
-                upper_picker = ColorPickerWidget('Upper Color', chroma_key_dict['upper_hue'], chroma_key_dict['upper_sat'], chroma_key_dict['upper_val'])
-                lower_picker = ColorPickerWidget('Lower Color', chroma_key_dict['lower_hue'], chroma_key_dict['lower_sat'], chroma_key_dict['lower_val'])
-                
-                color_pickers_layout.addWidget(upper_picker)
-                color_pickers_layout.addWidget(lower_picker)
-                
-                target_layout.addLayout(color_pickers_layout)
-                
-                self.mixer_widgets['upper_color_picker'] = upper_picker
-                self.mixer_widgets['lower_color_picker'] = lower_picker
-
-            for param in params_in_family:
-                widget = self.create_param_widget(param)
-                target_layout.addWidget(widget)
-        
-        target_layout.addStretch(1)
-
-
-    def open_lfo_dialog(self, param, button):
-        if param.parent in [ParentClass.SRC_1_ANIMATIONS, ParentClass.SRC_1_EFFECTS]:
+    def _open_lfo_dialog(self, param, button):
+        if param.group in [Groups.SRC_1_ANIMATIONS, Groups.SRC_1_EFFECTS]:
             osc_bank = self.src_1_effects.oscs
-        elif param.parent in [ParentClass.SRC_2_ANIMATIONS, ParentClass.SRC_2_EFFECTS]:
+        elif param.group in [Groups.SRC_2_ANIMATIONS, Groups.SRC_2_EFFECTS]:
             osc_bank = self.src_2_effects.oscs
         else:
             osc_bank = self.post_effects.oscs
@@ -528,66 +446,178 @@ class PyQTGUI(QMainWindow):
         """
         all_params_list = list(self.src_1_params.values()) + \
                           list(self.src_2_params.values()) + \
-                          list(self.post_params.values())
+                          list(self.post_params.values()) + \
+                          list(self.settings_params.values())
 
-        parent_groups = {}
+        groups = {}
         for param in all_params_list:
-            parent_key = param.parent if param.parent is not None else "Uncategorized"
-            if not isinstance(parent_key, (str, int, float, bool, tuple, type(None), ParentClass)):
-                log.warning(f"Unhashable parent_key for param '{param.name}': type={{type(parent_key)}}, value={{parent_key}}. Assigning to 'Uncategorized'.")
-                parent_key = "Uncategorized"
-            if parent_key not in parent_groups:
-                parent_groups[parent_key] = []
-            parent_groups[parent_key].append(param)
+            group_key = param.group if param.group is not None else "Uncategorized"
+            if not isinstance(group_key, (str, int, float, bool, tuple, type(None), Groups)):
+                log.warning(f"Unhashable group_key for param '{param.name}': type={{type(group_key)}}, value={{group_key}}. Assigning to 'Uncategorized'.")
+                group_key = "Uncategorized"
+            if group_key not in groups:
+                groups[group_key] = []
+            groups[group_key].append(param)
         
         layout_map = {
-            ParentClass.SRC_1_EFFECTS: self.src1_effects_layout,
-            ParentClass.SRC_1_ANIMATIONS: self.src1_animations_layout,
-            ParentClass.SRC_2_EFFECTS: self.src2_effects_layout,
-            ParentClass.SRC_2_ANIMATIONS: self.src2_animations_layout,
-            ParentClass.POST_EFFECTS: self.post_effects_layout,
-            ParentClass.MIXER: self.mixer_layout,
+            Groups.SRC_1_EFFECTS: self.src1_effects_layout,
+            Groups.SRC_1_ANIMATIONS: self.src1_animations_layout,
+            Groups.SRC_2_EFFECTS: self.src2_effects_layout,
+            Groups.SRC_2_ANIMATIONS: self.src2_animations_layout,
+            Groups.POST_EFFECTS: self.post_effects_layout,
+            Groups.MIXER: self.mixer_layout,
+            Groups.USER_SETTINGS: self.user_settings_layout,
             "Uncategorized": self.uncategorized_layout,
         }
 
-        if ParentClass.MIXER in parent_groups:
-            self._mixer_tab(parent_groups, layout_map)
-
-        for parent_enum_or_str, params_in_group in parent_groups.items():
-            target_layout = layout_map.get(parent_enum_or_str)
-
+        for group_enum_or_str, params_in_subgroup in groups.items():
+            target_layout = layout_map.get(group_enum_or_str)
             if target_layout is None:
-                log.warning(f"No target layout found for parameter group '{parent_enum_or_str}'. Skipping.")
+                log.warning(f"No target layout found for parameter subgroup '{group_enum_or_str}'. Skipping.")
                 continue
 
-            family_tab_widget = QTabWidget()
-            target_layout.addWidget(family_tab_widget)
-
-            family_groups = {}
-            for param in params_in_group:
-                if param.family not in family_groups:
-                    family_groups[param.family] = []
-                family_groups[param.family].append(param)
+            subgroups = {}
+            for param in params_in_subgroup:
+                if param.subgroup not in subgroups:
+                    subgroups[param.subgroup] = []
+                subgroups[param.subgroup].append(param)
             
-            for family_name, params_in_family in family_groups.items():
-                family_widget = QWidget()
-                family_layout = QVBoxLayout(family_widget)
-
-                for param in params_in_family:
-                    widget = self.create_param_widget(param)
-                    family_layout.addWidget(widget)
-
-                family_scroll = QScrollArea()
-                family_scroll.setWidgetResizable(True)
-                family_scroll.setWidget(family_widget)
+            use_sub_tabs = True
+            if len(subgroups) == 1:
+                subgroup_name = list(subgroups.keys())[0]
                 
-                tab_title = family_name.replace("_", " ").title()
-                family_tab_widget.addTab(family_scroll, tab_title)
+                group_name_str = ""
+                if isinstance(group_enum_or_str, enum.Enum):
+                    group_name_str = group_enum_or_str.name
+                else:
+                    group_name_str = group_enum_or_str
 
-        self.update_mixer_visibility()
+                subgroup_name_str = ""
+                if isinstance(subgroup_name, enum.Enum):
+                    subgroup_name_str = subgroup_name.name
+                else:
+                    subgroup_name_str = subgroup_name
+
+                if subgroup_name_str.replace('_', '').replace(' ', '').lower() == group_name_str.replace('_', '').replace(' ', '').lower():
+                    use_sub_tabs = False
+
+            if not use_sub_tabs:
+                # No sub-tabs, add widgets directly
+                if group_enum_or_str == Groups.MIXER:
+                    save_button = QPushButton("Save Patch")
+                    save_button.clicked.connect(self.save_controller.save_patch)
+                    target_layout.addWidget(save_button)
+
+                    patch_recall_layout = QHBoxLayout()
+                    load_prev_button = QPushButton("Load Previous Patch")
+                    load_prev_button.clicked.connect(self.save_controller.load_prev_patch)
+                    patch_recall_layout.addWidget(load_prev_button)
+
+                    load_random_button = QPushButton("Load Random Patch")
+                    load_random_button.clicked.connect(self.save_controller.load_random_patch)
+                    patch_recall_layout.addWidget(load_random_button)
+
+                    load_next_button = QPushButton("Load Next Patch")
+                    load_next_button.clicked.connect(self.save_controller.load_next_patch)
+                    patch_recall_layout.addWidget(load_next_button)
+                    
+                    target_layout.addLayout(patch_recall_layout)
+
+                    for params_in_subgroup in subgroups.values():
+                        blend_mode_param, chroma_key_hue_sat_val_params, source_params, remaining_params = None, [], {}, []
+                        
+                        all_mixer_subgroup_params = list(params_in_subgroup)
+                        
+                        for param in all_mixer_subgroup_params:
+                            if param.name == 'blend_mode':
+                                blend_mode_param = param
+                            elif param.name in ['upper_hue', 'upper_sat', 'upper_val', 'lower_hue', 'lower_sat', 'lower_val']:
+                                chroma_key_hue_sat_val_params.append(param)
+                            elif param.name in ['source_1', 'source_2']:
+                                source_params[param.name] = param
+                            else:
+                                remaining_params.append(param)
+
+                        if len(source_params) == 2:
+                            source_layout = QHBoxLayout()
+                            
+                            s1_param = source_params['source_1']
+                            s1_label = QLabel(s1_param.name)
+                            s1_combo = QComboBox()
+                            s1_combo.addItems([str(o) for o in s1_param.options])
+                            s1_combo.setCurrentText(str(s1_param.value))
+                            s1_combo.currentTextChanged.connect(lambda text, p=s1_param: self._on_dropdown_change(p, text))
+                            source_layout.addWidget(s1_label)
+                            source_layout.addWidget(s1_combo)
+
+                            s2_param = source_params['source_2']
+                            s2_label = QLabel(s2_param.name)
+                            s2_combo = QComboBox()
+                            s2_combo.addItems([str(o) for o in s2_param.options])
+                            s2_combo.setCurrentText(str(s2_param.value))
+                            s2_combo.currentTextChanged.connect(lambda text, p=s2_param: self._on_dropdown_change(p, text))
+                            source_layout.addWidget(s2_label)
+                            source_layout.addWidget(s2_combo)
+
+                            swap_button = QPushButton("Swap")
+                            swap_button.clicked.connect(lambda: self._swap_sources(s1_param, s2_param, s1_combo, s2_combo))
+                            source_layout.addWidget(swap_button)
+                            
+                            target_layout.addLayout(source_layout)
+
+                        if blend_mode_param:
+                            widget = self._create_param_widget(blend_mode_param)
+                            target_layout.addWidget(widget)
+
+                        if len(chroma_key_hue_sat_val_params) == 6:
+                            chroma_key_dict = {p.name: p for p in chroma_key_hue_sat_val_params}
+                            color_pickers_layout = QHBoxLayout()
+                            
+                            upper_picker = ColorPickerWidget('Upper Color', chroma_key_dict['upper_hue'], chroma_key_dict['upper_sat'], chroma_key_dict['upper_val'])
+                            lower_picker = ColorPickerWidget('Lower Color', chroma_key_dict['lower_hue'], chroma_key_dict['lower_sat'], chroma_key_dict['lower_val'])
+                            
+                            color_pickers_layout.addWidget(upper_picker)
+                            color_pickers_layout.addWidget(lower_picker)
+                            
+                            target_layout.addLayout(color_pickers_layout)
+                            
+                            self.mixer_widgets['upper_color_picker'] = upper_picker
+                            self.mixer_widgets['lower_color_picker'] = lower_picker
+
+                        for param in remaining_params:
+                            widget = self._create_param_widget(param)
+                            target_layout.addWidget(widget)
+
+                else:
+                    for params_in_subgroup in subgroups.values():
+                        for param in params_in_subgroup:
+                            widget = self._create_param_widget(param)
+                            target_layout.addWidget(widget)
+                target_layout.addStretch(1)
+            else:
+                # Create sub-tabs for each subgroup
+                subgroup_tab_widget = QTabWidget()
+                target_layout.addWidget(subgroup_tab_widget)
+                
+                for subgroup_name, params_in_subgroup in subgroups.items():
+                    subgroup_widget = QWidget()
+                    subgroup_layout = QVBoxLayout(subgroup_widget)
+
+                    for param in params_in_subgroup:
+                        widget = self._create_param_widget(param)
+                        subgroup_layout.addWidget(widget)
+
+                    subgroup_scroll = QScrollArea()
+                    subgroup_scroll.setWidgetResizable(True)
+                    subgroup_scroll.setWidget(subgroup_widget)
+                    
+                    tab_title = subgroup_name.replace("_", " ").title() if isinstance(subgroup_name, str) else subgroup_name.name.replace("_", " ").title()
+                    subgroup_tab_widget.addTab(subgroup_scroll, tab_title)
+
+        self._update_mixer_visibility()
 
 
-    def create_param_widget(self, param: Param):
+    def _create_param_widget(self, param: Param):
         widget = QWidget()
         widget.setProperty("param_name", param.name)
         layout = QHBoxLayout(widget)
@@ -597,18 +627,18 @@ class PyQTGUI(QMainWindow):
         label.setFixedWidth(100)
         layout.addWidget(label)
 
-        if param.type == WidgetType.RADIO:
-            radio_button_group = QWidget()
-            radio_layout = QHBoxLayout(radio_button_group)
+        if param.type == Widget.RADIO:
+            radio_button_subgroup = QWidget()
+            radio_layout = QHBoxLayout(radio_button_subgroup)
             for option in param.options:
                 radio_button = QRadioButton(option.name.replace('_', ' ').title())
-                radio_button.toggled.connect(lambda checked, p=param, v=option.value: self.on_radio_change(p, v, checked))
+                radio_button.toggled.connect(lambda checked, p=param, v=option.value: self._on_radio_change(p, v, checked))
                 if option.value == param.value:
                     radio_button.setChecked(True)
                 radio_layout.addWidget(radio_button)
-            layout.addWidget(radio_button_group)
+            layout.addWidget(radio_button_subgroup)
 
-        elif param.type == WidgetType.DROPDOWN:
+        elif param.type == Widget.DROPDOWN:
             combo_box = QComboBox()
             if isinstance(param.options, dict):
                 for key, value in param.options.items():
@@ -641,7 +671,7 @@ class PyQTGUI(QMainWindow):
                     pass
 
 
-            combo_box.currentIndexChanged.connect(lambda index, p=param, c=combo_box: self.on_dropdown_change(p, c.itemData(index)))
+            combo_box.currentIndexChanged.connect(lambda index, p=param, c=combo_box: self._on_dropdown_change(p, c.itemData(index)))
             layout.addWidget(combo_box)
 
         else:  # Default to SLIDER
@@ -670,19 +700,19 @@ class PyQTGUI(QMainWindow):
                 slider.setValue(param.value)
                 value_input.setText(str(param.value))
 
-            slider.valueChanged.connect(lambda value, p=param: self.on_slider_change(p, value))
+            slider.valueChanged.connect(lambda value, p=param: self._on_slider_change(p, value))
             layout.addWidget(slider)
             
             slider.setProperty("value_input", value_input)
-            value_input.editingFinished.connect(lambda p=param, vi=value_input, s=slider: self.on_text_input_change(p, vi, s))
+            value_input.editingFinished.connect(lambda p=param, vi=value_input, s=slider: self._on_text_input_change(p, vi, s))
             layout.addWidget(value_input)
 
         reset_button = QPushButton("R")
         reset_button.setFixedWidth(25)
-        reset_button.clicked.connect(lambda: self.on_reset_click(param, widget))
+        reset_button.clicked.connect(lambda: self._on_reset_click(param, widget))
         layout.addWidget(reset_button)
 
-        if param.parent == ParentClass.MIXER:
+        if param.group == Groups.MIXER:
             self.mixer_widgets[param.name] = widget
         else:
             self.param_widgets[param.name] = widget
@@ -690,7 +720,7 @@ class PyQTGUI(QMainWindow):
         return widget
 
 
-    def on_slider_change(self, param: Param, value):
+    def _on_slider_change(self, param: Param, value):
         if isinstance(param.default, float):
             param.value = value / 1000.0
         else:
@@ -704,7 +734,7 @@ class PyQTGUI(QMainWindow):
             value_input.setText(str(round(param.value, 3) if isinstance(param.default, float) else param.value))
 
 
-    def on_text_input_change(self, param: Param, value_input: QLineEdit, slider: QSlider):
+    def _on_text_input_change(self, param: Param, value_input: QLineEdit, slider: QSlider):
         try:
             new_value_str = value_input.text()
             if isinstance(param.default, float):
@@ -724,14 +754,14 @@ class PyQTGUI(QMainWindow):
             value_input.setText(str(round(param.value, 3) if isinstance(param.default, float) else param.value))
 
 
-    def on_radio_change(self, param: Param, value, checked):
+    def _on_radio_change(self, param: Param, value, checked):
         if checked:
             param.value = value
             if param.name == 'blend_mode':
-                self.update_mixer_visibility()
+                self._update_mixer_visibility()
 
 
-    def on_dropdown_change(self, param: Param, data):
+    def _on_dropdown_change(self, param: Param, data):
         try:
             if isinstance(data, enum.Enum):
                 param.value = data.value
@@ -741,13 +771,14 @@ class PyQTGUI(QMainWindow):
 
             if self.mixer:
                 if param.name == "source_1":
-                    self.mixer.start_video(data, SourceIndex.SRC_1)
+                    self.mixer.start_video(data, MixerSource.SRC_1)
                 elif param.name == "source_2":
-                    self.mixer.start_video(data, SourceIndex.SRC_2)
+                    self.mixer.start_video(data, MixerSource.SRC_2)
         except (ValueError, TypeError):
             pass
 
-    def on_reset_click(self, param: Param, widget: QWidget):
+
+    def _on_reset_click(self, param: Param, widget: QWidget):
         param.reset()
         slider = widget.findChild(QSlider)
         if slider:
@@ -771,28 +802,32 @@ class PyQTGUI(QMainWindow):
         if combo_box:
             combo_box.setCurrentText(str(param.value))
 
-    def reset_src1_params(self):
+
+    def _reset_src1_params(self):
         for param in self.src_1_params.values():
             param.reset()
-        self.refresh_all_widgets()
+        self._refresh_all_widgets()
 
-    def reset_src2_params(self):
+
+    def _reset_src2_params(self):
         for param in self.src_2_params.values():
             param.reset()
-        self.refresh_all_widgets()
+        self._refresh_all_widgets()
 
-    def reset_post_params(self):
+
+    def _reset_post_params(self):
         for param in self.post_params.values():
             param.reset()
-        self.refresh_all_widgets()
+        self._refresh_all_widgets()
 
-    def reset_all_params(self):
+
+    def _reset_all_params(self):
         for param in self.all_params.values():
             param.reset()
-        self.refresh_all_widgets()
+        self._refresh_all_widgets()
 
 
-    def update_mixer_visibility(self):
+    def _update_mixer_visibility(self):
         blend_mode = self.mixer.blend_mode.value
 
         widgets_visibility = {
@@ -810,7 +845,7 @@ class PyQTGUI(QMainWindow):
                 widget.setVisible(True) # Always show the blend mode selector
 
 
-    def refresh_all_widgets(self):
+    def _refresh_all_widgets(self):
         for widget in self.findChildren(QWidget):
             param_name = widget.property("param_name")
             if param_name and param_name in self.all_params:
@@ -854,8 +889,3 @@ class PyQTGUI(QMainWindow):
                             combo_box.setCurrentIndex(idx)
                         except ValueError:
                             pass
-
-
-    def closeEvent(self, event):
-        QApplication.instance().quit()
-        event.accept()
