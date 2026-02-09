@@ -16,6 +16,7 @@ import argparse
 import logging
 import signal
 import threading
+import time
 import cv2
 import numpy as np
 
@@ -105,41 +106,86 @@ def video_loop(mixer, effects, should_quit, gui, settings):
     prev_frame = dry_frame.copy()
     frame_count = 0
 
-    if settings.output_mode.value != OutputMode.NONE.value:
+    # Performance monitoring
+    perf_samples = []
+    perf_log_interval = 100  # Log every 100 frames
+
+    # CV window setup
+    cv_window_active = settings.output_mode.value != OutputMode.NONE.value
+    if cv_window_active:
         cv2.namedWindow(VIDEO_OUTPUT_WINDOW_TITLE, cv2.WINDOW_NORMAL)
         if settings.output_mode.value == OutputMode.FULLSCREEN.value:  # Fullscreen mode
             cv2.setWindowProperty(VIDEO_OUTPUT_WINDOW_TITLE, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     while not should_quit.is_set():
+        frame_start = time.perf_counter()
+        perf_data = {}
+
+        # Mixer get_frame
+        t0 = time.perf_counter()
         dry_frame = mixer.get_frame()
+        perf_data['mixer'] = (time.perf_counter() - t0) * 1000
 
         if mixer.skip or dry_frame is None:
             mixer.skip = False
             log.warning("Skipping frame due to source read failure")
             continue
 
+        # LFO updates
+        t0 = time.perf_counter()
         for effect_manager in effects:
             effect_manager.oscs.update()
+        perf_data['lfos'] = (time.perf_counter() - t0) * 1000
 
-        prev_frame, wet_frame = effects[2].get_frames(
+        # Effects processing
+        t0 = time.perf_counter()
+        prev_frame, wet_frame = effects[MixerSource.POST.value].get_frames(
             dry_frame, wet_frame, prev_frame, frame_count
         )
+        perf_data['effects'] = (time.perf_counter() - t0) * 1000
+
         frame_count += 1
-        
-        # Always emit frame to GUI preview
+
+        # GUI emit
+        t0 = time.perf_counter()
         rgb_image = cv2.cvtColor(wet_frame.astype(np.uint8), cv2.COLOR_BGR2RGB)
         h, w, ch = rgb_image.shape
         bytes_per_line = ch * w
-        qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
+        # CRITICAL: Copy data to prevent QImage from referencing temporary/modified memory
+        qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888).copy()
         gui.video_frame_ready.emit(qt_image)
+        perf_data['gui_emit'] = (time.perf_counter() - t0) * 1000
 
-        # Also show in external window if output mode is set
-        if settings.output_mode.value != OutputMode.NONE.value:
+        # External window
+        if cv_window_active:
+            t0 = time.perf_counter()
             cv2.imshow(VIDEO_OUTPUT_WINDOW_TITLE, wet_frame.astype(np.uint8))
             if cv2.waitKey(1) & 0xFF in ESCAPE_KEYS:
                 break
+            perf_data['cv2_show'] = (time.perf_counter() - t0) * 1000
 
-    if settings.output_mode.value != OutputMode.NONE.value:
+        # Total frame time
+        elapsed = time.perf_counter() - frame_start
+        perf_data['total'] = elapsed * 1000
+        perf_data['fps'] = 1.0 / elapsed if elapsed > 0 else 0
+
+        perf_samples.append(perf_data)
+
+        # Log performance stats periodically
+        if frame_count % perf_log_interval == 0 and perf_samples:
+            avg_stats = {}
+            for key in perf_samples[0].keys():
+                avg_stats[key] = sum(s[key] for s in perf_samples) / len(perf_samples)
+            log.info(f"Performance (avg over {len(perf_samples)} frames): "
+                    f"FPS={avg_stats['fps']:.1f} | "
+                    f"mixer={avg_stats['mixer']:.1f}ms | "
+                    f"lfos={avg_stats['lfos']:.1f}ms | "
+                    f"effects={avg_stats['effects']:.1f}ms | "
+                    f"gui={avg_stats['gui_emit']:.1f}ms | "
+                    f"total={avg_stats['total']:.1f}ms")
+            perf_samples.clear()
+
+    if cv_window_active:
         cv2.destroyAllWindows()
     log.info("Video loop has gracefully stopped.")
 
