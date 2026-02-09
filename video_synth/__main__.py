@@ -98,6 +98,8 @@ def config_log(log_level):
 
 """Video processing loop"""
 def video_loop(mixer, effects, should_quit, gui, settings):
+    import gc  # For explicit garbage collection
+
     wet_frame = dry_frame = mixer.get_frame()
     if dry_frame is None:
         log.error("Failed to get initial frame from mixer. Exiting video loop.")
@@ -109,6 +111,7 @@ def video_loop(mixer, effects, should_quit, gui, settings):
     # Performance monitoring
     perf_samples = []
     perf_log_interval = 100  # Log every 100 frames
+    gc_interval = 600  # Run garbage collection every 600 frames to prevent memory buildup
 
     # CV window setup
     cv_window_active = settings.output_mode.value != OutputMode.NONE.value
@@ -160,8 +163,12 @@ def video_loop(mixer, effects, should_quit, gui, settings):
         if cv_window_active:
             t0 = time.perf_counter()
             cv2.imshow(VIDEO_OUTPUT_WINDOW_TITLE, wet_frame.astype(np.uint8))
-            if cv2.waitKey(1) & 0xFF in ESCAPE_KEYS:
-                break
+            # PERFORMANCE FIX: Only check for key presses every 10 frames to reduce blocking
+            # cv2.waitKey(1) blocks for 1ms which adds up over time
+            if frame_count % 10 == 0:
+                key = cv2.waitKey(1) & 0xFF
+                if key in ESCAPE_KEYS:
+                    break
             perf_data['cv2_show'] = (time.perf_counter() - t0) * 1000
 
         # Total frame time
@@ -184,6 +191,11 @@ def video_loop(mixer, effects, should_quit, gui, settings):
                     f"gui={avg_stats['gui_emit']:.1f}ms | "
                     f"total={avg_stats['total']:.1f}ms")
             perf_samples.clear()
+
+        # PERFORMANCE FIX: Explicit garbage collection to prevent memory buildup
+        # NumPy arrays and OpenCV frames can accumulate if GC doesn't run frequently enough
+        if frame_count % gc_interval == 0:
+            gc.collect()
 
     if cv_window_active:
         cv2.destroyAllWindows()

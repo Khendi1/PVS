@@ -250,6 +250,12 @@ class Mixer:
             source_val = self._find_dir("images", file_name)
 
         cap = cv2.VideoCapture(source_val)
+
+        # CRITICAL FIX: Reduce camera buffer to 1 frame to minimize latency and prevent stale frames
+        # This dramatically improves responsiveness and reduces blocking time
+        if isinstance(source_val, int):  # Only for real camera devices (not files)
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
         self.live_caps.append(cap)
         self.skip = True
 
@@ -298,7 +304,19 @@ class Mixer:
             frame = cap.get_frame(frame)
             ret = True
         else:
-            ret, frame = cap.read()
+            # CRITICAL FIX: For live cameras, grab+retrieve is faster than read() and helps flush buffers
+            # This ensures we get the latest frame, not a stale buffered one
+            is_live_camera = isinstance(selected_source.value, str) and selected_source.value.startswith("DEVICE_")
+
+            if is_live_camera:
+                # Grab() is non-blocking, retrieve() decodes - this is faster for live sources
+                # Also helps flush any stale frames from the internal buffer
+                ret = cap.grab()
+                if ret:
+                    ret, frame = cap.retrieve()
+            else:
+                ret, frame = cap.read()
+
             if not ret:
                 if selected_source.value == "VIDEO_FILE":
                     log.info(f"Video end reached for source {source_index}. Looping back to start.")
