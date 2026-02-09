@@ -3,7 +3,7 @@ from common import *
 
 
 class UserSettings():
-    def __init__(self, control_layout: str, output_mode: str, devices: int, patch: int, log_level: str, file: str):
+    def __init__(self, control_layout: str, output_mode: str, devices: int, patch: int, log_level: str, file: str, diagnose: int):
         """Initialize user settings with given parameters."""
         group = Groups.USER_SETTINGS
         subgroup = group.name
@@ -33,5 +33,8 @@ class UserSettings():
                                          min=0, max=0, default=0,
                                          group=group, subgroup=subgroup,
                                          type=Widget.DROPDOWN, options={"saved_values.yaml": "saved_values.yaml", "alternate_values.yaml": "alternate_values.yaml"})
+        self.diagnose_frames = self.params.add("diagnose_frames",
+                                               min=0, max=1000, default=diagnose,
+                                               group=group, subgroup=subgroup)
         
         

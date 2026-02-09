@@ -24,7 +24,7 @@ from settings import UserSettings
 from common import *
 from midi import *
 from mixer import Mixer
-from effects import EffectManager
+from effects_manager import EffectManager
 
 from PyQt6.QtWidgets import QApplication, QGridLayout
 from PyQt6.QtGui import QImage, QPixmap
@@ -46,7 +46,7 @@ def parse_args():
         help='Set the logging level (CRITICAL, ERROR, WARNING, INFO, DEBUG)'
     )
     parser.add_argument(
-        '-d',
+        '-nd',
         '--devices',
         default=DEFAULT_NUM_DEVICES,
         choices=[i for i in range(1,11)],
@@ -54,7 +54,7 @@ def parse_args():
         help='Number of USB video capture devices to search for on boot. Will safely ignore a extra devices if not found'
     )
     parser.add_argument(
-        '-p',
+        '-pn',
         '--patch',
         default=DEFAULT_PATCH_INDEX,
         type=int,
@@ -80,6 +80,20 @@ def parse_args():
         default=OutputMode.NONE.name,
         choices=[item.name for item in OutputMode],
         help='Use an external window for video output'
+    )
+    # parser.add_argument(
+    #     '-p',
+    #     '--profile',
+    #     default=0,
+    #     type=int,
+    #     help='Run the program with cProfile to identify bottlenecks. Output saved to "profile_output.prof"'
+    # )
+    parser.add_argument(
+        '-d',
+        '--diagnose',
+        default=0,
+        type=int,
+        help='Number of frames to sample for performance diagnosis. Helps to identify bottlenecks causing stuttering.'
     )
     parser.print_help()
     return parser.parse_args()
@@ -110,7 +124,8 @@ def video_loop(mixer, effects, should_quit, gui, settings):
 
     # Performance monitoring
     perf_samples = []
-    perf_log_interval = 100  # Log every 100 frames
+    perf_log_interval = settings.diagnose_frames.value  # Log every n frames
+    DEBUG = settings.diagnose_frames.value > 0
     gc_interval = 600  # Run garbage collection every 600 frames to prevent memory buildup
 
     # CV window setup
@@ -134,63 +149,71 @@ def video_loop(mixer, effects, should_quit, gui, settings):
             log.warning("Skipping frame due to source read failure")
             continue
 
-        # LFO updates
-        t0 = time.perf_counter()
+        # --- LFO updates ---
+
+        if DEBUG: t0 = time.perf_counter()
+
         for effect_manager in effects:
             effect_manager.oscs.update()
-        perf_data['lfos'] = (time.perf_counter() - t0) * 1000
+        
+    
+        if DEBUG:
+            perf_data['lfos'] = (time.perf_counter() - t0) * 1000
+            # Effects processing
+            t0 = time.perf_counter()
 
-        # Effects processing
-        t0 = time.perf_counter()
         prev_frame, wet_frame = effects[MixerSource.POST.value].get_frames(
             dry_frame, wet_frame, prev_frame, frame_count
         )
-        perf_data['effects'] = (time.perf_counter() - t0) * 1000
-
         frame_count += 1
 
-        # GUI emit
-        t0 = time.perf_counter()
+        if DEBUG:
+            perf_data['effects'] = (time.perf_counter() - t0) * 1000
+            # GUI emit
+            t0 = time.perf_counter()
+
         rgb_image = cv2.cvtColor(wet_frame.astype(np.uint8), cv2.COLOR_BGR2RGB)
         h, w, ch = rgb_image.shape
         bytes_per_line = ch * w
         # CRITICAL: Copy data to prevent QImage from referencing temporary/modified memory
         qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888).copy()
         gui.video_frame_ready.emit(qt_image)
-        perf_data['gui_emit'] = (time.perf_counter() - t0) * 1000
+        
+        if DEBUG: perf_data['gui_emit'] = (time.perf_counter() - t0) * 1000
 
         # External window
         if cv_window_active:
-            t0 = time.perf_counter()
+            if DEBUG: t0 = time.perf_counter()
             cv2.imshow(VIDEO_OUTPUT_WINDOW_TITLE, wet_frame.astype(np.uint8))
             # PERFORMANCE FIX: Only check for key presses every 10 frames to reduce blocking
             # cv2.waitKey(1) blocks for 1ms which adds up over time
-            if frame_count % 10 == 0:
+            if frame_count % 20 == 0:
                 key = cv2.waitKey(1) & 0xFF
                 if key in ESCAPE_KEYS:
                     break
-            perf_data['cv2_show'] = (time.perf_counter() - t0) * 1000
+            if DEBUG: perf_data['cv2_show'] = (time.perf_counter() - t0) * 1000
 
-        # Total frame time
-        elapsed = time.perf_counter() - frame_start
-        perf_data['total'] = elapsed * 1000
-        perf_data['fps'] = 1.0 / elapsed if elapsed > 0 else 0
+        if DEBUG:
+            # Total frame time
+            elapsed = time.perf_counter() - frame_start
+            perf_data['total'] = elapsed * 1000
+            perf_data['fps'] = 1.0 / elapsed if elapsed > 0 else 0
 
-        perf_samples.append(perf_data)
+            perf_samples.append(perf_data)
 
-        # Log performance stats periodically
-        if frame_count % perf_log_interval == 0 and perf_samples:
-            avg_stats = {}
-            for key in perf_samples[0].keys():
-                avg_stats[key] = sum(s[key] for s in perf_samples) / len(perf_samples)
-            log.info(f"Performance (avg over {len(perf_samples)} frames): "
-                    f"FPS={avg_stats['fps']:.1f} | "
-                    f"mixer={avg_stats['mixer']:.1f}ms | "
-                    f"lfos={avg_stats['lfos']:.1f}ms | "
-                    f"effects={avg_stats['effects']:.1f}ms | "
-                    f"gui={avg_stats['gui_emit']:.1f}ms | "
-                    f"total={avg_stats['total']:.1f}ms")
-            perf_samples.clear()
+            # Log performance stats periodically
+            if frame_count % perf_log_interval == 0 and perf_samples:
+                avg_stats = {}
+                for key in perf_samples[0].keys():
+                    avg_stats[key] = sum(s[key] for s in perf_samples) / len(perf_samples)
+                log.info(f"Performance (avg/{len(perf_samples)} frames): \n\t"
+                        f"FPS={avg_stats['fps']:.1f} | "
+                        f"mixer={avg_stats['mixer']:.1f}ms | "
+                        f"lfos={avg_stats['lfos']:.1f}ms | "
+                        f"effects={avg_stats['effects']:.1f}ms | "
+                        f"gui={avg_stats['gui_emit']:.1f}ms | "
+                        f"total={avg_stats['total']:.1f}ms")
+                perf_samples.clear()
 
         # PERFORMANCE FIX: Explicit garbage collection to prevent memory buildup
         # NumPy arrays and OpenCV frames can accumulate if GC doesn't run frequently enough

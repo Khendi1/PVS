@@ -678,7 +678,7 @@ class PyQTGUI(QMainWindow):
             mod_button = QPushButton("LFO")
             mod_button.setProperty("param_name", param.name)
             mod_button.setFixedWidth(35)
-            mod_button.clicked.connect(lambda: self.open_lfo_dialog(param, mod_button))
+            mod_button.clicked.connect(lambda: self._open_lfo_dialog(param, mod_button))
             
             if param.linked_oscillator:
                 mod_button.setStyleSheet(PyQTGUI.LFO_BUTTON_LINKED_STYLE)

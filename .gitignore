@@ -1,7 +1,9 @@
 .venv/
 video_synth/__pycache__/
-video_synth/test.py
+video_synth/effects/__pycache__/
+video_synth/animations/__pycache__/
 !save/.gitkeep
 .vscode/
 .VSCodeCounter/
+*.log
 

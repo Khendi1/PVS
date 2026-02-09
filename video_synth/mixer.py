@@ -6,10 +6,20 @@ A single mixed frame is retrieved every iteration of the main loop.
 import cv2
 import numpy as np
 from enum import Enum, IntEnum, auto
-from animations import *
+from animations.enums import *
+from animations.metaballs import Metaballs
+from animations.plasma import Plasma
+from animations.reaction_diffusion import ReactionDiffusion
+from animations.moire import Moire
+from animations.shaders import Shaders
+from animations.strange_attractor import StrangeAttractor
+from animations.physarum import Physarum
+from animations.dla import DLA
+from animations.chladni import Chladni
+from animations.voronoi import Voronoi
 import os
 from pathlib import Path
-from effects import LumaMode, EffectManager
+from luma import LumaMode
 from luma import *
 from common import *
 import concurrent.futures 
