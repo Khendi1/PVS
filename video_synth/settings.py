@@ -26,7 +26,7 @@ class UserSettings():
                                            group=group, subgroup=subgroup,
                                            type=Widget.SLIDER)
         self.log_level = self.params.add("log_level",
-                                         min=0, max=len(logging._nameToLevel), default=logging._nameToLevel[log_level],
+                                         min=0, max=len(logging._nameToLevel), default=log_level,
                                          group=group, subgroup=subgroup,
                                          type=Widget.DROPDOWN, options=logging._nameToLevel)
         self.save_file = self.params.add("save_file",

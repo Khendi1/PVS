@@ -193,6 +193,11 @@ class Mixer:
         self.start_video(self.selected_source1.value, MixerSource.SRC_1)
         self.start_video(self.selected_source2.value, MixerSource.SRC_2)
 
+        # Cached frames for when sources timeout
+        self._cached_frame1 = None
+        self._cached_frame2 = None
+        self._first_frame_received = False
+
 
     # find dir one level up from current working directory
     def _find_dir(self, dir_name: str, file_name: str = None):
@@ -343,18 +348,21 @@ class Mixer:
             self.src_2_prev = None
             self.src_2_effects.reset_feedback_buffer()
 
-        if "ANIM" not in source_name:  # handle cv2 sources
-            log.info(f"Starting mixer source {index}: with cv2 source name: {source_name}")
-            if index == MixerSource.SRC_1:
-                self.cap1 = self._open_cv2_capture(self.cap1, source_name, index)
-            elif index == MixerSource.SRC_2:
-                self.cap2 = self._open_cv2_capture(self.cap2, source_name, index)
-        else:  # handle animation sources
+        # Check if source is an animation by looking in the animation dictionaries
+        is_animation = source_name in self.src_1_animations or source_name in self.src_2_animations
+
+        if is_animation:  # handle animation sources
             log.info(f"Starting mixer source {index}: with animation source name: {source_name}")
             if index == MixerSource.SRC_1:
                 self.cap1 = self._open_animation(self.cap1, source_name, index)
             elif index == MixerSource.SRC_2:
                 self.cap2 = self._open_animation(self.cap2, source_name, index)
+        else:  # handle cv2 sources (devices, video files, image files)
+            log.info(f"Starting mixer source {index}: with cv2 source name: {source_name}")
+            if index == MixerSource.SRC_1:
+                self.cap1 = self._open_cv2_capture(self.cap1, source_name, index)
+            elif index == MixerSource.SRC_2:
+                self.cap2 = self._open_cv2_capture(self.cap2, source_name, index)
 
 
     def get_frame(self):
@@ -362,8 +370,38 @@ class Mixer:
             future1 = executor.submit(self._process_single_source, MixerSource.SRC_1)
             future2 = executor.submit(self._process_single_source, MixerSource.SRC_2)
 
-            ret1, frame1 = future1.result()
-            ret2, frame2 = future2.result()
+            # Wait longer for first frame (sources need initialization time)
+            # After that, use aggressive timeout to maintain smooth frame rate
+            if not self._first_frame_received:
+                FRAME_TIMEOUT = None  # Wait indefinitely for first frame
+            else:
+                FRAME_TIMEOUT = 0.05  # 50ms timeout for smooth playback
+
+            # Try to get SRC_1 with timeout
+            try:
+                ret1, frame1 = future1.result(timeout=FRAME_TIMEOUT)
+                if frame1 is not None:
+                    self._cached_frame1 = frame1  # Cache successful frame
+            except concurrent.futures.TimeoutError:
+                # Source too slow - use cached frame to maintain smooth playback
+                ret1 = True if self._cached_frame1 is not None else False
+                frame1 = self._cached_frame1 if self._cached_frame1 is not None else np.zeros((self.height, self.width, 3), dtype=np.uint8)
+                log.debug("SRC_1 timeout - using cached frame")
+
+            # Try to get SRC_2 with timeout
+            try:
+                ret2, frame2 = future2.result(timeout=FRAME_TIMEOUT)
+                if frame2 is not None:
+                    self._cached_frame2 = frame2  # Cache successful frame
+            except concurrent.futures.TimeoutError:
+                ret2 = True if self._cached_frame2 is not None else False
+                frame2 = self._cached_frame2 if self._cached_frame2 is not None else np.zeros((self.height, self.width, 3), dtype=np.uint8)
+                log.debug("SRC_2 timeout - using cached frame")
+
+            # Mark that we've successfully received first frames
+            if not self._first_frame_received and ret1 and ret2:
+                self._first_frame_received = True
+                log.info("First frames received - enabling 50ms timeouts for smooth playback")
 
         # Process and display frames
         if ret1 and ret2:
