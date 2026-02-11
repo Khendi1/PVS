@@ -46,7 +46,7 @@ class Metaballs(Animation):
                                min=1.0, max=3.0, default=1.0,
                                subgroup=subgroup, group=group)
         self.colormap = params.add("metaball_colormap",
-                                   min=0, max=len(COLORMAP_OPTIONS)-1, default=0,
+                                   min=0, max=len(COLORMAP_OPTIONS)-1, default=Colormap.JET.value,
                                    group=group, subgroup=subgroup,
                                    type=Widget.DROPDOWN, options=Colormap)
         self.feedback_alpha = params.add("metaballs_feedback",

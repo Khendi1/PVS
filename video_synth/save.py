@@ -9,9 +9,10 @@ log = logging.getLogger(__name__)
 class SaveController:
     """
     A class to handle the saving and loading of patches.
+    Accepts a dict of ParamTables keyed by name (e.g. {"src_1": table, "mixer": table, ...}).
     """
-    def __init__(self, params, yaml_filename='saved_values.yaml', save_dir_name='save'):
-        self.params = params
+    def __init__(self, param_tables: dict, yaml_filename='saved_values.yaml', save_dir_name='save'):
+        self.param_tables = param_tables
         self.index = 0
         self.save_dir_path = self.init_save_dir(save_dir_name)
         self.yaml_file_path = os.path.join(self.save_dir_path, yaml_filename)
@@ -100,27 +101,35 @@ class SaveController:
 
     def load_param_vals(self, parsed_param_dict):
         for param_name, value in parsed_param_dict.items():
-            if param_name in self.params:
-                param = self.params[param_name]
-                if param.options and hasattr(param.options, '__members__') and isinstance(value, str): # Check if it's an enum
-                    try:
-                        enum_member = param.options[value]
-                        param.value = enum_member
-                    except KeyError:
-                        log.warning(f"Could not find enum member '{value}' for param '{param_name}'. Using default.")
-                else:
-                    param.value = value
+            param = self._find_param(param_name)
+            if param is None:
+                continue
+            if param.options and hasattr(param.options, '__members__') and isinstance(value, str):
+                try:
+                    enum_member = param.options[value]
+                    param.value = enum_member
+                except KeyError:
+                    log.warning(f"Could not find enum member '{value}' for param '{param_name}'. Using default.")
+            else:
+                param.value = value
+
+    def _find_param(self, param_name):
+        """Search all param tables for a param by name."""
+        for table in self.param_tables.values():
+            if param_name in table:
+                return table[param_name]
+        return None
 
     def get_values(self):
         new_data = {}
-        for param_name, param_obj in self.params.items():
-            if isinstance(param_obj, Param):
-                # For enum-based params, save the name, not the value for readability
-                if hasattr(param_obj.value, 'name'):
-                    new_data[param_name] = param_obj.value.name
+        for table_name, table in self.param_tables.items():
+            for param_name, param_obj in table.items():
+                if isinstance(param_obj, Param):
+                    if hasattr(param_obj.value, 'name'):
+                        new_data[param_name] = param_obj.value.name
+                    else:
+                        new_data[param_name] = param_obj.value
                 else:
-                    new_data[param_name] = param_obj.value
-            else:
-                log.warning(f"{param_name} is not a Param object, cannot save value")
+                    log.warning(f"{param_name} is not a Param object, cannot save value")
         log.debug(new_data)
         return new_data

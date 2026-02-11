@@ -10,7 +10,6 @@ from common import Groups, Widget
 
 log = logging.getLogger(__name__)
 
-
 def map_value(value, from_min, from_max, to_min, to_max, round_down=True):
   """
   Maps a value from one range to another.
@@ -59,7 +58,7 @@ class LFO:
                                 group=group, subgroup=subgroup,
                                 type=Widget.DROPDOWN, options=LFOShape)
         self.frequency = params.add(f"{name}_frequency",
-                                    min=0, max=2, default=frequency,
+                                    min=0, max=1, default=float(frequency),
                                     subgroup=subgroup, group=group)
         self.amplitude = params.add(f"{name}_amplitude",
                                     min=min_amplitude, max=max_amplitude, default=amplitude,
@@ -87,8 +86,15 @@ class LFO:
                                      min=0, max=1000, default=456,
                                      subgroup=subgroup, group=group)
 
+        self.cutoff_min = params.add(f"{name}_cutoff_min",
+                                      min=min_amplitude, max=max_amplitude, default=min_amplitude,
+                                      subgroup=subgroup, group=group)
+        self.cutoff_max = params.add(f"{name}_cutoff_max",
+                                      min=min_amplitude, max=max_amplitude, default=max_amplitude,
+                                      subgroup=subgroup, group=group)
+
         self.sample_rate = 30
-        self.direction = 1 
+        self.direction = 1
         self.oscillator = self.create_oscillator()
         self.linked_param = None
         self.value = 0
@@ -172,7 +178,10 @@ class LFO:
                     mapped_sample = map_value(round(sample, 5), -amp + seed, amp + seed, self.linked_param.min, self.linked_param.max, round_down=False)
                 elif isinstance(self.linked_param.default, int):
                     mapped_sample = map_value(sample, -amp + seed, amp + seed, self.linked_param.min, self.linked_param.max)
-        
+
+                # Apply cutoff clamping
+                mapped_sample = np.clip(mapped_sample, self.cutoff_min.value, self.cutoff_max.value)
+
                 self.linked_param.value = mapped_sample
                 # log.debug(f'{sample} mapped to {mapped_sample} for {self.linked_param.name}')
             
@@ -194,6 +203,12 @@ class LFO:
         self.phase.min = param.min
         self.seed.max = param.max
         self.seed.min = param.min
+        self.cutoff_min.max = param.max
+        self.cutoff_min.min = param.min
+        self.cutoff_min.value = param.min
+        self.cutoff_max.max = param.max
+        self.cutoff_max.min = param.min
+        self.cutoff_max.value = param.max
         self.group = param.group
         self.subgroup = param.subgroup
 
@@ -269,7 +284,9 @@ class OscBank():
             f"{osc.name}_noise_persistence",
             f"{osc.name}_noise_lacunarity",
             f"{osc.name}_noise_repeat",
-            f"{osc.name}_noise_base"
+            f"{osc.name}_noise_base",
+            f"{osc.name}_cutoff_min",
+            f"{osc.name}_cutoff_max"
         ]
         for param_name in param_names_to_remove:
             if param_name in self.params.params:

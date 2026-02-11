@@ -2,14 +2,30 @@ import enum
 import logging
 from param import ParamTable, Param
 from common import Groups, MixerSource, Widget, Layout
-from mixer import MixModes
+from mixer import MixModes, FileSource
 from save import SaveController
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QPushButton, QGroupBox, QRadioButton, QScrollArea, QToolButton, QSizePolicy, QLineEdit, QTabWidget, QComboBox, QDialog, QGridLayout, QColorDialog
-from PyQt6.QtGui import QGuiApplication, QImage, QPixmap, QPainter, QColor
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QPushButton, QGroupBox, QRadioButton, QScrollArea, QToolButton, QSizePolicy, QLineEdit, QTabWidget, QComboBox, QDialog, QGridLayout, QListWidget, QColorDialog, QTextEdit
+from PyQt6.QtGui import QGuiApplication, QImage, QPixmap, QPainter, QColor, QTextCursor
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSignal, pyqtSlot, QTimer
 
 
 log = logging.getLogger(__name__)
+
+
+"""
+Custom Qt logging handler that emits log messages to a QTextEdit widget.
+"""
+class QTextEditLogger(logging.Handler):
+    def __init__(self, widget):
+        super().__init__()
+        self.widget = widget
+        self.widget.setReadOnly(True)
+
+    def emit(self, record):
+        msg = self.format(record)
+        self.widget.append(msg)
+        # Auto-scroll to bottom
+        self.widget.moveCursor(QTextCursor.MoveOperation.End)
 
 
 """
@@ -130,7 +146,7 @@ class LFOManagerDialog(QDialog):
             for param_name in ['shape', 'frequency', 'amplitude', 'phase', 'noise_octaves', 'noise_persistence', 'noise_lacunarity', 'noise_repeat', 'noise_base']:
                 if hasattr(osc, param_name):
                     param = getattr(osc, param_name)
-                    widget = self.gui_instance._create_param_widget(param)
+                    widget = self.gui_instance._create_param_widget(param, register=False)
                     self.controls_layout.addWidget(widget)
 
     def link_new_lfo(self):
@@ -150,6 +166,47 @@ class LFOManagerDialog(QDialog):
             self.mod_button.setStyleSheet(PyQTGUI.LFO_BUTTON_UNLINKED_STYLE) # Update button style
             self.rebuild_ui()
 
+"""Widget for reordering the effects processing chain via drag-and-drop."""
+class SequencerWidget(QWidget):
+    def __init__(self, effect_manager, parent=None):
+        super().__init__(parent)
+        self.effect_manager = effect_manager
+        layout = QVBoxLayout(self)
+
+        self.list_widget = QListWidget()
+        self.list_widget.setDragDropMode(QListWidget.DragDropMode.InternalMove)
+        self.list_widget.setDefaultDropAction(Qt.DropAction.MoveAction)
+        layout.addWidget(self.list_widget)
+
+        self._populate_list()
+        self.list_widget.model().rowsMoved.connect(self._on_reorder)
+
+    def _populate_list(self):
+        self.list_widget.clear()
+        for method in self.effect_manager.all_methods:
+            class_name = method.__self__.__class__.__name__
+            self.list_widget.addItem(f"{class_name}.{method.__name__}")
+
+    def _on_reorder(self):
+        method_lookup = {}
+        for method in self.effect_manager.all_methods:
+            class_name = method.__self__.__class__.__name__
+            key = f"{class_name}.{method.__name__}"
+            method_lookup[key] = method
+
+        new_order = []
+        for i in range(self.list_widget.count()):
+            item_text = self.list_widget.item(i).text()
+            if item_text in method_lookup:
+                new_order.append(method_lookup[item_text])
+
+        if len(new_order) == len(self.effect_manager.all_methods):
+            self.effect_manager.all_methods = new_order
+        else:
+            log.error("Sequencer reorder failed: method count mismatch. Resetting.")
+            self._populate_list()
+
+
 """Main PyQt GUI class for the video synthesizer application."""
 class PyQTGUI(QMainWindow):
     LFO_BUTTON_UNLINKED_STYLE = "QPushButton { background-color: #607D8B; color: white; }" # Default grey
@@ -168,15 +225,22 @@ class PyQTGUI(QMainWindow):
         self.src_1_params = self.src_1_effects.params
         self.src_2_params = self.src_2_effects.params
         self.post_params = self.post_effects.params
+        self.mixer_params = mixer.params if mixer else ParamTable(group="Mixer")
         self.settings_params = settings.params
 
-        # TODO: test if this works
         self.all_params = ParamTable()
         self.all_params.params.update(self.src_1_params)
         self.all_params.params.update(self.src_2_params)
         self.all_params.params.update(self.post_params)
+        self.all_params.params.update(self.mixer_params)
         self.all_params.params.update(self.settings_params)
-        self.save_controller = SaveController(self.all_params)
+        self.save_controller = SaveController({
+            "src_1": self.src_1_params,
+            "src_2": self.src_2_params,
+            "post": self.post_params,
+            "mixer": self.mixer_params,
+            "settings": self.settings_params,
+        })
         self.save_controller.patch_loaded_callback = self._refresh_all_widgets
 
         self.mixer_widgets = {}
@@ -192,6 +256,9 @@ class PyQTGUI(QMainWindow):
         self._create_layout()
         self.create_ui()
 
+        # Set up logging to GUI
+        self._setup_logging()
+
         self.lfo_refresh_timer = QTimer(self)
         self.lfo_refresh_timer.timeout.connect(self._refresh_lfo_buttons)
         self.lfo_refresh_timer.start(250)
@@ -202,6 +269,7 @@ class PyQTGUI(QMainWindow):
         self.all_params.params.update(self.src_1_effects.params)
         self.all_params.params.update(self.src_2_effects.params)
         self.all_params.params.update(self.post_effects.params)
+        self.all_params.params.update(self.mixer_params)
         self.all_params.params.update(self.settings_params)
         for param_name, widget in self.param_widgets.items():
             param = self.all_params.get(param_name)
@@ -212,6 +280,13 @@ class PyQTGUI(QMainWindow):
                         mod_button.setStyleSheet(PyQTGUI.LFO_BUTTON_LINKED_STYLE)
                     else:
                         mod_button.setStyleSheet(PyQTGUI.LFO_BUTTON_UNLINKED_STYLE)
+
+    def _setup_logging(self):
+        """Connect the logging system to the GUI log viewer."""
+        log_handler = QTextEditLogger(self.log_viewer)
+        log_handler.setFormatter(logging.Formatter('%(levelname).1s | %(module)s | %(message)s'))
+        logging.getLogger().addHandler(log_handler)
+        log.info("GUI log viewer initialized")
 
 
     def _create_layout(self):
@@ -348,6 +423,11 @@ class PyQTGUI(QMainWindow):
         user_settings_scroll.setWidget(user_settings_container)
         bottom_right_tabs.addTab(user_settings_scroll, "User Settings")
 
+        # Logs Tab
+        self.log_viewer = QTextEdit()
+        self.log_viewer.setReadOnly(True)
+        bottom_right_tabs.addTab(self.log_viewer, "Logs")
+
         self.root_layout.addWidget(bottom_right_tabs, 1, 1)
 
         # --- Set Stretch Factors ---
@@ -421,6 +501,19 @@ class PyQTGUI(QMainWindow):
         uncategorized_scroll.setWidget(uncategorized_container)
         bottom_pane_tabs.addTab(uncategorized_scroll, "Uncategorized")
 
+        # User Settings Tab
+        user_settings_container = QWidget()
+        self.user_settings_layout = QVBoxLayout(user_settings_container)
+        user_settings_scroll = QScrollArea()
+        user_settings_scroll.setWidgetResizable(True)
+        user_settings_scroll.setWidget(user_settings_container)
+        bottom_pane_tabs.addTab(user_settings_scroll, "User Settings")
+
+        # Logs Tab
+        self.log_viewer = QTextEdit()
+        self.log_viewer.setReadOnly(True)
+        bottom_pane_tabs.addTab(self.log_viewer, "Logs")
+
 
     def _open_lfo_dialog(self, param, button):
         if param.group in [Groups.SRC_1_ANIMATIONS, Groups.SRC_1_EFFECTS]:
@@ -447,6 +540,7 @@ class PyQTGUI(QMainWindow):
         all_params_list = list(self.src_1_params.values()) + \
                           list(self.src_2_params.values()) + \
                           list(self.post_params.values()) + \
+                          list(self.mixer_params.values()) + \
                           list(self.settings_params.values())
 
         groups = {}
@@ -598,7 +692,7 @@ class PyQTGUI(QMainWindow):
                 # Create sub-tabs for each subgroup
                 subgroup_tab_widget = QTabWidget()
                 target_layout.addWidget(subgroup_tab_widget)
-                
+
                 for subgroup_name, params_in_subgroup in subgroups.items():
                     subgroup_widget = QWidget()
                     subgroup_layout = QVBoxLayout(subgroup_widget)
@@ -610,14 +704,24 @@ class PyQTGUI(QMainWindow):
                     subgroup_scroll = QScrollArea()
                     subgroup_scroll.setWidgetResizable(True)
                     subgroup_scroll.setWidget(subgroup_widget)
-                    
+
                     tab_title = subgroup_name.replace("_", " ").title() if isinstance(subgroup_name, str) else subgroup_name.name.replace("_", " ").title()
                     subgroup_tab_widget.addTab(subgroup_scroll, tab_title)
+
+                # Add sequencer subtab within effects sub-tabs
+                effect_manager = {
+                    Groups.SRC_1_EFFECTS: self.src_1_effects,
+                    Groups.SRC_2_EFFECTS: self.src_2_effects,
+                    Groups.POST_EFFECTS: self.post_effects,
+                }.get(group_enum_or_str)
+                if effect_manager:
+                    seq_widget = SequencerWidget(effect_manager)
+                    subgroup_tab_widget.addTab(seq_widget, "Sequence")
 
         self._update_mixer_visibility()
 
 
-    def _create_param_widget(self, param: Param):
+    def _create_param_widget(self, param: Param, register=True):
         widget = QWidget()
         widget.setProperty("param_name", param.name)
         layout = QHBoxLayout(widget)
@@ -712,10 +816,11 @@ class PyQTGUI(QMainWindow):
         reset_button.clicked.connect(lambda: self._on_reset_click(param, widget))
         layout.addWidget(reset_button)
 
-        if param.group == Groups.MIXER:
-            self.mixer_widgets[param.name] = widget
-        else:
-            self.param_widgets[param.name] = widget
+        if register:
+            if param.group == Groups.MIXER:
+                self.mixer_widgets[param.name] = widget
+            else:
+                self.param_widgets[param.name] = widget
 
         return widget
 
@@ -726,7 +831,7 @@ class PyQTGUI(QMainWindow):
         else:
             param.value = value
         
-        log.info(f"Slider changed: {param.name} = {param.value}")
+        # log.info(f"Slider changed: {param.name} = {param.value}")
         
         slider = self.sender()
         value_input = slider.property("value_input")
@@ -774,6 +879,14 @@ class PyQTGUI(QMainWindow):
                     self.mixer.start_video(data, MixerSource.SRC_1)
                 elif param.name == "source_2":
                     self.mixer.start_video(data, MixerSource.SRC_2)
+                elif param.name == "video_file_src1" and self.mixer.selected_source1.value == FileSource.VIDEO.name:
+                    self.mixer.start_video(FileSource.VIDEO.name, MixerSource.SRC_1)
+                elif param.name == "video_file_src2" and self.mixer.selected_source2.value == FileSource.VIDEO.name:
+                    self.mixer.start_video(FileSource.VIDEO.name, MixerSource.SRC_2)
+                elif param.name == "image_file_src1" and self.mixer.selected_source1.value == FileSource.IMAGE.name:
+                    self.mixer.start_video(FileSource.IMAGE.name, MixerSource.SRC_1)
+                elif param.name == "image_file_src2" and self.mixer.selected_source2.value == FileSource.IMAGE.name:
+                    self.mixer.start_video(FileSource.IMAGE.name, MixerSource.SRC_2)
         except (ValueError, TypeError):
             pass
 

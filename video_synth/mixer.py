@@ -19,6 +19,7 @@ from animations.chladni import Chladni
 from animations.voronoi import Voronoi
 import os
 from pathlib import Path
+from param import ParamTable
 from luma import LumaMode
 from luma import *
 from common import *
@@ -38,6 +39,20 @@ class MixModes(IntEnum):
     CHROMA_KEY = 2
 
 
+class ImageSource:
+    """Serves a static image as a frame source, matching the animation get_frame interface."""
+    def __init__(self, image_path, width, height):
+        img = cv2.imread(image_path)
+        if img is not None:
+            self.image = cv2.resize(img, (width, height)).astype(np.float32)
+        else:
+            log.error(f"Could not load image: {image_path}")
+            self.image = np.zeros((height, width, 3), dtype=np.float32)
+
+    def get_frame(self, frame=None):
+        return self.image.copy()
+
+
 class Mixer:
     """Mixer is used to init sources, get frames from each, and blend them"""
 
@@ -53,7 +68,7 @@ class Mixer:
         self.src_2_effects = effects[MixerSource.SRC_2]
         self.post_effects = effects[MixerSource.POST]
 
-        self.post_params = self.post_effects.params
+        self.params = ParamTable(group="Mixer")
 
         # cap variables to store video capture objects or animation instances
         self.cap1 = None
@@ -94,7 +109,7 @@ class Mixer:
             AnimSource.METABALLS.name: Metaballs(**anim_args),
             AnimSource.PLASMA.name: Plasma(**anim_args),
             AnimSource.REACTION_DIFFUSION.name: ReactionDiffusion(**anim_args),
-            AnimSource.MOIRE.name: Moire(**anim_args),
+            AnimSource.MOIRE.name: Moire(**anim_args, oscs=self.src_1_effects.oscs),
             AnimSource.SHADERS.name: Shaders(**anim_args),
             AnimSource.STRANGE_ATTRACTOR.name: StrangeAttractor(**anim_args),
             AnimSource.PHYSARUM.name: Physarum(**anim_args),
@@ -109,7 +124,7 @@ class Mixer:
             AnimSource.METABALLS.name: Metaballs(**anim_args),
             AnimSource.PLASMA.name: Plasma(**anim_args),
             AnimSource.REACTION_DIFFUSION.name: ReactionDiffusion(**anim_args),
-            AnimSource.MOIRE.name: Moire(**anim_args),
+            AnimSource.MOIRE.name: Moire(**anim_args, oscs=self.src_2_effects.oscs),
             AnimSource.SHADERS.name: Shaders(**anim_args),
             AnimSource.STRANGE_ATTRACTOR.name: StrangeAttractor(**anim_args),
             AnimSource.PHYSARUM.name: Physarum(**anim_args),
@@ -119,68 +134,94 @@ class Mixer:
         }
 
         # --- Configure file sources ---
-        self.video_samples = os.listdir(self._find_dir("samples"))
-        self.video_file_name1 = self.video_samples[0] if len(self.video_samples) > 0 else None
-        self.video_file_name2 = self.video_samples[0] if len(self.video_samples) > 0 else None
+        try:
+            self.video_samples = os.listdir(self._find_dir("samples"))
+        except (FileNotFoundError, OSError):
+            self.video_samples = []
 
-        self.images = os.listdir(self._find_dir("images"))
-        self.default_image_file_path = self.images[0] if len(self.images) > 0 else None
-        self.image_file_name1 = self.default_image_file_path
-        self.image_file_name2 = self.default_image_file_path
+        try:
+            self.images = os.listdir(self._find_dir("images"))
+        except (FileNotFoundError, OSError):
+            self.images = []
 
         # --- Source Params ---
 
         # initialize source 1 to use the first hardware device available
         # safely default to metaballs if no devices found
         default_src1 = "DEVICE_0" if num_devices > 0 else AnimSource.METABALLS.name
-        self.selected_source1 = self.post_params.add("source_1",
+        self.selected_source1 = self.params.add("source_1",
                                                       min=0, max=len(self.sources), default=default_src1,
                                                       subgroup=subgroup, group=self.group,
                                                       type=Widget.DROPDOWN, options=list(self.sources.keys()))
 
         # init source 2 to metaballs
-        self.selected_source2 = self.post_params.add("source_2",
+        self.selected_source2 = self.params.add("source_2",
                                                       min=0, max=len(self.sources), default=AnimSource.METABALLS.name,
                                                       subgroup=subgroup, group=self.group,
                                                       type=Widget.DROPDOWN, options=list(self.sources.keys()))
 
+        # --- File selection params ---
+        video_options = self.video_samples if self.video_samples else ["(none)"]
+        image_options = self.images if self.images else ["(none)"]
+
+        self.video_file_src1 = self.params.add("video_file_src1",
+                                               min=0, max=len(video_options),
+                                               default=video_options[0],
+                                               subgroup=subgroup, group=self.group,
+                                               type=Widget.DROPDOWN, options=video_options)
+        self.video_file_src2 = self.params.add("video_file_src2",
+                                               min=0, max=len(video_options),
+                                               default=video_options[0],
+                                               subgroup=subgroup, group=self.group,
+                                               type=Widget.DROPDOWN, options=video_options)
+        self.image_file_src1 = self.params.add("image_file_src1",
+                                               min=0, max=len(image_options),
+                                               default=image_options[0],
+                                               subgroup=subgroup, group=self.group,
+                                               type=Widget.DROPDOWN, options=image_options)
+        self.image_file_src2 = self.params.add("image_file_src2",
+                                               min=0, max=len(image_options),
+                                               default=image_options[0],
+                                               subgroup=subgroup, group=self.group,
+                                               type=Widget.DROPDOWN, options=image_options)
+
         # --- Parameters for blending and keying ---
 
-        self.blend_mode = self.post_params.add("blend_mode",
+        self.blend_mode = self.params.add("blend_mode",
                                                min=0, max=2, default=0,
                                                subgroup=subgroup, group=self.group,
                                                type=Widget.RADIO, options=MixModes)
-        self.luma_threshold = self.post_params.add("luma_threshold",
+        self.luma_threshold = self.params.add("luma_threshold",
                                                    min=0, max=255, default=128,
                                                    subgroup=subgroup, group=self.group)
-        self.luma_selection = self.post_params.add("luma_selection",
+        self.luma_selection = self.params.add("luma_selection",
                                                    min=LumaMode.WHITE.value, max=LumaMode.BLACK.value, default=LumaMode.WHITE.value,
                                                    subgroup=subgroup, group=self.group,
                                                    type=Widget.RADIO, options=LumaMode)
-        self.upper_hue = self.post_params.add("upper_hue",
+        self.upper_hue = self.params.add("upper_hue",
                                               min=0, max=179, default=80,
                                               subgroup=subgroup, group=self.group)
-        self.upper_saturation = self.post_params.add("upper_sat",
+        self.upper_saturation = self.params.add("upper_sat",
                                                      min=0, max=255, default=255,
                                                      subgroup=subgroup, group=self.group)
-        self.upper_value = self.post_params.add("upper_val",
+        self.upper_value = self.params.add("upper_val",
                                                 min=0, max=255, default=255,
                                                 subgroup=subgroup, group=self.group)
-        self.lower_hue = self.post_params.add("lower_hue",
+        self.lower_hue = self.params.add("lower_hue",
                                               min=0, max=179, default=0,
                                               subgroup=subgroup, group=self.group)
-        self.lower_saturation = self.post_params.add("lower_sat",
+        self.lower_saturation = self.params.add("lower_sat",
                                                      min=0, max=255, default=100,
                                                      subgroup=subgroup, group=self.group)
-        self.lower_value = self.post_params.add("lower_val",
+        self.lower_value = self.params.add("lower_val",
                                                 min=0, max=255, default=100,
                                                 subgroup=subgroup, group=self.group)
                                                 
-        self.alpha_blend = self.post_params.add("alpha_blend",
+        self.alpha_blend = self.params.add("alpha_blend",
                                                 min=0.0, max=1.0, default=0.5,
                                                 subgroup=subgroup, group=self.group)
                                                 
-        self.swap = self.post_params.add("swap_sources",
+        self.swap = self.params.add("swap_sources",
                                          min=0, max=1, default=0,
                                          subgroup=subgroup, group=self.group,
                                          type=Widget.RADIO, options=Toggle)
@@ -249,20 +290,20 @@ class Mixer:
             cap.release()
 
         log.info(f"Opening cv2 VideoCapture for source_{index}: {source_name}")
-        
+
         source_val = self.sources[source_name]
 
-        if source_name == "VIDEO_FILE":
-            file_name = self.video_file_name1 if index == MixerSource.SRC_1 else self.video_file_name2
-            source_val = self._find_dir("samples", file_name)
-        elif source_name == "IMAGE_FILE":
-            file_name = self.image_file_name1 if index == MixerSource.SRC_1 else self.image_file_name2
-            source_val = self._find_dir("images", file_name)
+        if source_name == FileSource.VIDEO.name:
+            file_param = self.video_file_src1 if index == MixerSource.SRC_1 else self.video_file_src2
+            if file_param.value and file_param.value != "(none)":
+                source_val = self._find_dir("samples", file_param.value)
+            else:
+                log.warning(f"No video file selected for source {index}")
+                return cap
 
         cap = cv2.VideoCapture(source_val)
 
-        # CRITICAL FIX: Reduce camera buffer to 1 frame to minimize latency and prevent stale frames
-        # This dramatically improves responsiveness and reduces blocking time
+        # Reduce camera buffer to 1 frame to minimize latency and prevent stale frames
         if isinstance(source_val, int):  # Only for real camera devices (not files)
             cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
@@ -270,8 +311,21 @@ class Mixer:
         self.skip = True
 
         if not cap.isOpened():
-            log.error(f"Could not open live video source {index}.")
+            log.error(f"Could not open video source {index}: {source_val}")
         return cap
+
+
+    def _open_image_source(self, cap, index):
+        if cap and isinstance(cap, cv2.VideoCapture):
+            cap.release()
+        file_param = self.image_file_src1 if index == MixerSource.SRC_1 else self.image_file_src2
+        if file_param.value and file_param.value != "(none)":
+            file_path = self._find_dir("images", file_param.value)
+            log.info(f"Loading image source for source_{index}: {file_path}")
+            return ImageSource(file_path, self.width, self.height)
+        else:
+            log.warning(f"No image file selected for source {index}")
+            return cap
 
 
     def _open_animation(self, cap, source_name, index):
@@ -328,7 +382,7 @@ class Mixer:
                 ret, frame = cap.read()
 
             if not ret:
-                if selected_source.value == "VIDEO_FILE":
+                if selected_source.value == FileSource.VIDEO.name:
                     log.info(f"Video end reached for source {source_index}. Looping back to start.")
                     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     ret, frame = cap.read()
@@ -378,15 +432,22 @@ class Mixer:
 
         # Check if source is an animation by looking in the animation dictionaries
         is_animation = source_name in self.src_1_animations or source_name in self.src_2_animations
+        is_image = source_name == FileSource.IMAGE.name
 
-        if is_animation:  # handle animation sources
-            log.info(f"Starting mixer source {index}: with animation source name: {source_name}")
+        if is_animation:
+            log.info(f"Starting mixer source {index}: animation {source_name}")
             if index == MixerSource.SRC_1:
                 self.cap1 = self._open_animation(self.cap1, source_name, index)
             elif index == MixerSource.SRC_2:
                 self.cap2 = self._open_animation(self.cap2, source_name, index)
-        else:  # handle cv2 sources (devices, video files, image files)
-            log.info(f"Starting mixer source {index}: with cv2 source name: {source_name}")
+        elif is_image:
+            log.info(f"Starting mixer source {index}: image source")
+            if index == MixerSource.SRC_1:
+                self.cap1 = self._open_image_source(self.cap1, index)
+            elif index == MixerSource.SRC_2:
+                self.cap2 = self._open_image_source(self.cap2, index)
+        else:  # handle cv2 sources (devices, video files)
+            log.info(f"Starting mixer source {index}: cv2 source {source_name}")
             if index == MixerSource.SRC_1:
                 self.cap1 = self._open_cv2_capture(self.cap1, source_name, index)
             elif index == MixerSource.SRC_2:

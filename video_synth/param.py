@@ -36,6 +36,10 @@ class ParamTable:
         else:
             raise TypeError("Key must be a string or an integer")
 
+    def __contains__(self, key):
+        """Enables 'param_name in table' checks."""
+        return key in self.params
+
     def __delitem__(self, key):
         """
         Enables item deletion using del obj[key]
