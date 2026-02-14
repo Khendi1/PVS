@@ -1,116 +1,141 @@
 # Python Video Synthesizer
 
-Analog video synth modules are expensive, CRTs are bulky and liquid light shows are messy. If you want to play around with live video effects without patch cables, dyes or expensive software, try out the Python Video Synthesizer (PVS).  Or augment your existing setup for as little as $0.00! 
+A real-time video synthesizer for creating live visual effects and generative animations. Control video processing pipelines with MIDI controllers or GUI, featuring modular effects, LFO modulation, and procedural animations.
 
-PVS is designed for use with MIDI controllers. Turning knobs and pushing faders is more engaging than using a mouse, though a (crappy) GUI is provided. 
+**No expensive hardware required** - works with just a laptop webcam, though it integrates seamlessly with capture cards, MIDI controllers, and external displays.
 
-There are many tunable parameters (~250 at the time of writing). Most parameters can be modulated by oscillators, including the oscillator parameters themselves (i.e. oscillator frequency, amplitude, phase, vertical shift).
+## Table of Contents
+- [Quick Start](#quick-start)
+- [Features](#features)
+- [Architecture Overview](#architecture-overview)
+- [Usage Guide](#usage-guide)
+- [Developer Guide](#developer-guide)
+- [Performance Profiling](#performance-profiling)
+- [Hardware Integration](#hardware-integration)
+- [Background](#background-and-inspiration)
 
-This suite plays well with lots of other tools and hardware. Note that any additional video capture devices, webcams, mixers, etc are **optional!** I have spent hours playing with this toy with nothing but a cheap laptop and its built-in camera, though it will even work without a webcam.
+---
 
-## Requirements
-- python3
-- packages from ```requirements.txt```
-- webcam
+## Quick Start
 
-## Software Setup
-1. Clone this repository
+### Requirements
+- **Python 3.12** (recommended) or 3.13
+- Webcam (optional - works with animations only)
+- MIDI controller (optional)
 
-2. from the top level directory, create a virtual environment:
+### Installation
 
-    - ```python -m venv <YOUR-VENV-NAME>```
+```bash
+# Clone repository
+git clone <repository-url>
+cd video_synth
 
-3. activate your virtual environment
+# Create virtual environment (Python 3.12 recommended for Numba support)
+python -m venv .venv
 
-    - Windows: ```<YOUR-VENV_NAME>/Scripts/activate```
+# Activate virtual environment
+# Windows:
+.venv\Scriptsctivate
+# Linux/Mac:
+source .venv/bin/activate
 
-    - Linux: ```source <YOUR-VENV_NAME>/bin/activate```
+# Install dependencies
+pip install -r requirements.txt
 
-4. install packages from requirements.txt.
+# Run the program
+python video_synth
+```
 
-    - ```pip install -r requirements.txt```
+### Command Line Options
 
-5. *OPTIONAL*: configure hardware; plug in MIDI devices and capture devices, See [Hardware Setup](#hardware-setup) for additional details.
+```bash
+python video_synth --help
 
-6. still from the top level, launch the program:
+Options:
+  -l, --log-level     Set logging level (DEBUG, INFO, WARNING, ERROR)
+  -nd, --devices      Number of USB capture devices to search for (default: 5)
+  -pn, --patch        Load saved patch by index (default: 0)
+  -f, --file          Use alternate save file
+  -c, --control-layout  GUI layout: SPLIT, QUAD_PREVIEW, QUAD_FULL
+  -o, --output-mode   External window: NONE, WINDOW, FULLSCREEN
+  -d, --diagnose      Enable performance logging every N frames
+```
 
-    - ```python video_synth```
+**Example:**
+```bash
+python video_synth --diagnose 100 --output-mode FULLSCREEN
+```
 
-## Hardware setup
+---
 
-Hardware video devices (USB capture devices, webcams, etc.) and MIDI controllers are automatically identified upon program execution. They are not re-identified or recovered through program execution (boo), so restart the program if you ever unplug equipment.
+## Features
 
-My personal MIDI devices have been mapped, but you will need to do this for your model of controller. See the [Control](#control) section to configure your MIDI device. 
+### Video Processing Pipeline
+- **Dual-Source Mixer**
+  - Alpha blending
+  - Luma keying (key on bright or dark areas)
+  - Chroma keying (green screen)
+  - Mix camera feeds, video files, images, or animations
 
-Find the 'Mixer' GUI panel to select among different video devices. Currently devices are identified by their USB enumeration value, i.e. the order that they are plugged in.
+- **Effect Sequencer**
+  - Drag-and-drop effect ordering
+  - Three independent effect chains (Source 1, Source 2, Post-Mix)
+  - Enable/disable effects dynamically
 
-## Features and Parameters:
-- Locally save and recall patches
-- 2 Source mixer:
-    - alpha blending
-    - luma keying with white/black selection
-    - chroma keying
-    - supports live usb devices like capture cards and webcams, saved image and video files, and some custom animations/simulations
-- Animated Input Sources:
-    - Metaballs
-    - Reaction diffusion
-    - Plasma generator
-    - Moire pattern generator
-    - Shader controller
-- Feedback & Filtering:
-    - Alpha blend: blends opacity of raw captured frame with  previous modified frame
-    - Temporal filter: blends current alpha-blend frame with previous alpha-blend frame to reduce strobing effects
-    - Frame buffer: store and average temporal-filter frames in variable length frame buffer
-- LFO menu: 
-    - each parameter has an optional LFO
-    - each LFO has a set of parameters (i.e. frequency, amplitude, etc.), that themselves have optional LFOs, with the depth only limited by my poor gui logic and your available screen space
-- Effects Manager:
-    - source 1, source 2, and the mixed output all have individual effect controls
-    - effects can be sequenced individually
-- Effects
-    - Color control
-    - Pixel manipulations
-    - Glitches
-    - Reflection/mirroring
-    - Frame pan, tilt, zoom
-    - Polar coordinate transform
-    - Sync modulation emulator
-    - Shape generator
-    - Pattern generator
-    - Warp effect generator
+- **LFO Modulation System**
+  - Link oscillators to any parameter
+  - 5 waveforms: Sine, Square, Triangle, Sawtooth, Perlin Noise
+  - Nested LFOs (modulate LFO parameters with other LFOs)
+  - Per-parameter cutoff ranges
 
-#### Parameters
-The ```Param``` class is used to manage all control variables. Each ```Param``` is a number with a minimum and maximum values (>=2), and belongs to. 
+### Effects Categories
 
-```Param```s are primarily used by the effects classes, but are also used in the Mixer and LFO bank. Essentially any single value that a user can alter should be a ```Param```.
+**Color**
+- HSV manipulation (hue rotation, saturation, value)
+- Brightness/contrast adjustment
+- Solarization and posterization
+- Color polarization
 
+**Pixels**
+- Noise addition (Gaussian, salt & pepper)
+- Blur and sharpen
+- Edge detection
 
-#### Effects Classes and Effects Manager
-For effect modularity and gui simplicity, each related set of effects are placed into an Effects Class.
-Each effect class is derived from the ```EffectBase``` parent class.
-Each effect class should take the ```ParamsTable``` and ```ButtonsTable``` as arugments, add its own params, and implement its own ```create_gui_panel``` method. Until this is automated, the ```create_gui_panel``` must be manually called in ```gui.py/create_interface()```***.
+**Transform**
+- Pan, tilt, zoom (PTZ)
+- Reflection (horizontal, vertical, kaleidoscope)
+- Polar coordinate transform
+- Warp effects
 
-All effects classes are stored, initialized and managed by the ```EffectsManager``` facade class. This simplifies dependencies, arguments, and effect sequencing. Feedback is currently ommitted from effect sequencing until further experimentation. 
+**Temporal**
+- Feedback blending
+- Frame averaging
+- Temporal filtering
+- Luma feedback
 
-## Control
-The app can be controlled through a (crappy) GUI or midi controller. The program is currently configured to use a cheap AKAI MIDI Mix or MVAVE SMC Mixer, but there are provisions to configure a new controller with relative ease. To implement a new controller, see the required functions you must expose in the example ```SMC_Mixer()``` or ```MidiMix()``` classes in ```midi.py```. Most work involves the mapping of CC values to parameters.
+**Glitch**
+- Scanline displacement
+- Color channel shifting
+- Block corruption
+- Sync modulation emulation
 
-Any new midi device class must be named after its parsed device name.
-This can be found simply by running the program and finding the detected device name.
-For example, the program may find an input device named "MIDI Mix 1". Remove the port number (resulting in "MIDI Mix"), and name your new class after it.
-Add the new class ```.___name___``` attribute to the ```CONTROLLER_NAMES``` list, and the program should now ID your device.
+### Procedural Animations
 
+All animations are fully parametric with real-time adjustment:
 
-## My Current Configuration
-* TODO: include VGA capture device in sources
-* TODO: include CHA/V, link to VGA capture source
-* TODO: add posterize, solarize, to effects
-* note that the Unmixed HDMI Display is not the fully mixed video. It is essentially a placeholder to indicate that there is another HDMI output available.
+- **Metaballs** - Organic blob simulation with configurable physics
+- **Moire Patterns** - 7 pattern types (line, radial, grid, spiral, diamond, checkerboard, hexagonal)
+- **Reaction Diffusion** - Gray-Scott chemical simulation
+- **Plasma** - Classic demoscene plasma effect
+- **Strange Attractors** - Chaotic systems (Lorenz, Clifford, De Jong, Aizawa, Thomas)
+- **Physarum** - Slime mold simulation
+- **Shaders** - 11 procedural shaders (fractal, plasma, galaxy, etc.)
+- **DLA** - Diffusion-limited aggregation
+- **Chladni** - Vibration pattern simulation
+- **Voronoi** - Cellular tessellation
 
-![Video Synthesizer Diagram](documentation/diagram.svg)
-
-## Background and Inspiration
-
-This program was inspired by [this video](https://www.youtube.com/watch?v=D3eHKI0nvKA), which was graciously provided by the algorithm despite lacking any prior exposure to video synthesis. In describing his kinetic video feedback synthesizer, Dave Blair explains why his machine use expensive field-monitors and their analog knobs to manipulate image properties. I wanted to acheive similar effects without such expensive equipment, so I was inspired to explore a purely code-based solution. The original intention was to design and program a PCB with an HID-capable MCU + encoders and interface it to a basic openCV program.
-
-I have since pivoted to using off-the-shelf MIDI controllers to emulate effects normally acheived through analog video synthesis modules and mixers, and added various live, tunable simulations, optical art generators, and other visually interesting algorithms.
+### Patch System
+- Save/recall parameter configurations
+- YAML-based patch storage
+- Multiple patch slots per save file
+- GUI patch browser

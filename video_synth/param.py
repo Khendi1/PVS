@@ -153,6 +153,7 @@ class Param:
         self.options = options
 
         self.linked_oscillator = None
+        self.linked_audio_band = None
 
         # Initialize the internal _value attribute using the setter
         # This ensures initial default is clamped and type-casted correctly

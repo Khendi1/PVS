@@ -1,10 +1,6 @@
 """
 Main module for the video synthesizer application.
 This module initializes the gui and video mixer, applies effects, and manages the main loop.
-
-All effects classes are initialized, sequenced and applied by the EffectsManager.
-The Effects manager is stored in globals.py for easy sharing with the GUI, but is initialized in main.
-
 See the Program Architecture section in README.md for in-depth explainations
 of module function and interation.
 
@@ -17,18 +13,19 @@ import logging
 import signal
 import threading
 import time
+from contextlib import contextmanager
 import cv2
 import numpy as np
-
+from PyQt6.QtWidgets import QApplication, QGridLayout
+from PyQt6.QtGui import QImage, QPixmap
+from pyqt_gui import PyQTGUI
 from settings import UserSettings
 from common import *
 from midi import *
 from mixer import Mixer
+from param import ParamTable
 from effects_manager import EffectManager
-
-from PyQt6.QtWidgets import QApplication, QGridLayout
-from PyQt6.QtGui import QImage, QPixmap
-from pyqt_gui import PyQTGUI
+from audio_reactive import AudioReactiveModule
 
 
 # List of MIDI controller class names to identify and initialize
@@ -81,13 +78,6 @@ def parse_args():
         choices=[item.name for item in OutputMode],
         help='Use an external window for video output'
     )
-    # parser.add_argument(
-    #     '-p',
-    #     '--profile',
-    #     default=0,
-    #     type=int,
-    #     help='Run the program with cProfile to identify bottlenecks. Output saved to "profile_output.prof"'
-    # )
     parser.add_argument(
         '-d',
         '--diagnose',
@@ -99,7 +89,7 @@ def parse_args():
     return parser.parse_args()
 
 
-""" Global logging module configuration using """
+""" Global logging module configuration """
 def config_log(log_level):
     logging.basicConfig(
         level=log_level,
@@ -110,8 +100,18 @@ def config_log(log_level):
     return log
 
 
+@contextmanager
+def perf_timer(perf_data, key, enabled):
+    if enabled:
+        t0 = time.perf_counter()
+        yield
+        perf_data[key] = (time.perf_counter() - t0) * 1000
+    else:
+        yield
+
+
 """Video processing loop"""
-def video_loop(mixer, effects, should_quit, gui, settings):
+def video_loop(mixer, effects, should_quit, gui, settings, audio_module=None):
     import gc  # For explicit garbage collection
 
     wet_frame = dry_frame = mixer.get_frame()
@@ -135,14 +135,15 @@ def video_loop(mixer, effects, should_quit, gui, settings):
         if settings.output_mode.value == OutputMode.FULLSCREEN.value:  # Fullscreen mode
             cv2.setWindowProperty(VIDEO_OUTPUT_WINDOW_TITLE, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
+    # Main loop
     while not should_quit.is_set():
-        frame_start = time.perf_counter()
+        if DEBUG:
+            frame_start = time.perf_counter()
         perf_data = {}
 
         # Mixer get_frame
-        t0 = time.perf_counter()
-        dry_frame = mixer.get_frame()
-        perf_data['mixer'] = (time.perf_counter() - t0) * 1000
+        with perf_timer(perf_data, 'mixer', DEBUG):
+            dry_frame = mixer.get_frame()
 
         if mixer.skip or dry_frame is None:
             mixer.skip = False
@@ -150,48 +151,39 @@ def video_loop(mixer, effects, should_quit, gui, settings):
             continue
 
         # --- LFO updates ---
+        with perf_timer(perf_data, 'lfos', DEBUG):
+            for effect_manager in effects:
+                effect_manager.oscs.update()
 
-        if DEBUG: t0 = time.perf_counter()
+            # --- Audio reactive updates ---
+            if audio_module is not None:
+                audio_module.analyze()
 
-        for effect_manager in effects:
-            effect_manager.oscs.update()
-        
-    
-        if DEBUG:
-            perf_data['lfos'] = (time.perf_counter() - t0) * 1000
-            # Effects processing
-            t0 = time.perf_counter()
+        # Effects processing
+        with perf_timer(perf_data, 'effects', DEBUG):
+            prev_frame, wet_frame = effects[MixerSource.POST.value].get_frames(
+                dry_frame, wet_frame, prev_frame, frame_count
+            )
+            frame_count += 1
 
-        prev_frame, wet_frame = effects[MixerSource.POST.value].get_frames(
-            dry_frame, wet_frame, prev_frame, frame_count
-        )
-        frame_count += 1
-
-        if DEBUG:
-            perf_data['effects'] = (time.perf_counter() - t0) * 1000
-            # GUI emit
-            t0 = time.perf_counter()
-
-        rgb_image = cv2.cvtColor(wet_frame.astype(np.uint8), cv2.COLOR_BGR2RGB)
-        h, w, ch = rgb_image.shape
-        bytes_per_line = ch * w
-        # CRITICAL: Copy data to prevent QImage from referencing temporary/modified memory
-        qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888).copy()
-        gui.video_frame_ready.emit(qt_image)
-        
-        if DEBUG: perf_data['gui_emit'] = (time.perf_counter() - t0) * 1000
+        # GUI emit
+        with perf_timer(perf_data, 'gui_emit', DEBUG):
+            rgb_image = cv2.cvtColor(wet_frame.astype(np.uint8), cv2.COLOR_BGR2RGB)
+            h, w, ch = rgb_image.shape
+            bytes_per_line = ch * w
+            # CRITICAL: Copy data to prevent QImage from referencing temporary/modified memory
+            qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888).copy()
+            gui.video_frame_ready.emit(qt_image)
 
         # External window
         if cv_window_active:
-            if DEBUG: t0 = time.perf_counter()
-            cv2.imshow(VIDEO_OUTPUT_WINDOW_TITLE, wet_frame.astype(np.uint8))
-            # PERFORMANCE FIX: Only check for key presses every 10 frames to reduce blocking
-            # cv2.waitKey(1) blocks for 1ms which adds up over time
-            if frame_count % 20 == 0:
-                key = cv2.waitKey(1) & 0xFF
-                if key in ESCAPE_KEYS:
-                    break
-            if DEBUG: perf_data['cv2_show'] = (time.perf_counter() - t0) * 1000
+            with perf_timer(perf_data, 'cv2_show', DEBUG):
+                cv2.imshow(VIDEO_OUTPUT_WINDOW_TITLE, wet_frame.astype(np.uint8))
+                # PERFORMANCE FIX: Only check for key presses every X frames to reduce blocking
+                if frame_count % 20 == 0:
+                    key = cv2.waitKey(1) & 0xFF
+                    if key in ESCAPE_KEYS:
+                        break
 
         if DEBUG:
             # Total frame time
@@ -215,8 +207,7 @@ def video_loop(mixer, effects, should_quit, gui, settings):
                         f"total={avg_stats['total']:.1f}ms")
                 perf_samples.clear()
 
-        # PERFORMANCE FIX: Explicit garbage collection to prevent memory buildup
-        # NumPy arrays and OpenCV frames can accumulate if GC doesn't run frequently enough
+        # PERFORMANCE FIX: Explicit garbage collection to prevent NumPy and OpenCV mem accumulation
         if frame_count % gc_interval == 0:
             gc.collect()
 
@@ -238,19 +229,26 @@ def main(settings, controller_names):
 
     mixer = Mixer(effects, settings.num_devices, WIDTH, HEIGHT)
 
+    # Initialize audio reactive module
+    audio_params = ParamTable(group="AudioReactive")
+    audio_module = AudioReactiveModule(audio_params)
+    audio_module.start()
+
     # Identify and initialize midi controllers before creating the GUI
     controllers = identify_midi_ports(controller_names, 
                                       src_1_effects.params, 
                                       src_2_effects.params, 
-                                      post_effects.params)
+                                      post_effects.params,
+                                      mixer.params,)
 
     # log.info(f'Starting program with {len(params.keys())} tunable parameters')
 
     # Handle Ctrl+C from terminal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     
+    # Create and start the control panel GUI
     app = QApplication(sys.argv)
-    main_window = PyQTGUI(effects, settings, mixer)
+    main_window = PyQTGUI(effects, settings, mixer, audio_module=audio_module)
     main_window.show() 
     
     should_quit = threading.Event()
@@ -258,7 +256,7 @@ def main(settings, controller_names):
     # Start main application thread to run the PyQt and video event loop
     video_thread = threading.Thread(
         target=video_loop,
-        args=(mixer, effects, should_quit, main_window, settings)
+        args=(mixer, effects, should_quit, main_window, settings, audio_module)
     )
     video_thread.start()
     
@@ -268,6 +266,7 @@ def main(settings, controller_names):
     log.info("PyQt event loop finished.")
     should_quit.set()
     video_thread.join()
+    audio_module.stop()
     sys.exit(exit_code)
 
     if controllers:
@@ -278,7 +277,6 @@ def main(settings, controller_names):
                 log.warning("MIDI thread did not terminate gracefully. Forcing exit.")
             else:
                 log.info("MIDI thread stopped successfully.")
-
 
 
 if __name__ == "__main__":

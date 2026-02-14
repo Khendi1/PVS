@@ -4,6 +4,7 @@ import threading
 import time
 import logging
 from abc import ABC, abstractmethod
+from param import ParamTable
 
 log = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ CONTROLLER_NAMES = []
 
 
 """ Identifies midi controller ports from controller_names"""
-def identify_midi_ports(controller_names: list[str], *params):
+def identify_midi_ports(controller_names: list[str], *params: ParamTable):
     
     # Mido uses a default backend (often python-rtmidi) which handles platform differences.    
     controllers = []

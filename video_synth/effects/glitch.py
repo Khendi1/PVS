@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 import random
-import dearpygui.dearpygui as dpg
 
 from effects.base import EffectBase
 from common import Widget, Toggle

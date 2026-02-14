@@ -2,6 +2,7 @@ import enum
 import logging
 from param import ParamTable, Param
 from common import Groups, MixerSource, Widget, Layout
+from audio_reactive import BAND_NAMES
 from mixer import MixModes, FileSource
 from save import SaveController
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QPushButton, QGroupBox, QRadioButton, QScrollArea, QToolButton, QSizePolicy, QLineEdit, QTabWidget, QComboBox, QDialog, QGridLayout, QListWidget, QColorDialog, QTextEdit
@@ -143,10 +144,12 @@ class LFOManagerDialog(QDialog):
             
             osc = self.param.linked_oscillator
             # Create widgets for oscillator parameters
-            for param_name in ['shape', 'frequency', 'amplitude', 'phase', 'noise_octaves', 'noise_persistence', 'noise_lacunarity', 'noise_repeat', 'noise_base']:
+            for param_name in ['shape', 'frequency', 'amplitude', 'phase', 'seed', 'cutoff_min', 'cutoff_max', 'noise_octaves', 'noise_persistence', 'noise_lacunarity', 'noise_repeat', 'noise_base']:
                 if hasattr(osc, param_name):
                     param = getattr(osc, param_name)
-                    widget = self.gui_instance._create_param_widget(param, register=False)
+                    # Strip the oscillator name prefix to create a clean display name
+                    display_name = param_name.replace("_", " ").title()
+                    widget = self.gui_instance._create_param_widget(param, register=False, display_name=display_name)
                     self.controls_layout.addWidget(widget)
 
     def link_new_lfo(self):
@@ -165,6 +168,74 @@ class LFOManagerDialog(QDialog):
             self.param.linked_oscillator = None
             self.mod_button.setStyleSheet(PyQTGUI.LFO_BUTTON_UNLINKED_STYLE) # Update button style
             self.rebuild_ui()
+
+
+"""Dialog for managing audio band linkage to a parameter."""
+class AudioLinkDialog(QDialog):
+    def __init__(self, param, audio_module, gui_instance, aud_button, parent=None):
+        super().__init__(parent)
+        self.param = param
+        self.audio_module = audio_module
+        self.gui_instance = gui_instance
+        self.aud_button = aud_button
+        self.setWindowTitle(f"Audio for {param.name}")
+        self.setWindowFlags(Qt.WindowType.Popup)
+
+        self.layout = QVBoxLayout(self)
+        self.rebuild_ui()
+
+    def rebuild_ui(self):
+        while self.layout.count():
+            child = self.layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+
+        if not self.audio_module.available:
+            label = QLabel("No audio device available.")
+            self.layout.addWidget(label)
+            return
+
+        if self.param.linked_audio_band is None:
+            link_button = QPushButton("Link Audio Band")
+            link_button.clicked.connect(self.link_new_band)
+            self.layout.addWidget(link_button)
+        else:
+            unlink_button = QPushButton("Unlink Audio Band")
+            unlink_button.clicked.connect(self.unlink_band)
+            self.layout.addWidget(unlink_button)
+
+            controls_container = QWidget()
+            controls_layout = QVBoxLayout(controls_container)
+            self.layout.addWidget(controls_container)
+
+            band = self.param.linked_audio_band
+            for param_name in ['band', 'sensitivity', 'attack', 'decay', 'cutoff_min', 'cutoff_max']:
+                if hasattr(band, param_name):
+                    p = getattr(band, param_name)
+                elif hasattr(band, f'{param_name}_select'):
+                    p = getattr(band, f'{param_name}_select')
+                else:
+                    continue
+                display_name = param_name.replace("_", " ").title()
+                widget = self.gui_instance._create_param_widget(p, register=False, display_name=display_name)
+                controls_layout.addWidget(widget)
+
+    def link_new_band(self):
+        band_name = f"{self.param.name}_audio"
+        new_band = self.audio_module.add_band(band_name, band_index=0)
+        new_band.link_param(self.param)
+        self.param.linked_audio_band = new_band
+        self.aud_button.setStyleSheet(PyQTGUI.AUD_BUTTON_LINKED_STYLE)
+        self.rebuild_ui()
+
+    def unlink_band(self):
+        if self.param.linked_audio_band:
+            self.audio_module.remove_band(self.param.linked_audio_band)
+            self.param.linked_audio_band.unlink_param()
+            self.param.linked_audio_band = None
+            self.aud_button.setStyleSheet(PyQTGUI.AUD_BUTTON_UNLINKED_STYLE)
+            self.rebuild_ui()
+
 
 """Widget for reordering the effects processing chain via drag-and-drop."""
 class SequencerWidget(QWidget):
@@ -211,13 +282,16 @@ class SequencerWidget(QWidget):
 class PyQTGUI(QMainWindow):
     LFO_BUTTON_UNLINKED_STYLE = "QPushButton { background-color: #607D8B; color: white; }" # Default grey
     LFO_BUTTON_LINKED_STYLE = "QPushButton { background-color: #4CAF50; color: white; }" # Green
+    AUD_BUTTON_UNLINKED_STYLE = "QPushButton { background-color: #607D8B; color: white; }" # Default grey
+    AUD_BUTTON_LINKED_STYLE = "QPushButton { background-color: #FF9800; color: white; }" # Orange
     video_frame_ready = pyqtSignal(QImage)
 
-    def __init__(self, effects, settings, mixer=None):
+    def __init__(self, effects, settings, mixer=None, audio_module=None):
         super().__init__()
         self.layout_style = settings.layout.value
         self.effects = effects
         self.mixer = mixer
+        self.audio_module = audio_module
         self.src_1_effects = effects[MixerSource.SRC_1]
         self.src_2_effects = effects[MixerSource.SRC_2]
         self.post_effects = effects[MixerSource.POST]
@@ -259,12 +333,12 @@ class PyQTGUI(QMainWindow):
         # Set up logging to GUI
         self._setup_logging()
 
-        self.lfo_refresh_timer = QTimer(self)
-        self.lfo_refresh_timer.timeout.connect(self._refresh_lfo_buttons)
-        self.lfo_refresh_timer.start(250)
+        self.mod_refresh_timer = QTimer(self)
+        self.mod_refresh_timer.timeout.connect(self._refresh_mod_buttons)
+        self.mod_refresh_timer.start(250)
   
         
-    def _refresh_lfo_buttons(self):
+    def _refresh_mod_buttons(self):
         self.all_params = ParamTable()
         self.all_params.params.update(self.src_1_effects.params)
         self.all_params.params.update(self.src_2_effects.params)
@@ -274,12 +348,17 @@ class PyQTGUI(QMainWindow):
         for param_name, widget in self.param_widgets.items():
             param = self.all_params.get(param_name)
             if param:
-                mod_button = widget.findChild(QPushButton)
-                if mod_button and mod_button.text() == "LFO":
-                    if param.linked_oscillator:
-                        mod_button.setStyleSheet(PyQTGUI.LFO_BUTTON_LINKED_STYLE)
-                    else:
-                        mod_button.setStyleSheet(PyQTGUI.LFO_BUTTON_UNLINKED_STYLE)
+                for btn in widget.findChildren(QPushButton):
+                    if btn.text() == "LFO":
+                        if param.linked_oscillator:
+                            btn.setStyleSheet(PyQTGUI.LFO_BUTTON_LINKED_STYLE)
+                        else:
+                            btn.setStyleSheet(PyQTGUI.LFO_BUTTON_UNLINKED_STYLE)
+                    elif btn.text() == "AUD":
+                        if param.linked_audio_band:
+                            btn.setStyleSheet(PyQTGUI.AUD_BUTTON_LINKED_STYLE)
+                        else:
+                            btn.setStyleSheet(PyQTGUI.AUD_BUTTON_UNLINKED_STYLE)
 
     def _setup_logging(self):
         """Connect the logging system to the GUI log viewer."""
@@ -522,14 +601,66 @@ class PyQTGUI(QMainWindow):
             osc_bank = self.src_2_effects.oscs
         else:
             osc_bank = self.post_effects.oscs
-        
+
         dialog = LFOManagerDialog(param, osc_bank, self, button, self)
-        
+        dialog.setMinimumWidth(600)
+
+        # Position dialog below button, with screen boundary detection
         button_pos = button.mapToGlobal(button.rect().bottomLeft())
+        screen_geometry = QGuiApplication.primaryScreen().availableGeometry()
+
+        # Adjust size to ensure it fits on screen
+        dialog.adjustSize()
+        dialog_size = dialog.size()
+
+        # Check if dialog would go off right edge
+        if button_pos.x() + dialog_size.width() > screen_geometry.right():
+            button_pos.setX(screen_geometry.right() - dialog_size.width())
+
+        # Check if dialog would go off left edge
+        if button_pos.x() < screen_geometry.left():
+            button_pos.setX(screen_geometry.left())
+
+        # Check if dialog would go off bottom edge
+        if button_pos.y() + dialog_size.height() > screen_geometry.bottom():
+            # Position above button instead
+            button_pos = button.mapToGlobal(button.rect().topLeft())
+            button_pos.setY(button_pos.y() - dialog_size.height())
+
+        # Check if dialog would go off top edge
+        if button_pos.y() < screen_geometry.top():
+            button_pos.setY(screen_geometry.top())
+
         dialog.move(button_pos)
-        dialog.setMinimumWidth(400)
-        
-        dialog.exec() 
+        dialog.exec()
+
+
+    def _open_audio_dialog(self, param, button):
+        if self.audio_module is None:
+            return
+
+        dialog = AudioLinkDialog(param, self.audio_module, self, button, self)
+        dialog.setMinimumWidth(600)
+
+        # Position dialog below button, with screen boundary detection
+        button_pos = button.mapToGlobal(button.rect().bottomLeft())
+        screen_geometry = QGuiApplication.primaryScreen().availableGeometry()
+
+        dialog.adjustSize()
+        dialog_size = dialog.size()
+
+        if button_pos.x() + dialog_size.width() > screen_geometry.right():
+            button_pos.setX(screen_geometry.right() - dialog_size.width())
+        if button_pos.x() < screen_geometry.left():
+            button_pos.setX(screen_geometry.left())
+        if button_pos.y() + dialog_size.height() > screen_geometry.bottom():
+            button_pos = button.mapToGlobal(button.rect().topLeft())
+            button_pos.setY(button_pos.y() - dialog_size.height())
+        if button_pos.y() < screen_geometry.top():
+            button_pos.setY(screen_geometry.top())
+
+        dialog.move(button_pos)
+        dialog.exec()
 
 
     def create_ui(self):
@@ -721,13 +852,14 @@ class PyQTGUI(QMainWindow):
         self._update_mixer_visibility()
 
 
-    def _create_param_widget(self, param: Param, register=True):
+    def _create_param_widget(self, param: Param, register=True, display_name=None):
         widget = QWidget()
         widget.setProperty("param_name", param.name)
         layout = QHBoxLayout(widget)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        label = QLabel(param.name.replace("_", " ").title())
+        label_text = display_name if display_name else param.name.replace("_", " ").title()
+        label = QLabel(label_text)
         label.setFixedWidth(100)
         layout.addWidget(label)
 
@@ -790,6 +922,18 @@ class PyQTGUI(QMainWindow):
                 mod_button.setStyleSheet(PyQTGUI.LFO_BUTTON_UNLINKED_STYLE)
             
             layout.addWidget(mod_button)
+
+            aud_button = QPushButton("AUD")
+            aud_button.setProperty("param_name", param.name)
+            aud_button.setFixedWidth(35)
+            aud_button.clicked.connect(lambda _, p=param, b=aud_button: self._open_audio_dialog(p, b))
+
+            if param.linked_audio_band:
+                aud_button.setStyleSheet(PyQTGUI.AUD_BUTTON_LINKED_STYLE)
+            else:
+                aud_button.setStyleSheet(PyQTGUI.AUD_BUTTON_UNLINKED_STYLE)
+
+            layout.addWidget(aud_button)
 
             slider = QSlider(Qt.Orientation.Horizontal)
             value_input = QLineEdit()
