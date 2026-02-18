@@ -80,6 +80,9 @@ class Mixer:
         # flags to skip the first frame after starting a new video source
         self.skip = False
 
+        # current frame for API snapshot endpoint
+        self.current_frame = None
+
         # search for available video capture devices
         num_devices = self._detect_devices(max_index=num_devices)
         # add devices to sources dict if found
@@ -198,6 +201,9 @@ class Mixer:
                                                    min=LumaMode.WHITE.value, max=LumaMode.BLACK.value, default=LumaMode.WHITE.value,
                                                    subgroup=subgroup, group=self.group,
                                                    type=Widget.RADIO, options=LumaMode)
+        self.luma_blur = self.params.add("luma_blur",
+                                              min=1, max=51, default=1,
+                                              subgroup=subgroup, group=self.group)
         self.upper_hue = self.params.add("upper_hue",
                                               min=0, max=179, default=80,
                                               subgroup=subgroup, group=self.group)
@@ -224,7 +230,7 @@ class Mixer:
         self.swap = self.params.add("swap_sources",
                                          min=0, max=1, default=0,
                                          subgroup=subgroup, group=self.group,
-                                         type=Widget.RADIO, options=Toggle)
+                                         type=Widget.TOGGLE)
 
         # --- Initialize previous and wet frames for each source ---
 
@@ -345,7 +351,8 @@ class Mixer:
 
     def _luma_key(self, frame1, frame2):
         return luma_key(
-            frame1, frame2, self.luma_selection.value, self.luma_threshold.value
+            frame1, frame2, self.luma_selection.value, self.luma_threshold.value,
+            self.luma_blur.value
         ).astype(np.float32)
 
 

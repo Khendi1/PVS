@@ -24,6 +24,7 @@ class WarpType(Enum):
     FRACTAL = auto()
     PERLIN = auto()
     WARP0 = auto()
+    FEEDBACK = auto()
 
 
 """Enumeration of blur modes"""

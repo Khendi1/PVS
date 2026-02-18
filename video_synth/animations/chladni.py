@@ -46,7 +46,7 @@ class Chladni(Animation):
         self.show_wave = params.add("chladni_show_wave",
                                     min=0, max=1, default=1,
                                     subgroup=subgroup, group=group,
-                                    type=Widget.RADIO, options=Toggle)
+                                    type=Widget.TOGGLE)
         self.colormap = params.add("chladni_colormap",
                                    min=0, max=len(COLORMAP_OPTIONS)-1, default=2,
                                    subgroup=subgroup, group=group,

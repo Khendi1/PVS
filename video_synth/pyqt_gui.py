@@ -5,7 +5,7 @@ from common import Groups, MixerSource, Widget, Layout
 from audio_reactive import BAND_NAMES
 from mixer import MixModes, FileSource
 from save import SaveController
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QPushButton, QGroupBox, QRadioButton, QScrollArea, QToolButton, QSizePolicy, QLineEdit, QTabWidget, QComboBox, QDialog, QGridLayout, QListWidget, QColorDialog, QTextEdit
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QPushButton, QGroupBox, QRadioButton, QScrollArea, QToolButton, QSizePolicy, QLineEdit, QTabWidget, QComboBox, QDialog, QGridLayout, QListWidget, QColorDialog, QTextEdit, QCheckBox
 from PyQt6.QtGui import QGuiApplication, QImage, QPixmap, QPainter, QColor, QTextCursor
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSignal, pyqtSlot, QTimer
 
@@ -910,6 +910,12 @@ class PyQTGUI(QMainWindow):
             combo_box.currentIndexChanged.connect(lambda index, p=param, c=combo_box: self._on_dropdown_change(p, c.itemData(index)))
             layout.addWidget(combo_box)
 
+        elif param.type == Widget.TOGGLE:
+            checkbox = QCheckBox()
+            checkbox.setChecked(bool(param.value))
+            checkbox.stateChanged.connect(lambda state, p=param: self._on_toggle_change(p, state))
+            layout.addWidget(checkbox)
+
         else:  # Default to SLIDER
             mod_button = QPushButton("LFO")
             mod_button.setProperty("param_name", param.name)
@@ -1035,6 +1041,12 @@ class PyQTGUI(QMainWindow):
             pass
 
 
+    def _on_toggle_change(self, param: Param, state):
+        """Handle toggle checkbox state changes. Qt.CheckState: Unchecked=0, Checked=2"""
+        param.value = 1 if state == Qt.CheckState.Checked.value else 0
+        log.info(f"Toggle changed: {param.name} = {param.value}")
+
+
     def _on_reset_click(self, param: Param, widget: QWidget):
         param.reset()
         slider = widget.findChild(QSlider)
@@ -1058,6 +1070,10 @@ class PyQTGUI(QMainWindow):
         combo_box = widget.findChild(QComboBox)
         if combo_box:
             combo_box.setCurrentText(str(param.value))
+
+        checkbox = widget.findChild(QCheckBox)
+        if checkbox:
+            checkbox.setChecked(bool(param.value))
 
 
     def _reset_src1_params(self):

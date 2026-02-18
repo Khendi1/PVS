@@ -52,7 +52,25 @@ class Warp(EffectBase):
                                  min=0.25, max=100.0, default=10.0,
                                  subgroup=subgroup, group=group)
 
+        self.fb_warp_decay = params.add("fb_warp_decay",
+                                         min=0.0, max=1.0, default=0.95,
+                                         subgroup=subgroup, group=group)
+        self.fb_warp_strength = params.add("fb_warp_strength",
+                                            min=0.0, max=50.0, default=5.0,
+                                            subgroup=subgroup, group=group)
+        self.fb_warp_freq = params.add("fb_warp_freq",
+                                        min=0.1, max=20.0, default=3.0,
+                                        subgroup=subgroup, group=group)
+
         self.t = 0
+
+        # Persistent displacement maps for feedback warp (identity = no displacement)
+        y_id, x_id = np.meshgrid(np.arange(self.height, dtype=np.float32),
+                                  np.arange(self.width, dtype=np.float32), indexing='ij')
+        self._fb_base_x = x_id.copy()
+        self._fb_base_y = y_id.copy()
+        self._fb_map_x = x_id.copy()
+        self._fb_map_y = y_id.copy()
 
     def _generate_perlin_flow(self, t, amp_x, amp_y, freq_x, freq_y):
         fx = np.zeros((self.height, self.width), dtype=np.float32)
@@ -148,6 +166,50 @@ class Warp(EffectBase):
 
         return frame
 
+    def _feedback_warp(self, frame):
+        """Feedback warp: displacement maps accumulate over time, creating chaotic self-similar patterns."""
+        strength = self.fb_warp_strength.value
+        decay = self.fb_warp_decay.value
+        freq = self.fb_warp_freq.value
+
+        # Generate a small per-frame perturbation using sine waves
+        dx = np.sin(self._fb_base_y * freq * 0.01 + self.t) * strength
+        dy = np.cos(self._fb_base_x * freq * 0.01 + self.t * 0.7) * strength
+
+        # Accumulate: add perturbation to the displacement offset from identity
+        offset_x = self._fb_map_x - self._fb_base_x
+        offset_y = self._fb_map_y - self._fb_base_y
+
+        # Decay existing displacement toward zero, then add new perturbation
+        offset_x = offset_x * decay + dx
+        offset_y = offset_y * decay + dy
+
+        # Self-distort: remap the displacement maps through themselves
+        # This is what creates the chaotic, fractal-like folding
+        new_map_x = self._fb_base_x + offset_x
+        new_map_y = self._fb_base_y + offset_y
+
+        # Remap the offset maps through the accumulated warp (self-referential feedback)
+        warped_offset_x = cv2.remap(offset_x, new_map_x, new_map_y,
+                                     interpolation=cv2.INTER_LINEAR,
+                                     borderMode=cv2.BORDER_REFLECT)
+        warped_offset_y = cv2.remap(offset_y, new_map_x, new_map_y,
+                                     interpolation=cv2.INTER_LINEAR,
+                                     borderMode=cv2.BORDER_REFLECT)
+
+        # Blend: mix self-distorted offsets back with a fraction of the straight offsets
+        # to control how chaotic it gets
+        self._fb_map_x = self._fb_base_x + warped_offset_x * 0.7 + offset_x * 0.3
+        self._fb_map_y = self._fb_base_y + warped_offset_y * 0.7 + offset_y * 0.3
+
+        # Clamp to valid pixel range
+        map_x = np.clip(self._fb_map_x, 0, self.width - 1)
+        map_y = np.clip(self._fb_map_y, 0, self.height - 1)
+
+        return cv2.remap(frame, map_x, map_y,
+                         interpolation=cv2.INTER_LINEAR,
+                         borderMode=cv2.BORDER_REFLECT)
+
     def warp(self, frame):
         self.t += 0.1
 
@@ -213,6 +275,9 @@ class Warp(EffectBase):
 
             case WarpType.WARP0:
                 return self._first_warp(frame)
+
+            case WarpType.FEEDBACK:
+                return self._feedback_warp(frame)
 
             case _:
                 return frame

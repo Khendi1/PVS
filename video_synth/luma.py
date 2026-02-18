@@ -6,7 +6,7 @@ class LumaMode(IntEnum):
     WHITE = auto()
     BLACK = auto()
 
-def luma_key(frame1: np.ndarray, frame2: np.ndarray, mode: LumaMode, threshold: int):
+def luma_key(frame1: np.ndarray, frame2: np.ndarray, mode: LumaMode, threshold: int, blur: int = 1):
     # Ensure inputs are uint8 for bitwise operations
     frame1 = np.clip(frame1, 0, 255).astype(np.uint8)
     frame2 = np.clip(frame2, 0, 255).astype(np.uint8)
@@ -25,7 +25,9 @@ def luma_key(frame1: np.ndarray, frame2: np.ndarray, mode: LumaMode, threshold: 
             gray, threshold, 255, cv2.THRESH_BINARY
         )
 
-    smoothed_mask = cv2.GaussianBlur(mask, (1, 1), 0)
+    # Blur the mask to soften key edges; kernel must be odd
+    k = max(1, int(blur)) | 1
+    smoothed_mask = cv2.GaussianBlur(mask, (k, k), 0)
 
     # Keep the keyed-out parts of the current frame
     fg = cv2.bitwise_and(frame1, frame1, mask=smoothed_mask)

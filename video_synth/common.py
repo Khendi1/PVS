@@ -66,6 +66,7 @@ class Widget(StrEnum):
     SLIDER = auto()
     DROPDOWN = auto()
     RADIO = auto()
+    TOGGLE = auto()
     SPLIT_ROW_SLIDER = auto()
     SPLIT_ROW_DROPDOWN = auto()
 

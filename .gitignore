@@ -5,3 +5,4 @@ __pycache__/
 .VSCodeCounter/
 *.log
 tasks.txt
+nul

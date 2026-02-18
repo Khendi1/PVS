@@ -58,7 +58,7 @@ class DLA(Animation):
         self.reset_trigger = params.add("dla_reset",
                                         min=0, max=1, default=0,
                                         subgroup=subgroup, group=group,
-                                        type=Widget.RADIO, options=Toggle)
+                                        type=Widget.TOGGLE)
 
         self._initialize_simulation()
 

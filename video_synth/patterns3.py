@@ -187,8 +187,86 @@ class Patterns:
                                       min=0.01, max=10.0, default=1.0,
                                       subgroup=subgroup, group=group) 
 
+        self.pattern_speed = params.add("pattern_speed",
+                                        min=0.0, max=5.0, default=1.0,
+                                        subgroup=subgroup, group=group)
+
+        # Pattern feedback parameters
+        self.pattern_fb_enable = params.add("pattern_fb_enable",
+                                            min=0, max=1, default=0,
+                                            subgroup=subgroup, group=group,
+                                            type=Widget.TOGGLE)
+        self.pattern_fb_decay = params.add("pattern_fb_decay",
+                                           min=0.0, max=1.0, default=0.85,
+                                           subgroup=subgroup, group=group)
+        self.pattern_fb_strength = params.add("pattern_fb_strength",
+                                              min=0.0, max=1.0, default=0.5,
+                                              subgroup=subgroup, group=group)
+        self.pattern_fb_warp = params.add("pattern_fb_warp",
+                                          min=0.0, max=20.0, default=5.0,
+                                          subgroup=subgroup, group=group)
+
         self.pattern_oscs = []
         self.prev = None
+        self._time = 0.0
+
+        # Persistent feedback buffer
+        self._fb_pattern_buffer = np.zeros((self.height, self.width, 3), dtype=np.float32)
+
+    def _apply_pattern_feedback(self, pattern: np.ndarray) -> np.ndarray:
+        """
+        Apply feedback modulation: blend new pattern with accumulated buffer,
+        with optional self-warping for chaotic evolution.
+        """
+        if self.pattern_fb_enable.value == 0:
+            return pattern
+
+        decay = self.pattern_fb_decay.value
+        strength = self.pattern_fb_strength.value
+        warp_amt = self.pattern_fb_warp.value
+
+        # Decay the existing buffer toward black
+        self._fb_pattern_buffer *= decay
+
+        # Convert new pattern to float32 for blending
+        pattern_float = pattern.astype(np.float32)
+
+        # Self-warp: create displacement map from buffer's luminance
+        if warp_amt > 0.1:
+            # Convert buffer to grayscale luminance
+            gray = cv2.cvtColor(self._fb_pattern_buffer.astype(np.uint8), cv2.COLOR_BGR2GRAY).astype(np.float32)
+
+            # Normalize luminance to create flow field
+            if gray.max() > 0:
+                normalized_luma = gray / gray.max()
+            else:
+                normalized_luma = gray
+
+            # Create displacement based on luminance gradients
+            # Bright areas flow in sine/cosine patterns
+            dx = np.sin(normalized_luma * np.pi * 2 + self._time * 0.1) * warp_amt
+            dy = np.cos(normalized_luma * np.pi * 2 + self._time * 0.15) * warp_amt
+
+            # Create remapping coordinates
+            y_coords, x_coords = np.indices((self.height, self.width), dtype=np.float32)
+            map_x = np.clip(x_coords + dx, 0, self.width - 1)
+            map_y = np.clip(y_coords + dy, 0, self.height - 1)
+
+            # Self-warp the buffer
+            warped_buffer = cv2.remap(self._fb_pattern_buffer,
+                                      map_x, map_y,
+                                      interpolation=cv2.INTER_LINEAR,
+                                      borderMode=cv2.BORDER_REFLECT)
+        else:
+            warped_buffer = self._fb_pattern_buffer
+
+        # Blend new pattern with warped feedback buffer
+        self._fb_pattern_buffer = (pattern_float * strength + warped_buffer * (1 - strength))
+
+        # Clamp to valid range
+        self._fb_pattern_buffer = np.clip(self._fb_pattern_buffer, 0, 255)
+
+        return self._fb_pattern_buffer.astype(np.uint8)
 
     def _cleanup_pattern_oscs(self):
         for osc in self.pattern_oscs:
@@ -280,61 +358,57 @@ class Patterns:
         pattern = np.zeros((self.height, self.width, 3), dtype=np.uint8)
 
         self._set_osc_params()
-
-        # log.debug(f"Generating pattern frame for type: {self.pattern_type.value}")
+        self._time += self.pattern_speed.value
 
         # Dispatch to the appropriate pattern generation function
         if self.pattern_type.value == PatternType.NONE.value:
             return frame
         elif self.pattern_type.value == PatternType.BARS.value:
             try:
-                log.debug("Calling _generate_bars")
                 pattern = self._generate_bars(pattern)
             except Exception as e:
                 log.error(f"Error generating BARS pattern: {e}")
-                return frame # Return original frame on error
+                return frame
         elif self.pattern_type.value == PatternType.WAVES.value:
             try:
-                log.debug("Calling _generate_waves")
                 pattern = self._generate_waves(pattern, self.X, self.Y)
             except Exception as e:
                 log.error(f"Error generating WAVES pattern: {e}")
                 return frame
         elif self.pattern_type.value == PatternType.CHECKERS.value:
             try:
-                log.debug("Calling _generate_checkers")
                 pattern = self._generate_checkers(pattern, self.X, self.Y)
             except Exception as e:
                 log.error(f"Error generating CHECKERS pattern: {e}")
                 return frame
         elif self.pattern_type.value == PatternType.RADIAL.value:
             try:
-                log.debug("Calling _generate_radial")
                 pattern = self._generate_radial(pattern, self.X, self.Y)
             except Exception as e:
                 log.error(f"Error generating RADIAL pattern: {e}")
                 return frame
         elif self.pattern_type.value == PatternType.PERLIN_BLOBS.value:
             try:
-                log.debug("Calling _generate_perlin_blobs")
-                pattern = self._generate_perlin_blobs(0) # frame_time not available here, using 0
+                pattern = self._generate_perlin_blobs(self._time / 30.0)
             except Exception as e:
                 log.error(f"Error generating PERLIN_BLOBS pattern: {e}")
                 return frame
         elif self.pattern_type.value == PatternType.FRACTAL_SINE.value:
             try:
-                log.debug("Calling _generate_fractal_sine")
-                pattern = self._generate_fractal_sine(pattern, self.X, self.Y, 0) # frame_time not available here, using 0
+                pattern = self._generate_fractal_sine(pattern, self.X, self.Y, self._time / 30.0)
             except Exception as e:
                 log.error(f"Error generating FRACTAL_SINE pattern: {e}")
                 return frame
         elif self.pattern_type.value == PatternType.XY_BARS.value:
             try:
-                log.debug("Calling _generate_xy_bars")
                 pattern = self._generate_xy_bars(pattern, self.X, self.Y)
             except Exception as e:
                 log.error(f"Error generating XY_BARS pattern: {e}")
                 return frame
+
+        # Apply feedback modulation before blending with frame
+        pattern = self._apply_pattern_feedback(pattern)
+
         alpha = self.pattern_alpha.value
         blended_frame = cv2.addWeighted(frame.astype(np.float32), 1 - alpha, pattern.astype(np.float32), alpha, 0)
         return blended_frame.astype('uint8')
@@ -343,48 +417,24 @@ class Patterns:
         """
         Generates bars that can be rotated, shifting color and position based on oscillator values.
         """
-        log.debug("Entering _generate_bars")
         height, width, _ = pattern.shape
 
         density = self.bar_x_freq.value
-        log.debug(f"bar_x_freq.value (density): {density}")
-        offset = self.bar_x_offset.value / 4  # linked to posc 0 for scrolling
-        log.debug(f"bar_x_offset.value (offset): {self.bar_x_offset.value}, calculated offset: {offset}")
-        mod = self.mod.value # gradient modulation for stripy bar patterns
-        log.debug(f"mod.value (mod): {mod}")
-        
+        offset = self.bar_x_offset.value / 4 + self._time
+        mod = self.mod.value
         rotation_rad = math.radians(self.rotation.value)
-        log.debug(f"rotation.value: {self.rotation.value}, rotation_rad: {rotation_rad}")
 
-        # Create normalized X and Y coordinate grids (e.g., from -1 to 1 or 0 to 1)
-        # This example uses normalized coordinates from 0 to 1, then scales/centers them
         x = np.linspace(-1, 1, width)
         y = np.linspace(-1, 1, height)
         xx, yy = np.meshgrid(x, y)
-        log.debug("Generated xx and yy meshgrids")
-        
-        # Combine the new coordinates into a single axis for modulation
-        rotated_axis = (
-            xx * math.cos(rotation_rad) - yy * math.sin(rotation_rad)
-        )
-        log.debug("Calculated rotated_axis")
 
-        # color modulation: clamp bar_mod to avoid overflow errors
-        bar_mod = (np.sin(rotated_axis * density * width + offset) + 1) / mod
-        log.debug(f"Calculated bar_mod (before clip): min={np.min(bar_mod)}, max={np.max(bar_mod)}")
-        bar_mod = np.clip(bar_mod, 0, 1)
-        log.debug(f"Calculated bar_mod (after clip): min={np.min(bar_mod)}, max={np.max(bar_mod)}")
+        rotated_axis = xx * math.cos(rotation_rad) - yy * math.sin(rotation_rad)
 
-        # Apply colors based on modulated brightness and other oscillators
-        # BGR format for OpenCV
-        blue_channel = (bar_mod * 255 * self.b.value / 255).astype(np.uint8)
-        green_channel = (bar_mod * 255 * self.g.value / 255).astype(np.uint8)
-        red_channel = (bar_mod * 255 * self.r.value / 255).astype(np.uint8)
-        log.debug("Calculated color channels")
+        bar_mod = np.clip((np.sin(rotated_axis * density * width + offset) + 1) / mod, 0, 1)
 
-        pattern[:, :, 0] = blue_channel
-        pattern[:, :, 1] = green_channel
-        pattern[:, :, 2] = red_channel
+        pattern[:, :, 0] = (bar_mod * 255 * self.b.value / 255).astype(np.uint8)
+        pattern[:, :, 1] = (bar_mod * 255 * self.g.value / 255).astype(np.uint8)
+        pattern[:, :, 2] = (bar_mod * 255 * self.r.value / 255).astype(np.uint8)
         return pattern
 
     def _generate_xy_bars(self, pattern: np.ndarray, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
@@ -392,12 +442,12 @@ class Patterns:
         Generates a pattern of bars on both X and Y axes, controlled by static parameters.
         """
 
-        x_offset = self.bar_x_offset.value / 10 # linked to posc 0
-        y_offset = self.bar_y_offset.value / 10 # linked to posc 1
+        x_offset = self.bar_x_offset.value / 10 + self._time
+        y_offset = self.bar_y_offset.value / 10 + self._time * 0.7
 
         # Generate bars per axis
-        x_bars = (np.sin(X * self.bar_x_freq.value + x_offset) + 1) / 2 # Range 0-1
-        y_bars = (np.sin(Y * self.bar_y_freq.value + y_offset) + 1) / 2 # Range 0-1
+        x_bars = (np.sin(X * self.bar_x_freq.value + x_offset) + 1) / 2
+        y_bars = (np.sin(Y * self.bar_y_freq.value + y_offset) + 1) / 2
 
         # Combine the bar patterns. Multiplying creates a grid-like intersection.
         # Adding would create overlapping bars.
@@ -426,12 +476,10 @@ class Patterns:
         # posc1: controls vertical wave frequency/speed
         # posc2: controls overall brightness/color shift
 
-        # Growing/spacing mode: use oscillators to modulate wave frequencies 
-        freq_x = 0.03 + self.wave_freq_x.value / 0.05 # testing w/ value 5, original is 0.05
+        freq_x = 0.03 + self.wave_freq_x.value / 0.05
         freq_y = 0.03 + self.wave_freq_y.value / 0.05
-        # Combine waves and modulate with osc2 for overall brightness/color
-        val_x = np.sin(X * freq_x + self.bar_x_offset.value * 5) # Horizontal wave
-        val_y = np.sin(Y * freq_y + self.bar_y_offset.value * 5) # Vertical wave
+        val_x = np.sin(X * freq_x + self.bar_x_offset.value * 5 + self._time)
+        val_y = np.sin(Y * freq_y + self.bar_y_offset.value * 5 + self._time * 0.8)
 
         total_val = (val_x + val_y) / 2 # Range -1 to 1
         brightness = ((total_val + self.brightness.value) / 2 + 1) / self.mod.value * 255 # Map to 0-255
@@ -450,52 +498,29 @@ class Patterns:
         """
         Generates a checkerboard pattern whose square size and colors shift.
         """
-        log.debug("Entering _generate_checkers")
-        # posc0: controls grid size
-        # posc1: controls color blend
-        # posc2: controls color shift
+        grid_size_base = 30
+        grid_size_mod = self.grid_size.value * 40
+        grid_size_x = max(1, grid_size_base + grid_size_mod)
+        grid_size_y = max(1, grid_size_base + grid_size_mod)
 
-        grid_size_base = 30 # Base size in pixels
-        log.debug(f"grid_size_base: {grid_size_base}")
-        grid_size_mod = self.grid_size.value * 40 # Modulation amount
-        log.debug(f"grid_size.value: {self.grid_size.value}, grid_size_mod: {grid_size_mod}")
-        grid_size_x = grid_size_base + grid_size_mod
-        grid_size_y = grid_size_base + grid_size_mod
-        log.debug(f"grid_size_x: {grid_size_x}, grid_size_y: {grid_size_y}")
+        # Offset the grid by time to create scrolling motion
+        offset_x = self._time * 5
+        checker_mask = (((X + offset_x) // grid_size_x).astype(int) % 2 == (Y // grid_size_y).astype(int) % 2)
 
-        # Create checkerboard mask
-        # Ensure grid_size is at least 1 to prevent division by zero
-        grid_size_x = max(1, grid_size_x)
-        grid_size_y = max(1, grid_size_y)
-        log.debug(f"grid_size_x (after max(1)): {grid_size_x}, grid_size_y (after max(1)): {grid_size_y}")
+        color_shift = self.color_shift.value
+        color_blend = self.color_blend.value / 255
 
-        checker_mask = ((X // grid_size_x).astype(int) % 2 == (Y // grid_size_y).astype(int) % 2)
-        log.debug("Calculated checker_mask")
-        
-        # Define two colors, modulated by oscillators
-        # color_shift = norm_osc_vals[2] * 255
-        color_shift = self.color_shift.value # Modulation for color shift
-        log.debug(f"color_shift.value: {color_shift}")
-        color_blend = self.color_blend.value / 255 # Modulation for color blending
-        log.debug(f"color_blend.value: {self.color_blend.value}, calculated color_blend: {color_blend}")
-
-        # Color 1: Changes based on osc2 (color_shift)
         c1_b = int(color_shift)
         c1_g = int(255 - color_shift)
         c1_r = int(127 + color_shift / 2)
-        log.debug(f"Color 1: c1_b={c1_b}, c1_g={c1_g}, c1_r={c1_r}")
 
-        # Color 2: Inverse or complementary to Color 1, also blended by osc1
         c2_b = int((255 - color_shift) * color_blend)
         c2_g = int(color_shift * color_blend)
         c2_r = int((127 - color_shift / 2) * color_blend)
-        log.debug(f"Color 2: c2_b={c2_b}, c2_g={c2_g}, c2_r={c2_r}")
-        
-        # Apply colors based on the mask
-        # Use np.where for efficient assignment
-        pattern[:, :, 0] = np.where(checker_mask, c1_b, c2_b).astype(np.uint8) # Blue
-        pattern[:, :, 1] = np.where(checker_mask, c1_g, c2_g).astype(np.uint8) # Green
-        pattern[:, :, 2] = np.where(checker_mask, c1_r, c2_r).astype(np.uint8) # Red
+
+        pattern[:, :, 0] = np.where(checker_mask, c1_b, c2_b).astype(np.uint8)
+        pattern[:, :, 1] = np.where(checker_mask, c1_g, c2_g).astype(np.uint8)
+        pattern[:, :, 2] = np.where(checker_mask, c1_r, c2_r).astype(np.uint8)
         return pattern
 
     def _generate_radial(self, pattern: np.ndarray, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
@@ -517,8 +542,8 @@ class Patterns:
         radial_freq = 0.05 * self.radial_freq.value * 0.05 # Radial wave frequency
         angular_freq = self.angular_freq.value #* 5 # Angular wave frequency
         
-        radial_mod = np.sin(distance * radial_freq + self.radial_mod.value * 10) # Radial wave
-        angle_mod = np.sin(angle * angular_freq + self.angle_mod.value * 5) # Angular wave
+        radial_mod = np.sin(distance * radial_freq + self.radial_mod.value * 10 + self._time * 0.5)
+        angle_mod = np.sin(angle * angular_freq + self.angle_mod.value * 5 + self._time * 0.3)
 
         # Combine for brightness, modulate color with osc2
         brightness_base = ((radial_mod + angle_mod) / 2 + 1) / 2 * 255 # Map to 0-255

@@ -26,6 +26,8 @@ from mixer import Mixer
 from param import ParamTable
 from effects_manager import EffectManager
 from audio_reactive import AudioReactiveModule
+from api import APIServer
+from ffmpeg_output import FFmpegOutput, FFmpegStreamOutput
 
 
 # List of MIDI controller class names to identify and initialize
@@ -85,6 +87,51 @@ def parse_args():
         type=int,
         help='Number of frames to sample for performance diagnosis. Helps to identify bottlenecks causing stuttering.'
     )
+    parser.add_argument(
+        '--api',
+        action='store_true',
+        help='Enable REST API server for remote control'
+    )
+    parser.add_argument(
+        '--api-host',
+        default='127.0.0.1',
+        type=str,
+        help='API server host (default: 127.0.0.1)'
+    )
+    parser.add_argument(
+        '--api-port',
+        default=8000,
+        type=int,
+        help='API server port (default: 8000)'
+    )
+    parser.add_argument(
+        '--ffmpeg',
+        action='store_true',
+        help='Enable FFmpeg output to file or stream'
+    )
+    parser.add_argument(
+        '--ffmpeg-output',
+        default='output.mp4',
+        type=str,
+        help='FFmpeg output path (file path or rtmp:// URL)'
+    )
+    parser.add_argument(
+        '--ffmpeg-preset',
+        default='medium',
+        choices=['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow', 'slower', 'veryslow'],
+        help='FFmpeg encoding preset (default: medium)'
+    )
+    parser.add_argument(
+        '--ffmpeg-crf',
+        default=23,
+        type=int,
+        help='FFmpeg CRF quality (0-51, lower=better, default: 23)'
+    )
+    parser.add_argument(
+        '--headless',
+        action='store_true',
+        help='Run without GUI (requires --api or --ffmpeg)'
+    )
     parser.print_help()
     return parser.parse_args()
 
@@ -111,7 +158,7 @@ def perf_timer(perf_data, key, enabled):
 
 
 """Video processing loop"""
-def video_loop(mixer, effects, should_quit, gui, settings, audio_module=None):
+def video_loop(mixer, effects, should_quit, gui, settings, audio_module=None, ffmpeg_output=None):
     import gc  # For explicit garbage collection
 
     wet_frame = dry_frame = mixer.get_frame()
@@ -155,7 +202,8 @@ def video_loop(mixer, effects, should_quit, gui, settings, audio_module=None):
             for effect_manager in effects:
                 effect_manager.oscs.update()
 
-            # --- Audio reactive updates ---
+        # --- Audio reactive updates ---
+        with perf_timer(perf_data, 'audio', DEBUG):
             if audio_module is not None:
                 audio_module.analyze()
 
@@ -166,14 +214,24 @@ def video_loop(mixer, effects, should_quit, gui, settings, audio_module=None):
             )
             frame_count += 1
 
+        # Store current frame for API snapshot endpoint
+        with perf_timer(perf_data, 'api_copy', DEBUG):
+            mixer.current_frame = wet_frame.astype(np.uint8)
+
+        # FFmpeg output
+        if ffmpeg_output is not None:
+            with perf_timer(perf_data, 'ffmpeg', DEBUG):
+                ffmpeg_output.write_frame(mixer.current_frame)
+
         # GUI emit
-        with perf_timer(perf_data, 'gui_emit', DEBUG):
-            rgb_image = cv2.cvtColor(wet_frame.astype(np.uint8), cv2.COLOR_BGR2RGB)
-            h, w, ch = rgb_image.shape
-            bytes_per_line = ch * w
-            # CRITICAL: Copy data to prevent QImage from referencing temporary/modified memory
-            qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888).copy()
-            gui.video_frame_ready.emit(qt_image)
+        if gui is not None:
+            with perf_timer(perf_data, 'gui_emit', DEBUG):
+                rgb_image = cv2.cvtColor(wet_frame.astype(np.uint8), cv2.COLOR_BGR2RGB)
+                h, w, ch = rgb_image.shape
+                bytes_per_line = ch * w
+                # CRITICAL: Copy data to prevent QImage from referencing temporary/modified memory
+                qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888).copy()
+                gui.video_frame_ready.emit(qt_image)
 
         # External window
         if cv_window_active:
@@ -191,20 +249,65 @@ def video_loop(mixer, effects, should_quit, gui, settings, audio_module=None):
             perf_data['total'] = elapsed * 1000
             perf_data['fps'] = 1.0 / elapsed if elapsed > 0 else 0
 
+            # Collect effects_manager breakdown
+            em_perf = effects[MixerSource.POST.value].perf_data
+            if em_perf:
+                perf_data['em_alpha_blend'] = em_perf.get('alpha_blend', 0)
+                perf_data['em_effect_chain'] = em_perf.get('effect_chain', 0)
+                perf_data['em_feedback'] = em_perf.get('feedback', 0)
+
+                # Identify the top 3 slowest individual effects
+                effect_timings = em_perf.get('effects', {})
+                if effect_timings:
+                    top_effects = sorted(effect_timings.items(), key=lambda x: x[1], reverse=True)[:3]
+                    perf_data['top_effects'] = top_effects
+
             perf_samples.append(perf_data)
 
             # Log performance stats periodically
             if frame_count % perf_log_interval == 0 and perf_samples:
-                avg_stats = {}
-                for key in perf_samples[0].keys():
-                    avg_stats[key] = sum(s[key] for s in perf_samples) / len(perf_samples)
-                log.info(f"Performance (avg/{len(perf_samples)} frames): \n\t"
-                        f"FPS={avg_stats['fps']:.1f} | "
-                        f"mixer={avg_stats['mixer']:.1f}ms | "
-                        f"lfos={avg_stats['lfos']:.1f}ms | "
-                        f"effects={avg_stats['effects']:.1f}ms | "
-                        f"gui={avg_stats['gui_emit']:.1f}ms | "
-                        f"total={avg_stats['total']:.1f}ms")
+                n = len(perf_samples)
+
+                # Average the core numeric metrics
+                core_keys = ['fps', 'mixer', 'lfos', 'audio', 'effects', 'api_copy',
+                             'ffmpeg', 'gui_emit', 'cv2_show',
+                             'em_alpha_blend', 'em_effect_chain', 'em_feedback', 'total']
+                avg = {}
+                for key in core_keys:
+                    vals = [s[key] for s in perf_samples if key in s]
+                    if vals:
+                        avg[key] = sum(vals) / len(vals)
+
+                # Build the log message dynamically
+                parts = [f"FPS={avg.get('fps', 0):.1f}"]
+
+                stage_order = [
+                    ('mixer', 'mixer'), ('lfos', 'lfos'), ('audio', 'audio'),
+                    ('effects', 'effects'), ('api_copy', 'api_copy'),
+                    ('ffmpeg', 'ffmpeg'), ('gui_emit', 'gui'), ('cv2_show', 'cv2'),
+                    ('total', 'TOTAL'),
+                ]
+                for key, label in stage_order:
+                    if key in avg:
+                        parts.append(f"{label}={avg[key]:.1f}ms")
+
+                # Effects breakdown line
+                em_parts = []
+                for key, label in [('em_alpha_blend', 'alpha'), ('em_effect_chain', 'chain'), ('em_feedback', 'fb')]:
+                    if key in avg:
+                        em_parts.append(f"{label}={avg[key]:.1f}ms")
+
+                # Top slow effects from last sample
+                top_str = ""
+                last_top = perf_samples[-1].get('top_effects', [])
+                if last_top:
+                    top_str = " | top: " + ", ".join(f"{name}={t:.1f}ms" for name, t in last_top if t > 0.5)
+
+                msg = f"Performance (avg/{n} frames): \n\t" + " | ".join(parts)
+                if em_parts:
+                    msg += f"\n\t  effects breakdown: " + " | ".join(em_parts) + top_str
+
+                log.info(msg)
                 perf_samples.clear()
 
         # PERFORMANCE FIX: Explicit garbage collection to prevent NumPy and OpenCV mem accumulation
@@ -235,38 +338,96 @@ def main(settings, controller_names):
     audio_module.start()
 
     # Identify and initialize midi controllers before creating the GUI
-    controllers = identify_midi_ports(controller_names, 
-                                      src_1_effects.params, 
-                                      src_2_effects.params, 
+    controllers = identify_midi_ports(controller_names,
+                                      src_1_effects.params,
+                                      src_2_effects.params,
                                       post_effects.params,
                                       mixer.params,)
 
-    # log.info(f'Starting program with {len(params.keys())} tunable parameters')
+    # Initialize API server if requested
+    api_server = None
+    if settings.api:
+        # Collect all params for API
+        all_params = ParamTable()
+        for effect_mgr in effects:
+            all_params.table.update(effect_mgr.params.table)
+        all_params.table.update(mixer.params.table)
+        all_params.table.update(audio_params.table)
+
+        api_server = APIServer(all_params, mixer=mixer, host=settings.api_host, port=settings.api_port)
+        api_server.start()
+
+    # Initialize FFmpeg output if requested
+    ffmpeg_output = None
+    if settings.ffmpeg:
+        if settings.ffmpeg_output.startswith('rtmp://'):
+            log.info("Using RTMP streaming mode")
+            ffmpeg_output = FFmpegStreamOutput(
+                WIDTH, HEIGHT, fps=30,
+                rtmp_url=settings.ffmpeg_output,
+                preset=settings.ffmpeg_preset
+            )
+        else:
+            log.info(f"Using file output mode: {settings.ffmpeg_output}")
+            ffmpeg_output = FFmpegOutput(
+                WIDTH, HEIGHT, fps=30,
+                output=settings.ffmpeg_output,
+                preset=settings.ffmpeg_preset,
+                crf=settings.ffmpeg_crf
+            )
+        ffmpeg_output.start()
+
+    # Validate headless mode
+    if settings.headless and not (settings.api or settings.ffmpeg):
+        log.error("Headless mode requires --api or --ffmpeg to be enabled")
+        sys.exit(1)
 
     # Handle Ctrl+C from terminal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    
-    # Create and start the control panel GUI
-    app = QApplication(sys.argv)
-    main_window = PyQTGUI(effects, settings, mixer, audio_module=audio_module)
-    main_window.show() 
-    
+
+    # Create and start the control panel GUI (unless headless)
+    app = None
+    main_window = None
+    if not settings.headless:
+        app = QApplication(sys.argv)
+        main_window = PyQTGUI(effects, settings, mixer, audio_module=audio_module)
+        main_window.show()
+    else:
+        log.info("Running in headless mode (no GUI)")
+
     should_quit = threading.Event()
-    
-    # Start main application thread to run the PyQt and video event loop
+
+    # Start main application thread to run the video event loop
     video_thread = threading.Thread(
         target=video_loop,
-        args=(mixer, effects, should_quit, main_window, settings, audio_module)
+        args=(mixer, effects, should_quit, main_window, settings, audio_module, ffmpeg_output)
     )
     video_thread.start()
-    
-    log.info("Starting PyQt event loop.")
-    exit_code = app.exec()
 
-    log.info("PyQt event loop finished.")
-    should_quit.set()
+    if not settings.headless:
+        log.info("Starting PyQt event loop.")
+        exit_code = app.exec()
+        log.info("PyQt event loop finished.")
+        should_quit.set()
+    else:
+        # In headless mode, wait for Ctrl+C
+        log.info("Headless mode active. Press Ctrl+C to stop.")
+        try:
+            video_thread.join()
+        except KeyboardInterrupt:
+            log.info("Received keyboard interrupt, shutting down...")
+            should_quit.set()
+        exit_code = 0
+
     video_thread.join()
     audio_module.stop()
+
+    if ffmpeg_output is not None:
+        ffmpeg_output.stop()
+
+    if api_server is not None:
+        api_server.stop()
+
     sys.exit(exit_code)
 
     if controllers:

@@ -72,6 +72,9 @@ class EffectManager:
 
         self.class_with_methods, self.all_methods = self._get_effect_methods()
 
+        # Per-frame performance data (read by video_loop when DEBUG is enabled)
+        self.perf_data = {}
+
 
     def _get_effect_methods(self):
         """
@@ -155,54 +158,61 @@ class EffectManager:
         """
 
         if frame_count % (self.feedback.frame_skip.value+1) == 0:
-            # PERFORMANCE: Only copy frame for recovery if we actually might need it
-            # (i.e., if any effects have historically returned None)
             original_frame_for_recovery = None
-            slow_effects = []  # Track which effects are slow
+            slow_effects = []
+            effect_timings = {}
             for method in self.all_methods:
                 t_start = time.perf_counter()
                 processed_frame = method(frame)
                 elapsed_ms = (time.perf_counter() - t_start) * 1000
 
-                # Log if individual effect takes > 20ms
+                effect_timings[method.__name__] = elapsed_ms
+
                 if elapsed_ms > 20:
                     slow_effects.append((method.__name__, elapsed_ms))
 
                 if processed_frame is None:
                     log.warning(f"Method {method.__name__} in EffectManager ({self.group}) returned None. Recovering with previous frame.")
-                    # Only create the recovery copy when actually needed
                     if original_frame_for_recovery is None:
                         log.error(f"No recovery frame available! Effect chain may be broken.")
                         continue
                     frame = original_frame_for_recovery
                 else:
                     frame = processed_frame
-                    # Clear reference to allow GC
                     del processed_frame
 
-            # Log slow effects every 30 frames (more frequent for debugging)
+            # Store per-effect timings for diagnostics
+            self.perf_data['effects'] = effect_timings
+
             if slow_effects and frame_count % 30 == 0:
-                effects_str = ", ".join([f"{name}={time:.1f}ms" for name, time in slow_effects])
+                effects_str = ", ".join([f"{name}={t:.1f}ms" for name, t in slow_effects])
                 log.warning(f"{self.group.name} slow effects: {effects_str}")
 
         return frame
 
     
     def get_frames(self, dry_frame, wet_frame, prev_frame, frame_count):
+        perf = self.perf_data
 
         # Blend the current dry frame with the previous wet frame using the alpha param (feedback)
+        t0 = time.perf_counter()
         wet_frame = cv2.addWeighted(dry_frame.astype(np.float32), 1 - self.feedback.alpha.value, wet_frame.astype(np.float32), self.feedback.alpha.value, 0)
+        perf['alpha_blend'] = (time.perf_counter() - t0) * 1000
+
         # Apply effects AFTER blend so they affect the output regardless of alpha
+        t0 = time.perf_counter()
         wet_frame = self._apply_effect_chain(wet_frame, frame_count)
+        perf['effect_chain'] = (time.perf_counter() - t0) * 1000
 
         # Apply feedback effects
+        t0 = time.perf_counter()
         wet_frame = self.feedback.apply_temporal_filter(prev_frame, wet_frame)
         wet_frame = self.feedback.avg_frame_buffer(wet_frame)
         wet_frame = self.feedback.nth_frame_feedback(wet_frame)
         wet_frame = self.feedback.apply_luma_feedback(prev_frame, wet_frame)
+        perf['feedback'] = (time.perf_counter() - t0) * 1000
+
         prev_frame = wet_frame
         prev_frame = self.ptz._shift_prev_frame(prev_frame)
 
-        # prev_frame = self.color.tonemap(prev_frame)
-        # wet_frame = self.color.tonemap(wet_frame)
         return np.clip(prev_frame, 0, 255), np.clip(wet_frame, 0, 255)

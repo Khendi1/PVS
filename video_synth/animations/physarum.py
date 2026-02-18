@@ -43,7 +43,7 @@ class Physarum(Animation):
         self.wrap_around = params.add("phys_wrap_around",
                                       min=0, max=1, default=1,
                                       group=group, subgroup=subgroup,
-                                      type=Widget.RADIO, options=Toggle) # Boolean as int
+                                      type=Widget.TOGGLE) # Boolean as int
 
         # Color parameters
         self.trail_r = params.add("phys_trail_r",

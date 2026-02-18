@@ -3,11 +3,28 @@ from common import *
 
 
 class UserSettings():
-    def __init__(self, control_layout: str, output_mode: str, devices: int, patch: int, log_level: str, file: str, diagnose: int):
+    def __init__(self, control_layout: str, output_mode: str, devices: int, patch: int, log_level: str, file: str, diagnose: int,
+                 api: bool = False, api_host: str = "127.0.0.1", api_port: int = 8000,
+                 ffmpeg: bool = False, ffmpeg_output: str = "output.mp4", ffmpeg_preset: str = "medium", ffmpeg_crf: int = 23,
+                 headless: bool = False, **kwargs):
         """Initialize user settings with given parameters."""
         group = Groups.USER_SETTINGS
         subgroup = group.name
         self.params = ParamTable(group=group)
+
+        # API settings (not exposed in GUI)
+        self.api = api
+        self.api_host = api_host
+        self.api_port = api_port
+
+        # FFmpeg settings (not exposed in GUI)
+        self.ffmpeg = ffmpeg
+        self.ffmpeg_output = ffmpeg_output
+        self.ffmpeg_preset = ffmpeg_preset
+        self.ffmpeg_crf = ffmpeg_crf
+
+        # Headless mode (not exposed in GUI)
+        self.headless = headless
 
         self.layout = self.params.add("layout",
                                        min=0, max=len(Layout), default=Layout[control_layout].value,

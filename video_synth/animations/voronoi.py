@@ -29,15 +29,15 @@ class Voronoi(Animation):
         self.show_edges = params.add("voronoi_show_edges",
                                      min=0, max=1, default=1,
                                      subgroup=subgroup, group=group,
-                                     type=Widget.RADIO, options=Toggle)
+                                     type=Widget.TOGGLE)
         self.show_points = params.add("voronoi_show_points",
                                       min=0, max=1, default=1,
                                       subgroup=subgroup, group=group,
-                                      type=Widget.RADIO, options=Toggle)
+                                      type=Widget.TOGGLE)
         self.fill_cells = params.add("voronoi_fill_cells",
                                      min=0, max=1, default=1,
                                      subgroup=subgroup, group=group,
-                                     type=Widget.RADIO, options=Toggle)
+                                     type=Widget.TOGGLE)
         self.edge_thickness = params.add("voronoi_edge_thickness",
                                          min=1, max=5, default=2,
                                          subgroup=subgroup, group=group)

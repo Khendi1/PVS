@@ -13,8 +13,6 @@ class Glitch(EffectBase):
         self.glitch_phase_start_frame = 0
         self.glitch_cycle_start_frame = 0
 
-        subgroup = self.__class__.__name__
-
         # State for horizontal scroll freeze glitch
         self.current_fixed_y_end = None
         self.current_growth_duration = None
@@ -25,86 +23,118 @@ class Glitch(EffectBase):
         self.glitch_phase_start_frame_color = 0
         self.glitch_phase_start_frame_block = 0
 
+        # General glitch parameters
+        subgroup_general = "Glitch_General"
+
         self.enable_pixel_shift = params.add("enable_pixel_shift",
-                                              group=group, subgroup=subgroup,
-                                              type=Widget.RADIO, options=Toggle)
+                                              group=group, subgroup=subgroup_general,
+                                              type=Widget.TOGGLE)
         self.enable_color_split = params.add("enable_color_split",
-                                             group=group, subgroup=subgroup,
-                                             type=Widget.RADIO, options=Toggle)
+                                             group=group, subgroup=subgroup_general,
+                                             type=Widget.TOGGLE)
         self.enable_block_corruption = params.add("enable_block_corruption",
-                                                  group=group, subgroup=subgroup,
-                                                  type=Widget.RADIO, options=Toggle)
+                                                  group=group, subgroup=subgroup_general,
+                                                  type=Widget.TOGGLE)
         self.enable_random_rectangles = params.add("enable_random_rectangles",
-                                                   group=group, subgroup=subgroup,
-                                                   type=Widget.RADIO, options=Toggle)
+                                                   group=group, subgroup=subgroup_general,
+                                                   type=Widget.TOGGLE)
         self.enable_horizontal_scroll_freeze = params.add("enable_horizontal_scroll_freeze",
-                                                          group=group, subgroup=subgroup,
-                                                          type=Widget.RADIO, options=Toggle)
-        self.enable_slitscan = params.add("enable_slitscan",
-                                          group=group, subgroup=subgroup,
-                                          type=Widget.RADIO, options=Toggle)
+                                                          group=group, subgroup=subgroup_general,
+                                                          type=Widget.TOGGLE)
 
         self.glitch_duration_frames = params.add("glitch_duration_frames",
                                                  min=1, max=300, default=60,
-                                                 subgroup=subgroup, group=group)
+                                                 subgroup=subgroup_general, group=group)
         self.glitch_intensity_max = params.add("glitch_intensity_max",
                                                min=0, max=100, default=50,
-                                               subgroup=subgroup, group=group)
+                                               subgroup=subgroup_general, group=group)
         self.glitch_block_size_max = params.add("glitch_block_size_max",
                                                 min=0, max=200, default=60,
-                                                subgroup=subgroup, group=group)
+                                                subgroup=subgroup_general, group=group)
         self.band_div = params.add("glitch_band_div",
                                    min=1, max=10, default=5,
-                                   subgroup=subgroup, group=group)
+                                   subgroup=subgroup_general, group=group)
         self.num_glitches = params.add("num_glitches",
                                        min=0, max=100, default=0,
-                                       group=group, subgroup=subgroup)
+                                       group=group, subgroup=subgroup_general)
         self.glitch_size = params.add("glitch_size",
                                       min=1, max=100, default=0,
-                                      group=group, subgroup=subgroup)
+                                      group=group, subgroup=subgroup_general)
 
         # Slitscan parameters
+        subgroup_slitscan = "Glitch_Slitscan"
+
+        self.enable_slitscan = params.add("enable_slitscan",
+                                          group=group, subgroup=subgroup_slitscan,
+                                          type=Widget.TOGGLE)
         self.ss_dir = params.add("slitscan_direction",
                                  min=0, max=1, default=0,
-                                 group=group, subgroup=subgroup,
-                                 type=Widget.RADIO, options=Toggle)
+                                 group=group, subgroup=subgroup_slitscan,
+                                 type=Widget.TOGGLE)
         self.ss_slice_width = params.add("slitscan_slice_width",
                                          min=1, max=50, default=5,
-                                         group=group, subgroup=subgroup)
+                                         group=group, subgroup=subgroup_slitscan)
         self.ss_time_offset = params.add("slitscan_time_offset",
                                          min=1, max=60, default=10,
-                                         group=group, subgroup=subgroup)
+                                         group=group, subgroup=subgroup_slitscan)
         self.ss_speed = params.add("slitscan_speed",
                                    min=0.1, max=10.0, default=1.0,
-                                   group=group, subgroup=subgroup)
+                                   group=group, subgroup=subgroup_slitscan)
         self.ss_reverse = params.add("slitscan_reverse",
                                      min=0, max=1, default=0,
-                                     group=group, subgroup=subgroup,
-                                     type=Widget.RADIO, options=Toggle)
+                                     group=group, subgroup=subgroup_slitscan,
+                                     type=Widget.TOGGLE)
         self.ss_buffer_size = params.add("slitscan_buffer_size",
                                          min=10, max=120, default=60,
-                                         group=group, subgroup=subgroup)
+                                         group=group, subgroup=subgroup_slitscan)
         self.ss_blend_mode = params.add("slitscan_blend_mode",
                                         min=0, max=2, default=0,
-                                        group=group, subgroup=subgroup,
+                                        group=group, subgroup=subgroup_slitscan,
                                         type=Widget.DROPDOWN, options=BlendModes)
         self.ss_blend_alpha = params.add("slitscan_blend_alpha",
                                          min=0.0, max=1.0, default=1.0,
-                                         group=group, subgroup=subgroup,
+                                         group=group, subgroup=subgroup_slitscan,
                                          type=Widget.SLIDER)
         self.ss_position_offset = params.add("slitscan_position_offset",
                                              min=-100, max=100, default=0,
-                                             group=group, subgroup=subgroup)
+                                             group=group, subgroup=subgroup_slitscan)
         self.ss_wobble_amount = params.add("slitscan_wobble_amount",
                                            min=0, max=50, default=0,
-                                           group=group, subgroup=subgroup)
+                                           group=group, subgroup=subgroup_slitscan)
         self.ss_wobble_freq = params.add("slitscan_wobble_freq",
                                          min=0.1, max=10.0, default=1.0,
-                                         group=group, subgroup=subgroup)
+                                         group=group, subgroup=subgroup_slitscan)
+
+        # Echo/Stutter parameters
+        subgroup_echo = "Glitch_Echo"
+
+        self.enable_echo = params.add("enable_echo",
+                                      group=group, subgroup=subgroup_echo,
+                                      type=Widget.TOGGLE)
+        self.echo_probability = params.add("echo_probability",
+                                           min=0.0, max=1.0, default=0.1,
+                                           group=group, subgroup=subgroup_echo)
+        self.echo_buffer_size = params.add("echo_buffer_size",
+                                           min=5, max=60, default=30,
+                                           group=group, subgroup=subgroup_echo)
+        self.echo_freeze_min = params.add("echo_freeze_min",
+                                          min=1, max=30, default=2,
+                                          group=group, subgroup=subgroup_echo)
+        self.echo_freeze_max = params.add("echo_freeze_max",
+                                          min=2, max=60, default=10,
+                                          group=group, subgroup=subgroup_echo)
+        self.echo_blend_amount = params.add("echo_blend_amount",
+                                            min=0.0, max=1.0, default=1.0,
+                                            group=group, subgroup=subgroup_echo)
 
         # Slitscan frame buffer
         self.ss_buffer = []
         self.ss_position = 0
+
+        # Echo/Stutter frame buffer and state
+        self.echo_buffer = []
+        self._echo_frozen_frame = None
+        self._echo_freeze_counter = 0
 
         self.frame_count = 0
 
@@ -137,6 +167,11 @@ class Glitch(EffectBase):
         dpg.add_button(
             label=self.enable_slitscan.label,
             callback=self.enable_slitscan.toggle,
+            group=gui,
+        )
+        dpg.add_button(
+            label=self.enable_echo.label,
+            callback=self.enable_echo.toggle,
             group=gui,
         )
 
@@ -552,6 +587,59 @@ class Glitch(EffectBase):
 
         return output
 
+    def _apply_echo_stutter(self, frame):
+        """
+        Creates echo/stutter effects by randomly freezing and replaying frames from buffer.
+
+        This effect maintains a buffer of recent frames and occasionally freezes playback,
+        replaying a frame from the buffer for a random duration, creating rhythmic stuttering
+        and temporal glitching effects.
+        """
+        # Add current frame to buffer
+        self.echo_buffer.append(frame.copy())
+
+        # Maintain buffer size
+        max_buffer_size = int(self.echo_buffer_size.value)
+        if len(self.echo_buffer) > max_buffer_size:
+            self.echo_buffer.pop(0)
+
+        # If buffer isn't full yet, return original frame
+        if len(self.echo_buffer) < 2:
+            return frame
+
+        # Check if we should trigger a new freeze
+        if self._echo_freeze_counter <= 0 and np.random.random() < self.echo_probability.value:
+            # Grab a random frame from the buffer
+            buffer_depth = len(self.echo_buffer)
+            random_idx = np.random.randint(0, buffer_depth)
+            self._echo_frozen_frame = self.echo_buffer[random_idx].copy()
+
+            # Determine how long to hold this frame
+            freeze_min = int(self.echo_freeze_min.value)
+            freeze_max = int(self.echo_freeze_max.value)
+            # Ensure max is always >= min
+            if freeze_max < freeze_min:
+                freeze_max = freeze_min
+            self._echo_freeze_counter = np.random.randint(freeze_min, freeze_max + 1)
+
+        # If we're in a freeze, return the frozen frame (optionally blended)
+        if self._echo_freeze_counter > 0:
+            self._echo_freeze_counter -= 1
+
+            if self._echo_frozen_frame is not None:
+                # Blend frozen frame with current frame based on blend_amount
+                blend_amount = self.echo_blend_amount.value
+                if blend_amount >= 0.99:  # Full replacement
+                    return self._echo_frozen_frame
+                else:  # Partial blend
+                    return cv2.addWeighted(
+                        frame.astype(np.float32), 1 - blend_amount,
+                        self._echo_frozen_frame.astype(np.float32), blend_amount,
+                        0
+                    ).astype(frame.dtype)
+
+        return frame
+
     def apply_glitch_effects(self, frame):
 
         # Get frame dimensions for dynamic calculations
@@ -609,6 +697,8 @@ class Glitch(EffectBase):
             )
         if self.enable_slitscan.value:
             frame = self._apply_slitscan(frame)
+        if self.enable_echo.value:
+            frame = self._apply_echo_stutter(frame)
 
         self.frame_count += 1
         return frame

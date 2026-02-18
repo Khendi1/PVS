@@ -16,6 +16,9 @@ python-rtmidi==1.5.8
 pywin32==311
 PyYAML==6.0.2
 sounddevice==0.5.1
+fastapi==0.115.6
+uvicorn==0.34.0
+obs-websocket-py==1.0
 setuptools==80.9.0
 usb-monitor==1.23
 wheel==0.45.1
