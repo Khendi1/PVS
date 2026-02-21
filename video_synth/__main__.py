@@ -28,6 +28,9 @@ from effects_manager import EffectManager
 from audio_reactive import AudioReactiveModule
 from api import APIServer
 from ffmpeg_output import FFmpegOutput, FFmpegStreamOutput
+from virtualcam_output import VirtualCamOutput
+from obs_controller import OBSController
+from obs_filters import OBSFilters
 
 
 # List of MIDI controller class names to identify and initialize
@@ -113,7 +116,7 @@ def parse_args():
         '--ffmpeg-output',
         default='output.mp4',
         type=str,
-        help='FFmpeg output path (file path or rtmp:// URL)'
+        help='FFmpeg output path (file path, udp://, srt://, or rtmp:// URL)'
     )
     parser.add_argument(
         '--ffmpeg-preset',
@@ -128,9 +131,37 @@ def parse_args():
         help='FFmpeg CRF quality (0-51, lower=better, default: 23)'
     )
     parser.add_argument(
+        '--no-virtualcam',
+        action='store_true',
+        help='Disable virtual camera output (enabled by default)'
+    )
+    parser.add_argument(
         '--headless',
         action='store_true',
         help='Run without GUI (requires --api or --ffmpeg)'
+    )
+    parser.add_argument(
+        '--obs',
+        action='store_true',
+        help='Enable OBS WebSocket connection for remote filter control'
+    )
+    parser.add_argument(
+        '--obs-host',
+        default='localhost',
+        type=str,
+        help='OBS WebSocket host (default: localhost)'
+    )
+    parser.add_argument(
+        '--obs-port',
+        default=4455,
+        type=int,
+        help='OBS WebSocket port (default: 4455)'
+    )
+    parser.add_argument(
+        '--obs-password',
+        default='',
+        type=str,
+        help='OBS WebSocket password'
     )
     parser.print_help()
     return parser.parse_args()
@@ -158,7 +189,7 @@ def perf_timer(perf_data, key, enabled):
 
 
 """Video processing loop"""
-def video_loop(mixer, effects, should_quit, gui, settings, audio_module=None, ffmpeg_output=None):
+def video_loop(mixer, effects, should_quit, gui, settings, audio_module=None, ffmpeg_output=None, virtualcam_output=None, obs_filters=None):
     import gc  # For explicit garbage collection
 
     wet_frame = dry_frame = mixer.get_frame()
@@ -214,6 +245,11 @@ def video_loop(mixer, effects, should_quit, gui, settings, audio_module=None, ff
             )
             frame_count += 1
 
+        # OBS filter updates
+        if obs_filters is not None:
+            with perf_timer(perf_data, 'obs', DEBUG):
+                obs_filters.update()
+
         # Store current frame for API snapshot endpoint
         with perf_timer(perf_data, 'api_copy', DEBUG):
             mixer.current_frame = wet_frame.astype(np.uint8)
@@ -222,6 +258,11 @@ def video_loop(mixer, effects, should_quit, gui, settings, audio_module=None, ff
         if ffmpeg_output is not None:
             with perf_timer(perf_data, 'ffmpeg', DEBUG):
                 ffmpeg_output.write_frame(mixer.current_frame)
+
+        # Virtual camera output
+        if virtualcam_output is not None:
+            with perf_timer(perf_data, 'virtualcam', DEBUG):
+                virtualcam_output.write_frame(mixer.current_frame)
 
         # GUI emit
         if gui is not None:
@@ -269,8 +310,8 @@ def video_loop(mixer, effects, should_quit, gui, settings, audio_module=None, ff
                 n = len(perf_samples)
 
                 # Average the core numeric metrics
-                core_keys = ['fps', 'mixer', 'lfos', 'audio', 'effects', 'api_copy',
-                             'ffmpeg', 'gui_emit', 'cv2_show',
+                core_keys = ['fps', 'mixer', 'lfos', 'audio', 'effects', 'obs', 'api_copy',
+                             'ffmpeg', 'virtualcam', 'gui_emit', 'cv2_show',
                              'em_alpha_blend', 'em_effect_chain', 'em_feedback', 'total']
                 avg = {}
                 for key in core_keys:
@@ -283,8 +324,8 @@ def video_loop(mixer, effects, should_quit, gui, settings, audio_module=None, ff
 
                 stage_order = [
                     ('mixer', 'mixer'), ('lfos', 'lfos'), ('audio', 'audio'),
-                    ('effects', 'effects'), ('api_copy', 'api_copy'),
-                    ('ffmpeg', 'ffmpeg'), ('gui_emit', 'gui'), ('cv2_show', 'cv2'),
+                    ('effects', 'effects'), ('obs', 'obs'), ('api_copy', 'api_copy'),
+                    ('ffmpeg', 'ffmpeg'), ('virtualcam', 'vcam'), ('gui_emit', 'gui'), ('cv2_show', 'cv2'),
                     ('total', 'TOTAL'),
                 ]
                 for key, label in stage_order:
@@ -350,9 +391,9 @@ def main(settings, controller_names):
         # Collect all params for API
         all_params = ParamTable()
         for effect_mgr in effects:
-            all_params.table.update(effect_mgr.params.table)
-        all_params.table.update(mixer.params.table)
-        all_params.table.update(audio_params.table)
+            all_params.params.update(effect_mgr.params.params)
+        all_params.params.update(mixer.params.params)
+        all_params.params.update(audio_params.params)
 
         api_server = APIServer(all_params, mixer=mixer, host=settings.api_host, port=settings.api_port)
         api_server.start()
@@ -360,11 +401,12 @@ def main(settings, controller_names):
     # Initialize FFmpeg output if requested
     ffmpeg_output = None
     if settings.ffmpeg:
-        if settings.ffmpeg_output.startswith('rtmp://'):
-            log.info("Using RTMP streaming mode")
+        stream_prefixes = ('udp://', 'srt://', 'rtmp://')
+        if settings.ffmpeg_output.startswith(stream_prefixes):
+            log.info(f"Using streaming mode: {settings.ffmpeg_output}")
             ffmpeg_output = FFmpegStreamOutput(
                 WIDTH, HEIGHT, fps=30,
-                rtmp_url=settings.ffmpeg_output,
+                url=settings.ffmpeg_output,
                 preset=settings.ffmpeg_preset
             )
         else:
@@ -376,6 +418,28 @@ def main(settings, controller_names):
                 crf=settings.ffmpeg_crf
             )
         ffmpeg_output.start()
+
+    # Initialize virtual camera output (enabled by default, disable with --no-virtualcam)
+    virtualcam_output = None
+    if not settings.no_virtualcam:
+        virtualcam_output = VirtualCamOutput(WIDTH, HEIGHT, fps=30)
+        virtualcam_output.start()
+
+    # Initialize OBS WebSocket connection and filter controls
+    obs_controller = None
+    obs_filters = OBSFilters()  # Always create params so GUI tab exists
+    if settings.obs:
+        obs_controller = OBSController(
+            host=settings.obs_host,
+            port=settings.obs_port,
+            password=settings.obs_password
+        )
+        obs_controller.connect()
+        obs_filters.obs = obs_controller
+
+    # Add OBS params to API if both are enabled
+    if api_server is not None:
+        all_params.params.update(obs_filters.params.params)
 
     # Validate headless mode
     if settings.headless and not (settings.api or settings.ffmpeg):
@@ -390,7 +454,7 @@ def main(settings, controller_names):
     main_window = None
     if not settings.headless:
         app = QApplication(sys.argv)
-        main_window = PyQTGUI(effects, settings, mixer, audio_module=audio_module)
+        main_window = PyQTGUI(effects, settings, mixer, audio_module=audio_module, obs_filters=obs_filters)
         main_window.show()
     else:
         log.info("Running in headless mode (no GUI)")
@@ -400,7 +464,7 @@ def main(settings, controller_names):
     # Start main application thread to run the video event loop
     video_thread = threading.Thread(
         target=video_loop,
-        args=(mixer, effects, should_quit, main_window, settings, audio_module, ffmpeg_output)
+        args=(mixer, effects, should_quit, main_window, settings, audio_module, ffmpeg_output, virtualcam_output, obs_filters)
     )
     video_thread.start()
 
@@ -425,8 +489,14 @@ def main(settings, controller_names):
     if ffmpeg_output is not None:
         ffmpeg_output.stop()
 
+    if virtualcam_output is not None:
+        virtualcam_output.stop()
+
     if api_server is not None:
         api_server.stop()
+
+    if obs_controller is not None:
+        obs_controller.disconnect()
 
     sys.exit(exit_code)
 

@@ -64,9 +64,10 @@ Options:
   --api-host HOST       API server host (default: 127.0.0.1)
   --api-port PORT       API server port (default: 8000)
   --ffmpeg              Enable FFmpeg output to file or stream
-  --ffmpeg-output PATH  Output path or rtmp:// URL (default: output.mp4)
+  --ffmpeg-output PATH  Output path or stream URL: udp://, srt://, rtmp:// (default: output.mp4)
   --ffmpeg-preset PRE   Encoding preset (ultrafast..veryslow, default: medium)
   --ffmpeg-crf CRF      Quality 0-51, lower=better (default: 23)
+  --no-virtualcam       Disable virtual camera output (enabled by default)
   --headless            Run without GUI (requires --api or --ffmpeg)
 ```
 
@@ -78,9 +79,9 @@ python video_synth --diagnose 100 --output-mode FULLSCREEN
 # API-controlled with FFmpeg recording
 python video_synth --api --ffmpeg --ffmpeg-output recording.mp4
 
-# Headless server mode, streaming to RTMP
+# Headless server mode, streaming over UDP (near-zero latency)
 python video_synth --headless --api --ffmpeg \
-  --ffmpeg-output rtmp://localhost/live/stream --ffmpeg-preset veryfast
+  --ffmpeg-output udp://127.0.0.1:1234 --ffmpeg-preset veryfast
 ```
 
 ---
@@ -255,26 +256,48 @@ python ./video_synth --ffmpeg --ffmpeg-output recording.mp4
 python ./video_synth --ffmpeg --ffmpeg-output recording.mp4 --ffmpeg-preset slow --ffmpeg-crf 18
 ```
 
-### RTMP Streaming
-Stream to an RTMP server (nginx-rtmp, OBS, Twitch, etc.):
-```bash
-# Start an RTMP server (Docker)
-docker run -d -p 1935:1935 --name rtmp-server tiangolo/nginx-rtmp
+### Live Streaming
 
-# Stream to it
+**UDP (Recommended - lowest latency, no server needed):**
+```bash
+python ./video_synth --api --ffmpeg \
+  --ffmpeg-output udp://127.0.0.1:1234 \
+  --ffmpeg-preset veryfast
+```
+
+**SRT (low latency with error recovery):**
+```bash
+python ./video_synth --api --ffmpeg \
+  --ffmpeg-output "srt://127.0.0.1:1234?pkt_size=1316" \
+  --ffmpeg-preset veryfast
+```
+
+**RTMP (legacy, higher latency, requires RTMP server):**
+```bash
+docker run -d -p 1935:1935 --name rtmp-server tiangolo/nginx-rtmp
 python ./video_synth --api --ffmpeg \
   --ffmpeg-output rtmp://localhost/live/stream \
   --ffmpeg-preset veryfast
 ```
 
 ### OBS Integration
-The synthesizer can feed into OBS Studio via RTMP or be controlled alongside OBS via WebSocket.
+The synthesizer can feed into OBS Studio via virtual camera, UDP/SRT stream, or be controlled alongside OBS via WebSocket.
 
-**Method 1: RTMP Media Source**
-1. Start the synth with `--ffmpeg --ffmpeg-output rtmp://localhost/live/stream`
-2. In OBS, add a Media Source pointing to `rtmp://localhost/live/stream`
+**Method 1: Virtual Camera (enabled by default - zero latency)**
 
-**Method 2: OBS WebSocket Control**
+The virtual camera starts automatically. No extra flags needed.
+1. In OBS, add a **Video Capture Device** source
+2. Select the virtual camera from the device dropdown
+3. No encoding/decoding - raw pixel transfer with zero latency
+
+**Method 2: UDP Media Source**
+1. Start the synth with `--ffmpeg --ffmpeg-output udp://127.0.0.1:1234`
+2. In OBS, add a Media Source:
+   - Uncheck "Local File"
+   - Input: `udp://127.0.0.1:1234`
+   - Check "Restart playback when source becomes active"
+
+**Method 3: OBS WebSocket Control**
 Use `obs_controller.py` for programmatic OBS control (recording, streaming, scene switching):
 ```python
 from obs_controller import OBSController
@@ -334,7 +357,7 @@ video_synth/
   luma.py              # Luma keying utilities
   pyqt_gui.py          # PyQt6 GUI (tabs, sliders, LFO/audio dialogs)
   api.py               # FastAPI REST server
-  ffmpeg_output.py     # FFmpeg subprocess pipe (file + RTMP streaming)
+  ffmpeg_output.py     # FFmpeg subprocess pipe (file + UDP/SRT/RTMP streaming)
   obs_controller.py    # OBS WebSocket controller
 
   effects/             # Modular effect classes

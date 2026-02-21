@@ -24,7 +24,11 @@ def map_value(value, from_min, from_max, to_min, to_max, round_down=True):
     The mapped value in the target range, rounded down to the nearest integer.
   """
   # Calculate the proportion of the value within the original range
-  proportion = (value - from_min) / (from_max - from_min)
+  range_span = from_max - from_min
+  if range_span == 0:
+    # Amplitude is zero — return midpoint of target range
+    return math.floor((to_min + to_max) / 2) if round_down else (to_min + to_max) / 2
+  proportion = (value - from_min) / range_span
 
   # Map the proportion to the target range
   mapped_value = to_min + proportion * (to_max - to_min)
@@ -199,6 +203,7 @@ class LFO:
         self.linked_param = param
         self.amplitude.max =  param.max
         self.amplitude.min =  param.min
+        self.amplitude.value = (param.max - param.min) / 2
         self.phase.max = param.max
         self.phase.min = param.min
         self.seed.max = param.max

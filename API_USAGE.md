@@ -7,7 +7,7 @@ The video synthesizer can now be controlled remotely via REST API and output to 
 ## Features
 
 - **REST API**: Control all parameters remotely via HTTP
-- **FFmpeg Output**: Record to file or stream to RTMP
+- **FFmpeg Output**: Record to file or stream via UDP/SRT/RTMP
 - **Headless Mode**: Run without GUI for server deployments
 - **Agent Control**: Perfect for AI agents or automation scripts
 
@@ -50,10 +50,10 @@ Record to file:
 python -m video_synth --ffmpeg --ffmpeg-output output.mp4
 ```
 
-Stream to RTMP server:
+Stream over UDP (lowest latency, no server needed):
 
 ```bash
-python -m video_synth --ffmpeg --ffmpeg-output rtmp://localhost/live/stream
+python -m video_synth --ffmpeg --ffmpeg-output udp://127.0.0.1:1234
 ```
 
 Encoding options:
@@ -311,83 +311,32 @@ while True:
 
 The video synthesizer can be integrated with OBS Studio in several ways.
 
-### Method 1: RTMP Stream to OBS (Recommended)
+### Method 1: UDP Stream to OBS (Recommended)
 
-This is the most reliable method for live integration.
+MPEG-TS over UDP provides the lowest latency with zero setup - no external server required.
 
-#### Step 1: Setup RTMP Server
-
-**Using Docker (Easiest):**
-```bash
-docker run -d -p 1935:1935 --name rtmp-server tiangolo/nginx-rtmp
-```
-
-**Using nginx-rtmp:**
-
-Windows: Download from https://github.com/illuspas/nginx-rtmp-windows-module
-
-macOS:
-```bash
-brew tap denji/nginx
-brew install nginx-full --with-rtmp-module
-```
-
-Linux:
-```bash
-sudo apt-get install nginx libnginx-mod-rtmp
-```
-
-Create/edit `nginx.conf`:
-```nginx
-rtmp {
-    server {
-        listen 1935;
-        chunk_size 4096;
-
-        application live {
-            live on;
-            record off;
-            # Optional: allow only localhost
-            # allow publish 127.0.0.1;
-            # deny publish all;
-        }
-    }
-}
-```
-
-Start nginx:
-```bash
-# Windows
-nginx.exe
-
-# macOS/Linux
-sudo nginx
-# or
-sudo systemctl start nginx
-```
-
-#### Step 2: Stream from Video Synth
+#### Step 1: Stream from Video Synth
 ```bash
 python -m video_synth --ffmpeg \
-  --ffmpeg-output rtmp://localhost/live/stream \
+  --ffmpeg-output udp://127.0.0.1:1234 \
   --ffmpeg-preset veryfast
 ```
 
-#### Step 3: Add to OBS
+#### Step 2: Add to OBS
 1. In OBS, add a **Media Source**
 2. Uncheck "Local File"
-3. Input: `rtmp://localhost/live/stream`
+3. Input: `udp://127.0.0.1:1234`
 4. Check "Restart playback when source becomes active"
 5. Set to "Close file when inactive" = Off
 
 **Tips:**
-- Use `veryfast` or `ultrafast` preset for low latency
-- For best quality, use `medium` preset but expect ~1-2 second delay
-- Adjust buffer size in OBS Media Source settings if you experience lag
+- Use `veryfast` or `ultrafast` preset for lowest latency
+- UDP on localhost has near-zero packet loss
+- No external RTMP server needed - just start the synth and point OBS at the UDP address
 
 ### Method 2: OBS WebSocket Control
 
-Control OBS programmatically while using virtual camera or RTMP.
+Control OBS programmatically while using virtual camera or UDP/SRT stream.
 
 #### Install Dependencies
 ```bash
@@ -471,7 +420,7 @@ python -m video_synth
 
 #### Step 3: Create Feedback Loop
 This creates interesting feedback effects:
-1. Video Synth → OBS (via RTMP)
+1. Video Synth → OBS (via UDP/SRT)
 2. OBS → Virtual Camera
 3. Virtual Camera → Video Synth (as input)
 
@@ -498,31 +447,17 @@ pip install ndi-python
 # Currently not implemented, but could be added similar to FFmpeg output
 ```
 
-### Method 5: SRT Protocol (Low Latency Alternative to RTMP)
+### Method 5: SRT Protocol (Low Latency with Error Recovery)
 
-SRT provides lower latency than RTMP.
+SRT provides low latency with built-in error recovery, useful for streaming over networks.
 
-#### Install SRT
-```bash
-# Windows: Download from https://github.com/Haivision/srt/releases
-# macOS:
-brew install srt
-
-# Linux:
-sudo apt-get install srt-tools
-```
-
-#### Stream with SRT
 ```bash
 python -m video_synth --ffmpeg \
-  --ffmpeg-output "srt://localhost:9999?mode=listener" \
-  --ffmpeg-preset ultrafast
+  --ffmpeg-output "srt://127.0.0.1:9999?pkt_size=1316" \
+  --ffmpeg-preset veryfast
 ```
 
-#### Add to OBS
-1. Add **Media Source**
-2. Input: `srt://localhost:9999`
-3. Enable hardware decoding
+In OBS, add a **Media Source** with input: `srt://127.0.0.1:9999`
 
 ### Automated Recording Workflow
 
@@ -588,9 +523,9 @@ def automated_recording_session():
     obs.disconnect()
 
 if __name__ == "__main__":
-    # Start the video synth with RTMP output
+    # Start the video synth with UDP output
     print("Start video_synth with:")
-    print("python -m video_synth --api --ffmpeg --ffmpeg-output rtmp://localhost/live/stream --ffmpeg-preset veryfast")
+    print("python -m video_synth --api --ffmpeg --ffmpeg-output udp://127.0.0.1:1234 --ffmpeg-preset veryfast")
     print("\nThen run this script to automate the recording")
 
     input("Press Enter when video_synth and OBS are ready...")
@@ -599,11 +534,11 @@ if __name__ == "__main__":
 
 ### Recommended Setup for Best Results
 
-**For Live Streaming:**
+**For Live Streaming (lowest latency):**
 ```bash
-# Terminal 1: Start video synth with RTMP output
+# Terminal 1: Start video synth with UDP output
 python -m video_synth --api --ffmpeg \
-  --ffmpeg-output rtmp://localhost/live/stream \
+  --ffmpeg-output udp://127.0.0.1:1234 \
   --ffmpeg-preset ultrafast
 
 # Terminal 2: Run automation script
@@ -614,7 +549,7 @@ python automation_script.py
 ```bash
 # Terminal 1: Video synth with medium quality
 python -m video_synth --api --ffmpeg \
-  --ffmpeg-output rtmp://localhost/live/stream \
+  --ffmpeg-output udp://127.0.0.1:1234 \
   --ffmpeg-preset medium
 
 # OBS: Record at high quality settings
@@ -623,9 +558,9 @@ python -m video_synth --api --ffmpeg \
 
 **For Headless Server:**
 ```bash
-# No GUI, just API and RTMP output
+# No GUI, just API and UDP output
 python -m video_synth --headless --api --ffmpeg \
-  --ffmpeg-output rtmp://your-server:1935/live/stream \
+  --ffmpeg-output udp://127.0.0.1:1234 \
   --ffmpeg-preset fast
 ```
 

@@ -47,6 +47,7 @@ class Groups(StrEnum):
     SRC_2_ANIMATIONS = "#0B5C9C"
     MIXER = "#B53D3D"
     AUDIO_REACTIVE = "#FF9800"
+    OBS = "#9C27B0"
     USER_SETTINGS = "#F0F0F0"
     UNCATEGORIZED = "#000000"
 

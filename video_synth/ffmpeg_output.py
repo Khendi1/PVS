@@ -148,27 +148,35 @@ class FFmpegOutput:
 
 
 class FFmpegStreamOutput(FFmpegOutput):
-    """FFmpeg output configured for RTMP streaming."""
+    """FFmpeg output configured for low-latency streaming via MPEG-TS/UDP, SRT, or RTMP."""
 
     def __init__(self, width: int, height: int, fps: int = 30,
-                 rtmp_url: str = "rtmp://localhost/live/stream",
+                 url: str = "udp://127.0.0.1:1234",
                  preset: str = "veryfast", bitrate: str = "2500k"):
         """
-        Initialize FFmpeg for RTMP streaming.
+        Initialize FFmpeg for live streaming.
 
         Args:
             width: Frame width
             height: Frame height
             fps: Frames per second
-            rtmp_url: RTMP server URL
+            url: Stream URL (udp://, srt://, or rtmp://)
             preset: FFmpeg encoding preset (use ultrafast/veryfast for streaming)
             bitrate: Target bitrate (e.g., "2500k")
         """
         self.bitrate = bitrate
-        super().__init__(width, height, fps, rtmp_url, preset, format="flv")
+
+        # Determine container format from URL protocol
+        if url.startswith('rtmp://'):
+            fmt = 'flv'
+        else:
+            # MPEG-TS for UDP and SRT (lower latency than FLV/RTMP)
+            fmt = 'mpegts'
+
+        super().__init__(width, height, fps, url, preset, format=fmt)
 
     def start(self):
-        """Start ffmpeg for RTMP streaming."""
+        """Start ffmpeg for live streaming."""
         if self.process is not None:
             log.warning("FFmpeg process already running")
             return
@@ -184,12 +192,13 @@ class FFmpegStreamOutput(FFmpegOutput):
             '-an',
             '-vcodec', 'libx264',
             '-preset', self.preset,
+            '-tune', 'zerolatency',
             '-b:v', self.bitrate,
             '-maxrate', self.bitrate,
-            '-bufsize', f'{int(self.bitrate[:-1]) * 2}k',  # 2x bitrate for buffer
+            '-bufsize', f'{int(self.bitrate[:-1]) * 2}k',
             '-pix_fmt', 'yuv420p',
-            '-g', str(self.fps * 2),  # Keyframe interval (2 seconds)
-            '-f', 'flv',
+            '-g', str(self.fps),  # Keyframe every 1 second for low latency
+            '-f', self.format,
             self.output
         ]
 

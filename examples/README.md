@@ -14,16 +14,7 @@ This directory contains example scripts demonstrating how to use the video synth
 pip install -r ../requirements.txt
 ```
 
-### 2. Setup RTMP Server
-
-**Using Docker (Recommended):**
-```bash
-docker run -d -p 1935:1935 --name rtmp-server tiangolo/nginx-rtmp
-```
-
-**Or install nginx-rtmp manually** - see [../API_USAGE.md](../API_USAGE.md) for details.
-
-### 3. Setup OBS
+### 2. Setup OBS
 
 1. Install OBS Studio
 2. Enable WebSocket server:
@@ -34,14 +25,14 @@ docker run -d -p 1935:1935 --name rtmp-server tiangolo/nginx-rtmp
 3. Add Media Source:
    - Add new Media Source
    - Uncheck "Local File"
-   - Input: `rtmp://localhost/live/stream`
+   - Input: `udp://127.0.0.1:1234`
    - Check "Restart playback when source becomes active"
 
-### 4. Start Video Synthesizer
+### 3. Start Video Synthesizer
 
 ```bash
-python -m video_synth --api --ffmpeg \
-  --ffmpeg-output rtmp://localhost/live/stream \
+python ./video_synth --api --ffmpeg \
+  --ffmpeg-output udp://127.0.0.1:1234 \
   --ffmpeg-preset veryfast
 ```
 
@@ -197,9 +188,9 @@ params = {
 - Check port (default 4455 for OBS 28+, 4444 for older)
 
 ### No video in OBS
-- Check RTMP server is running (`docker ps` or `nginx status`)
-- Verify Media Source URL is correct: `rtmp://localhost/live/stream`
+- Verify Media Source URL is correct: `udp://127.0.0.1:1234`
 - Check video synth FFmpeg output is working (look for frame count logs)
+- Make sure the synth is started before OBS tries to connect
 
 ### Low FPS / Lag
 - Use faster encoding preset (`ultrafast` or `veryfast`)

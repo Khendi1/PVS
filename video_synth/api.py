@@ -82,7 +82,7 @@ class APIServer:
         async def list_params():
             """Get list of all parameters with their current values."""
             result = []
-            for name, param in self.params.table.items():
+            for name, param in self.params.params.items():
                 result.append(ParamInfo(
                     name=name,
                     value=param.value,
@@ -98,10 +98,10 @@ class APIServer:
         @self.app.get("/params/{param_name}", response_model=ParamInfo)
         async def get_param(param_name: str):
             """Get specific parameter info and current value."""
-            if param_name not in self.params.table:
+            if param_name not in self.params.params:
                 raise HTTPException(status_code=404, detail=f"Parameter '{param_name}' not found")
 
-            param = self.params.table[param_name]
+            param = self.params.params[param_name]
             return ParamInfo(
                 name=param_name,
                 value=param.value,
@@ -116,10 +116,10 @@ class APIServer:
         @self.app.put("/params/{param_name}")
         async def set_param(param_name: str, param_value: ParamValue):
             """Set a parameter value."""
-            if param_name not in self.params.table:
+            if param_name not in self.params.params:
                 raise HTTPException(status_code=404, detail=f"Parameter '{param_name}' not found")
 
-            param = self.params.table[param_name]
+            param = self.params.params[param_name]
 
             # Validate value is within bounds
             if param_value.value < param.min or param_value.value > param.max:
@@ -142,10 +142,10 @@ class APIServer:
         @self.app.post("/params/reset/{param_name}")
         async def reset_param(param_name: str):
             """Reset parameter to its default value."""
-            if param_name not in self.params.table:
+            if param_name not in self.params.params:
                 raise HTTPException(status_code=404, detail=f"Parameter '{param_name}' not found")
 
-            param = self.params.table[param_name]
+            param = self.params.params[param_name]
             param.reset()
 
             log.info(f"API: Reset {param_name} to {param.value}")

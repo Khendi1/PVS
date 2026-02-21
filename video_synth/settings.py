@@ -6,7 +6,10 @@ class UserSettings():
     def __init__(self, control_layout: str, output_mode: str, devices: int, patch: int, log_level: str, file: str, diagnose: int,
                  api: bool = False, api_host: str = "127.0.0.1", api_port: int = 8000,
                  ffmpeg: bool = False, ffmpeg_output: str = "output.mp4", ffmpeg_preset: str = "medium", ffmpeg_crf: int = 23,
-                 headless: bool = False, **kwargs):
+                 no_virtualcam: bool = False,
+                 headless: bool = False,
+                 obs: bool = False, obs_host: str = "localhost", obs_port: int = 4455, obs_password: str = "",
+                 **kwargs):
         """Initialize user settings with given parameters."""
         group = Groups.USER_SETTINGS
         subgroup = group.name
@@ -23,8 +26,17 @@ class UserSettings():
         self.ffmpeg_preset = ffmpeg_preset
         self.ffmpeg_crf = ffmpeg_crf
 
+        # Virtual camera output (enabled by default, --no-virtualcam to disable)
+        self.no_virtualcam = no_virtualcam
+
         # Headless mode (not exposed in GUI)
         self.headless = headless
+
+        # OBS WebSocket settings (not exposed in GUI)
+        self.obs = obs
+        self.obs_host = obs_host
+        self.obs_port = obs_port
+        self.obs_password = obs_password
 
         self.layout = self.params.add("layout",
                                        min=0, max=len(Layout), default=Layout[control_layout].value,

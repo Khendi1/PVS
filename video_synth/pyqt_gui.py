@@ -286,12 +286,13 @@ class PyQTGUI(QMainWindow):
     AUD_BUTTON_LINKED_STYLE = "QPushButton { background-color: #FF9800; color: white; }" # Orange
     video_frame_ready = pyqtSignal(QImage)
 
-    def __init__(self, effects, settings, mixer=None, audio_module=None):
+    def __init__(self, effects, settings, mixer=None, audio_module=None, obs_filters=None):
         super().__init__()
         self.layout_style = settings.layout.value
         self.effects = effects
         self.mixer = mixer
         self.audio_module = audio_module
+        self.obs_filters = obs_filters
         self.src_1_effects = effects[MixerSource.SRC_1]
         self.src_2_effects = effects[MixerSource.SRC_2]
         self.post_effects = effects[MixerSource.POST]
@@ -301,6 +302,7 @@ class PyQTGUI(QMainWindow):
         self.post_params = self.post_effects.params
         self.mixer_params = mixer.params if mixer else ParamTable(group="Mixer")
         self.settings_params = settings.params
+        self.obs_params = obs_filters.params if obs_filters else ParamTable(group="OBS")
 
         self.all_params = ParamTable()
         self.all_params.params.update(self.src_1_params)
@@ -308,13 +310,17 @@ class PyQTGUI(QMainWindow):
         self.all_params.params.update(self.post_params)
         self.all_params.params.update(self.mixer_params)
         self.all_params.params.update(self.settings_params)
-        self.save_controller = SaveController({
+        self.all_params.params.update(self.obs_params)
+        save_tables = {
             "src_1": self.src_1_params,
             "src_2": self.src_2_params,
             "post": self.post_params,
             "mixer": self.mixer_params,
             "settings": self.settings_params,
-        })
+        }
+        if obs_filters:
+            save_tables["obs"] = self.obs_params
+        self.save_controller = SaveController(save_tables)
         self.save_controller.patch_loaded_callback = self._refresh_all_widgets
 
         self.mixer_widgets = {}
@@ -345,6 +351,7 @@ class PyQTGUI(QMainWindow):
         self.all_params.params.update(self.post_effects.params)
         self.all_params.params.update(self.mixer_params)
         self.all_params.params.update(self.settings_params)
+        self.all_params.params.update(self.obs_params)
         for param_name, widget in self.param_widgets.items():
             param = self.all_params.get(param_name)
             if param:
@@ -372,8 +379,7 @@ class PyQTGUI(QMainWindow):
         log.debug(f"Creating layout: {self.layout_style}/{Layout(self.layout_style).name}")
         match Layout(self.layout_style):
             case Layout.QUAD_FULL:
-                log.error("QUAD_FULL layout is not yet implemented. Defaulting to QUAD_PREVIEW.")
-                self._create_quad_layout()
+                self._create_quad_full_layout()
             case Layout.QUAD_PREVIEW:
                 self._create_quad_layout()
             case Layout.SPLIT:
@@ -502,6 +508,14 @@ class PyQTGUI(QMainWindow):
         user_settings_scroll.setWidget(user_settings_container)
         bottom_right_tabs.addTab(user_settings_scroll, "User Settings")
 
+        # OBS Tab
+        obs_container = QWidget()
+        self.obs_layout = QVBoxLayout(obs_container)
+        obs_scroll = QScrollArea()
+        obs_scroll.setWidgetResizable(True)
+        obs_scroll.setWidget(obs_container)
+        bottom_right_tabs.addTab(obs_scroll, "OBS")
+
         # Logs Tab
         self.log_viewer = QTextEdit()
         self.log_viewer.setReadOnly(True)
@@ -510,6 +524,146 @@ class PyQTGUI(QMainWindow):
         self.root_layout.addWidget(bottom_right_tabs, 1, 1)
 
         # --- Set Stretch Factors ---
+        self.root_layout.setColumnStretch(0, 1)
+        self.root_layout.setColumnStretch(1, 1)
+        self.root_layout.setRowStretch(0, 1)
+        self.root_layout.setRowStretch(1, 1)
+
+
+    def _create_quad_full_layout(self):
+        """
+        4-quadrant layout without video preview.
+        Src 2 Effects/Animations tabs replace the video player in the top-right.
+        All 4 quadrants are equal size.
+        """
+        self.root_layout = QGridLayout(self.central_widget)
+        self.root_layout.setContentsMargins(0, 0, 0, 0)
+        self.root_layout.setSpacing(0)
+
+        # --- Top-Left: Src 1 Effects + Src 1 Animations ---
+        top_left_tabs = QTabWidget()
+
+        src1_effects_container = QWidget()
+        self.src1_effects_layout = QVBoxLayout(src1_effects_container)
+        src1_effects_scroll = QScrollArea()
+        src1_effects_scroll.setWidgetResizable(True)
+        src1_effects_scroll.setWidget(src1_effects_container)
+        top_left_tabs.addTab(src1_effects_scroll, "Src 1 Effects")
+
+        src1_animations_container = QWidget()
+        self.src1_animations_layout = QVBoxLayout(src1_animations_container)
+        src1_animations_scroll = QScrollArea()
+        src1_animations_scroll.setWidgetResizable(True)
+        src1_animations_scroll.setWidget(src1_animations_container)
+        top_left_tabs.addTab(src1_animations_scroll, "Src 1 Animations")
+
+        self.root_layout.addWidget(top_left_tabs, 0, 0)
+
+        # --- Top-Right: Src 2 Effects + Src 2 Animations + Reset Buttons ---
+        top_right_widget = QWidget()
+        top_right_outer = QHBoxLayout(top_right_widget)
+        top_right_outer.setContentsMargins(0, 0, 0, 0)
+        top_right_outer.setSpacing(0)
+
+        # Reset button column
+        button_column_layout = QVBoxLayout()
+
+        button_r1 = QPushButton("R1")
+        button_r1.setFixedWidth(30)
+        button_r1.setToolTip("Reset Source 1 Params")
+        button_r1.clicked.connect(self._reset_src1_params)
+        button_column_layout.addWidget(button_r1)
+
+        button_r2 = QPushButton("R2")
+        button_r2.setFixedWidth(30)
+        button_r2.setToolTip("Reset Source 2 Params")
+        button_r2.clicked.connect(self._reset_src2_params)
+        button_column_layout.addWidget(button_r2)
+
+        button_rp = QPushButton("RP")
+        button_rp.setFixedWidth(30)
+        button_rp.setToolTip("Reset Post-Processing Params")
+        button_rp.clicked.connect(self._reset_post_params)
+        button_column_layout.addWidget(button_rp)
+
+        button_ra = QPushButton("RA")
+        button_ra.setFixedWidth(30)
+        button_ra.setToolTip("Reset All Params")
+        button_ra.clicked.connect(self._reset_all_params)
+        button_column_layout.addWidget(button_ra)
+
+        button_column_layout.addStretch(1)
+        top_right_outer.addLayout(button_column_layout)
+
+        # Src 2 tabs
+        top_right_tabs = QTabWidget()
+
+        src2_effects_container = QWidget()
+        self.src2_effects_layout = QVBoxLayout(src2_effects_container)
+        src2_effects_scroll = QScrollArea()
+        src2_effects_scroll.setWidgetResizable(True)
+        src2_effects_scroll.setWidget(src2_effects_container)
+        top_right_tabs.addTab(src2_effects_scroll, "Src 2 Effects")
+
+        src2_animations_container = QWidget()
+        self.src2_animations_layout = QVBoxLayout(src2_animations_container)
+        src2_animations_scroll = QScrollArea()
+        src2_animations_scroll.setWidgetResizable(True)
+        src2_animations_scroll.setWidget(src2_animations_container)
+        top_right_tabs.addTab(src2_animations_scroll, "Src 2 Animations")
+
+        top_right_outer.addWidget(top_right_tabs, 1)
+
+        self.root_layout.addWidget(top_right_widget, 0, 1)
+
+        # --- Bottom-Left: Post Effects + Uncategorized ---
+        bottom_left_tabs = QTabWidget()
+
+        self.post_effects_container = QWidget()
+        self.post_effects_layout = QVBoxLayout(self.post_effects_container)
+        bottom_left_tabs.addTab(self.post_effects_container, "Post Effects")
+
+        uncategorized_container = QWidget()
+        self.uncategorized_layout = QVBoxLayout(uncategorized_container)
+        uncategorized_scroll = QScrollArea()
+        uncategorized_scroll.setWidgetResizable(True)
+        uncategorized_scroll.setWidget(uncategorized_container)
+        bottom_left_tabs.addTab(uncategorized_scroll, "Uncategorized")
+
+        self.root_layout.addWidget(bottom_left_tabs, 1, 0)
+
+        # --- Bottom-Right: Mixer + User Settings + Logs ---
+        bottom_right_tabs = QTabWidget()
+
+        mixer_container = QWidget()
+        self.mixer_layout = QVBoxLayout(mixer_container)
+        mixer_scroll = QScrollArea()
+        mixer_scroll.setWidgetResizable(True)
+        mixer_scroll.setWidget(mixer_container)
+        bottom_right_tabs.addTab(mixer_scroll, "Mixer")
+
+        user_settings_container = QWidget()
+        self.user_settings_layout = QVBoxLayout(user_settings_container)
+        user_settings_scroll = QScrollArea()
+        user_settings_scroll.setWidgetResizable(True)
+        user_settings_scroll.setWidget(user_settings_container)
+        bottom_right_tabs.addTab(user_settings_scroll, "User Settings")
+
+        # OBS Tab
+        obs_container = QWidget()
+        self.obs_layout = QVBoxLayout(obs_container)
+        obs_scroll = QScrollArea()
+        obs_scroll.setWidgetResizable(True)
+        obs_scroll.setWidget(obs_container)
+        bottom_right_tabs.addTab(obs_scroll, "OBS")
+
+        self.log_viewer = QTextEdit()
+        self.log_viewer.setReadOnly(True)
+        bottom_right_tabs.addTab(self.log_viewer, "Logs")
+
+        self.root_layout.addWidget(bottom_right_tabs, 1, 1)
+
+        # --- Equal quadrant sizing ---
         self.root_layout.setColumnStretch(0, 1)
         self.root_layout.setColumnStretch(1, 1)
         self.root_layout.setRowStretch(0, 1)
@@ -587,6 +741,14 @@ class PyQTGUI(QMainWindow):
         user_settings_scroll.setWidgetResizable(True)
         user_settings_scroll.setWidget(user_settings_container)
         bottom_pane_tabs.addTab(user_settings_scroll, "User Settings")
+
+        # OBS Tab
+        obs_container = QWidget()
+        self.obs_layout = QVBoxLayout(obs_container)
+        obs_scroll = QScrollArea()
+        obs_scroll.setWidgetResizable(True)
+        obs_scroll.setWidget(obs_container)
+        bottom_pane_tabs.addTab(obs_scroll, "OBS")
 
         # Logs Tab
         self.log_viewer = QTextEdit()
@@ -672,7 +834,8 @@ class PyQTGUI(QMainWindow):
                           list(self.src_2_params.values()) + \
                           list(self.post_params.values()) + \
                           list(self.mixer_params.values()) + \
-                          list(self.settings_params.values())
+                          list(self.settings_params.values()) + \
+                          list(self.obs_params.values())
 
         groups = {}
         for param in all_params_list:
@@ -691,6 +854,7 @@ class PyQTGUI(QMainWindow):
             Groups.SRC_2_ANIMATIONS: self.src2_animations_layout,
             Groups.POST_EFFECTS: self.post_effects_layout,
             Groups.MIXER: self.mixer_layout,
+            Groups.OBS: self.obs_layout,
             Groups.USER_SETTINGS: self.user_settings_layout,
             "Uncategorized": self.uncategorized_layout,
         }

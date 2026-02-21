@@ -137,7 +137,7 @@ def full_automated_session():
         print("ERROR: Cannot connect to video synth API")
         print("Please start the video synth with:")
         print("  python -m video_synth --api --ffmpeg \\")
-        print("    --ffmpeg-output rtmp://localhost/live/stream \\")
+        print("    --ffmpeg-output udp://127.0.0.1:1234 \\")
         print("    --ffmpeg-preset veryfast")
         return
 
@@ -275,12 +275,11 @@ if __name__ == "__main__":
     print("\nBefore running this script, make sure:")
     print("1. Video synth is running with API and FFmpeg:")
     print("   python -m video_synth --api --ffmpeg \\")
-    print("     --ffmpeg-output rtmp://localhost/live/stream \\")
+    print("     --ffmpeg-output udp://127.0.0.1:1234 \\")
     print("     --ffmpeg-preset veryfast")
-    print("\n2. RTMP server is running (nginx-rtmp or docker)")
-    print("\n3. OBS is running with:")
+    print("\n2. OBS is running with:")
     print("   - WebSocket server enabled")
-    print("   - Media source added: rtmp://localhost/live/stream")
+    print("   - Media source added: udp://127.0.0.1:1234")
     print("\n" + "=" * 60)
 
     choice = input("\nRun (f)ull automation or (m)anual control? [f/m]: ").strip().lower()
