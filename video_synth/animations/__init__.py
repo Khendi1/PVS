@@ -5,6 +5,7 @@ from animations.moire import Moire
 from animations.strange_attractor import StrangeAttractor
 from animations.physarum import Physarum
 from animations.shaders import Shaders
+from animations.shaders2 import Shaders2
 from animations.dla import DLA
 from animations.chladni import Chladni
 from animations.voronoi import Voronoi
@@ -17,6 +18,7 @@ __all__ = [
     "StrangeAttractor",
     "Physarum",
     "Shaders",
+    "Shaders2",
     "DLA",
     "Chladni",
     "Voronoi",

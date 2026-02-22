@@ -21,7 +21,8 @@ from PyQt6.QtGui import QImage, QPixmap
 from pyqt_gui import PyQTGUI
 from settings import UserSettings
 from common import *
-from midi import *
+# from midi import *
+from midi_mapper import MidiMapper
 from mixer import Mixer
 from param import ParamTable
 from effects_manager import EffectManager
@@ -33,8 +34,8 @@ from obs_controller import OBSController
 from obs_filters import OBSFilters
 
 
-# List of MIDI controller class names to identify and initialize
-CONTROLLER_NAMES = [SMC_Mixer.__name__, MidiMix.__name__]
+# Old hard-coded MIDI controller names (disabled in favor of MidiMapper)
+# CONTROLLER_NAMES = [SMC_Mixer.__name__, MidiMix.__name__]
 
 
 """Creates ArgumentParser, configures arguments, returns parser"""
@@ -202,19 +203,31 @@ def video_loop(mixer, effects, should_quit, gui, settings, audio_module=None, ff
 
     # Performance monitoring
     perf_samples = []
-    perf_log_interval = settings.diagnose_frames.value  # Log every n frames
-    DEBUG = settings.diagnose_frames.value > 0
     gc_interval = 600  # Run garbage collection every 600 frames to prevent memory buildup
 
-    # CV window setup
-    cv_window_active = settings.output_mode.value != OutputMode.NONE.value
-    if cv_window_active:
-        cv2.namedWindow(VIDEO_OUTPUT_WINDOW_TITLE, cv2.WINDOW_NORMAL)
-        if settings.output_mode.value == OutputMode.FULLSCREEN.value:  # Fullscreen mode
-            cv2.setWindowProperty(VIDEO_OUTPUT_WINDOW_TITLE, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    # CV window state tracking (dynamically managed based on output_mode param)
+    cv_window_active = False
+    prev_output_mode = None
 
     # Main loop
     while not should_quit.is_set():
+        # --- Dynamic output_mode: create/destroy/reconfigure CV window on change ---
+        current_output_mode = settings.output_mode.value
+        if current_output_mode != prev_output_mode:
+            if cv_window_active:
+                cv2.destroyAllWindows()
+                cv_window_active = False
+            if current_output_mode != OutputMode.NONE.value:
+                cv2.namedWindow(VIDEO_OUTPUT_WINDOW_TITLE, cv2.WINDOW_NORMAL)
+                if current_output_mode == OutputMode.FULLSCREEN.value:
+                    cv2.setWindowProperty(VIDEO_OUTPUT_WINDOW_TITLE, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+                cv_window_active = True
+            prev_output_mode = current_output_mode
+
+        # --- Dynamic diagnose_frames: re-read each frame ---
+        perf_log_interval = settings.diagnose_frames.value
+        DEBUG = perf_log_interval > 0
+
         if DEBUG:
             frame_start = time.perf_counter()
         perf_data = {}
@@ -361,7 +374,7 @@ def video_loop(mixer, effects, should_quit, gui, settings, audio_module=None, ff
 
 
 """ Main app setup and loop """
-def main(settings, controller_names):
+def main(settings):
 
     log.info("Initializing video synthesizer... Press 'q' or 'ESC' to quit")
 
@@ -378,23 +391,23 @@ def main(settings, controller_names):
     audio_module = AudioReactiveModule(audio_params)
     audio_module.start()
 
-    # Identify and initialize midi controllers before creating the GUI
-    controllers = identify_midi_ports(controller_names,
-                                      src_1_effects.params,
-                                      src_2_effects.params,
-                                      post_effects.params,
-                                      mixer.params,)
+    # Old hard-coded MIDI controller initialization (disabled in favor of MidiMapper)
+    # controllers = identify_midi_ports(controller_names,
+    #                                   src_1_effects.params,
+    #                                   src_2_effects.params,
+    #                                   post_effects.params,
+    #                                   mixer.params,)
+
+    # Collect all params (used by API server and MIDI mapper)
+    all_params = ParamTable()
+    for effect_mgr in effects:
+        all_params.params.update(effect_mgr.params.params)
+    all_params.params.update(mixer.params.params)
+    all_params.params.update(audio_params.params)
 
     # Initialize API server if requested
     api_server = None
     if settings.api:
-        # Collect all params for API
-        all_params = ParamTable()
-        for effect_mgr in effects:
-            all_params.params.update(effect_mgr.params.params)
-        all_params.params.update(mixer.params.params)
-        all_params.params.update(audio_params.params)
-
         api_server = APIServer(all_params, mixer=mixer, host=settings.api_host, port=settings.api_port)
         api_server.start()
 
@@ -441,6 +454,11 @@ def main(settings, controller_names):
     if api_server is not None:
         all_params.params.update(obs_filters.params.params)
 
+    # --- MIDI Mapper ---
+    # Generic MIDI learn/mapping system - works with any controller, saves mappings to YAML.
+    midi_mapper = MidiMapper(all_params)
+    midi_mapper.start()
+
     # Validate headless mode
     if settings.headless and not (settings.api or settings.ffmpeg):
         log.error("Headless mode requires --api or --ffmpeg to be enabled")
@@ -454,7 +472,7 @@ def main(settings, controller_names):
     main_window = None
     if not settings.headless:
         app = QApplication(sys.argv)
-        main_window = PyQTGUI(effects, settings, mixer, audio_module=audio_module, obs_filters=obs_filters)
+        main_window = PyQTGUI(effects, settings, mixer, audio_module=audio_module, obs_filters=obs_filters, api_server=api_server)
         main_window.show()
     else:
         log.info("Running in headless mode (no GUI)")
@@ -492,26 +510,32 @@ def main(settings, controller_names):
     if virtualcam_output is not None:
         virtualcam_output.stop()
 
-    if api_server is not None:
-        api_server.stop()
+    # Stop API server (may have been started via CLI or GUI toggle)
+    active_api = main_window.api_server if main_window and main_window.api_server else api_server
+    if active_api is not None:
+        active_api.stop()
 
     if obs_controller is not None:
         obs_controller.disconnect()
 
+    # --- MIDI Mapper cleanup ---
+    midi_mapper.stop()
+
     sys.exit(exit_code)
 
-    if controllers:
-        for c in controllers:
-            c.thread_stop = True
-            c.thread.join(timeout=5)
-            if c.thread.is_alive():
-                log.warning("MIDI thread did not terminate gracefully. Forcing exit.")
-            else:
-                log.info("MIDI thread stopped successfully.")
+    # Old hard-coded MIDI controller cleanup (disabled in favor of MidiMapper)
+    # if controllers:
+    #     for c in controllers:
+    #         c.thread_stop = True
+    #         c.thread.join(timeout=5)
+    #         if c.thread.is_alive():
+    #             log.warning("MIDI thread did not terminate gracefully. Forcing exit.")
+    #         else:
+    #             log.info("MIDI thread stopped successfully.")
 
 
 if __name__ == "__main__":
     args = parse_args()
     log = config_log(args.log_level)
     settings = UserSettings(**args.__dict__)
-    main(settings, CONTROLLER_NAMES)
+    main(settings)

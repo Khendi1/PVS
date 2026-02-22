@@ -89,6 +89,19 @@ class AttractorType(IntEnum):
     THOMAS = auto()
 
 
+class Shader2Type(IntEnum):
+    DOMAIN_WARP = 0
+    VORONOI_FLOW = auto()
+    SDF_MORPH = auto()
+    REACTION = auto()
+    TUNNEL = auto()
+    KALEIDO = auto()
+    FLUID = auto()
+    ELECTRIC = auto()
+    CELLULAR = auto()
+    WORMHOLE = auto()
+
+
 class AnimSource(IntEnum):
     PLASMA = 1
     REACTION_DIFFUSION = 2
@@ -100,3 +113,4 @@ class AnimSource(IntEnum):
     DLA = 8
     CHLADNI = 9
     VORONOI = 10
+    SHADERS_2 = 11

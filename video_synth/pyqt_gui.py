@@ -286,13 +286,15 @@ class PyQTGUI(QMainWindow):
     AUD_BUTTON_LINKED_STYLE = "QPushButton { background-color: #FF9800; color: white; }" # Orange
     video_frame_ready = pyqtSignal(QImage)
 
-    def __init__(self, effects, settings, mixer=None, audio_module=None, obs_filters=None):
+    def __init__(self, effects, settings, mixer=None, audio_module=None, obs_filters=None, api_server=None):
         super().__init__()
         self.layout_style = settings.layout.value
         self.effects = effects
+        self.settings = settings
         self.mixer = mixer
         self.audio_module = audio_module
         self.obs_filters = obs_filters
+        self.api_server = api_server
         self.src_1_effects = effects[MixerSource.SRC_1]
         self.src_2_effects = effects[MixerSource.SRC_2]
         self.post_effects = effects[MixerSource.POST]
@@ -374,6 +376,36 @@ class PyQTGUI(QMainWindow):
         logging.getLogger().addHandler(log_handler)
         log.info("GUI log viewer initialized")
 
+
+    def _rebuild_layout(self):
+        """Tear down and rebuild the entire GUI layout when layout param changes."""
+        new_style = self.settings.layout.value
+        if isinstance(new_style, enum.Enum):
+            new_style = new_style.value
+        if new_style == self.layout_style:
+            return
+        log.info(f"Rebuilding layout: {Layout(self.layout_style).name} -> {Layout(new_style).name}")
+        self.layout_style = new_style
+
+        # Remove old log handler before destroying widgets
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers[:]:
+            if isinstance(handler, QTextEditLogger):
+                root_logger.removeHandler(handler)
+
+        # Clear widget tracking
+        self.mixer_widgets.clear()
+        self.param_widgets.clear()
+
+        # Replace central widget (destroys all child widgets)
+        old_widget = self.central_widget
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+        old_widget.deleteLater()
+
+        self._create_layout()
+        self.create_ui()
+        self._setup_logging()
 
     def _create_layout(self):
         log.debug(f"Creating layout: {self.layout_style}/{Layout(self.layout_style).name}")
@@ -1201,6 +1233,15 @@ class PyQTGUI(QMainWindow):
                     self.mixer.start_video(FileSource.IMAGE.name, MixerSource.SRC_1)
                 elif param.name == "image_file_src2" and self.mixer.selected_source2.value == FileSource.IMAGE.name:
                     self.mixer.start_video(FileSource.IMAGE.name, MixerSource.SRC_2)
+
+            if param.name == "log_level":
+                level = data if isinstance(data, int) else logging.getLevelName(str(data))
+                logging.getLogger().setLevel(level)
+                log.info(f"Log level changed to {logging.getLevelName(level)}")
+
+            if param.name == "layout":
+                self._rebuild_layout()
+
         except (ValueError, TypeError):
             pass
 
@@ -1210,6 +1251,33 @@ class PyQTGUI(QMainWindow):
         param.value = 1 if state == Qt.CheckState.Checked.value else 0
         log.info(f"Toggle changed: {param.name} = {param.value}")
 
+        if param.name == "api_enabled":
+            self._toggle_api_server(param.value)
+
+    def _toggle_api_server(self, enabled):
+        """Start or stop the API server based on the toggle state."""
+        if enabled:
+            if self.api_server is None:
+                from api import APIServer
+                all_params = ParamTable()
+                for effect_mgr in self.effects:
+                    all_params.params.update(effect_mgr.params.params)
+                all_params.params.update(self.mixer.params.params)
+                if self.audio_module:
+                    all_params.params.update(self.audio_module.params.params)
+                all_params.params.update(self.settings.params.params)
+                if self.obs_filters:
+                    all_params.params.update(self.obs_filters.params.params)
+                self.api_server = APIServer(
+                    all_params, mixer=self.mixer,
+                    host=self.settings.api_host, port=self.settings.api_port
+                )
+            self.api_server.start()
+            log.info(f"API server started on {self.settings.api_host}:{self.settings.api_port}")
+        else:
+            if self.api_server is not None:
+                self.api_server.stop()
+                log.info("API server stopped")
 
     def _on_reset_click(self, param: Param, widget: QWidget):
         param.reset()

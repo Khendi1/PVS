@@ -41,7 +41,7 @@ class UserSettings():
         self.layout = self.params.add("layout",
                                        min=0, max=len(Layout), default=Layout[control_layout].value,
                                        group=group, subgroup=subgroup,
-                                       type=Widget.SLIDER)
+                                       type=Widget.DROPDOWN, options=Layout)
         self.output_mode = self.params.add("output_mode",
                                            min=0, max=len(OutputMode), default=OutputMode[output_mode].value,
                                            group=group, subgroup=subgroup,
@@ -65,5 +65,9 @@ class UserSettings():
         self.diagnose_frames = self.params.add("diagnose_frames",
                                                min=0, max=1000, default=diagnose,
                                                group=group, subgroup=subgroup)
-        
+        self.api_enabled = self.params.add("api_enabled",
+                                           min=0, max=1, default=int(api),
+                                           group=group, subgroup=subgroup,
+                                           type=Widget.TOGGLE)
+
         

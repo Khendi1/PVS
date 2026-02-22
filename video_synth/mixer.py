@@ -12,6 +12,7 @@ from animations.plasma import Plasma
 from animations.reaction_diffusion import ReactionDiffusion
 from animations.moire import Moire
 from animations.shaders import Shaders
+from animations.shaders2 import Shaders2
 from animations.strange_attractor import StrangeAttractor
 from animations.physarum import Physarum
 from animations.dla import DLA
@@ -114,6 +115,7 @@ class Mixer:
             AnimSource.REACTION_DIFFUSION.name: ReactionDiffusion(**anim_args),
             AnimSource.MOIRE.name: Moire(**anim_args, oscs=self.src_1_effects.oscs),
             AnimSource.SHADERS.name: Shaders(**anim_args),
+            AnimSource.SHADERS_2.name: Shaders2(**anim_args),
             AnimSource.STRANGE_ATTRACTOR.name: StrangeAttractor(**anim_args),
             AnimSource.PHYSARUM.name: Physarum(**anim_args),
             AnimSource.DLA.name: DLA(**anim_args),
@@ -129,6 +131,7 @@ class Mixer:
             AnimSource.REACTION_DIFFUSION.name: ReactionDiffusion(**anim_args),
             AnimSource.MOIRE.name: Moire(**anim_args, oscs=self.src_2_effects.oscs),
             AnimSource.SHADERS.name: Shaders(**anim_args),
+            AnimSource.SHADERS_2.name: Shaders2(**anim_args),
             AnimSource.STRANGE_ATTRACTOR.name: StrangeAttractor(**anim_args),
             AnimSource.PHYSARUM.name: Physarum(**anim_args),
             AnimSource.DLA.name: DLA(**anim_args),
