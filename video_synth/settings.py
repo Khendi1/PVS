@@ -9,6 +9,7 @@ class UserSettings():
                  no_virtualcam: bool = False,
                  headless: bool = False,
                  obs: bool = False, obs_host: str = "localhost", obs_port: int = 4455, obs_password: str = "",
+                 osc: bool = False, osc_host: str = "0.0.0.0", osc_port: int = 9000,
                  **kwargs):
         """Initialize user settings with given parameters."""
         group = Groups.USER_SETTINGS
@@ -37,6 +38,11 @@ class UserSettings():
         self.obs_host = obs_host
         self.obs_port = obs_port
         self.obs_password = obs_password
+
+        # OSC settings
+        self.osc = osc
+        self.osc_host = osc_host
+        self.osc_port = osc_port
 
         self.layout = self.params.add("layout",
                                        min=0, max=len(Layout), default=Layout[control_layout].value,
@@ -69,5 +75,7 @@ class UserSettings():
                                            min=0, max=1, default=int(api),
                                            group=group, subgroup=subgroup,
                                            type=Widget.TOGGLE)
-
-        
+        self.osc_enabled = self.params.add("osc_enabled",
+                                           min=0, max=1, default=int(osc),
+                                           group=group, subgroup=subgroup,
+                                           type=Widget.TOGGLE)

@@ -1,0 +1,5 @@
+ports:
+  MIDI Mix 0:
+    mappings:
+      19: hue_shift
+      23: aizawa_b

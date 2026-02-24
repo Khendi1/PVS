@@ -5,16 +5,19 @@ This module runs alongside the existing hard-coded MIDI controller classes in mi
 It allows any MIDI controller to be mapped to any parameter via a learn mode,
 and persists those mappings to a YAML file for automatic reload on startup.
 
+Parameters are addressed by qualified keys: "group_name/param_name"
+(e.g. "Src 1 Effects/hue_shift") to avoid collisions between groups.
+
 Usage:
-    mapper = MidiMapper(all_params)
-    mapper.start()          # Scans ports, loads saved mappings, starts listener threads
-    mapper.start_learn("alpha")  # Next CC from any port maps to "alpha"
-    mapper.stop()           # Stops all threads
+    param_tables = {"Src 1 Effects": src1_table, "Mixer": mixer_table, ...}
+    mapper = MidiMapper(param_tables)
+    mapper.start()
+    mapper.start_learn("Src 1 Effects/hue_shift")
+    mapper.stop()
 """
 
 import mido
 import yaml
-import os
 import threading
 import logging
 from pathlib import Path
@@ -25,6 +28,7 @@ from param import ParamTable
 log = logging.getLogger(__name__)
 
 MAPPINGS_FILENAME = "midi_mappings.yaml"
+SEPARATOR = "/"
 
 
 class MidiMapperController(ControllerBase):
@@ -32,14 +36,14 @@ class MidiMapperController(ControllerBase):
     A generic MIDI controller that routes CC messages to parameters
     based on a configurable mapping dictionary.
 
-    Unlike SMC_Mixer or MidiMix, this class has no hard-coded CC assignments.
-    Mappings are added dynamically via learn mode or loaded from YAML.
+    Mappings use qualified keys ("group/param_name") to uniquely identify
+    parameters across multiple groups that may share param names.
     """
 
-    def __init__(self, port_name, params, mappings=None):
+    def __init__(self, port_name, param_tables, mappings=None):
         self.port_name = port_name
-        self.params = params
-        # {cc_number (int): param_name (str)}
+        self.param_tables = param_tables  # {"group_name": (ParamTable, group_filter|None)}
+        # {cc_number (int): qualified_key (str "group/param")}
         self.mappings = mappings if mappings is not None else {}
         # One MidiProcessor per CC for independent smoothing state
         self._processors = {}
@@ -52,23 +56,37 @@ class MidiMapperController(ControllerBase):
             )
         return self._processors[cc]
 
+    def _resolve_param(self, qualified_key):
+        """Resolve a qualified key to (ParamTable, param_name, Param) or None."""
+        if SEPARATOR not in qualified_key:
+            return None
+        group_name, param_name = qualified_key.split(SEPARATOR, 1)
+        entry = self.param_tables.get(group_name)
+        if entry is None:
+            return None
+        table = entry[0]  # (ParamTable, group_filter)
+        if param_name not in table:
+            return None
+        return table, param_name, table[param_name]
+
     def set_values(self, control, value):
-        param_name = self.mappings.get(control)
-        if param_name is None:
+        qualified_key = self.mappings.get(control)
+        if qualified_key is None:
             return
 
-        param = self.params.get(param_name, default=None)
-        if param is None:
-            log.warning(f"Mapped param '{param_name}' not found for CC {control}")
+        resolved = self._resolve_param(qualified_key)
+        if resolved is None:
+            log.warning(f"Mapped param '{qualified_key}' not found for CC {control}")
             return
 
+        table, param_name, param = resolved
         processor = self._get_processor(control)
         smoothed = processor.process_message(control, value, param.min, param.max)
-        self.params.set(param_name, smoothed)
+        table.set(param_name, smoothed)
 
-    def add_mapping(self, cc, param_name):
-        self.mappings[cc] = param_name
-        log.info(f"Mapped CC {cc} -> '{param_name}' on '{self.port_name}'")
+    def add_mapping(self, cc, qualified_key):
+        self.mappings[cc] = qualified_key
+        log.info(f"Mapped CC {cc} -> '{qualified_key}' on '{self.port_name}'")
 
     def remove_mapping(self, cc):
         removed = self.mappings.pop(cc, None)
@@ -81,18 +99,17 @@ class MidiMapper:
     """
     Manages MIDI learn mode, mapping persistence, and per-port listener threads.
 
-    This class scans all available MIDI input ports, creates a MidiMapperController
-    for each, loads any saved mappings from YAML, and listens for CC messages.
-    Learn mode allows mapping any CC on any port to any parameter interactively.
+    Accepts a dict of named ParamTables to preserve parameter identity across
+    groups that share param names (e.g. hue_shift in src_1, src_2, post).
     """
 
-    def __init__(self, params):
+    def __init__(self, param_tables):
         """
         Args:
-            params: A ParamTable containing all parameters from all effect managers,
-                    mixer, audio module, etc.
+            param_tables: dict of {"group_label": ParamTable, ...}
+                e.g. {"Src 1 Effects": src1_effects.params, "Mixer": mixer.params}
         """
-        self.params = params
+        self.param_tables = param_tables
 
         # Per-port controllers: {"port_name": MidiMapperController}
         self.controllers = {}
@@ -104,13 +121,29 @@ class MidiMapper:
         # Learn mode state (thread-safe via lock)
         self._learn_lock = threading.Lock()
         self._learning = False
-        self._learn_target = None  # param_name to map
+        self._learn_target = None  # qualified key "group/param_name"
 
         # Resolve save directory
         script_dir = Path(__file__).parent
         self._save_dir = script_dir / ".." / "save"
         self._save_dir.mkdir(parents=True, exist_ok=True)
         self._yaml_path = self._save_dir / MAPPINGS_FILENAME
+
+    def get_all_qualified_keys(self):
+        """
+        Returns a dict of {group_name: [param_name, ...]} for building the GUI.
+        Filters params by their group attribute when a group_filter is provided.
+        """
+        result = {}
+        for group_name, (table, group_filter) in self.param_tables.items():
+            if group_filter is not None:
+                result[group_name] = sorted(
+                    name for name, param in table.items()
+                    if param.group == group_filter
+                )
+            else:
+                result[group_name] = sorted(table.keys())
+        return result
 
     def start(self):
         """Scan MIDI ports, load saved mappings, and start listener threads."""
@@ -129,12 +162,11 @@ class MidiMapper:
         log.info(f"Found {len(input_ports)} MIDI input port(s)")
 
         for port_name in input_ports:
-            # Load any saved mappings for this port
             port_mappings = saved_mappings.get(port_name, {})
 
             controller = MidiMapperController(
                 port_name=port_name,
-                params=self.params,
+                param_tables=self.param_tables,
                 mappings=port_mappings
             )
             self.controllers[port_name] = controller
@@ -142,7 +174,6 @@ class MidiMapper:
             if port_mappings:
                 log.info(f"Loaded {len(port_mappings)} mapping(s) for '{port_name}'")
 
-            # Start a listener thread for this port
             thread = threading.Thread(
                 target=self._listener_thread,
                 args=(port_name, controller),
@@ -163,28 +194,29 @@ class MidiMapper:
         self._threads.clear()
         log.info("All listener threads stopped")
 
-    def start_learn(self, param_name):
+    def start_learn(self, qualified_key):
         """
         Enter learn mode. The next CC message received from any port
-        will be mapped to the given parameter name.
-
-        Args:
-            param_name: The name of the parameter to map (must exist in ParamTable).
+        will be mapped to the given qualified key ("group/param_name").
 
         Returns:
             True if learn mode was started, False if param doesn't exist.
         """
-        # Validate that the parameter exists
-        param = self.params.get(param_name, default=None)
-        if param is None:
-            log.warning(f"Cannot learn - param '{param_name}' not found")
+        if SEPARATOR not in qualified_key:
+            log.warning(f"Cannot learn - invalid key format '{qualified_key}' (expected 'group/param')")
+            return False
+
+        group_name, param_name = qualified_key.split(SEPARATOR, 1)
+        entry = self.param_tables.get(group_name)
+        if entry is None or param_name not in entry[0]:
+            log.warning(f"Cannot learn - param '{qualified_key}' not found")
             return False
 
         with self._learn_lock:
             self._learning = True
-            self._learn_target = param_name
+            self._learn_target = qualified_key
 
-        log.info(f"Learn mode ON - waiting for CC to map to '{param_name}'")
+        log.info(f"Learn mode ON - waiting for CC to map to '{qualified_key}'")
         return True
 
     def cancel_learn(self):
@@ -200,9 +232,8 @@ class MidiMapper:
     def get_mappings(self):
         """
         Returns the current mappings for all ports.
-
         Returns:
-            dict: {"port_name": {cc: param_name, ...}, ...}
+            dict: {"port_name": {cc: qualified_key, ...}, ...}
         """
         result = {}
         for port_name, controller in self.controllers.items():
@@ -213,7 +244,6 @@ class MidiMapper:
     def get_learn_state(self):
         """
         Returns the current learn mode state.
-
         Returns:
             dict: {"learning": bool, "target": str or None}
         """
@@ -253,7 +283,7 @@ class MidiMapper:
         for port_name, controller in self.controllers.items():
             if controller.mappings:
                 data["ports"][port_name] = {
-                    "mappings": {int(cc): name for cc, name in controller.mappings.items()}
+                    "mappings": {int(cc): key for cc, key in controller.mappings.items()}
                 }
 
         try:
@@ -266,9 +296,8 @@ class MidiMapper:
     def _load_mappings_from_yaml(self):
         """
         Load mappings from YAML file.
-
         Returns:
-            dict: {"port_name": {cc_int: param_name, ...}, ...}
+            dict: {"port_name": {cc_int: qualified_key, ...}, ...}
         """
         if not self._yaml_path.exists():
             return {}
@@ -283,8 +312,7 @@ class MidiMapper:
             result = {}
             for port_name, port_data in data["ports"].items():
                 raw_mappings = port_data.get("mappings", {})
-                # Ensure CC keys are ints
-                result[port_name] = {int(cc): name for cc, name in raw_mappings.items()}
+                result[port_name] = {int(cc): key for cc, key in raw_mappings.items()}
 
             return result
 
@@ -308,7 +336,6 @@ class MidiMapper:
                     if self._stop_event.is_set():
                         break
 
-                    # Only handle control_change messages
                     if not hasattr(msg, 'control'):
                         continue
 
@@ -318,7 +345,6 @@ class MidiMapper:
                     # Check learn mode (thread-safe)
                     with self._learn_lock:
                         if self._learning and self._learn_target:
-                            # Map this CC to the target param
                             controller.add_mapping(cc, self._learn_target)
                             log.info(
                                 f"Learned CC {cc} on '{port_name}' "
@@ -326,7 +352,6 @@ class MidiMapper:
                             )
                             self._learning = False
                             self._learn_target = None
-                            # Save immediately after learning
                             self.save_mappings()
                             continue
 

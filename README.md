@@ -4,6 +4,8 @@ A real-time video synthesizer for creating live visual effects and generative an
 
 **No expensive hardware required** - works with just a laptop webcam, though it integrates seamlessly with capture cards, MIDI controllers, and external displays.
 
+![System Architecture](documentation/diagram.png)
+
 ## Table of Contents
 - [Quick Start](#quick-start)
 - [Features](#features)
@@ -22,13 +24,16 @@ A real-time video synthesizer for creating live visual effects and generative an
 - **Python 3.12** (recommended) or 3.13
 - Webcam (optional - works with animations only)
 - MIDI controller (optional)
+- OBS studio (optional)
+- ffmpeg (optional)
+- OSC controller (optional)
 
 ### Installation
 
 ```bash
 # Clone repository
 git clone <repository-url>
-cd video_synth
+cd <repository-name>
 
 # Create virtual environment (Python 3.12 recommended for Numba support)
 python -m venv .venv
@@ -69,18 +74,25 @@ Options:
   --ffmpeg-crf CRF      Quality 0-51, lower=better (default: 23)
   --no-virtualcam       Disable virtual camera output (enabled by default)
   --headless            Run without GUI (requires --api or --ffmpeg)
+  --obs                 Enable OBS WebSocket connection for remote filter control
+  --obs-host HOST       OBS WebSocket host (default: localhost)
+  --obs-port PORT       OBS WebSocket port (default: 4455)
+  --obs-password PASS   OBS WebSocket password
+  --osc                 Enable OSC server for real-time parameter control
+  --osc-host HOST       OSC server host (default: 0.0.0.0)
+  --osc-port PORT       OSC server port (default: 9000)
 ```
 
 **Examples:**
 ```bash
 # Standard usage with performance monitoring
-python video_synth --diagnose 100 --output-mode FULLSCREEN
+python ./video_synth --diagnose 100 --output-mode FULLSCREEN
 
 # API-controlled with FFmpeg recording
-python video_synth --api --ffmpeg --ffmpeg-output recording.mp4
+python ./video_synth --api --ffmpeg --ffmpeg-output recording.mp4
 
 # Headless server mode, streaming over UDP (near-zero latency)
-python video_synth --headless --api --ffmpeg \
+python ./video_synth --headless --api --ffmpeg \
   --ffmpeg-output udp://127.0.0.1:1234 --ffmpeg-preset veryfast
 ```
 
@@ -159,6 +171,11 @@ All animations are fully parametric with real-time adjustment:
 - **DLA** - Diffusion-limited aggregation
 - **Chladni** - Vibration pattern simulation
 - **Voronoi** - Cellular tessellation
+
+### OSC (Open Sound Control)
+- Receive real-time parameter control from OSC-capable applications (TouchOSC, Max/MSP, etc.)
+- Address pattern maps directly to parameter names
+- UDP-based, low-latency
 
 ### Patch System
 - Save/recall parameter configurations
@@ -358,7 +375,10 @@ video_synth/
   pyqt_gui.py          # PyQt6 GUI (tabs, sliders, LFO/audio dialogs)
   api.py               # FastAPI REST server
   ffmpeg_output.py     # FFmpeg subprocess pipe (file + UDP/SRT/RTMP streaming)
+  virtualcam_output.py # Virtual camera output via pyvirtualcam
   obs_controller.py    # OBS WebSocket controller
+  osc_controller.py    # OSC (Open Sound Control) server
+  midi_mapper.py       # Generic MIDI learn/mapping system with YAML persistence
 
   effects/             # Modular effect classes
     color.py, pixels.py, warp.py, feedback.py,
@@ -368,28 +388,12 @@ video_synth/
     metaballs.py, moire.py, reaction_diffusion.py, plasma.py,
     attractors.py, physarum.py, shaders.py, dla.py, chladni.py, voronoi.py
 ```
-
-### Data Flow
-```
-Camera/Source --> EffectManager (per-source effect chain)
-                     |
-              Mixer (blend sources)
-                     |
-              EffectManager (post-mix effects)
-                     |
-           +----+----+----+
-           |    |         |
-          GUI  FFmpeg    API
-```
-
-LFOs and Audio Reactive modules update parameter values each frame before effects are applied.
-
 ---
 
 ## Hardware Integration
 
 ### MIDI Controllers
-Any MIDI controller with knobs/sliders works. MIDI CC messages are mapped to parameters via the GUI. Connect your controller before launching the application.
+Any MIDI controller with knobs/sliders works. MIDI CC messages are mapped to parameters via the GUI. Connect your controller before launching the application. Save your control mappings to reuse them in future runs.
 
 ### Capture Devices
 Use `-nd` to set how many USB devices to scan. Works with:
@@ -398,6 +402,8 @@ Use `-nd` to set how many USB devices to scan. Works with:
 - Virtual cameras
 
 ### External Display
+The external display output mode can be enabled and configured via command line arguments or in the GUI. There is no external output window by default.
+
 ```bash
 python ./video_synth --output-mode WINDOW       # Separate output window
 python ./video_synth --output-mode FULLSCREEN    # Fullscreen on secondary display

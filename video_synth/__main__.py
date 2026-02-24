@@ -32,6 +32,7 @@ from ffmpeg_output import FFmpegOutput, FFmpegStreamOutput
 from virtualcam_output import VirtualCamOutput
 from obs_controller import OBSController
 from obs_filters import OBSFilters
+from osc_controller import OSCController
 
 
 # Old hard-coded MIDI controller names (disabled in favor of MidiMapper)
@@ -163,6 +164,23 @@ def parse_args():
         default='',
         type=str,
         help='OBS WebSocket password'
+    )
+    parser.add_argument(
+        '--osc',
+        action='store_true',
+        help='Enable OSC (Open Sound Control) server for real-time control'
+    )
+    parser.add_argument(
+        '--osc-host',
+        default='0.0.0.0',
+        type=str,
+        help='OSC server host (default: 0.0.0.0)'
+    )
+    parser.add_argument(
+        '--osc-port',
+        default=9000,
+        type=int,
+        help='OSC server port (default: 9000)'
     )
     parser.print_help()
     return parser.parse_args()
@@ -456,8 +474,32 @@ def main(settings):
 
     # --- MIDI Mapper ---
     # Generic MIDI learn/mapping system - works with any controller, saves mappings to YAML.
-    midi_mapper = MidiMapper(all_params)
+    # Uses named param tables so duplicate param names across groups are preserved.
+    midi_param_tables = {
+        "Src 1 Effects": (src_1_effects.params, Groups.SRC_1_EFFECTS),
+        "Src 1 Animations": (src_1_effects.params, Groups.SRC_1_ANIMATIONS),
+        "Src 2 Effects": (src_2_effects.params, Groups.SRC_2_EFFECTS),
+        "Src 2 Animations": (src_2_effects.params, Groups.SRC_2_ANIMATIONS),
+        "Post Effects": (post_effects.params, Groups.POST_EFFECTS),
+        "Mixer": (mixer.params, None),
+        "Audio": (audio_params, None),
+    }
+    if obs_filters:
+        midi_param_tables["OBS"] = (obs_filters.params, None)
+    midi_mapper = MidiMapper(midi_param_tables)
     midi_mapper.start()
+
+    # --- OSC Controller ---
+    # Open Sound Control server for real-time control from TouchOSC, SuperCollider, DAWs, etc.
+    # Reuses the same param_tables dict as the MIDI mapper.
+    osc_controller = None
+    if settings.osc:
+        osc_controller = OSCController(
+            midi_param_tables,
+            host=settings.osc_host,
+            port=settings.osc_port
+        )
+        osc_controller.start()
 
     # Validate headless mode
     if settings.headless and not (settings.api or settings.ffmpeg):
@@ -472,7 +514,7 @@ def main(settings):
     main_window = None
     if not settings.headless:
         app = QApplication(sys.argv)
-        main_window = PyQTGUI(effects, settings, mixer, audio_module=audio_module, obs_filters=obs_filters, api_server=api_server)
+        main_window = PyQTGUI(effects, settings, mixer, audio_module=audio_module, obs_filters=obs_filters, api_server=api_server, midi_mapper=midi_mapper, osc_controller=osc_controller)
         main_window.show()
     else:
         log.info("Running in headless mode (no GUI)")
@@ -520,6 +562,10 @@ def main(settings):
 
     # --- MIDI Mapper cleanup ---
     midi_mapper.stop()
+
+    # --- OSC Controller cleanup ---
+    if osc_controller is not None:
+        osc_controller.stop()
 
     sys.exit(exit_code)
 

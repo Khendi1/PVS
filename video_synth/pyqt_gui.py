@@ -5,6 +5,10 @@ from common import Groups, MixerSource, Widget, Layout
 from audio_reactive import BAND_NAMES
 from mixer import MixModes, FileSource
 from save import SaveController
+from pyqt_widgets import (QTextEditLogger, ColorPickerWidget, VideoWidget, LFOManagerDialog,
+                           AudioLinkDialog, SequencerWidget, MidiMapperWidget, OSCMapperWidget,
+                           LFO_BUTTON_LINKED_STYLE, LFO_BUTTON_UNLINKED_STYLE,
+                           AUD_BUTTON_LINKED_STYLE, AUD_BUTTON_UNLINKED_STYLE)
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QPushButton, QGroupBox, QRadioButton, QScrollArea, QToolButton, QSizePolicy, QLineEdit, QTabWidget, QComboBox, QDialog, QGridLayout, QListWidget, QColorDialog, QTextEdit, QCheckBox
 from PyQt6.QtGui import QGuiApplication, QImage, QPixmap, QPainter, QColor, QTextCursor
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSignal, pyqtSlot, QTimer
@@ -13,280 +17,15 @@ from PyQt6.QtCore import Qt, QSize, QThread, pyqtSignal, pyqtSlot, QTimer
 log = logging.getLogger(__name__)
 
 
-"""
-Custom Qt logging handler that emits log messages to a QTextEdit widget.
-"""
-class QTextEditLogger(logging.Handler):
-    def __init__(self, widget):
-        super().__init__()
-        self.widget = widget
-        self.widget.setReadOnly(True)
-
-    def emit(self, record):
-        msg = self.format(record)
-        self.widget.append(msg)
-        # Auto-scroll to bottom
-        self.widget.moveCursor(QTextCursor.MoveOperation.End)
-
-
-"""
-Custom color picker widget for selecting HSV colors.
-"""
-class ColorPickerWidget(QWidget):
-    def __init__(self, name, h_param, s_param, v_param, group=None):
-        super().__init__(group)
-        self.h_param = h_param
-        self.s_param = s_param
-        self.v_param = v_param
-        self.name = name
-
-        self.layout = QHBoxLayout(self)
-        self.label = QLabel(self.name)
-        self.label.setFixedWidth(100)
-        self.color_button = QPushButton()
-        self.color_button.setFixedWidth(100)
-        self.color_button.clicked.connect(self.open_color_dialog)
-        self.layout.addWidget(self.label)
-        self.layout.addWidget(self.color_button)
-        self.update_button_color()
-
-    def open_color_dialog(self):
-        color = QColorDialog.getColor(self.get_current_color(), self, "Select Color")
-        if color.isValid():
-            self.h_param.value = color.hue() / 2 
-            self.s_param.value = color.saturation()
-            self.v_param.value = color.value()
-            self.update_button_color()
-
-    def get_current_color(self):
-        return QColor.fromHsv(int(self.h_param.value * 2), self.s_param.value, self.v_param.value)
-
-    def update_button_color(self):
-        color = self.get_current_color()
-        self.color_button.setStyleSheet(f"background-color: {color.name()}")
-
-"""
-Widget to display video frames with aspect ratio preservation.
-"""
-class VideoWidget(QLabel):
-    def __init__(self, group=None):
-        super().__init__(group)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        self._pixmap = None
-
-    @pyqtSlot(QImage)
-    def set_image(self, image):
-        self._pixmap = QPixmap.fromImage(image)
-        self.setPixmap(self._pixmap)
-        self.updateGeometry()
-
-    def hasHeightForWidth(self):
-        return self._pixmap is not None
-
-    def heightForWidth(self, width: int) -> int:
-        if self._pixmap:
-            if self._pixmap.width() == 0:
-                return self.height()
-            return int(width * (self._pixmap.height() / self._pixmap.width()))
-        return self.height()
-
-    def paintEvent(self, event):
-        if self._pixmap:
-            pm = self._pixmap
-            widget_size = self.size()
-            
-            scaled_pixmap = pm.scaled(widget_size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-            
-            x = (widget_size.width() - scaled_pixmap.width()) / 2
-            y = (widget_size.height() - scaled_pixmap.height()) / 2
-
-            painter = QPainter(self)
-            painter.drawPixmap(int(x), int(y), scaled_pixmap)
-        else:
-            super().paintEvent(event)
-
-"""
-Dialog for managing LFO linkage to a parameter and editing LFO settings.
-"""
-class LFOManagerDialog(QDialog):
-    def __init__(self, param, osc_bank, gui_instance, mod_button, group=None):
-        super().__init__(group)
-        self.param = param
-        self.osc_bank = osc_bank
-        self.gui_instance = gui_instance
-        self.mod_button = mod_button # Store reference to the LFO button
-        self.setWindowTitle(f"LFO for {param.name}")
-        self.setWindowFlags(Qt.WindowType.Popup)
-
-        self.layout = QVBoxLayout(self)
-        self.rebuild_ui()
-
-    def rebuild_ui(self):
-        # Clear existing layout
-        while self.layout.count():
-            child = self.layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
-
-        if self.param.linked_oscillator is None:
-            link_button = QPushButton("Link New LFO")
-            link_button.clicked.connect(self.link_new_lfo)
-            self.layout.addWidget(link_button)
-        else:
-            unlink_button = QPushButton("Unlink LFO")
-            unlink_button.clicked.connect(self.unlink_lfo)
-            self.layout.addWidget(unlink_button)
-
-            # Container for oscillator controls
-            self.controls_container = QWidget()
-            self.controls_layout = QVBoxLayout(self.controls_container)
-            self.layout.addWidget(self.controls_container)
-            
-            osc = self.param.linked_oscillator
-            # Create widgets for oscillator parameters
-            for param_name in ['shape', 'frequency', 'amplitude', 'phase', 'seed', 'cutoff_min', 'cutoff_max', 'noise_octaves', 'noise_persistence', 'noise_lacunarity', 'noise_repeat', 'noise_base']:
-                if hasattr(osc, param_name):
-                    param = getattr(osc, param_name)
-                    # Strip the oscillator name prefix to create a clean display name
-                    display_name = param_name.replace("_", " ").title()
-                    widget = self.gui_instance._create_param_widget(param, register=False, display_name=display_name)
-                    self.controls_layout.addWidget(widget)
-
-    def link_new_lfo(self):
-        # Create a unique name for the new oscillator
-        osc_name = f"{self.param.name}"
-        new_osc = self.osc_bank.add_oscillator(name=osc_name)
-        new_osc.link_param(self.param)
-        self.param.linked_oscillator = new_osc
-        self.mod_button.setStyleSheet(PyQTGUI.LFO_BUTTON_LINKED_STYLE) # Update button style
-        self.rebuild_ui()
-
-    def unlink_lfo(self):
-        if self.param.linked_oscillator:
-            self.osc_bank.remove_oscillator(self.param.linked_oscillator)
-            self.param.linked_oscillator.unlink_param()
-            self.param.linked_oscillator = None
-            self.mod_button.setStyleSheet(PyQTGUI.LFO_BUTTON_UNLINKED_STYLE) # Update button style
-            self.rebuild_ui()
-
-
-"""Dialog for managing audio band linkage to a parameter."""
-class AudioLinkDialog(QDialog):
-    def __init__(self, param, audio_module, gui_instance, aud_button, parent=None):
-        super().__init__(parent)
-        self.param = param
-        self.audio_module = audio_module
-        self.gui_instance = gui_instance
-        self.aud_button = aud_button
-        self.setWindowTitle(f"Audio for {param.name}")
-        self.setWindowFlags(Qt.WindowType.Popup)
-
-        self.layout = QVBoxLayout(self)
-        self.rebuild_ui()
-
-    def rebuild_ui(self):
-        while self.layout.count():
-            child = self.layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
-
-        if not self.audio_module.available:
-            label = QLabel("No audio device available.")
-            self.layout.addWidget(label)
-            return
-
-        if self.param.linked_audio_band is None:
-            link_button = QPushButton("Link Audio Band")
-            link_button.clicked.connect(self.link_new_band)
-            self.layout.addWidget(link_button)
-        else:
-            unlink_button = QPushButton("Unlink Audio Band")
-            unlink_button.clicked.connect(self.unlink_band)
-            self.layout.addWidget(unlink_button)
-
-            controls_container = QWidget()
-            controls_layout = QVBoxLayout(controls_container)
-            self.layout.addWidget(controls_container)
-
-            band = self.param.linked_audio_band
-            for param_name in ['band', 'sensitivity', 'attack', 'decay', 'cutoff_min', 'cutoff_max']:
-                if hasattr(band, param_name):
-                    p = getattr(band, param_name)
-                elif hasattr(band, f'{param_name}_select'):
-                    p = getattr(band, f'{param_name}_select')
-                else:
-                    continue
-                display_name = param_name.replace("_", " ").title()
-                widget = self.gui_instance._create_param_widget(p, register=False, display_name=display_name)
-                controls_layout.addWidget(widget)
-
-    def link_new_band(self):
-        band_name = f"{self.param.name}_audio"
-        new_band = self.audio_module.add_band(band_name, band_index=0)
-        new_band.link_param(self.param)
-        self.param.linked_audio_band = new_band
-        self.aud_button.setStyleSheet(PyQTGUI.AUD_BUTTON_LINKED_STYLE)
-        self.rebuild_ui()
-
-    def unlink_band(self):
-        if self.param.linked_audio_band:
-            self.audio_module.remove_band(self.param.linked_audio_band)
-            self.param.linked_audio_band.unlink_param()
-            self.param.linked_audio_band = None
-            self.aud_button.setStyleSheet(PyQTGUI.AUD_BUTTON_UNLINKED_STYLE)
-            self.rebuild_ui()
-
-
-"""Widget for reordering the effects processing chain via drag-and-drop."""
-class SequencerWidget(QWidget):
-    def __init__(self, effect_manager, parent=None):
-        super().__init__(parent)
-        self.effect_manager = effect_manager
-        layout = QVBoxLayout(self)
-
-        self.list_widget = QListWidget()
-        self.list_widget.setDragDropMode(QListWidget.DragDropMode.InternalMove)
-        self.list_widget.setDefaultDropAction(Qt.DropAction.MoveAction)
-        layout.addWidget(self.list_widget)
-
-        self._populate_list()
-        self.list_widget.model().rowsMoved.connect(self._on_reorder)
-
-    def _populate_list(self):
-        self.list_widget.clear()
-        for method in self.effect_manager.all_methods:
-            class_name = method.__self__.__class__.__name__
-            self.list_widget.addItem(f"{class_name}.{method.__name__}")
-
-    def _on_reorder(self):
-        method_lookup = {}
-        for method in self.effect_manager.all_methods:
-            class_name = method.__self__.__class__.__name__
-            key = f"{class_name}.{method.__name__}"
-            method_lookup[key] = method
-
-        new_order = []
-        for i in range(self.list_widget.count()):
-            item_text = self.list_widget.item(i).text()
-            if item_text in method_lookup:
-                new_order.append(method_lookup[item_text])
-
-        if len(new_order) == len(self.effect_manager.all_methods):
-            self.effect_manager.all_methods = new_order
-        else:
-            log.error("Sequencer reorder failed: method count mismatch. Resetting.")
-            self._populate_list()
-
-
 """Main PyQt GUI class for the video synthesizer application."""
 class PyQTGUI(QMainWindow):
-    LFO_BUTTON_UNLINKED_STYLE = "QPushButton { background-color: #607D8B; color: white; }" # Default grey
-    LFO_BUTTON_LINKED_STYLE = "QPushButton { background-color: #4CAF50; color: white; }" # Green
-    AUD_BUTTON_UNLINKED_STYLE = "QPushButton { background-color: #607D8B; color: white; }" # Default grey
-    AUD_BUTTON_LINKED_STYLE = "QPushButton { background-color: #FF9800; color: white; }" # Orange
+    LFO_BUTTON_UNLINKED_STYLE = LFO_BUTTON_UNLINKED_STYLE
+    LFO_BUTTON_LINKED_STYLE = LFO_BUTTON_LINKED_STYLE
+    AUD_BUTTON_UNLINKED_STYLE = AUD_BUTTON_UNLINKED_STYLE
+    AUD_BUTTON_LINKED_STYLE = AUD_BUTTON_LINKED_STYLE
     video_frame_ready = pyqtSignal(QImage)
 
-    def __init__(self, effects, settings, mixer=None, audio_module=None, obs_filters=None, api_server=None):
+    def __init__(self, effects, settings, mixer=None, audio_module=None, obs_filters=None, api_server=None, midi_mapper=None, osc_controller=None):
         super().__init__()
         self.layout_style = settings.layout.value
         self.effects = effects
@@ -295,6 +34,8 @@ class PyQTGUI(QMainWindow):
         self.audio_module = audio_module
         self.obs_filters = obs_filters
         self.api_server = api_server
+        self.midi_mapper = midi_mapper
+        self.osc_controller = osc_controller
         self.src_1_effects = effects[MixerSource.SRC_1]
         self.src_2_effects = effects[MixerSource.SRC_2]
         self.post_effects = effects[MixerSource.POST]
@@ -548,6 +289,14 @@ class PyQTGUI(QMainWindow):
         obs_scroll.setWidget(obs_container)
         bottom_right_tabs.addTab(obs_scroll, "OBS")
 
+        # MIDI Mapper Tab
+        self.midi_mapper_widget = MidiMapperWidget(self.midi_mapper) if self.midi_mapper else QWidget()
+        bottom_right_tabs.addTab(self.midi_mapper_widget, "MIDI")
+
+        # OSC Mapper Tab
+        self.osc_mapper_widget = OSCMapperWidget(self.osc_controller) if self.osc_controller else QWidget()
+        bottom_right_tabs.addTab(self.osc_mapper_widget, "OSC")
+
         # Logs Tab
         self.log_viewer = QTextEdit()
         self.log_viewer.setReadOnly(True)
@@ -689,6 +438,14 @@ class PyQTGUI(QMainWindow):
         obs_scroll.setWidget(obs_container)
         bottom_right_tabs.addTab(obs_scroll, "OBS")
 
+        # MIDI Mapper Tab
+        self.midi_mapper_widget = MidiMapperWidget(self.midi_mapper) if self.midi_mapper else QWidget()
+        bottom_right_tabs.addTab(self.midi_mapper_widget, "MIDI")
+
+        # OSC Mapper Tab
+        self.osc_mapper_widget = OSCMapperWidget(self.osc_controller) if self.osc_controller else QWidget()
+        bottom_right_tabs.addTab(self.osc_mapper_widget, "OSC")
+
         self.log_viewer = QTextEdit()
         self.log_viewer.setReadOnly(True)
         bottom_right_tabs.addTab(self.log_viewer, "Logs")
@@ -781,6 +538,14 @@ class PyQTGUI(QMainWindow):
         obs_scroll.setWidgetResizable(True)
         obs_scroll.setWidget(obs_container)
         bottom_pane_tabs.addTab(obs_scroll, "OBS")
+
+        # MIDI Mapper Tab
+        self.midi_mapper_widget = MidiMapperWidget(self.midi_mapper) if self.midi_mapper else QWidget()
+        bottom_pane_tabs.addTab(self.midi_mapper_widget, "MIDI")
+
+        # OSC Mapper Tab
+        self.osc_mapper_widget = OSCMapperWidget(self.osc_controller) if self.osc_controller else QWidget()
+        bottom_pane_tabs.addTab(self.osc_mapper_widget, "OSC")
 
         # Logs Tab
         self.log_viewer = QTextEdit()
@@ -1253,6 +1018,33 @@ class PyQTGUI(QMainWindow):
 
         if param.name == "api_enabled":
             self._toggle_api_server(param.value)
+        elif param.name == "osc_enabled":
+            self._toggle_osc_server(param.value)
+
+    def _toggle_osc_server(self, enabled):
+        """Start or stop the OSC server based on the toggle state."""
+        if enabled:
+            if self.osc_controller is None:
+                from osc_controller import OSCController
+                param_tables = {}
+                for effect_mgr in self.effects:
+                    group_name = effect_mgr.group.name.replace("_", " ").title()
+                    param_tables[group_name] = (effect_mgr.params, effect_mgr.group)
+                param_tables["Mixer"] = (self.mixer.params, None)
+                if self.audio_module:
+                    param_tables["Audio"] = (self.audio_module.params, None)
+                if self.obs_filters:
+                    param_tables["OBS"] = (self.obs_filters.params, None)
+                self.osc_controller = OSCController(
+                    param_tables,
+                    host=self.settings.osc_host, port=self.settings.osc_port
+                )
+            self.osc_controller.start()
+            log.info(f"OSC server started on {self.settings.osc_host}:{self.settings.osc_port}")
+        else:
+            if self.osc_controller is not None:
+                self.osc_controller.stop()
+                log.info("OSC server stopped")
 
     def _toggle_api_server(self, enabled):
         """Start or stop the API server based on the toggle state."""
