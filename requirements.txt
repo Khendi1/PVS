@@ -20,7 +20,7 @@ fastapi==0.115.6
 uvicorn==0.34.0
 obsws-python
 python-osc==1.9.3
-pyvirtualcam==0.5.0
+pyvirtualcam==0.15.0
 setuptools==80.9.0
 usb-monitor==1.23
 wheel==0.45.1

@@ -85,10 +85,13 @@ class Mixer:
         self.current_frame = None
 
         # search for available video capture devices
-        num_devices = self._detect_devices(max_index=num_devices)
-        # add devices to sources dict if found
-        self.sources = {f"DEVICE_{i}": i for i in range(num_devices+1)}
-        i = num_devices+1
+        num_devices_int = int(num_devices)  # Param object -> int
+        detected_devices = self._detect_devices(max_index=num_devices_int)
+        # Always include at least DEVICE_0 so virtual cameras are selectable
+        # regardless of how many physical devices were detected or scanned.
+        max_device_slots = max(1, num_devices_int)
+        self.sources = {f"DEVICE_{i}": i for i in range(max_device_slots)}
+        i = max_device_slots
         # add file sources to sources dict
         for file_source in FileSource:
             self.sources[file_source.name] = i
@@ -154,7 +157,7 @@ class Mixer:
 
         # initialize source 1 to use the first hardware device available
         # safely default to metaballs if no devices found
-        default_src1 = "DEVICE_0" if num_devices > 0 else AnimSource.METABALLS.name
+        default_src1 = "DEVICE_0" if detected_devices > 0 else AnimSource.METABALLS.name
         self.selected_source1 = self.params.add("source_1",
                                                       min=0, max=len(self.sources), default=default_src1,
                                                       subgroup=subgroup, group=self.group,
@@ -290,8 +293,7 @@ class Mixer:
                     log.warning(f"Failed to find capture device at index {index}")
             except Exception as e:
                 log.error(f"Error while checking device at index {index}: {e}")
-                # pass
-            return num_success
+        return num_success
 
 
     def _open_cv2_capture(self, cap, source_name, index):
@@ -502,27 +504,33 @@ class Mixer:
                 self._first_frame_received = True
                 log.info("First frames received - enabling 50ms timeouts for smooth playback")
 
-        # Process and display frames
-        if ret1 and ret2:
-            # Ensure frames are the same size for mixing
-            if frame1.shape[0] != self.height or frame1.shape[1] != self.width:
-                 frame1 = cv2.resize(frame1, (self.width, self.height))
-            if frame2.shape[0] != self.height or frame2.shape[1] != self.width:
-                 frame2 = cv2.resize(frame2, (self.width, self.height))
-
-            if self.swap.value == True:
-                temp = frame1.copy()
-                frame1 = frame2
-                frame2 = temp
-
-            if self.blend_mode.value == MixModes.LUMA_KEY.value:
-                return self._luma_key(frame1,frame2)
-            elif self.blend_mode.value == MixModes.CHROMA_KEY.value:
-                lower = (self.lower_hue.value, self.lower_saturation.value, self.lower_value.value)
-                upper = (self.upper_hue.value, self.upper_saturation.value, self.upper_value.value)
-                return self._chroma_key(frame1, frame2, lower=lower, upper=upper)
-            else:
-                return self._alpha_blend(frame1, frame2)
-        else:
+        # Fall back to black frames for any failed source rather than returning None,
+        # so the virtual cam and other outputs always receive a frame.
+        if not ret1 or frame1 is None:
             log.error("Could not retrieve frames from both sources.")
-            return None
+            frame1 = self._cached_frame1 if self._cached_frame1 is not None else np.zeros((self.height, self.width, 3), dtype=np.uint8)
+            self.skip = True
+        if not ret2 or frame2 is None:
+            log.error("Could not retrieve frames from both sources.")
+            frame2 = self._cached_frame2 if self._cached_frame2 is not None else np.zeros((self.height, self.width, 3), dtype=np.uint8)
+            self.skip = True
+
+        # Ensure frames are the same size for mixing
+        if frame1.shape[0] != self.height or frame1.shape[1] != self.width:
+             frame1 = cv2.resize(frame1, (self.width, self.height))
+        if frame2.shape[0] != self.height or frame2.shape[1] != self.width:
+             frame2 = cv2.resize(frame2, (self.width, self.height))
+
+        if self.swap.value == True:
+            temp = frame1.copy()
+            frame1 = frame2
+            frame2 = temp
+
+        if self.blend_mode.value == MixModes.LUMA_KEY.value:
+            return self._luma_key(frame1,frame2)
+        elif self.blend_mode.value == MixModes.CHROMA_KEY.value:
+            lower = (self.lower_hue.value, self.lower_saturation.value, self.lower_value.value)
+            upper = (self.upper_hue.value, self.upper_saturation.value, self.upper_value.value)
+            return self._chroma_key(frame1, frame2, lower=lower, upper=upper)
+        else:
+            return self._alpha_blend(frame1, frame2)

@@ -1,5 +1,6 @@
 ports:
   MIDI Mix 0:
     mappings:
-      19: hue_shift
-      23: aizawa_b
+      19: Src 1 Effects/alpha
+      23: Src 1 Effects/hue_shift
+      27: Src 1 Effects/val_shift
