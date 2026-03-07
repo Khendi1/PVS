@@ -114,3 +114,8 @@ class AnimSource(IntEnum):
     CHLADNI = 9
     VORONOI = 10
     SHADERS_2 = 11
+    DRIFT_FIELD = 12
+    LENIA = 13
+    FRACTAL_ZOOM = 14
+    OSCILLATOR_GRID = 15
+    HARMONIC_INTERFERENCE = 16

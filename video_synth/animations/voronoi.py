@@ -65,6 +65,14 @@ class Voronoi(Animation):
                                             min=0.0, max=2.0, default=0.2,
                                             subgroup=subgroup, group=group)
 
+        # Tectonics - slow autonomous drift for plate-like movement
+        self.tectonic_speed = params.add("voronoi_tectonic_speed",
+                                          min=0.0, max=3.0, default=0.0,
+                                          subgroup=subgroup, group=group)
+        self.tectonic_chaos = params.add("voronoi_tectonic_chaos",
+                                          min=0.0, max=1.0, default=0.3,
+                                          subgroup=subgroup, group=group)
+
         self.time = 0.0
         self._init_points()
         self.prev_num_points = self.num_points.value
@@ -81,6 +89,8 @@ class Voronoi(Animation):
         ).astype(np.float32)
         # Generate random colors for each cell
         self.cell_colors = np.random.randint(0, 256, (n, 3), dtype=np.uint8)
+        # Tectonic drift velocities
+        self.velocities = np.random.uniform(-1, 1, (n, 2)).astype(np.float32)
 
     def _compute_voronoi_image(self):
         """Compute Voronoi diagram using distance transform."""
@@ -207,9 +217,26 @@ class Voronoi(Animation):
         relax_speed = self.relaxation_speed.value
         self.points += (centroids - self.points) * relax_speed
 
-        # Keep points within bounds
-        margin = 10
-        self.points[:, 0] = np.clip(self.points[:, 0], margin, self.width - margin)
-        self.points[:, 1] = np.clip(self.points[:, 1], margin, self.height - margin)
+        # Tectonic drift - slow autonomous movement
+        tectonic_speed = self.tectonic_speed.value
+        if tectonic_speed > 0:
+            chaos = self.tectonic_chaos.value
+            # Add random perturbation to velocities
+            if chaos > 0:
+                self.velocities += np.random.normal(0, chaos * 0.1,
+                                                     self.velocities.shape).astype(np.float32)
+                # Dampen to prevent runaway velocities
+                self.velocities *= 0.99
+            self.points += self.velocities * tectonic_speed
+
+            # Wrap around edges (toroidal)
+            margin = 10
+            self.points[:, 0] = self.points[:, 0] % (self.width - 2 * margin) + margin
+            self.points[:, 1] = self.points[:, 1] % (self.height - 2 * margin) + margin
+        else:
+            # Keep points within bounds (non-tectonic mode)
+            margin = 10
+            self.points[:, 0] = np.clip(self.points[:, 0], margin, self.width - margin)
+            self.points[:, 1] = np.clip(self.points[:, 1], margin, self.height - margin)
 
         return pattern

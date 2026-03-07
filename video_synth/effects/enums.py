@@ -25,6 +25,9 @@ class WarpType(Enum):
     PERLIN = auto()
     WARP0 = auto()
     FEEDBACK = auto()
+    DISPLACEMENT = auto()
+    CONVECTION = auto()
+    RD_WARP = auto()
 
 
 """Enumeration of blur modes"""

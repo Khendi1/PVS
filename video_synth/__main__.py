@@ -28,8 +28,8 @@ from param import ParamTable
 from effects_manager import EffectManager
 from audio_reactive import AudioReactiveModule
 from api import APIServer
-from ffmpeg_output import FFmpegOutput, FFmpegStreamOutput
-from virtualcam_output import VirtualCamOutput
+from ffmpeg import FFmpegOutput, FFmpegStreamOutput
+from virtualcam import VirtualCamOutput
 from obs_controller import OBSController
 from obs_filters import OBSFilters
 from osc_controller import OSCController
@@ -53,7 +53,7 @@ def parse_args():
         '-nd',
         '--devices',
         default=DEFAULT_NUM_DEVICES,
-        choices=[i for i in range(1,11)],
+        choices=[i for i in range(0, 11)],
         type=int,
         help='Number of USB video capture devices to search for on boot. Will safely ignore a extra devices if not found'
     )

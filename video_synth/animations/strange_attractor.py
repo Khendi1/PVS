@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import math
+import time
 
 from animations.base import Animation
 from animations.enums import AttractorType
@@ -109,6 +110,20 @@ class StrangeAttractor(Animation):
         self.thomas_b = params.add("thomas_b",
                                    min=0.1, max=0.3, default=0.208186,
                                    subgroup=subgroup, group=group)
+
+        # Morphing - slowly interpolate coefficients over time
+        self.morph_speed = params.add("attractor_morph_speed",
+                                       min=0.0, max=1.0, default=0.0,
+                                       subgroup=subgroup, group=group)
+
+        # Preset coefficient targets for morphing (2D attractors: Clifford/De Jong)
+        self._morph_presets = [
+            {"clifford_a": -1.4, "clifford_b": 1.6, "clifford_c": 1.0, "clifford_d": 0.7},
+            {"clifford_a": 1.7, "clifford_b": 1.7, "clifford_c": 0.6, "clifford_d": 1.2},
+            {"clifford_a": -1.7, "clifford_b": -1.4, "clifford_c": -1.0, "clifford_d": -1.5},
+            {"clifford_a": 2.0, "clifford_b": -2.0, "clifford_c": -1.2, "clifford_d": 2.0},
+        ]
+        self._morph_time = 0.0
 
         # State variables for each attractor
         self._init_attractor_states()
@@ -276,8 +291,35 @@ class StrangeAttractor(Animation):
         sy = int((y - y_min) / (y_max - y_min) * self.height * scale / 5 + self.height * (1 - scale/5) / 2)
         return sx, sy
 
+    def _apply_morph(self):
+        """Slowly interpolate Clifford coefficients between presets."""
+        morph_speed = self.morph_speed.value
+        if morph_speed <= 0:
+            return
+
+        self._morph_time += 0.016 * morph_speed
+
+        presets = self._morph_presets
+        n = len(presets)
+        t = self._morph_time % n
+        idx_a = int(t) % n
+        idx_b = (idx_a + 1) % n
+        frac = t - int(t)
+        # Smooth interpolation
+        frac = frac * frac * (3 - 2 * frac)
+
+        a, b = presets[idx_a], presets[idx_b]
+        for key in a:
+            val = a[key] * (1 - frac) + b[key] * frac
+            param = getattr(self, key, None)
+            if param is not None:
+                param.value = val
+
     def get_frame(self, frame: np.ndarray = None) -> np.ndarray:
         """Generates a Strange Attractor pattern based on selected type."""
+
+        # Apply morphing (slowly drifts coefficients between presets)
+        self._apply_morph()
 
         # Check if attractor type changed - reset state if so
         if self.attractor_type.value != self.prev_attractor_type:

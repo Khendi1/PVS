@@ -34,6 +34,7 @@ from effects.ptz import PTZ
 from effects.feedback import Feedback
 from effects.glitch import Glitch
 from effects.shapes import Shapes
+from effects.erosion import Erosion
 
 log = logging.getLogger(__name__)
 
@@ -56,6 +57,7 @@ class EffectManager:
         self.warp = Warp(self.params, width, height, self.group)
         self.glitch = Glitch(self.params, self.group)
         self.ptz = PTZ(self.params, width, height, self.group)
+        self.erosion = Erosion(self.params, width, height, self.group)
 
         self._all_services = [
             self.feedback,
@@ -68,6 +70,7 @@ class EffectManager:
             self.warp,
             self.glitch,
             self.ptz,
+            self.erosion,
         ]
 
         self.class_with_methods, self.all_methods = self._get_effect_methods()
@@ -214,5 +217,9 @@ class EffectManager:
 
         prev_frame = wet_frame
         prev_frame = self.ptz._shift_prev_frame(prev_frame)
+
+        # Paint drift: transform wet_frame so the drifted version feeds back
+        # into the next frame's alpha blend (wet_frame is what gets blended)
+        wet_frame = self.feedback.paint_drift(wet_frame)
 
         return np.clip(prev_frame, 0, 255), np.clip(wet_frame, 0, 255)

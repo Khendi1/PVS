@@ -18,6 +18,11 @@ from animations.physarum import Physarum
 from animations.dla import DLA
 from animations.chladni import Chladni
 from animations.voronoi import Voronoi
+from animations.drift_field import DriftField
+from animations.lenia import Lenia
+from animations.fractal_zoom import FractalZoom
+from animations.oscillator_grid import OscillatorGrid
+from animations.harmonic_interference import HarmonicInterference
 import os
 from pathlib import Path
 from param import ParamTable
@@ -86,20 +91,26 @@ class Mixer:
 
         # search for available video capture devices
         num_devices_int = int(num_devices)  # Param object -> int
-        detected_devices = self._detect_devices(max_index=num_devices_int)
-        # Always include at least DEVICE_0 so virtual cameras are selectable
-        # regardless of how many physical devices were detected or scanned.
-        max_device_slots = max(1, num_devices_int)
-        self.sources = {f"DEVICE_{i}": i for i in range(max_device_slots)}
-        i = max_device_slots
+        found_devices = self._detect_devices(max_index=num_devices_int)
+
+        # Only add devices that were actually detected
+        self.sources = {}
+        # Map device names to their cv2 capture index
+        self._device_indices = {}
+        for dev_index in found_devices:
+            name = f"DEVICE_{dev_index}"
+            self.sources[name] = len(self.sources)
+            self._device_indices[name] = dev_index
+
+        # Virtual camera is always available as a dedicated source
+        self.sources["VIRTUAL_CAM"] = len(self.sources)
+
         # add file sources to sources dict
         for file_source in FileSource:
-            self.sources[file_source.name] = i
-            i += 1
+            self.sources[file_source.name] = len(self.sources)
         # add animation sources to sources dict
         for anim_source in AnimSource:
-            self.sources[anim_source.name] = i  
-            i += 1
+            self.sources[anim_source.name] = len(self.sources)
         
         srcs_str = ", ".join([f"\n\t{k}: {v}" for k,v in self.sources.items()])
         log.info(f"Sources: {srcs_str}")
@@ -123,7 +134,12 @@ class Mixer:
             AnimSource.PHYSARUM.name: Physarum(**anim_args),
             AnimSource.DLA.name: DLA(**anim_args),
             AnimSource.CHLADNI.name: Chladni(**anim_args),
-            AnimSource.VORONOI.name: Voronoi(**anim_args)
+            AnimSource.VORONOI.name: Voronoi(**anim_args),
+            AnimSource.DRIFT_FIELD.name: DriftField(**anim_args),
+            AnimSource.LENIA.name: Lenia(**anim_args),
+            AnimSource.FRACTAL_ZOOM.name: FractalZoom(**anim_args),
+            AnimSource.OSCILLATOR_GRID.name: OscillatorGrid(**anim_args),
+            AnimSource.HARMONIC_INTERFERENCE.name: HarmonicInterference(**anim_args),
         }
 
         anim_args["group"] = Groups.SRC_2_ANIMATIONS
@@ -139,7 +155,12 @@ class Mixer:
             AnimSource.PHYSARUM.name: Physarum(**anim_args),
             AnimSource.DLA.name: DLA(**anim_args),
             AnimSource.CHLADNI.name: Chladni(**anim_args),
-            AnimSource.VORONOI.name: Voronoi(**anim_args)
+            AnimSource.VORONOI.name: Voronoi(**anim_args),
+            AnimSource.DRIFT_FIELD.name: DriftField(**anim_args),
+            AnimSource.LENIA.name: Lenia(**anim_args),
+            AnimSource.FRACTAL_ZOOM.name: FractalZoom(**anim_args),
+            AnimSource.OSCILLATOR_GRID.name: OscillatorGrid(**anim_args),
+            AnimSource.HARMONIC_INTERFERENCE.name: HarmonicInterference(**anim_args),
         }
 
         # --- Configure file sources ---
@@ -157,7 +178,7 @@ class Mixer:
 
         # initialize source 1 to use the first hardware device available
         # safely default to metaballs if no devices found
-        default_src1 = "DEVICE_0" if detected_devices > 0 else AnimSource.METABALLS.name
+        default_src1 = f"DEVICE_{found_devices[0]}" if found_devices else AnimSource.METABALLS.name
         self.selected_source1 = self.params.add("source_1",
                                                       min=0, max=len(self.sources), default=default_src1,
                                                       subgroup=subgroup, group=self.group,
@@ -277,8 +298,9 @@ class Mixer:
 
 
     def _detect_devices(self, max_index: int):
-        log.info(f"Attempting to find video capture sources ({max_index})")
-        num_success = 0
+        """Scan device indices and return list of indices that responded."""
+        log.info(f"Scanning for video capture devices (indices 0-{max_index - 1})")
+        found = []
         for index in range(int(max_index)):
             try:
                 cap = cv2.VideoCapture(index, cv2.CAP_ANY)
@@ -286,14 +308,36 @@ class Mixer:
                     ret, _ = cap.read()
                     if ret:
                         log.info(f"Found video capture device at index {index}")
-                        num_success += 1
+                        found.append(index)
                     cap.release()
                 else:
-                    print('\n\nNone found\n\n')
-                    log.warning(f"Failed to find capture device at index {index}")
+                    log.debug(f"No capture device at index {index}")
             except Exception as e:
                 log.error(f"Error while checking device at index {index}: {e}")
-        return num_success
+        log.info(f"Device scan complete: {len(found)} device(s) found")
+        return found
+
+
+    def _find_virtualcam_index(self):
+        """Find the cv2 capture index for the pyvirtualcam device.
+
+        Scans indices beyond the detected physical devices to find
+        the virtual camera output loopback.
+        """
+        for index in range(MAX_DEVICES + 5):
+            if index in self._device_indices.values():
+                continue  # skip known physical devices
+            try:
+                cap = cv2.VideoCapture(index, cv2.CAP_ANY)
+                if cap.isOpened():
+                    ret, _ = cap.read()
+                    cap.release()
+                    if ret:
+                        log.info(f"Found virtual camera at index {index}")
+                        return index
+            except Exception:
+                continue
+        return None
 
 
     def _open_cv2_capture(self, cap, source_name, index):
@@ -302,15 +346,24 @@ class Mixer:
 
         log.info(f"Opening cv2 VideoCapture for source_{index}: {source_name}")
 
-        source_val = self.sources[source_name]
-
-        if source_name == FileSource.VIDEO.name:
+        if source_name in self._device_indices:
+            # Physical device — use the actual cv2 device index
+            source_val = self._device_indices[source_name]
+        elif source_name == "VIRTUAL_CAM":
+            # Virtual camera — find it by scanning for the pyvirtualcam device
+            source_val = self._find_virtualcam_index()
+            if source_val is None:
+                log.warning("Virtual camera device not found")
+                return cap
+        elif source_name == FileSource.VIDEO.name:
             file_param = self.video_file_src1 if index == MixerSource.SRC_1 else self.video_file_src2
             if file_param.value and file_param.value != "(none)":
                 source_val = self._find_dir("samples", file_param.value)
             else:
                 log.warning(f"No video file selected for source {index}")
                 return cap
+        else:
+            source_val = self.sources[source_name]
 
         cap = cv2.VideoCapture(source_val)
 
@@ -382,7 +435,9 @@ class Mixer:
         else:
             # CRITICAL FIX: For live cameras, grab+retrieve is faster than read() and helps flush buffers
             # This ensures we get the latest frame, not a stale buffered one
-            is_live_camera = isinstance(selected_source.value, str) and selected_source.value.startswith("DEVICE_")
+            is_live_camera = isinstance(selected_source.value, str) and (
+                selected_source.value.startswith("DEVICE_") or selected_source.value == "VIRTUAL_CAM"
+            )
 
             if is_live_camera:
                 # Grab() is non-blocking, retrieve() decodes - this is faster for live sources

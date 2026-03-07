@@ -1,9 +1,11 @@
 import cv2
 import numpy as np
 import logging
+import time
 
 from effects.base import EffectBase
 from effects.enums import HSV
+from animations.enums import Colormap, COLORMAP_OPTIONS
 from common import Widget
 
 log = logging.getLogger(__name__)
@@ -61,6 +63,102 @@ class Color(EffectBase):
         self.highlight_compression = params.add("highlight_compression",
                                                 min=0.0, max=1.0, default=0.0,
                                                 subgroup=subgroup, group=group)
+
+        # Color cycling - rotates a palette ramp over the brightness of the image
+        self.color_cycle_speed = params.add("color_cycle_speed",
+                                             min=0.0, max=5.0, default=0.0,
+                                             subgroup=subgroup, group=group)
+        self.color_cycle_bands = params.add("color_cycle_bands",
+                                             min=1, max=8, default=3,
+                                             subgroup=subgroup, group=group)
+
+        # Channel Mixer - cross-mix RGB channels
+        self.ch_mix_rr = params.add("ch_mix_rr", min=0.0, max=2.0, default=1.0,
+                                     subgroup=subgroup, group=group)
+        self.ch_mix_rg = params.add("ch_mix_rg", min=0.0, max=2.0, default=0.0,
+                                     subgroup=subgroup, group=group)
+        self.ch_mix_rb = params.add("ch_mix_rb", min=0.0, max=2.0, default=0.0,
+                                     subgroup=subgroup, group=group)
+        self.ch_mix_gr = params.add("ch_mix_gr", min=0.0, max=2.0, default=0.0,
+                                     subgroup=subgroup, group=group)
+        self.ch_mix_gg = params.add("ch_mix_gg", min=0.0, max=2.0, default=1.0,
+                                     subgroup=subgroup, group=group)
+        self.ch_mix_gb = params.add("ch_mix_gb", min=0.0, max=2.0, default=0.0,
+                                     subgroup=subgroup, group=group)
+        self.ch_mix_br = params.add("ch_mix_br", min=0.0, max=2.0, default=0.0,
+                                     subgroup=subgroup, group=group)
+        self.ch_mix_bg = params.add("ch_mix_bg", min=0.0, max=2.0, default=0.0,
+                                     subgroup=subgroup, group=group)
+        self.ch_mix_bb = params.add("ch_mix_bb", min=0.0, max=2.0, default=1.0,
+                                     subgroup=subgroup, group=group)
+
+        # Color Bitcrush - reduce bit depth per channel
+        self.color_bitcrush = params.add("color_bitcrush",
+                                          min=1, max=8, default=8,
+                                          subgroup=subgroup, group=group)
+
+        # Hue Scatter - randomize hue per-pixel
+        self.hue_scatter = params.add("hue_scatter",
+                                       min=0.0, max=1.0, default=0.0,
+                                       subgroup=subgroup, group=group)
+
+        # Duotone - map luminance to two-color gradient
+        self.duotone_strength = params.add("duotone_strength",
+                                            min=0.0, max=1.0, default=0.0,
+                                            subgroup=subgroup, group=group)
+        self.duotone_hue_lo = params.add("duotone_hue_lo",
+                                          min=0, max=180, default=120,
+                                          subgroup=subgroup, group=group)
+        self.duotone_hue_hi = params.add("duotone_hue_hi",
+                                          min=0, max=180, default=10,
+                                          subgroup=subgroup, group=group)
+
+        # Channel Isolation - mute individual R/G/B channels
+        self.ch_r = params.add("ch_r", min=0.0, max=1.0, default=1.0,
+                                subgroup=subgroup, group=group)
+        self.ch_g = params.add("ch_g", min=0.0, max=1.0, default=1.0,
+                                subgroup=subgroup, group=group)
+        self.ch_b = params.add("ch_b", min=0.0, max=1.0, default=1.0,
+                                subgroup=subgroup, group=group)
+
+        # Chromatic Aberration - offset R/G/B channels spatially
+        self.chroma_ab_x = params.add("chroma_ab_x",
+                                       min=0, max=30, default=0,
+                                       subgroup=subgroup, group=group)
+        self.chroma_ab_y = params.add("chroma_ab_y",
+                                       min=0, max=30, default=0,
+                                       subgroup=subgroup, group=group)
+
+        # Color Temperature - warm/cool shift
+        self.color_temp = params.add("color_temp",
+                                      min=-1.0, max=1.0, default=0.0,
+                                      subgroup=subgroup, group=group)
+
+        # Saturation Curve - non-linear saturation boost/crush
+        self.sat_curve_shadows = params.add("sat_curve_shadows",
+                                             min=0.0, max=3.0, default=1.0,
+                                             subgroup=subgroup, group=group)
+        self.sat_curve_mids = params.add("sat_curve_mids",
+                                          min=0.0, max=3.0, default=1.0,
+                                          subgroup=subgroup, group=group)
+        self.sat_curve_highlights = params.add("sat_curve_highlights",
+                                                min=0.0, max=3.0, default=1.0,
+                                                subgroup=subgroup, group=group)
+
+        # False Color - apply colormap to luminance
+        self.false_color_strength = params.add("false_color_strength",
+                                                min=0.0, max=1.0, default=0.0,
+                                                subgroup=subgroup, group=group)
+        self.false_color_map = params.add("false_color_map",
+                                           min=0, max=len(COLORMAP_OPTIONS)-1,
+                                           default=int(Colormap.INFERNO),
+                                           subgroup=subgroup, group=group,
+                                           type=Widget.DROPDOWN, options=Colormap)
+
+        # Invert - partial or full color inversion
+        self.invert_strength = params.add("invert_strength",
+                                           min=0.0, max=1.0, default=0.0,
+                                           subgroup=subgroup, group=group)
 
     def _shift_hue(self, hue: int):
         """
@@ -325,3 +423,295 @@ class Color(EffectBase):
         
         # Scale the result back up to the [0, 255] range.
         return ldr_image * 255.0
+
+    def color_cycle(self, frame: np.ndarray):
+        """
+        Rotates a color palette over the brightness of the image.
+        Maps luminance to a cycling hue ramp — static textures come alive
+        as the palette rotates through them.
+        """
+        speed = self.color_cycle_speed.value
+        if speed == 0.0:
+            return frame
+
+        bands = int(self.color_cycle_bands.value)
+        offset = time.time() * speed * 30.0  # continuous rotation
+
+        # Convert to grayscale luminance
+        if frame.dtype != np.uint8:
+            work = np.clip(frame, 0, 255).astype(np.uint8)
+        else:
+            work = frame
+
+        gray = cv2.cvtColor(work, cv2.COLOR_BGR2GRAY)
+
+        # Map luminance through cycling hue ramp
+        hue = ((gray.astype(np.float32) * bands + offset) % 180).astype(np.uint8)
+        sat = np.full_like(gray, 200, dtype=np.uint8)
+        val = gray  # preserve original brightness
+
+        hsv = cv2.merge([hue, sat, val])
+        result = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+
+        if frame.dtype == np.float32:
+            return result.astype(np.float32)
+        return result
+
+    def channel_mix(self, frame: np.ndarray):
+        """Cross-mix RGB channels via a 3x3 matrix. Identity = no change."""
+        rr = self.ch_mix_rr.value
+        rg = self.ch_mix_rg.value
+        rb = self.ch_mix_rb.value
+        gr = self.ch_mix_gr.value
+        gg = self.ch_mix_gg.value
+        gb = self.ch_mix_gb.value
+        br = self.ch_mix_br.value
+        bg = self.ch_mix_bg.value
+        bb = self.ch_mix_bb.value
+
+        # Early exit if identity matrix
+        if (rr == 1.0 and rg == 0.0 and rb == 0.0 and
+            gr == 0.0 and gg == 1.0 and gb == 0.0 and
+            br == 0.0 and bg == 0.0 and bb == 1.0):
+            return frame
+
+        if frame.dtype != np.float32:
+            work = frame.astype(np.float32)
+        else:
+            work = frame.copy()
+
+        b, g, r = work[:, :, 0], work[:, :, 1], work[:, :, 2]
+        new_b = bb * b + bg * g + br * r
+        new_g = gb * b + gg * g + gr * r
+        new_r = rb * b + rg * g + rr * r
+
+        result = np.stack([new_b, new_g, new_r], axis=2)
+        return np.clip(result, 0, 255)
+
+    def color_bitcrush(self, frame: np.ndarray):
+        """Reduce color bit depth per channel for hard RGB banding."""
+        bits = int(self.color_bitcrush.value)
+        if bits >= 8:
+            return frame
+
+        if frame.dtype != np.uint8:
+            work = np.clip(frame, 0, 255).astype(np.uint8)
+        else:
+            work = frame
+
+        # Shift right then left to zero out lower bits
+        shift = 8 - bits
+        result = (work >> shift) << shift
+
+        if frame.dtype == np.float32:
+            return result.astype(np.float32)
+        return result
+
+    def hue_scatter(self, frame: np.ndarray):
+        """Randomize hue per-pixel proportional to strength. Creates chromatic shimmer."""
+        strength = self.hue_scatter.value
+        if strength == 0.0:
+            return frame
+
+        if frame.dtype != np.uint8:
+            work = np.clip(frame, 0, 255).astype(np.uint8)
+        else:
+            work = frame.copy()
+
+        hsv = cv2.cvtColor(work, cv2.COLOR_BGR2HSV)
+        h = hsv[:, :, 0].astype(np.int16)
+
+        noise = np.random.randint(-90, 91, h.shape, dtype=np.int16)
+        h = (h + (noise * strength).astype(np.int16)) % 180
+        hsv[:, :, 0] = h.astype(np.uint8)
+
+        result = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+        if frame.dtype == np.float32:
+            return result.astype(np.float32)
+        return result
+
+    def duotone(self, frame: np.ndarray):
+        """Map luminance to a two-color gradient defined by lo/hi hue."""
+        strength = self.duotone_strength.value
+        if strength == 0.0:
+            return frame
+
+        hue_lo = int(self.duotone_hue_lo.value)
+        hue_hi = int(self.duotone_hue_hi.value)
+
+        if frame.dtype != np.uint8:
+            work = np.clip(frame, 0, 255).astype(np.uint8)
+        else:
+            work = frame
+
+        gray = cv2.cvtColor(work, cv2.COLOR_BGR2GRAY)
+        t = gray.astype(np.float32) / 255.0  # 0=shadow, 1=highlight
+
+        # Interpolate hue (handle wrap-around)
+        if abs(hue_hi - hue_lo) > 90:
+            # Wrap the shorter way around
+            if hue_lo > hue_hi:
+                hue = (hue_lo + t * (hue_hi + 180 - hue_lo)) % 180
+            else:
+                hue = (hue_hi + (1 - t) * (hue_lo + 180 - hue_hi)) % 180
+        else:
+            hue = hue_lo + t * (hue_hi - hue_lo)
+
+        hue = hue.astype(np.uint8)
+        sat = np.full_like(gray, 220, dtype=np.uint8)
+
+        hsv = cv2.merge([hue, sat, gray])
+        duo = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+
+        # Blend with original
+        if strength < 1.0:
+            result = cv2.addWeighted(work, 1.0 - strength, duo, strength, 0)
+        else:
+            result = duo
+
+        if frame.dtype == np.float32:
+            return result.astype(np.float32)
+        return result
+
+    def channel_isolate(self, frame: np.ndarray):
+        """Scale individual R/G/B channels. Set to 0 to mute, 1 = unchanged."""
+        r_scale = self.ch_r.value
+        g_scale = self.ch_g.value
+        b_scale = self.ch_b.value
+
+        if r_scale == 1.0 and g_scale == 1.0 and b_scale == 1.0:
+            return frame
+
+        if frame.dtype != np.float32:
+            work = frame.astype(np.float32)
+        else:
+            work = frame.copy()
+
+        work[:, :, 0] *= b_scale
+        work[:, :, 1] *= g_scale
+        work[:, :, 2] *= r_scale
+
+        return np.clip(work, 0, 255)
+
+    def chromatic_aberration(self, frame: np.ndarray):
+        """Offset R/G/B channels spatially for lens distortion look."""
+        offset_x = int(self.chroma_ab_x.value)
+        offset_y = int(self.chroma_ab_y.value)
+
+        if offset_x == 0 and offset_y == 0:
+            return frame
+
+        if frame.dtype != np.uint8:
+            work = np.clip(frame, 0, 255).astype(np.uint8)
+        else:
+            work = frame.copy()
+
+        h, w = work.shape[:2]
+        b, g, r = cv2.split(work)
+
+        # Shift R channel right/down, B channel left/up, G stays centered
+        M_r = np.float32([[1, 0, offset_x], [0, 1, offset_y]])
+        M_b = np.float32([[1, 0, -offset_x], [0, 1, -offset_y]])
+
+        r_shifted = cv2.warpAffine(r, M_r, (w, h), borderMode=cv2.BORDER_REFLECT)
+        b_shifted = cv2.warpAffine(b, M_b, (w, h), borderMode=cv2.BORDER_REFLECT)
+
+        result = cv2.merge([b_shifted, g, r_shifted])
+
+        if frame.dtype == np.float32:
+            return result.astype(np.float32)
+        return result
+
+    def color_temperature(self, frame: np.ndarray):
+        """Warm/cool white balance shift. Positive = warm (orange), negative = cool (blue)."""
+        temp = self.color_temp.value
+        if temp == 0.0:
+            return frame
+
+        if frame.dtype != np.float32:
+            work = frame.astype(np.float32)
+        else:
+            work = frame.copy()
+
+        # Warm: boost red, reduce blue. Cool: boost blue, reduce red.
+        work[:, :, 2] += temp * 30.0   # R channel
+        work[:, :, 1] += temp * 10.0   # G channel (slight warm tint)
+        work[:, :, 0] -= temp * 30.0   # B channel
+
+        return np.clip(work, 0, 255)
+
+    def saturation_curve(self, frame: np.ndarray):
+        """Non-linear saturation: independently control shadows, mids, highlights."""
+        s_shadows = self.sat_curve_shadows.value
+        s_mids = self.sat_curve_mids.value
+        s_highs = self.sat_curve_highlights.value
+
+        if s_shadows == 1.0 and s_mids == 1.0 and s_highs == 1.0:
+            return frame
+
+        if frame.dtype != np.uint8:
+            work = np.clip(frame, 0, 255).astype(np.uint8)
+        else:
+            work = frame.copy()
+
+        hsv = cv2.cvtColor(work, cv2.COLOR_BGR2HSV)
+        v = hsv[:, :, 2].astype(np.float32) / 255.0
+        s = hsv[:, :, 1].astype(np.float32)
+
+        # Smooth weight masks for shadows (<0.33), mids (0.33-0.66), highlights (>0.66)
+        w_shadow = np.clip(1.0 - v * 3.0, 0, 1)
+        w_high = np.clip(v * 3.0 - 2.0, 0, 1)
+        w_mid = 1.0 - w_shadow - w_high
+
+        multiplier = w_shadow * s_shadows + w_mid * s_mids + w_high * s_highs
+        s = np.clip(s * multiplier, 0, 255).astype(np.uint8)
+        hsv[:, :, 1] = s
+
+        result = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+        if frame.dtype == np.float32:
+            return result.astype(np.float32)
+        return result
+
+    def false_color(self, frame: np.ndarray):
+        """Apply a colormap to luminance for thermal/scientific visualization look."""
+        strength = self.false_color_strength.value
+        if strength == 0.0:
+            return frame
+
+        if frame.dtype != np.uint8:
+            work = np.clip(frame, 0, 255).astype(np.uint8)
+        else:
+            work = frame
+
+        gray = cv2.cvtColor(work, cv2.COLOR_BGR2GRAY)
+        cmap_idx = int(self.false_color_map.value)
+        colored = cv2.applyColorMap(gray, COLORMAP_OPTIONS[cmap_idx])
+
+        if strength < 1.0:
+            result = cv2.addWeighted(work, 1.0 - strength, colored, strength, 0)
+        else:
+            result = colored
+
+        if frame.dtype == np.float32:
+            return result.astype(np.float32)
+        return result
+
+    def invert(self, frame: np.ndarray):
+        """Partial or full color inversion with blend control."""
+        strength = self.invert_strength.value
+        if strength == 0.0:
+            return frame
+
+        if frame.dtype != np.float32:
+            work = frame.astype(np.float32)
+        else:
+            work = frame
+
+        inverted = 255.0 - work
+
+        if strength < 1.0:
+            result = work * (1.0 - strength) + inverted * strength
+        else:
+            result = inverted
+
+        return np.clip(result, 0, 255)

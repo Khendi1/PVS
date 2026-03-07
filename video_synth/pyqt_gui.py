@@ -9,7 +9,7 @@ from pyqt_widgets import (QTextEditLogger, ColorPickerWidget, VideoWidget, LFOMa
                            AudioLinkDialog, SequencerWidget, MidiMapperWidget, OSCMapperWidget,
                            LFO_BUTTON_LINKED_STYLE, LFO_BUTTON_UNLINKED_STYLE,
                            AUD_BUTTON_LINKED_STYLE, AUD_BUTTON_UNLINKED_STYLE)
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QPushButton, QGroupBox, QRadioButton, QScrollArea, QToolButton, QSizePolicy, QLineEdit, QTabWidget, QComboBox, QDialog, QGridLayout, QListWidget, QColorDialog, QTextEdit, QCheckBox
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QPushButton, QGroupBox, QRadioButton, QScrollArea, QToolButton, QSizePolicy, QLineEdit, QTabWidget, QComboBox, QDialog, QGridLayout, QListWidget, QColorDialog, QTextEdit, QCheckBox, QStackedWidget
 from PyQt6.QtGui import QGuiApplication, QImage, QPixmap, QPainter, QColor, QTextCursor
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSignal, pyqtSlot, QTimer
 
@@ -781,9 +781,9 @@ class PyQTGUI(QMainWindow):
                             target_layout.addWidget(widget)
                 target_layout.addStretch(1)
             else:
-                # Create sub-tabs for each subgroup
-                subgroup_tab_widget = QTabWidget()
-                target_layout.addWidget(subgroup_tab_widget)
+                # Create dropdown + stacked widget for subgroups
+                subgroup_combo = QComboBox()
+                subgroup_stack = QStackedWidget()
 
                 for subgroup_name, params_in_subgroup in subgroups.items():
                     subgroup_widget = QWidget()
@@ -792,15 +792,17 @@ class PyQTGUI(QMainWindow):
                     for param in params_in_subgroup:
                         widget = self._create_param_widget(param)
                         subgroup_layout.addWidget(widget)
+                    subgroup_layout.addStretch(1)
 
                     subgroup_scroll = QScrollArea()
                     subgroup_scroll.setWidgetResizable(True)
                     subgroup_scroll.setWidget(subgroup_widget)
 
                     tab_title = subgroup_name.replace("_", " ").title() if isinstance(subgroup_name, str) else subgroup_name.name.replace("_", " ").title()
-                    subgroup_tab_widget.addTab(subgroup_scroll, tab_title)
+                    subgroup_combo.addItem(tab_title)
+                    subgroup_stack.addWidget(subgroup_scroll)
 
-                # Add sequencer subtab within effects sub-tabs
+                # Add sequencer as a stacked page within effects groups
                 effect_manager = {
                     Groups.SRC_1_EFFECTS: self.src_1_effects,
                     Groups.SRC_2_EFFECTS: self.src_2_effects,
@@ -808,7 +810,12 @@ class PyQTGUI(QMainWindow):
                 }.get(group_enum_or_str)
                 if effect_manager:
                     seq_widget = SequencerWidget(effect_manager)
-                    subgroup_tab_widget.addTab(seq_widget, "Sequence")
+                    subgroup_combo.addItem("Sequence")
+                    subgroup_stack.addWidget(seq_widget)
+
+                subgroup_combo.currentIndexChanged.connect(subgroup_stack.setCurrentIndex)
+                target_layout.addWidget(subgroup_combo)
+                target_layout.addWidget(subgroup_stack, 1)
 
         self._update_mixer_visibility()
 

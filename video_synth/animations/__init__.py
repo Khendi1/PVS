@@ -9,6 +9,11 @@ from animations.shaders2 import Shaders2
 from animations.dla import DLA
 from animations.chladni import Chladni
 from animations.voronoi import Voronoi
+from animations.drift_field import DriftField
+from animations.lenia import Lenia
+from animations.fractal_zoom import FractalZoom
+from animations.oscillator_grid import OscillatorGrid
+from animations.harmonic_interference import HarmonicInterference
 
 __all__ = [
     "Plasma",
@@ -22,4 +27,9 @@ __all__ = [
     "DLA",
     "Chladni",
     "Voronoi",
+    "DriftField",
+    "Lenia",
+    "FractalZoom",
+    "OscillatorGrid",
+    "HarmonicInterference",
 ]

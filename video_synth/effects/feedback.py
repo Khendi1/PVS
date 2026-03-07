@@ -56,6 +56,43 @@ class Feedback(EffectBase):
         self._running_sum = None
         self._prev_buffer_size = 0
 
+        # Feedback painting - autonomous drift applied to the feedback frame
+        self.fb_paint_drift_x = params.add("fb_paint_drift_x",
+                                            min=-5.0, max=5.0, default=0.0,
+                                            subgroup=subgroup, group=group)
+        self.fb_paint_drift_y = params.add("fb_paint_drift_y",
+                                            min=-5.0, max=5.0, default=0.0,
+                                            subgroup=subgroup, group=group)
+        self.fb_paint_rotation = params.add("fb_paint_rotation",
+                                             min=-2.0, max=2.0, default=0.0,
+                                             subgroup=subgroup, group=group)
+        self.fb_paint_zoom = params.add("fb_paint_zoom",
+                                         min=0.99, max=1.01, default=1.0,
+                                         subgroup=subgroup, group=group)
+
+
+    def paint_drift(self, frame):
+        """Apply autonomous pan/rotation/zoom drift to feedback frame.
+        Creates spiraling, fractal-like accumulations when combined with
+        feedback alpha blending.
+        """
+        dx = self.fb_paint_drift_x.value
+        dy = self.fb_paint_drift_y.value
+        rot = self.fb_paint_rotation.value
+        zoom = self.fb_paint_zoom.value
+
+        if dx == 0 and dy == 0 and rot == 0 and zoom == 1.0:
+            return frame
+
+        h, w = frame.shape[:2]
+        cx, cy = w / 2.0, h / 2.0
+
+        # Build affine transform: translate + rotate + scale around center
+        M = cv2.getRotationMatrix2D((cx, cy), rot, zoom)
+        M[0, 2] += dx
+        M[1, 2] += dy
+
+        return cv2.warpAffine(frame, M, (w, h), borderMode=cv2.BORDER_WRAP)
 
     def scale_frame(self, frame):
 

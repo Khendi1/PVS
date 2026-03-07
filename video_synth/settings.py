@@ -53,9 +53,9 @@ class UserSettings():
                                            group=group, subgroup=subgroup,
                                            type=Widget.DROPDOWN, options=OutputMode)
         self.num_devices = self.params.add("num_devices",
-                                           min=1, max=MAX_DEVICES, default=devices,
+                                           min=0, max=MAX_DEVICES, default=devices,
                                            group=group, subgroup=subgroup,
-                                           type=Widget.DROPDOWN, options={str(i): str(i) for i in range(1, MAX_DEVICES + 1)})
+                                           type=Widget.DROPDOWN, options={str(i): str(i) for i in range(0, MAX_DEVICES + 1)})
         self.patch_index = self.params.add("patch_index",
                                            min=0, max=100, default=patch,
                                            group=group, subgroup=subgroup,
