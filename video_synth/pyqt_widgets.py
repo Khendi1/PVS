@@ -361,7 +361,10 @@ class MidiMapperWidget(QWidget):
         self.ports_list = QListWidget()
         self.ports_list.setStyleSheet(self.MAPPED_STYLE)
         ports_layout.addWidget(self.ports_list)
-        ports_group.setMaximumHeight(100)
+        rescan_btn = QPushButton("Re-scan Devices")
+        rescan_btn.clicked.connect(self._on_rescan_click)
+        ports_layout.addWidget(rescan_btn)
+        ports_group.setMaximumHeight(120)
         root.addWidget(ports_group, 0)
 
         # Timer to poll learn state and refresh mappings
@@ -462,6 +465,12 @@ class MidiMapperWidget(QWidget):
         self._refresh_mappings()
         self._refresh_ports()
         self.learn_status.setText("All mappings cleared")
+
+    def _on_rescan_click(self):
+        ports = self.midi_mapper.rescan_ports()
+        self._refresh_ports()
+        self._refresh_mappings()
+        self.learn_status.setText(f"Found {len(ports)} port(s)" if ports else "No MIDI ports found")
 
 
 class OSCMapperWidget(QWidget):

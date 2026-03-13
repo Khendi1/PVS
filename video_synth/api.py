@@ -4,9 +4,11 @@ Allows an agent or external application to control parameters via HTTP REST API.
 """
 
 import logging
+import time
 from typing import Dict, List, Optional, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import threading
 import uvicorn
@@ -36,24 +38,23 @@ class ParamInfo(BaseModel):
 class APIServer:
     """FastAPI server for controlling video synthesizer parameters."""
 
-    def __init__(self, params, mixer=None, host="127.0.0.1", port=8000):
-        """
-        Initialize API server.
-
-        Args:
-            params: ParamTable instance containing all parameters
-            mixer: Mixer instance (optional, for mixer-specific controls)
-            host: Host to bind to (default: localhost)
-            port: Port to bind to (default: 8000)
-        """
+    def __init__(self, params, mixer=None, save_controller=None, midi_mapper=None, host="127.0.0.1", port=8000):
         self.params = params
         self.mixer = mixer
+        self.save_controller = save_controller
+        self.midi_mapper = midi_mapper
         self.host = host
         self.port = port
         self.app = FastAPI(
             title="Video Synth API",
             description="API for controlling video synthesizer parameters",
             version="1.0.0"
+        )
+        self.app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_methods=["*"],
+            allow_headers=["*"],
         )
 
         self._setup_routes()
@@ -162,12 +163,88 @@ class APIServer:
             if self.mixer is None or self.mixer.current_frame is None:
                 raise HTTPException(status_code=503, detail="No frame available")
 
-            # Encode frame as JPEG
             success, buffer = cv2.imencode('.jpg', self.mixer.current_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
             if not success:
                 raise HTTPException(status_code=500, detail="Failed to encode frame")
 
             return StreamingResponse(io.BytesIO(buffer.tobytes()), media_type="image/jpeg")
+
+        @self.app.get("/stream")
+        async def mjpeg_stream():
+            """MJPEG stream of the current output frame (~30 fps)."""
+            def frame_generator():
+                while not self._should_stop:
+                    if self.mixer is None or self.mixer.current_frame is None:
+                        time.sleep(0.05)
+                        continue
+                    frame = self.mixer.current_frame.copy()
+                    success, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+                    if success:
+                        yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n'
+                               + buffer.tobytes() + b'\r\n')
+                    time.sleep(1 / 30)
+
+            return StreamingResponse(
+                frame_generator(),
+                media_type="multipart/x-mixed-replace; boundary=frame"
+            )
+
+        # --- Patch endpoints ---
+
+        @self.app.post("/patch/save")
+        async def patch_save():
+            if self.save_controller is None:
+                raise HTTPException(status_code=503, detail="SaveController not available")
+            self.save_controller.save_patch()
+            return {"success": True}
+
+        @self.app.post("/patch/next")
+        async def patch_next():
+            if self.save_controller is None:
+                raise HTTPException(status_code=503, detail="SaveController not available")
+            self.save_controller.load_next_patch()
+            return {"success": True}
+
+        @self.app.post("/patch/prev")
+        async def patch_prev():
+            if self.save_controller is None:
+                raise HTTPException(status_code=503, detail="SaveController not available")
+            self.save_controller.load_prev_patch()
+            return {"success": True}
+
+        @self.app.post("/patch/random")
+        async def patch_random():
+            if self.save_controller is None:
+                raise HTTPException(status_code=503, detail="SaveController not available")
+            self.save_controller.load_random_patch()
+            return {"success": True}
+
+        # --- MIDI learn endpoints ---
+
+        class MidiLearnRequest(BaseModel):
+            param: str  # qualified key "group/param_name"
+
+        @self.app.post("/midi/learn")
+        async def midi_learn(req: MidiLearnRequest):
+            if self.midi_mapper is None:
+                raise HTTPException(status_code=503, detail="MidiMapper not available")
+            ok = self.midi_mapper.start_learn(req.param)
+            if not ok:
+                raise HTTPException(status_code=404, detail=f"Param '{req.param}' not found")
+            return {"success": True, "target": req.param}
+
+        @self.app.post("/midi/learn/cancel")
+        async def midi_learn_cancel():
+            if self.midi_mapper is None:
+                raise HTTPException(status_code=503, detail="MidiMapper not available")
+            self.midi_mapper.cancel_learn()
+            return {"success": True}
+
+        @self.app.get("/midi/learn/status")
+        async def midi_learn_status():
+            if self.midi_mapper is None:
+                raise HTTPException(status_code=503, detail="MidiMapper not available")
+            return self.midi_mapper.get_learn_state()
 
     def start(self):
         """Start the API server in a background thread."""

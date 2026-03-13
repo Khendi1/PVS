@@ -111,13 +111,11 @@ class DriftField(Animation):
             radius = np.random.randint(5, 20)
             cv2.circle(self.field, (cx, cy), radius, 1.0, -1)
 
-        # Color cycling offset
+        # Color cycling offset - use modulo so it wraps instead of saturating
         color_offset = self._time * self.drift_color_speed.value * 50
 
-        # Normalize and convert to colormap
-        display = np.clip(self.field + color_offset / 255.0, 0, 1)
-        display = (display * 255).astype(np.uint8)
-        display = display % 256  # wrap for cycling
+        # Map field to [0,255] then add cyclic offset, wrapping with modulo
+        display = ((self.field * 255.0 + color_offset) % 256).astype(np.uint8)
 
         cmap_idx = int(self.drift_colormap.value)
         colored = cv2.applyColorMap(display, COLORMAP_OPTIONS[cmap_idx])

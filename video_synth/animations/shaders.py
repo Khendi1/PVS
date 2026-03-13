@@ -481,6 +481,227 @@ class Shaders(Animation):
                     col += vec3(1.0, 1.0, 0.9) * exp(-dist * 5.0);
                     f_color = vec4(col * u_brightness, 1.0);
                 }
+            ''',
+            ShaderType.MANDELBROT: '''
+                #version 330
+                uniform vec2 u_resolution;
+                uniform float u_time;
+                uniform float u_zoom;
+                uniform float u_distortion;
+                uniform float u_iterations;
+                uniform float u_color_shift;
+                uniform float u_brightness;
+                uniform float u_hue_shift;
+                uniform float u_saturation;
+                uniform float u_scroll_x;
+                uniform float u_scroll_y;
+                uniform float u_rotation;
+                out vec4 f_color;
+
+                mat2 rotate2d(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+
+                vec3 palette(float t) {
+                    return 0.5 + 0.5 * cos(6.28318 * (t * u_color_shift + vec3(0.0, 0.33, 0.67) + u_hue_shift));
+                }
+
+                void main() {
+                    vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution) / u_resolution.y;
+                    uv *= rotate2d(u_rotation);
+                    uv = uv * 2.5 / u_zoom + vec2(u_scroll_x - 0.5, u_scroll_y);
+
+                    // Power controlled by distortion: 2.0 (classic) to 4.0 (Multibrot)
+                    float power = 2.0 + u_distortion * 2.0;
+                    float maxIter = u_iterations * 20.0;
+                    vec2 z = vec2(0.0);
+                    float iter = 0.0;
+
+                    for (float i = 0.0; i < 200.0; i++) {
+                        if (i >= maxIter || dot(z, z) > 4.0) break;
+                        float r = length(z);
+                        float theta = atan(z.y, z.x);
+                        z = pow(r, power) * vec2(cos(power * theta), sin(power * theta)) + uv;
+                        iter++;
+                    }
+
+                    if (iter >= maxIter) {
+                        f_color = vec4(0.0, 0.0, 0.0, 1.0);
+                        return;
+                    }
+
+                    float smooth_iter = (iter - log2(max(1.0, log2(dot(z, z))))) / maxIter;
+                    vec3 col = palette(smooth_iter + u_time * 0.05);
+                    float gray = dot(col, vec3(0.299, 0.587, 0.114));
+                    col = mix(vec3(gray), col, u_saturation);
+                    f_color = vec4(col * u_brightness, 1.0);
+                }
+            ''',
+            ShaderType.JULIA: '''
+                #version 330
+                uniform vec2 u_resolution;
+                uniform float u_time;
+                uniform float u_zoom;
+                uniform float u_distortion;
+                uniform float u_iterations;
+                uniform float u_color_shift;
+                uniform float u_brightness;
+                uniform float u_hue_shift;
+                uniform float u_saturation;
+                uniform float u_scroll_x;
+                uniform float u_scroll_y;
+                uniform float u_rotation;
+                out vec4 f_color;
+
+                mat2 rotate2d(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+
+                vec3 palette(float t) {
+                    return 0.5 + 0.5 * cos(6.28318 * (t * u_color_shift + vec3(0.0, 0.33, 0.67) + u_hue_shift));
+                }
+
+                void main() {
+                    vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution) / u_resolution.y;
+                    uv *= rotate2d(u_rotation);
+                    uv *= 1.5 / u_zoom;
+                    uv += vec2(u_scroll_x * 0.1, u_scroll_y * 0.1);
+
+                    // c orbits a circle of radius 0.7885 (near chaotic boundary).
+                    // scroll_x offsets the phase; distortion controls animation speed.
+                    float angle = u_time * u_distortion * 0.4 + u_scroll_x * 3.14159;
+                    vec2 c = 0.7885 * vec2(cos(angle), sin(angle));
+
+                    float maxIter = u_iterations * 20.0;
+                    vec2 z = uv;
+                    float iter = 0.0;
+
+                    for (float i = 0.0; i < 200.0; i++) {
+                        if (i >= maxIter || dot(z, z) > 4.0) break;
+                        z = vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y) + c;
+                        iter++;
+                    }
+
+                    if (iter >= maxIter) {
+                        f_color = vec4(0.0, 0.0, 0.0, 1.0);
+                        return;
+                    }
+
+                    float smooth_iter = (iter - log2(max(1.0, log2(dot(z, z))))) / maxIter;
+                    vec3 col = palette(smooth_iter + u_time * 0.05);
+                    float gray = dot(col, vec3(0.299, 0.587, 0.114));
+                    col = mix(vec3(gray), col, u_saturation);
+                    f_color = vec4(col * u_brightness, 1.0);
+                }
+            ''',
+            ShaderType.BURNING_SHIP: '''
+                #version 330
+                uniform vec2 u_resolution;
+                uniform float u_time;
+                uniform float u_zoom;
+                uniform float u_distortion;
+                uniform float u_iterations;
+                uniform float u_color_shift;
+                uniform float u_brightness;
+                uniform float u_hue_shift;
+                uniform float u_saturation;
+                uniform float u_scroll_x;
+                uniform float u_scroll_y;
+                uniform float u_rotation;
+                out vec4 f_color;
+
+                mat2 rotate2d(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+
+                vec3 palette(float t) {
+                    return 0.5 + 0.5 * cos(6.28318 * (t * u_color_shift + vec3(0.0, 0.33, 0.67) + u_hue_shift));
+                }
+
+                void main() {
+                    vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution) / u_resolution.y;
+                    uv *= rotate2d(u_rotation);
+                    uv = uv * 2.5 / u_zoom + vec2(u_scroll_x - 0.4, u_scroll_y - 0.3);
+
+                    // distortion morphs between Mandelbrot (0) and full Burning Ship (1)
+                    float maxIter = u_iterations * 20.0;
+                    vec2 z = vec2(0.0);
+                    float iter = 0.0;
+
+                    for (float i = 0.0; i < 200.0; i++) {
+                        if (i >= maxIter || dot(z, z) > 4.0) break;
+                        float zx = mix(z.x, abs(z.x), u_distortion);
+                        float zy = mix(z.y, abs(z.y), u_distortion);
+                        z = vec2(zx*zx - zy*zy, 2.0*zx*zy) + uv;
+                        iter++;
+                    }
+
+                    if (iter >= maxIter) {
+                        f_color = vec4(0.0, 0.0, 0.0, 1.0);
+                        return;
+                    }
+
+                    float smooth_iter = (iter - log2(max(1.0, log2(dot(z, z))))) / maxIter;
+                    vec3 col = palette(smooth_iter + u_time * 0.05);
+                    float gray = dot(col, vec3(0.299, 0.587, 0.114));
+                    col = mix(vec3(gray), col, u_saturation);
+                    f_color = vec4(col * u_brightness, 1.0);
+                }
+            ''',
+            ShaderType.NEWTON: '''
+                #version 330
+                uniform vec2 u_resolution;
+                uniform float u_time;
+                uniform float u_zoom;
+                uniform float u_distortion;
+                uniform float u_iterations;
+                uniform float u_color_shift;
+                uniform float u_brightness;
+                uniform float u_hue_shift;
+                uniform float u_saturation;
+                uniform float u_scroll_x;
+                uniform float u_scroll_y;
+                uniform float u_rotation;
+                out vec4 f_color;
+
+                mat2 rotate2d(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+
+                vec2 cmul(vec2 a, vec2 b) { return vec2(a.x*b.x - a.y*b.y, a.x*b.y + a.y*b.x); }
+                vec2 cdiv(vec2 a, vec2 b) { float d = dot(b, b); return vec2(dot(a, b), a.y*b.x - a.x*b.y) / d; }
+
+                void main() {
+                    vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution) / u_resolution.y;
+                    uv *= rotate2d(u_rotation);
+                    uv = uv * 2.0 / u_zoom + vec2(u_scroll_x, u_scroll_y);
+
+                    // Newton's method for z^3 - 1 = 0
+                    // Roots: (1,0), (-0.5, 0.866), (-0.5, -0.866)
+                    vec2 r0 = vec2(1.0, 0.0);
+                    vec2 r1 = vec2(-0.5,  0.8660254);
+                    vec2 r2 = vec2(-0.5, -0.8660254);
+
+                    float maxIter = u_iterations * 20.0;
+                    vec2 z = uv;
+                    float iter = 0.0;
+                    int root = -1;
+
+                    for (float i = 0.0; i < 200.0; i++) {
+                        if (i >= maxIter) break;
+                        vec2 z2 = cmul(z, z);
+                        vec2 z3 = cmul(z2, z);
+                        // z = (2*z^3 + 1) / (3*z^2)  + distortion perturbation
+                        vec2 num = 2.0 * z3 + vec2(1.0 + u_distortion * sin(u_time), u_distortion * cos(u_time * 0.7));
+                        vec2 den = 3.0 * z2;
+                        if (dot(den, den) < 1e-10) break;
+                        z = cdiv(num, den);
+                        iter++;
+
+                        if (length(z - r0) < 0.001) { root = 0; break; }
+                        if (length(z - r1) < 0.001) { root = 1; break; }
+                        if (length(z - r2) < 0.001) { root = 2; break; }
+                    }
+
+                    float shade = 1.0 - iter / maxIter;
+                    float hue = float(root) / 3.0 + u_hue_shift + u_time * 0.05;
+                    vec3 col = (0.5 + 0.5 * cos(6.28318 * (hue * u_color_shift + vec3(0.0, 0.33, 0.67)))) * shade;
+                    float gray = dot(col, vec3(0.299, 0.587, 0.114));
+                    col = mix(vec3(gray), col, u_saturation);
+                    f_color = vec4(col * u_brightness, 1.0);
+                }
             '''
         }
         return vertex_shader, code

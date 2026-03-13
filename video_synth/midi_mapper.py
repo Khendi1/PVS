@@ -194,6 +194,57 @@ class MidiMapper:
         self._threads.clear()
         log.info("All listener threads stopped")
 
+    def rescan_ports(self):
+        """
+        Stop all listener threads, re-scan MIDI ports, and restart listeners.
+        Existing controllers keep their mappings; new ports load from saved YAML.
+        Returns the list of currently active port names.
+        """
+        log.info("Rescanning MIDI ports...")
+
+        # Stop all running listeners
+        self._stop_event.set()
+        for thread in self._threads:
+            thread.join(timeout=3)
+        self._threads.clear()
+        self._stop_event.clear()
+
+        try:
+            input_ports = mido.get_input_names()
+        except Exception as e:
+            log.exception(f"Failed to scan MIDI ports: {e}")
+            return []
+
+        if not input_ports:
+            log.info("No MIDI input ports found.")
+            return []
+
+        saved_mappings = self._load_mappings_from_yaml()
+
+        for port_name in input_ports:
+            # Create controller for newly discovered ports; preserve existing ones
+            if port_name not in self.controllers:
+                port_mappings = saved_mappings.get(port_name, {})
+                controller = MidiMapperController(
+                    port_name=port_name,
+                    param_tables=self.param_tables,
+                    mappings=port_mappings,
+                )
+                self.controllers[port_name] = controller
+                if port_mappings:
+                    log.info(f"Loaded {len(port_mappings)} mapping(s) for '{port_name}'")
+
+            thread = threading.Thread(
+                target=self._listener_thread,
+                args=(port_name, self.controllers[port_name]),
+                daemon=True,
+            )
+            thread.start()
+            self._threads.append(thread)
+
+        log.info(f"Restarted {len(self._threads)} listener thread(s): {input_ports}")
+        return input_ports
+
     def start_learn(self, qualified_key):
         """
         Enter learn mode. The next CC message received from any port

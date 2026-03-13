@@ -25,7 +25,7 @@ class PyQTGUI(QMainWindow):
     AUD_BUTTON_LINKED_STYLE = AUD_BUTTON_LINKED_STYLE
     video_frame_ready = pyqtSignal(QImage)
 
-    def __init__(self, effects, settings, mixer=None, audio_module=None, obs_filters=None, api_server=None, midi_mapper=None, osc_controller=None):
+    def __init__(self, effects, settings, mixer=None, audio_module=None, obs_filters=None, api_server=None, midi_mapper=None, osc_controller=None, save_controller=None):
         super().__init__()
         self.layout_style = settings.layout.value
         self.effects = effects
@@ -54,17 +54,22 @@ class PyQTGUI(QMainWindow):
         self.all_params.params.update(self.mixer_params)
         self.all_params.params.update(self.settings_params)
         self.all_params.params.update(self.obs_params)
-        save_tables = {
-            "src_1": self.src_1_params,
-            "src_2": self.src_2_params,
-            "post": self.post_params,
-            "mixer": self.mixer_params,
-            "settings": self.settings_params,
-        }
-        if obs_filters:
-            save_tables["obs"] = self.obs_params
-        self.save_controller = SaveController(save_tables)
+
+        if save_controller is not None:
+            self.save_controller = save_controller
+        else:
+            save_tables = {
+                "src_1": self.src_1_params,
+                "src_2": self.src_2_params,
+                "post": self.post_params,
+                "mixer": self.mixer_params,
+                "settings": self.settings_params,
+            }
+            if obs_filters:
+                save_tables["obs"] = self.obs_params
+            self.save_controller = SaveController(save_tables)
         self.save_controller.patch_loaded_callback = self._refresh_all_widgets
+        self._crash_recovery_check()
 
         self.mixer_widgets = {}
         self.param_widgets = {}
@@ -85,8 +90,35 @@ class PyQTGUI(QMainWindow):
         self.mod_refresh_timer = QTimer(self)
         self.mod_refresh_timer.timeout.connect(self._refresh_mod_buttons)
         self.mod_refresh_timer.start(250)
-  
-        
+
+        self.autosave_timer = QTimer(self)
+        self.autosave_timer.timeout.connect(self.save_controller.autosave)
+        self.autosave_timer.start(30_000)  # autosave every 30 seconds
+
+    def _crash_recovery_check(self):
+        """On startup, check for a previous crash and offer to restore autosave."""
+        from PyQt6.QtWidgets import QMessageBox
+        crashed, has_autosave = self.save_controller.check_crash()
+        if crashed and has_autosave:
+            reply = QMessageBox.question(
+                None,
+                "Recover from crash?",
+                "The previous session ended unexpectedly.\n\nRestore parameters from last autosave?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                self.save_controller.recover_from_autosave()
+                self._refresh_all_widgets()
+        elif crashed:
+            log.warning("Previous session crashed but no autosave found.")
+        self.save_controller.write_lock()
+
+    def closeEvent(self, event):
+        """Mark clean exit so crash recovery doesn't trigger on next startup."""
+        self.save_controller.clear_lock()
+        super().closeEvent(event)
+
     def _refresh_mod_buttons(self):
         self.all_params = ParamTable()
         self.all_params.params.update(self.src_1_effects.params)
@@ -690,24 +722,18 @@ class PyQTGUI(QMainWindow):
             if not use_sub_tabs:
                 # No sub-tabs, add widgets directly
                 if group_enum_or_str == Groups.MIXER:
-                    save_button = QPushButton("Save Patch")
-                    save_button.clicked.connect(self.save_controller.save_patch)
-                    target_layout.addWidget(save_button)
-
-                    patch_recall_layout = QHBoxLayout()
-                    load_prev_button = QPushButton("Load Previous Patch")
-                    load_prev_button.clicked.connect(self.save_controller.load_prev_patch)
-                    patch_recall_layout.addWidget(load_prev_button)
-
-                    load_random_button = QPushButton("Load Random Patch")
-                    load_random_button.clicked.connect(self.save_controller.load_random_patch)
-                    patch_recall_layout.addWidget(load_random_button)
-
-                    load_next_button = QPushButton("Load Next Patch")
-                    load_next_button.clicked.connect(self.save_controller.load_next_patch)
-                    patch_recall_layout.addWidget(load_next_button)
-                    
-                    target_layout.addLayout(patch_recall_layout)
+                    patch_row = QHBoxLayout()
+                    for label, slot in [
+                        ("Save",     self.save_controller.save_patch),
+                        ("← Prev",   self.save_controller.load_prev_patch),
+                        ("Random",   self.save_controller.load_random_patch),
+                        ("Next →",   self.save_controller.load_next_patch),
+                    ]:
+                        btn = QPushButton(label)
+                        btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+                        btn.clicked.connect(slot)
+                        patch_row.addWidget(btn)
+                    target_layout.addLayout(patch_row)
 
                     for params_in_subgroup in subgroups.values():
                         blend_mode_param, chroma_key_hue_sat_val_params, source_params, remaining_params = None, [], {}, []
@@ -984,6 +1010,21 @@ class PyQTGUI(QMainWindow):
                 self._update_mixer_visibility()
 
 
+    def _swap_sources(self, s1_param, s2_param, s1_combo, s2_combo):
+        """Swap the values of source_1 and source_2 and update their combos."""
+        v1, v2 = s1_param.value, s2_param.value
+        s1_param.value = v2
+        s2_param.value = v1
+        s1_combo.blockSignals(True)
+        s2_combo.blockSignals(True)
+        s1_combo.setCurrentText(str(v2))
+        s2_combo.setCurrentText(str(v1))
+        s1_combo.blockSignals(False)
+        s2_combo.blockSignals(False)
+        if self.mixer:
+            self.mixer.start_video(v2, MixerSource.SRC_1)
+            self.mixer.start_video(v1, MixerSource.SRC_2)
+
     def _on_dropdown_change(self, param: Param, data):
         try:
             if isinstance(data, enum.Enum):
@@ -1172,7 +1213,7 @@ class PyQTGUI(QMainWindow):
 
                 # Update radio buttons
                 radio_buttons = widget.findChildren(QRadioButton)
-                if radio_buttons:
+                if radio_buttons and hasattr(param.value, 'name'):
                     for rb in radio_buttons:
                         if rb.text().replace(' ', '_').lower() == param.value.name.lower():
                             rb.setChecked(True)
@@ -1187,9 +1228,13 @@ class PyQTGUI(QMainWindow):
                             combo_box.setCurrentIndex(idx)
                         except ValueError:
                             pass
-                    else: # Enum
+                    else: # Enum or list
                         try:
-                            idx = [option for option in param.options].index(param.value)
+                            options_list = list(param.options)
+                            if options_list and hasattr(options_list[0], 'value'):
+                                idx = [o.value for o in options_list].index(param.value)
+                            else:
+                                idx = options_list.index(param.value)
                             combo_box.setCurrentIndex(idx)
-                        except ValueError:
+                        except (ValueError, IndexError):
                             pass

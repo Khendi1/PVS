@@ -79,6 +79,10 @@ class ShaderType(IntEnum):
     BIOLUMINESCENT = auto()
     AURORA = auto()
     CRYSTAL = auto()
+    MANDELBROT = auto()
+    JULIA = auto()
+    BURNING_SHIP = auto()
+    NEWTON = auto()
 
 
 class AttractorType(IntEnum):

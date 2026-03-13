@@ -33,6 +33,7 @@ from virtualcam import VirtualCamOutput
 from obs_controller import OBSController
 from obs_filters import OBSFilters
 from osc_controller import OSCController
+from save import SaveController
 
 
 # Old hard-coded MIDI controller names (disabled in favor of MidiMapper)
@@ -423,10 +424,20 @@ def main(settings):
     all_params.params.update(mixer.params.params)
     all_params.params.update(audio_params.params)
 
-    # Initialize API server if requested
+    # Shared SaveController (used by both API and GUI)
+    save_tables = {
+        "src_1": src_1_effects.params,
+        "src_2": src_2_effects.params,
+        "post": post_effects.params,
+        "mixer": mixer.params,
+    }
+    save_controller = SaveController(save_tables)
+
+    # Initialize API server if requested (midi_mapper set below after it's created)
     api_server = None
     if settings.api:
-        api_server = APIServer(all_params, mixer=mixer, host=settings.api_host, port=settings.api_port)
+        api_server = APIServer(all_params, mixer=mixer, save_controller=save_controller,
+                               host=settings.api_host, port=settings.api_port)
         api_server.start()
 
     # Initialize FFmpeg output if requested
@@ -488,6 +499,8 @@ def main(settings):
         midi_param_tables["OBS"] = (obs_filters.params, None)
     midi_mapper = MidiMapper(midi_param_tables)
     midi_mapper.start()
+    if api_server is not None:
+        api_server.midi_mapper = midi_mapper
 
     # --- OSC Controller ---
     # Open Sound Control server for real-time control from TouchOSC, SuperCollider, DAWs, etc.
@@ -514,7 +527,7 @@ def main(settings):
     main_window = None
     if not settings.headless:
         app = QApplication(sys.argv)
-        main_window = PyQTGUI(effects, settings, mixer, audio_module=audio_module, obs_filters=obs_filters, api_server=api_server, midi_mapper=midi_mapper, osc_controller=osc_controller)
+        main_window = PyQTGUI(effects, settings, mixer, audio_module=audio_module, obs_filters=obs_filters, api_server=api_server, midi_mapper=midi_mapper, osc_controller=osc_controller, save_controller=save_controller)
         main_window.show()
     else:
         log.info("Running in headless mode (no GUI)")

@@ -6,6 +6,9 @@ import logging
 
 log = logging.getLogger(__name__)
 
+LOCK_FILENAME = 'session.lock'
+AUTOSAVE_FILENAME = 'autosave.yaml'
+
 class SaveController:
     """
     A class to handle the saving and loading of patches.
@@ -133,3 +136,62 @@ class SaveController:
                     log.warning(f"{param_name} is not a Param object, cannot save value")
         log.debug(new_data)
         return new_data
+
+    # --- Crash Recovery ---
+
+    @property
+    def _lock_path(self):
+        return os.path.join(self.save_dir_path, LOCK_FILENAME)
+
+    @property
+    def _autosave_path(self):
+        return os.path.join(self.save_dir_path, AUTOSAVE_FILENAME)
+
+    def write_lock(self):
+        """Write a session lock file. Its presence on next startup means the previous session crashed."""
+        try:
+            with open(self._lock_path, 'w') as f:
+                import time
+                f.write(str(time.time()))
+        except OSError as e:
+            log.warning(f"Could not write session lock file: {e}")
+
+    def clear_lock(self):
+        """Remove the session lock file on clean exit."""
+        try:
+            if os.path.exists(self._lock_path):
+                os.remove(self._lock_path)
+        except OSError as e:
+            log.warning(f"Could not remove session lock file: {e}")
+
+    def check_crash(self):
+        """Return (crashed, has_autosave). crashed=True if lock file exists from prior run."""
+        crashed = os.path.exists(self._lock_path)
+        has_autosave = os.path.exists(self._autosave_path)
+        return crashed, has_autosave
+
+    def autosave(self):
+        """Save all current param values to autosave.yaml (flat dict, not entries list)."""
+        try:
+            data = self.get_values()
+            with open(self._autosave_path, 'w') as f:
+                yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+            log.debug("Autosaved params to autosave.yaml")
+        except Exception as e:
+            log.warning(f"Autosave failed: {e}")
+
+    def recover_from_autosave(self):
+        """Load param values from autosave.yaml."""
+        if not os.path.exists(self._autosave_path):
+            log.warning("No autosave file found, cannot recover.")
+            return False
+        try:
+            with open(self._autosave_path, 'r') as f:
+                data = yaml.safe_load(f)
+            if data:
+                self.load_param_vals(data)
+                log.info("Recovered param state from autosave.yaml")
+                return True
+        except Exception as e:
+            log.warning(f"Could not load autosave: {e}")
+        return False
