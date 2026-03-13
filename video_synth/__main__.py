@@ -417,10 +417,14 @@ def main(settings):
     #                                   post_effects.params,
     #                                   mixer.params,)
 
-    # Collect all params (used by API server and MIDI mapper)
+    # Collect all params (used by API server and MIDI mapper).
+    # Effect managers share param names (e.g. "alpha" in SRC_1, SRC_2, POST),
+    # so prefix each with its group name to avoid collisions.
     all_params = ParamTable()
     for effect_mgr in effects:
-        all_params.params.update(effect_mgr.params.params)
+        group_key = effect_mgr.group.name if hasattr(effect_mgr.group, 'name') else str(effect_mgr.group)
+        for k, v in effect_mgr.params.params.items():
+            all_params.params[f"{group_key}.{k}"] = v
     all_params.params.update(mixer.params.params)
     all_params.params.update(audio_params.params)
 
@@ -436,7 +440,12 @@ def main(settings):
     # Initialize API server if requested (midi_mapper set below after it's created)
     api_server = None
     if settings.api:
+        osc_banks = {
+            (effect_mgr.group.name if hasattr(effect_mgr.group, 'name') else str(effect_mgr.group)): effect_mgr.oscs
+            for effect_mgr in effects
+        }
         api_server = APIServer(all_params, mixer=mixer, save_controller=save_controller,
+                               osc_banks=osc_banks,
                                host=settings.api_host, port=settings.api_port)
         api_server.start()
 

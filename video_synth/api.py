@@ -14,35 +14,56 @@ import threading
 import uvicorn
 import io
 import cv2
+from lfo import LFO, LFOShape
 
 log = logging.getLogger(__name__)
 
 
 class ParamValue(BaseModel):
     """Request model for setting a parameter value."""
-    value: float | int
+    value: Any
 
 
 class ParamInfo(BaseModel):
     """Response model for parameter information."""
     name: str
-    value: float | int
-    min: float | int
-    max: float | int
-    default: float | int
+    value: Any
+    min: Any
+    max: Any
+    default: Any
     group: str
     subgroup: str
     type: str
+    options: Optional[List[str]] = None
+
+
+class LfoInfo(BaseModel):
+    param_name: str
+    osc_name: str
+    shape: str
+    frequency: float
+    amplitude: float
+    phase: float
+    seed: float
+
+class LfoRequest(BaseModel):
+    shape: str = "SINE"
+    frequency: float = 0.5
+    amplitude: Optional[float] = None
+    phase: float = 0.0
+    seed: float = 0.0
 
 
 class APIServer:
     """FastAPI server for controlling video synthesizer parameters."""
 
-    def __init__(self, params, mixer=None, save_controller=None, midi_mapper=None, host="127.0.0.1", port=8000):
+    def __init__(self, params, mixer=None, save_controller=None, midi_mapper=None, osc_banks=None, host="127.0.0.1", port=8000):
         self.params = params
         self.mixer = mixer
         self.save_controller = save_controller
         self.midi_mapper = midi_mapper
+        self.osc_banks = osc_banks or {}  # group_prefix → OscBank
+        self._lfo_map = {}  # param_name → LFO
         self.host = host
         self.port = port
         self.app = FastAPI(
@@ -79,40 +100,49 @@ class APIServer:
                 }
             }
 
+        def _serialize_options(param) -> Optional[List[str]]:
+            """Convert a Param's options to a flat list of strings for the API."""
+            opts = param.options
+            if opts is None:
+                return None
+            if isinstance(opts, dict):
+                return list(opts.keys())
+            if isinstance(opts, list):
+                return [str(o) for o in opts]
+            # Enum class
+            try:
+                return [e.name for e in opts]
+            except TypeError:
+                return [str(opts)]
+
+        def _enum_name(v) -> str:
+            """Return the enum member name if v is an enum, else str(v)."""
+            return v.name if hasattr(v, 'name') else str(v)
+
+        def _make_param_info(name, param) -> ParamInfo:
+            return ParamInfo(
+                name=name,
+                value=param.value,
+                min=param.min,
+                max=param.max,
+                default=param.default,
+                group=_enum_name(param.group),
+                subgroup=_enum_name(param.subgroup),
+                type=_enum_name(param.type),
+                options=_serialize_options(param),
+            )
+
         @self.app.get("/params", response_model=List[ParamInfo])
         async def list_params():
             """Get list of all parameters with their current values."""
-            result = []
-            for name, param in self.params.params.items():
-                result.append(ParamInfo(
-                    name=name,
-                    value=param.value,
-                    min=param.min,
-                    max=param.max,
-                    default=param.default,
-                    group=str(param.group),
-                    subgroup=str(param.subgroup),
-                    type=str(param.type)
-                ))
-            return result
+            return [_make_param_info(n, p) for n, p in self.params.params.items()]
 
         @self.app.get("/params/{param_name}", response_model=ParamInfo)
         async def get_param(param_name: str):
             """Get specific parameter info and current value."""
             if param_name not in self.params.params:
                 raise HTTPException(status_code=404, detail=f"Parameter '{param_name}' not found")
-
-            param = self.params.params[param_name]
-            return ParamInfo(
-                name=param_name,
-                value=param.value,
-                min=param.min,
-                max=param.max,
-                default=param.default,
-                group=str(param.group),
-                subgroup=str(param.subgroup),
-                type=str(param.type)
-            )
+            return _make_param_info(param_name, self.params.params[param_name])
 
         @self.app.put("/params/{param_name}")
         async def set_param(param_name: str, param_value: ParamValue):
@@ -122,12 +152,13 @@ class APIServer:
 
             param = self.params.params[param_name]
 
-            # Validate value is within bounds
-            if param_value.value < param.min or param_value.value > param.max:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Value {param_value.value} out of range [{param.min}, {param.max}]"
-                )
+            # Validate numeric bounds (skip for dropdown string values)
+            if isinstance(param_value.value, (int, float)):
+                if param_value.value < param.min or param_value.value > param.max:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Value {param_value.value} out of range [{param.min}, {param.max}]"
+                    )
 
             # Set the value
             param.value = param_value.value
@@ -245,6 +276,99 @@ class APIServer:
             if self.midi_mapper is None:
                 raise HTTPException(status_code=503, detail="MidiMapper not available")
             return self.midi_mapper.get_learn_state()
+
+        # --- LFO endpoints ---
+
+        def _get_osc_bank(param_name: str):
+            prefix = param_name.split('.')[0] if '.' in param_name else None
+            return self.osc_banks.get(prefix)
+
+        @self.app.get("/lfo", response_model=List[LfoInfo])
+        async def list_lfos():
+            result = []
+            for pname, osc in self._lfo_map.items():
+                try:
+                    shape_name = LFOShape(int(osc.shape.value)).name
+                except (ValueError, KeyError):
+                    shape_name = "SINE"
+                result.append(LfoInfo(
+                    param_name=pname,
+                    osc_name=osc.name,
+                    shape=shape_name,
+                    frequency=float(osc.frequency.value),
+                    amplitude=float(osc.amplitude.value),
+                    phase=float(osc.phase.value),
+                    seed=float(osc.seed.value),
+                ))
+            return result
+
+        @self.app.get("/lfo/{param_name:path}", response_model=LfoInfo)
+        async def get_lfo(param_name: str):
+            if param_name not in self._lfo_map:
+                raise HTTPException(status_code=404, detail=f"No LFO for param '{param_name}'")
+            osc = self._lfo_map[param_name]
+            try:
+                shape_name = LFOShape(int(osc.shape.value)).name
+            except (ValueError, KeyError):
+                shape_name = "SINE"
+            return LfoInfo(
+                param_name=param_name,
+                osc_name=osc.name,
+                shape=shape_name,
+                frequency=float(osc.frequency.value),
+                amplitude=float(osc.amplitude.value),
+                phase=float(osc.phase.value),
+                seed=float(osc.seed.value),
+            )
+
+        @self.app.post("/lfo/{param_name:path}")
+        async def create_lfo(param_name: str, req: LfoRequest):
+            if param_name not in self.params.params:
+                raise HTTPException(status_code=404, detail=f"Param '{param_name}' not found")
+            osc_bank = _get_osc_bank(param_name)
+            if osc_bank is None:
+                raise HTTPException(status_code=400, detail=f"No oscillator bank for param '{param_name}'")
+            param = self.params.params[param_name]
+            # Remove existing LFO for this param if any
+            if param_name in self._lfo_map:
+                old_osc = self._lfo_map.pop(param_name)
+                old_osc.unlink_param()
+                osc_bank.remove_oscillator(old_osc)
+            shape_val = LFOShape[req.shape].value if req.shape in LFOShape.__members__ else LFOShape.SINE.value
+            amplitude = req.amplitude if req.amplitude is not None else (param.max - param.min) / 2
+            osc_name = f"web_lfo_{id(param)}"
+            osc = osc_bank.add_oscillator(osc_name, frequency=req.frequency, amplitude=amplitude, phase=req.phase, shape=shape_val)
+            osc.link_param(param)
+            osc.seed.value = req.seed
+            self._lfo_map[param_name] = osc
+            log.info(f"LFO created for '{param_name}' shape={req.shape} freq={req.frequency}")
+            return {"success": True, "osc_name": osc_name}
+
+        @self.app.put("/lfo/{param_name:path}")
+        async def update_lfo(param_name: str, req: LfoRequest):
+            if param_name not in self._lfo_map:
+                raise HTTPException(status_code=404, detail=f"No LFO for param '{param_name}'")
+            osc = self._lfo_map[param_name]
+            if req.shape in LFOShape.__members__:
+                osc.shape.value = LFOShape[req.shape].value
+            osc.frequency.value = req.frequency
+            if req.amplitude is not None:
+                osc.amplitude.value = req.amplitude
+            osc.phase.value = req.phase
+            osc.seed.value = req.seed
+            return {"success": True}
+
+        @self.app.delete("/lfo/{param_name:path}")
+        async def delete_lfo(param_name: str):
+            if param_name not in self._lfo_map:
+                raise HTTPException(status_code=404, detail=f"No LFO for param '{param_name}'")
+            osc = self._lfo_map.pop(param_name)
+            osc.unlink_param()
+            osc_bank = _get_osc_bank(param_name)
+            if osc_bank:
+                osc_bank.remove_oscillator(osc)
+            log.info(f"LFO removed for '{param_name}'")
+            return {"success": True}
 
     def start(self):
         """Start the API server in a background thread."""

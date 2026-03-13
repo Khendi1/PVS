@@ -59,3 +59,43 @@ export function streamUrl() {
   // Cache-bust on each call to force reconnect
   return `${API_BASE}/stream?t=${Date.now()}`
 }
+
+export async function fetchLfos() {
+  const r = await fetch(`${API_BASE}/lfo`)
+  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  return r.json()
+}
+
+export async function fetchLfo(paramName) {
+  const r = await fetch(`${API_BASE}/lfo/${encodeURIComponent(paramName)}`)
+  if (!r.ok) return null
+  return r.json()
+}
+
+export async function createLfo(paramName, config) {
+  const r = await fetch(`${API_BASE}/lfo/${encodeURIComponent(paramName)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  })
+  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  return r.json()
+}
+
+export async function updateLfo(paramName, config) {
+  const r = await fetch(`${API_BASE}/lfo/${encodeURIComponent(paramName)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  })
+  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  return r.json()
+}
+
+export async function deleteLfo(paramName) {
+  const r = await fetch(`${API_BASE}/lfo/${encodeURIComponent(paramName)}`, {
+    method: 'DELETE',
+  })
+  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  return r.json()
+}

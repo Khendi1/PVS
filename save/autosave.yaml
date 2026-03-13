@@ -280,13 +280,13 @@ iterations_per_frame: 50
 moire_blend: 0
 moire_type_1: 0
 spatial_freq_1: 10.0
-angle_1: 321.06482
+angle_1: 4.755799999999994
 zoom_1: 1.0
 moire_center_x_1: 320
 moire_center_y_1: 240
 moire_type_2: 0
 spatial_freq_2: 1.0
-angle_2: 0.0003900000000101045
+angle_2: 179.24602
 zoom_2: 1.0
 moire_center_x_2: 320
 moire_center_y_2: 240
@@ -476,7 +476,7 @@ src_2_animations_moire_rot2_noise_repeat: 100
 src_2_animations_moire_rot2_noise_base: 456
 src_2_animations_moire_rot2_cutoff_min: 0
 src_2_animations_moire_rot2_cutoff_max: 360
-source_1: DEVICE_0
+source_1: METABALLS
 source_2: METABALLS
 video_file_src1: 13241754_3840_2160_60fps.mp4
 video_file_src2: 13241754_3840_2160_60fps.mp4

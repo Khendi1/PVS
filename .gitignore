@@ -6,3 +6,8 @@ __pycache__/
 *.log
 tasks.txt
 nul
+
+# Web
+web/node_modules/
+web/dist/
+web/.vite/

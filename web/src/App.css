@@ -128,7 +128,7 @@ html, body, #root {
 /* ── Param row ────────────────────────────────────────────────────── */
 .param-row {
   display: grid;
-  grid-template-columns: 110px 1fr 52px 24px;
+  grid-template-columns: 110px 1fr 52px 24px 18px;
   align-items: center;
   gap: 4px;
   padding: 2px 0;
@@ -174,6 +174,24 @@ input[type='range']::-moz-range-thumb {
   cursor: pointer;
   border: none;
 }
+
+.param-row.dropdown {
+  grid-template-columns: 110px 1fr;
+}
+
+.param-select {
+  background: var(--bg3);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-family: var(--font);
+  font-size: 11px;
+  outline: none;
+  width: 100%;
+  cursor: pointer;
+}
+.param-select:focus { border-color: var(--accent); }
 
 .param-value-input {
   width: 52px;
@@ -343,3 +361,85 @@ button.btn-active:hover { background: #c0392b; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
 select, input { color-scheme: dark; }
+
+/* ── LFO panel ────────────────────────────────────────────────────── */
+.param-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.lfo-btn {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  font-size: 12px;
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.lfo-btn:hover { color: var(--accent); border-color: var(--accent); }
+.lfo-btn.active { color: var(--accent); border-color: var(--accent); }
+
+.lfo-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 4px 6px;
+  margin-bottom: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lfo-row {
+  display: grid;
+  grid-template-columns: 48px 1fr 48px auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.lfo-label {
+  font-size: 10px;
+  color: var(--text2);
+  text-align: right;
+  padding-right: 4px;
+}
+
+.lfo-range {
+  width: 100%;
+  min-width: 0;
+}
+
+.lfo-val {
+  font-size: 10px;
+  color: var(--text2);
+  text-align: right;
+  width: 44px;
+}
+
+.lfo-remove-btn {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  font-size: 10px;
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.lfo-remove-btn:hover { color: #e55; border-color: #e55; }
+
+.lfo-apply-btn {
+  height: 18px;
+  padding: 0 6px;
+  font-size: 10px;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+  cursor: pointer;
+}
