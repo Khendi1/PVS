@@ -13,53 +13,53 @@ class Shapes:
         self.height = height
         subgroup = self.__class__.__name__
 
-        self.shape_type = params.add("shape_type",
+        self.shape_type = params.new("shape_type",
                                       min=0, max=len(Shape)-1, default=Shape.NONE.value,
                                       group=group, subgroup=subgroup,
                                       type=Widget.DROPDOWN, options=Shape)
 
-        self.line_h = params.add("line_hue", min=0, max=179, default=0,
+        self.line_h = params.new("line_hue", min=0, max=179, default=0,
                                  subgroup=subgroup, group=group)
-        self.line_s = params.add("line_sat", min=0, max=255, default=255,
+        self.line_s = params.new("line_sat", min=0, max=255, default=255,
                                  subgroup=subgroup, group=group)
-        self.line_v = params.add("line_val", min=0, max=255, default=255,
+        self.line_v = params.new("line_val", min=0, max=255, default=255,
                                  subgroup=subgroup, group=group)
-        self.line_weight = params.add("line_weight", min=1, max=20, default=2,
+        self.line_weight = params.new("line_weight", min=1, max=20, default=2,
                                       subgroup=subgroup, group=group)
-        self.line_opacity = params.add("line_opacity", min=0.0, max=1.0, default=0.66,
+        self.line_opacity = params.new("line_opacity", min=0.0, max=1.0, default=0.66,
                                        subgroup=subgroup, group=group)
 
-        self.size_multiplier = params.add("size_multiplier", min=0.1, max=10.0, default=0.9,
+        self.size_multiplier = params.new("size_multiplier", min=0.1, max=10.0, default=0.9,
                                           subgroup=subgroup, group=group)
-        self.aspect_ratio = params.add("aspect_ratio", min=0.1, max=10.0, default=1.0,
+        self.aspect_ratio = params.new("aspect_ratio", min=0.1, max=10.0, default=1.0,
                                        subgroup=subgroup, group=group)
-        self.rotation_angle = params.add("rotation_angle", min=0, max=360, default=0,
+        self.rotation_angle = params.new("rotation_angle", min=0, max=360, default=0,
                                          subgroup=subgroup, group=group)
 
-        self.shape_x_shift = params.add("shape_x_shift", min=-width, max=width, default=shape_x_shift,
+        self.shape_x_shift = params.new("shape_x_shift", min=-width, max=width, default=shape_x_shift,
                                         subgroup=subgroup, group=group)
-        self.shape_y_shift = params.add("shape_y_shift", min=-height, max=height, default=shape_y_shift,
+        self.shape_y_shift = params.new("shape_y_shift", min=-height, max=height, default=shape_y_shift,
                                         subgroup=subgroup, group=group)
 
-        self.multiply_grid_x = params.add("multiply_grid_x", min=1, max=10, default=2,
+        self.multiply_grid_x = params.new("multiply_grid_x", min=1, max=10, default=2,
                                           subgroup=subgroup, group=group)
-        self.multiply_grid_y = params.add("multiply_grid_y", min=1, max=10, default=2,
+        self.multiply_grid_y = params.new("multiply_grid_y", min=1, max=10, default=2,
                                           subgroup=subgroup, group=group)
-        self.grid_pitch_x = params.add("grid_pitch_x", min=0, max=width, default=100,
+        self.grid_pitch_x = params.new("grid_pitch_x", min=0, max=width, default=100,
                                        subgroup=subgroup, group=group)
-        self.grid_pitch_y = params.add("grid_pitch_y", min=0, max=height, default=100,
+        self.grid_pitch_y = params.new("grid_pitch_y", min=0, max=height, default=100,
                                        subgroup=subgroup, group=group)
 
-        self.fill_h = params.add("fill_hue", min=0, max=179, default=120,
+        self.fill_h = params.new("fill_hue", min=0, max=179, default=120,
                                  subgroup=subgroup, group=group)
-        self.fill_s = params.add("fill_sat", min=0, max=255, default=100,
+        self.fill_s = params.new("fill_sat", min=0, max=255, default=100,
                                  subgroup=subgroup, group=group)
-        self.fill_v = params.add("fill_val", min=0, max=255, default=255,
+        self.fill_v = params.new("fill_val", min=0, max=255, default=255,
                                  subgroup=subgroup, group=group)
-        self.fill_opacity = params.add("fill_opacity", min=0.0, max=1.0, default=0.25,
+        self.fill_opacity = params.new("fill_opacity", min=0.0, max=1.0, default=0.25,
                                        subgroup=subgroup, group=group)
 
-        self.canvas_rotation = params.add("canvas_rotation", min=0, max=360, default=0,
+        self.canvas_rotation = params.new("canvas_rotation", min=0, max=360, default=0,
                                           subgroup=subgroup, group=group)
 
         self._draw_fn = {

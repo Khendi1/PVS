@@ -179,13 +179,13 @@ class Mixer:
         # initialize source 1 to use the first hardware device available
         # safely default to metaballs if no devices found
         default_src1 = f"DEVICE_{found_devices[0]}" if found_devices else AnimSource.METABALLS.name
-        self.selected_source1 = self.params.add("source_1",
+        self.selected_source1 = self.params.new("source_1",
                                                       min=0, max=len(self.sources), default=default_src1,
                                                       subgroup=subgroup, group=self.group,
                                                       type=Widget.DROPDOWN, options=list(self.sources.keys()))
 
         # init source 2 to metaballs
-        self.selected_source2 = self.params.add("source_2",
+        self.selected_source2 = self.params.new("source_2",
                                                       min=0, max=len(self.sources), default=AnimSource.METABALLS.name,
                                                       subgroup=subgroup, group=self.group,
                                                       type=Widget.DROPDOWN, options=list(self.sources.keys()))
@@ -194,22 +194,22 @@ class Mixer:
         video_options = self.video_samples if self.video_samples else ["(none)"]
         image_options = self.images if self.images else ["(none)"]
 
-        self.video_file_src1 = self.params.add("video_file_src1",
+        self.video_file_src1 = self.params.new("video_file_src1",
                                                min=0, max=len(video_options),
                                                default=video_options[0],
                                                subgroup=subgroup, group=self.group,
                                                type=Widget.DROPDOWN, options=video_options)
-        self.video_file_src2 = self.params.add("video_file_src2",
+        self.video_file_src2 = self.params.new("video_file_src2",
                                                min=0, max=len(video_options),
                                                default=video_options[0],
                                                subgroup=subgroup, group=self.group,
                                                type=Widget.DROPDOWN, options=video_options)
-        self.image_file_src1 = self.params.add("image_file_src1",
+        self.image_file_src1 = self.params.new("image_file_src1",
                                                min=0, max=len(image_options),
                                                default=image_options[0],
                                                subgroup=subgroup, group=self.group,
                                                type=Widget.DROPDOWN, options=image_options)
-        self.image_file_src2 = self.params.add("image_file_src2",
+        self.image_file_src2 = self.params.new("image_file_src2",
                                                min=0, max=len(image_options),
                                                default=image_options[0],
                                                subgroup=subgroup, group=self.group,
@@ -217,44 +217,44 @@ class Mixer:
 
         # --- Parameters for blending and keying ---
 
-        self.blend_mode = self.params.add("blend_mode",
+        self.blend_mode = self.params.new("blend_mode",
                                                min=0, max=2, default=0,
                                                subgroup=subgroup, group=self.group,
                                                type=Widget.RADIO, options=MixModes)
-        self.luma_threshold = self.params.add("luma_threshold",
+        self.luma_threshold = self.params.new("luma_threshold",
                                                    min=0, max=255, default=128,
                                                    subgroup=subgroup, group=self.group)
-        self.luma_selection = self.params.add("luma_selection",
+        self.luma_selection = self.params.new("luma_selection",
                                                    min=LumaMode.WHITE.value, max=LumaMode.BLACK.value, default=LumaMode.WHITE.value,
                                                    subgroup=subgroup, group=self.group,
                                                    type=Widget.RADIO, options=LumaMode)
-        self.luma_blur = self.params.add("luma_blur",
+        self.luma_blur = self.params.new("luma_blur",
                                               min=1, max=51, default=1,
                                               subgroup=subgroup, group=self.group)
-        self.upper_hue = self.params.add("upper_hue",
+        self.upper_hue = self.params.new("upper_hue",
                                               min=0, max=179, default=80,
                                               subgroup=subgroup, group=self.group)
-        self.upper_saturation = self.params.add("upper_sat",
+        self.upper_saturation = self.params.new("upper_sat",
                                                      min=0, max=255, default=255,
                                                      subgroup=subgroup, group=self.group)
-        self.upper_value = self.params.add("upper_val",
+        self.upper_value = self.params.new("upper_val",
                                                 min=0, max=255, default=255,
                                                 subgroup=subgroup, group=self.group)
-        self.lower_hue = self.params.add("lower_hue",
+        self.lower_hue = self.params.new("lower_hue",
                                               min=0, max=179, default=0,
                                               subgroup=subgroup, group=self.group)
-        self.lower_saturation = self.params.add("lower_sat",
+        self.lower_saturation = self.params.new("lower_sat",
                                                      min=0, max=255, default=100,
                                                      subgroup=subgroup, group=self.group)
-        self.lower_value = self.params.add("lower_val",
+        self.lower_value = self.params.new("lower_val",
                                                 min=0, max=255, default=100,
                                                 subgroup=subgroup, group=self.group)
                                                 
-        self.alpha_blend = self.params.add("alpha_blend",
+        self.alpha_blend = self.params.new("alpha_blend",
                                                 min=0.0, max=1.0, default=0.5,
                                                 subgroup=subgroup, group=self.group)
                                                 
-        self.swap = self.params.add("swap_sources",
+        self.swap = self.params.new("swap_sources",
                                          min=0, max=1, default=0,
                                          subgroup=subgroup, group=self.group,
                                          type=Widget.TOGGLE)

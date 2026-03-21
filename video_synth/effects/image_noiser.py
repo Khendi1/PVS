@@ -28,11 +28,11 @@ class ImageNoiser(EffectBase):
         if not isinstance(noise_type, NoiseType):
             raise ValueError("noise_type must be an instance of NoiseType Enum.")
 
-        self.noise_type = params.add("noise_type",
+        self.noise_type = params.new("noise_type",
                                      min=NoiseType.NONE.value, max=NoiseType.RANDOM.value, default=NoiseType.NONE.value,
                                      group=group, subgroup=subgroup,
                                      type=Widget.DROPDOWN, options=NoiseType)
-        self.noise_intensity = params.add("noise_intensity",
+        self.noise_intensity = params.new("noise_intensity",
                                           min=0.0, max=1.0, default=0.1,
                                           subgroup=subgroup, group=group)
 

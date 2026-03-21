@@ -18,19 +18,19 @@ class FractalZoom(Animation):
         super().__init__(params, width, height, group=group)
         subgroup = self.__class__.__name__
 
-        self.fractal_zoom_speed = params.add("fractal_zoom_speed",
+        self.fractal_zoom_speed = params.new("fractal_zoom_speed",
                                               min=0.0, max=1.0, default=0.1,
                                               subgroup=subgroup, group=group)
-        self.fractal_drift_speed = params.add("fractal_drift_speed",
+        self.fractal_drift_speed = params.new("fractal_drift_speed",
                                                min=0.0, max=1.0, default=0.2,
                                                subgroup=subgroup, group=group)
-        self.fractal_max_iter = params.add("fractal_max_iter",
+        self.fractal_max_iter = params.new("fractal_max_iter",
                                             min=20, max=200, default=64,
                                             subgroup=subgroup, group=group)
-        self.fractal_color_speed = params.add("fractal_color_speed",
+        self.fractal_color_speed = params.new("fractal_color_speed",
                                                min=0.0, max=2.0, default=0.5,
                                                subgroup=subgroup, group=group)
-        self.fractal_colormap = params.add("fractal_colormap",
+        self.fractal_colormap = params.new("fractal_colormap",
                                             min=0, max=len(COLORMAP_OPTIONS)-1,
                                             default=int(Colormap.TWILIGHT_SHIFTED),
                                             subgroup=subgroup, group=group,

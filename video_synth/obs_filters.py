@@ -63,100 +63,100 @@ class OBSFilters:
 
     def _init_connection_params(self):
         subgroup = "Connection"
-        self.enabled = self.params.add("obs_enabled",
+        self.enabled = self.params.new("obs_enabled",
                                        min=0, max=1, default=0,
                                        subgroup=subgroup, group=self.group,
                                        type=Widget.TOGGLE)
-        self.source_name = self.params.add("obs_source_name",
+        self.source_name = self.params.new("obs_source_name",
                                            min=0, max=0, default=0,
                                            subgroup=subgroup, group=self.group)
 
     def _init_color_correction_params(self):
         subgroup = "Color Correction"
-        self.cc_enabled = self.params.add("obs_cc_enabled",
+        self.cc_enabled = self.params.new("obs_cc_enabled",
                                           min=0, max=1, default=0,
                                           subgroup=subgroup, group=self.group,
                                           type=Widget.TOGGLE)
-        self.cc_hue_shift = self.params.add("obs_cc_hue_shift",
+        self.cc_hue_shift = self.params.new("obs_cc_hue_shift",
                                             min=-180.0, max=180.0, default=0.0,
                                             subgroup=subgroup, group=self.group)
-        self.cc_saturation = self.params.add("obs_cc_saturation",
+        self.cc_saturation = self.params.new("obs_cc_saturation",
                                              min=-1.0, max=5.0, default=0.0,
                                              subgroup=subgroup, group=self.group)
-        self.cc_contrast = self.params.add("obs_cc_contrast",
+        self.cc_contrast = self.params.new("obs_cc_contrast",
                                            min=-2.0, max=2.0, default=0.0,
                                            subgroup=subgroup, group=self.group)
-        self.cc_brightness = self.params.add("obs_cc_brightness",
+        self.cc_brightness = self.params.new("obs_cc_brightness",
                                              min=-1.0, max=1.0, default=0.0,
                                              subgroup=subgroup, group=self.group)
-        self.cc_gamma = self.params.add("obs_cc_gamma",
+        self.cc_gamma = self.params.new("obs_cc_gamma",
                                         min=-3.0, max=3.0, default=0.0,
                                         subgroup=subgroup, group=self.group)
-        self.cc_opacity = self.params.add("obs_cc_opacity",
+        self.cc_opacity = self.params.new("obs_cc_opacity",
                                           min=0, max=100, default=100,
                                           subgroup=subgroup, group=self.group)
 
     def _init_chroma_key_params(self):
         subgroup = "Chroma Key"
-        self.ck_enabled = self.params.add("obs_ck_enabled",
+        self.ck_enabled = self.params.new("obs_ck_enabled",
                                           min=0, max=1, default=0,
                                           subgroup=subgroup, group=self.group,
                                           type=Widget.TOGGLE)
-        self.ck_key_color_type = self.params.add("obs_ck_key_color_type",
+        self.ck_key_color_type = self.params.new("obs_ck_key_color_type",
                                                   min=0, max=len(ChromaKeyColor) - 1, default=0,
                                                   subgroup=subgroup, group=self.group,
                                                   type=Widget.DROPDOWN, options=ChromaKeyColor)
-        self.ck_similarity = self.params.add("obs_ck_similarity",
+        self.ck_similarity = self.params.new("obs_ck_similarity",
                                              min=1, max=1000, default=400,
                                              subgroup=subgroup, group=self.group)
-        self.ck_smoothness = self.params.add("obs_ck_smoothness",
+        self.ck_smoothness = self.params.new("obs_ck_smoothness",
                                              min=1, max=1000, default=50,
                                              subgroup=subgroup, group=self.group)
-        self.ck_spill = self.params.add("obs_ck_spill",
+        self.ck_spill = self.params.new("obs_ck_spill",
                                         min=1, max=1000, default=50,
                                         subgroup=subgroup, group=self.group)
 
     def _init_sharpen_params(self):
         subgroup = "Sharpen"
-        self.sharpen_enabled = self.params.add("obs_sharpen_enabled",
+        self.sharpen_enabled = self.params.new("obs_sharpen_enabled",
                                                min=0, max=1, default=0,
                                                subgroup=subgroup, group=self.group,
                                                type=Widget.TOGGLE)
-        self.sharpen_sharpness = self.params.add("obs_sharpen_sharpness",
+        self.sharpen_sharpness = self.params.new("obs_sharpen_sharpness",
                                                  min=0.0, max=1.0, default=0.0,
                                                  subgroup=subgroup, group=self.group)
 
     def _init_transform_params(self):
         subgroup = "Transform"
-        self.transform_enabled = self.params.add("obs_transform_enabled",
+        self.transform_enabled = self.params.new("obs_transform_enabled",
                                                  min=0, max=1, default=0,
                                                  subgroup=subgroup, group=self.group,
                                                  type=Widget.TOGGLE)
-        self.pos_x = self.params.add("obs_pos_x",
+        self.pos_x = self.params.new("obs_pos_x",
                                      min=0.0, max=3840.0, default=0.0,
                                      subgroup=subgroup, group=self.group)
-        self.pos_y = self.params.add("obs_pos_y",
+        self.pos_y = self.params.new("obs_pos_y",
                                      min=0.0, max=2160.0, default=0.0,
                                      subgroup=subgroup, group=self.group)
-        self.rotation = self.params.add("obs_rotation",
+        self.rotation = self.params.new("obs_rotation",
                                         min=0.0, max=360.0, default=0.0,
                                         subgroup=subgroup, group=self.group)
-        self.scale_x = self.params.add("obs_scale_x",
+        self.scale_x = self.params.new("obs_scale_x",
                                        min=0.0, max=5.0, default=1.0,
                                        subgroup=subgroup, group=self.group)
-        self.scale_y = self.params.add("obs_scale_y",
+        self.scale_y = self.params.new("obs_scale_y",
                                        min=0.0, max=5.0, default=1.0,
                                        subgroup=subgroup, group=self.group)
-        self.crop_top = self.params.add("obs_crop_top",
+        self.crop_top = self.params.new("obs_crop_top",
                                         min=0, max=1920, default=0,
                                         subgroup=subgroup, group=self.group)
-        self.crop_bottom = self.params.add("obs_crop_bottom",
+        self.crop_bottom = self.params.new("obs_crop_bottom",
                                            min=0, max=1920, default=0,
                                            subgroup=subgroup, group=self.group)
-        self.crop_left = self.params.add("obs_crop_left",
+        self.crop_left = self.params.new("obs_crop_left",
                                          min=0, max=1920, default=0,
                                          subgroup=subgroup, group=self.group)
-        self.crop_right = self.params.add("obs_crop_right",
+        self.crop_right = self.params.new("obs_crop_right",
                                           min=0, max=1920, default=0,
                                           subgroup=subgroup, group=self.group)
 

@@ -16,6 +16,7 @@ python-rtmidi==1.5.8
 pywin32==311
 PyYAML==6.0.2
 sounddevice==0.5.1
+aiofiles==24.1.0
 fastapi==0.115.6
 uvicorn==0.34.0
 obsws-python

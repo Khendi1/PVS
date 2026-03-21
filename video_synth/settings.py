@@ -44,38 +44,38 @@ class UserSettings():
         self.osc_host = osc_host
         self.osc_port = osc_port
 
-        self.layout = self.params.add("layout",
+        self.layout = self.params.new("layout",
                                        min=0, max=len(Layout), default=Layout[control_layout].value,
                                        group=group, subgroup=subgroup,
                                        type=Widget.DROPDOWN, options=Layout)
-        self.output_mode = self.params.add("output_mode",
+        self.output_mode = self.params.new("output_mode",
                                            min=0, max=len(OutputMode), default=OutputMode[output_mode].value,
                                            group=group, subgroup=subgroup,
                                            type=Widget.DROPDOWN, options=OutputMode)
-        self.num_devices = self.params.add("num_devices",
+        self.num_devices = self.params.new("num_devices",
                                            min=0, max=MAX_DEVICES, default=devices,
                                            group=group, subgroup=subgroup,
                                            type=Widget.DROPDOWN, options={str(i): str(i) for i in range(0, MAX_DEVICES + 1)})
-        self.patch_index = self.params.add("patch_index",
+        self.patch_index = self.params.new("patch_index",
                                            min=0, max=100, default=patch,
                                            group=group, subgroup=subgroup,
                                            type=Widget.SLIDER)
-        self.log_level = self.params.add("log_level",
+        self.log_level = self.params.new("log_level",
                                          min=0, max=len(logging._nameToLevel), default=log_level,
                                          group=group, subgroup=subgroup,
                                          type=Widget.DROPDOWN, options=logging._nameToLevel)
-        self.save_file = self.params.add("save_file",
+        self.save_file = self.params.new("save_file",
                                          min=0, max=0, default=0,
                                          group=group, subgroup=subgroup,
                                          type=Widget.DROPDOWN, options={"saved_values.yaml": "saved_values.yaml", "alternate_values.yaml": "alternate_values.yaml"})
-        self.diagnose_frames = self.params.add("diagnose_frames",
+        self.diagnose_frames = self.params.new("diagnose_frames",
                                                min=0, max=1000, default=diagnose,
                                                group=group, subgroup=subgroup)
-        self.api_enabled = self.params.add("api_enabled",
+        self.api_enabled = self.params.new("api_enabled",
                                            min=0, max=1, default=int(api),
                                            group=group, subgroup=subgroup,
                                            type=Widget.TOGGLE)
-        self.osc_enabled = self.params.add("osc_enabled",
+        self.osc_enabled = self.params.new("osc_enabled",
                                            min=0, max=1, default=int(osc),
                                            group=group, subgroup=subgroup,
                                            type=Widget.TOGGLE)

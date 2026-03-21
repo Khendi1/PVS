@@ -14,16 +14,16 @@ class Plasma(Animation):
         self.width = width
         self.height = height
 
-        self.plasma_speed = params.add("plasma_speed",
+        self.plasma_speed = params.new("plasma_speed",
                                        min=0.01, max=10, default=1.0,
                                        subgroup=subgroup, group=group)
-        self.plasma_distance = params.add("plasma_distance",
+        self.plasma_distance = params.new("plasma_distance",
                                           min=0.01, max=10, default=1.0,
                                           subgroup=subgroup, group=group)
-        self.plasma_color_speed = params.add("plasma_color_speed",
+        self.plasma_color_speed = params.new("plasma_color_speed",
                                              min=0.01, max=10, default=1.0,
                                              subgroup=subgroup, group=group)
-        self.plasma_flow_speed = params.add("plasma_flow_speed",
+        self.plasma_flow_speed = params.new("plasma_flow_speed",
                                             min=0.01, max=10, default=1.0,
                                             subgroup=subgroup, group=group)
 

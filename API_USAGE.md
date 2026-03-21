@@ -34,13 +34,36 @@ Start the synthesizer with API enabled:
 python -m video_synth --api
 ```
 
-The API server will start at `http://127.0.0.1:8000`
+The API server starts at `http://0.0.0.0:8000` by default (accessible from any device on the network).
+To restrict to localhost only, pass `--api-host 127.0.0.1`.
 
 Custom host and port:
 
 ```bash
-python -m video_synth --api --api-host 0.0.0.0 --api-port 8080
+python -m video_synth --api --api-host 127.0.0.1 --api-port 8080
 ```
+
+### Web UI
+
+A browser-based control panel is bundled with the API. Build it once from the `web/` directory:
+
+```bash
+cd web
+npm install
+npm run build
+```
+
+After building, start the synth with `--api` and open `http://<host>:8000/ui` in a browser.
+The web UI provides sliders for all parameters, live video preview, LFO controls, and MIDI learn — no separate server needed.
+
+**Development mode** (auto-reloads on source changes):
+
+```bash
+cd web
+npm run dev
+```
+
+The dev server runs on port 5173 and proxies API and WebSocket traffic to the Python backend automatically.
 
 ### Enable FFmpeg Output
 
@@ -184,6 +207,31 @@ response = requests.get('http://127.0.0.1:8000/snapshot')
 image = Image.open(io.BytesIO(response.content))
 image.show()
 ```
+
+### MJPEG Stream
+
+```http
+GET http://127.0.0.1:8000/stream
+```
+
+Continuous MJPEG stream at ~30 fps. Open directly in a browser or media player.
+
+### WebSocket Stream
+
+```
+ws://127.0.0.1:8000/ws/stream
+```
+
+Low-latency binary JPEG frames pushed at the render rate (~30 fps). Each message is a raw JPEG blob.
+Used by the web UI for the live preview panel.
+
+### Web UI
+
+```
+http://127.0.0.1:8000/ui
+```
+
+Browser-based control panel (requires building with `npm run build` in `web/`).
 
 ### API Documentation
 

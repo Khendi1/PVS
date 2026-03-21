@@ -98,9 +98,9 @@ class ParamTable:
         """Returns a view of the Param objects."""
         return self.params.values()
     
-    def add(self, name: str, min: int | float = 0, max: int | float = 1,
-            default: int | float = 0, subgroup=None, group=None, 
-            type=Widget.SLIDER, options=None) -> 'Param':
+    def new(self, name: str, min: int | float = 0, max: int | float = 1,
+            default: int | float = 0, subgroup=None, group=None,
+            type=Widget.SLIDER, options=None, info: str = "") -> 'Param':
         """
         Add a new Param to the table. Defaults to a slider widget type if not specified.
         Args:
@@ -109,13 +109,14 @@ class ParamTable:
             max (int/float): The maximum allowed value for the parameter.
             default (int/float/bool): The default value for the parameter.
             subgroup (str, optional): An optional subgroup/subgroup name for the parameter.
+            info (str, optional): A short description shown as a tooltip in the UI.
         Returns:
             Param: The newly created Param object.
         Raises:
             ValueError: If a parameter with the given name already exists.
         """
         if name not in self.params:
-            self.params[name] = Param(name, min, max, default, group=group, subgroup=subgroup, type=type, options=options)
+            self.params[name] = Param(name, min, max, default, group=group, subgroup=subgroup, type=type, options=options, info=info)
             return self.params[name]
         else:
             raise ValueError(f"Parameter '{name}' already exists.")
@@ -126,21 +127,23 @@ class Param:
     Represents a single parameter with a name, min/max bounds, default value,
     and its current value. Includes clamping, type conversion, randomize, and reset methods.
     """
-    def __init__(self, name, min=None, max=None, default=None, 
-                 subgroup=None, group=None, 
-                 type=Widget.SLIDER, options=None):
+    def __init__(self, name, min=None, max=None, default=None,
+                 subgroup=None, group=None,
+                 type=Widget.SLIDER, options=None, info: str = ""):
         """
         Initializes a Param object.
         Args:
             name (str): The name of the parameter. Must be unique within a ParamTable.
             min (int/float): The minimum allowed value. If None, defaults to 0.
             max (int/float): The maximum allowed value. If None, defaults to 1.
-            default (int/float/bool): The default value. 
+            default (int/float/bool): The default value.
             group (str, optional): The group this parameter belongs to.
             subgroup (str, optional): The subgroup/subgroup the parameter belongs to.
             type (Widget): The type of widget to use for this parameter. Defaults to Widget.SLIDER.
+            info (str, optional): A short description shown as a tooltip in the UI.
         """
         self.name = name
+        self.info = info
 
         self.min = min if min is not None else 0
         self.max = max if max is not None else 1

@@ -14,90 +14,90 @@ class Warp(EffectBase):
         self.params = params
         self.width = image_width
         self.height = image_height
-        self.warp_type = params.add("warp_type",
+        self.warp_type = params.new("warp_type",
                                     min=0, max=len(WarpType)-1, default=0,
                                     group=group, subgroup=subgroup,
                                     type=Widget.DROPDOWN, options=WarpType)
-        self.warp_angle_amt = params.add("warp_angle_amt",
+        self.warp_angle_amt = params.new("warp_angle_amt",
                                          min=0, max=360, default=30,
                                          subgroup=subgroup, group=group)
-        self.warp_radius_amt = params.add("warp_radius_amt",
+        self.warp_radius_amt = params.new("warp_radius_amt",
                                           min=0, max=360, default=30,
                                           subgroup=subgroup, group=group)
-        self.warp_speed = params.add("warp_speed",
+        self.warp_speed = params.new("warp_speed",
                                      min=0, max=100, default=10,
                                      subgroup=subgroup, group=group)
-        self.warp_use_fractal = params.add("warp_use_fractal",
+        self.warp_use_fractal = params.new("warp_use_fractal",
                                            min=0, max=1, default=0,
                                            subgroup=subgroup, group=group)
-        self.warp_octaves = params.add("warp_octaves",
+        self.warp_octaves = params.new("warp_octaves",
                                        min=1, max=8, default=4,
                                        subgroup=subgroup, group=group)
-        self.warp_gain = params.add("warp_gain",
+        self.warp_gain = params.new("warp_gain",
                                     min=0.0, max=1.0, default=0.5,
                                     subgroup=subgroup, group=group)
-        self.warp_lacunarity = params.add("warp_lacunarity",
+        self.warp_lacunarity = params.new("warp_lacunarity",
                                           min=1.0, max=4.0, default=2.0,
                                           subgroup=subgroup, group=group)
-        self.x_speed = params.add("x_speed",
+        self.x_speed = params.new("x_speed",
                                   min=0.0, max=100.0, default=1.0,
                                   subgroup=subgroup, group=group)
-        self.x_size = params.add("x_size",
+        self.x_size = params.new("x_size",
                                  min=0.25, max=100.0, default=20.0,
                                  subgroup=subgroup, group=group)
-        self.y_speed = params.add("y_speed",
+        self.y_speed = params.new("y_speed",
                                   min=0.0, max=10.0, default=1.0,
                                   subgroup=subgroup, group=group)
-        self.y_size = params.add("y_size",
+        self.y_size = params.new("y_size",
                                  min=0.25, max=100.0, default=10.0,
                                  subgroup=subgroup, group=group)
 
-        self.fb_warp_decay = params.add("fb_warp_decay",
+        self.fb_warp_decay = params.new("fb_warp_decay",
                                          min=0.0, max=1.0, default=0.95,
                                          subgroup=subgroup, group=group)
-        self.fb_warp_strength = params.add("fb_warp_strength",
+        self.fb_warp_strength = params.new("fb_warp_strength",
                                             min=0.0, max=50.0, default=5.0,
                                             subgroup=subgroup, group=group)
-        self.fb_warp_freq = params.add("fb_warp_freq",
+        self.fb_warp_freq = params.new("fb_warp_freq",
                                         min=0.1, max=20.0, default=3.0,
                                         subgroup=subgroup, group=group)
 
         # Displacement feedback params
-        self.disp_strength = params.add("disp_strength",
+        self.disp_strength = params.new("disp_strength",
                                          min=0.0, max=30.0, default=5.0,
                                          subgroup=subgroup, group=group)
-        self.disp_decay = params.add("disp_decay",
+        self.disp_decay = params.new("disp_decay",
                                       min=0.0, max=1.0, default=0.92,
                                       subgroup=subgroup, group=group)
-        self.disp_blur = params.add("disp_blur",
+        self.disp_blur = params.new("disp_blur",
                                      min=1, max=15, default=5,
                                      subgroup=subgroup, group=group)
 
         # Convection params
-        self.conv_rise_speed = params.add("conv_rise_speed",
+        self.conv_rise_speed = params.new("conv_rise_speed",
                                            min=0.0, max=10.0, default=2.0,
                                            subgroup=subgroup, group=group)
-        self.conv_diffusion = params.add("conv_diffusion",
+        self.conv_diffusion = params.new("conv_diffusion",
                                           min=0.0, max=1.0, default=0.5,
                                           subgroup=subgroup, group=group)
-        self.conv_turbulence = params.add("conv_turbulence",
+        self.conv_turbulence = params.new("conv_turbulence",
                                            min=0.0, max=1.0, default=0.3,
                                            subgroup=subgroup, group=group)
-        self.conv_decay = params.add("conv_decay",
+        self.conv_decay = params.new("conv_decay",
                                       min=0.0, max=1.0, default=0.95,
                                       subgroup=subgroup, group=group)
 
         # Reaction-Diffusion warp params
-        self.rd_warp_strength = params.add("rd_warp_strength",
+        self.rd_warp_strength = params.new("rd_warp_strength",
                                             min=0.0, max=30.0, default=10.0,
                                             subgroup=subgroup, group=group)
-        self.rd_warp_feed = params.add("rd_warp_feed",
+        self.rd_warp_feed = params.new("rd_warp_feed",
                                         min=0.01, max=0.1, default=0.055,
                                         subgroup=subgroup, group=group)
-        self.rd_warp_kill = params.add("rd_warp_kill",
+        self.rd_warp_kill = params.new("rd_warp_kill",
                                         min=0.03, max=0.08, default=0.062,
                                         subgroup=subgroup, group=group)
-        self.rd_warp_speed = params.add("rd_warp_speed",
+        self.rd_warp_speed = params.new("rd_warp_speed",
                                          min=0.1, max=5.0, default=1.0,
                                          subgroup=subgroup, group=group)
 

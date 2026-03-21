@@ -54,155 +54,155 @@ class Patterns:
         self.X, self.Y = np.meshgrid(self.x_coords, self.y_coords)
 
         # Define pattern-specific parameters (using the global params_table)
-        self.pattern_type = params.add("pattern_type",
+        self.pattern_type = params.new("pattern_type",
                                        min=PatternType.NONE.value, max=len(PatternType)-1, default=0,
                                        group=group, subgroup=subgroup,
                                        type=Widget.DROPDOWN, options=PatternType)
         self.prev_pattern_type = self.pattern_type.value
-        self.pattern_alpha = params.add("pattern_alpha",
+        self.pattern_alpha = params.new("pattern_alpha",
                                         min=0.0, max=1.0, default=0.5,
                                         subgroup=subgroup, group=group)
 
         # perlin params
-        self.octaves = params.add("pattern_octaves",
+        self.octaves = params.new("pattern_octaves",
                                   min=1, max=8, default=4,
                                   subgroup=subgroup, group=group) # Number of octaves for fractal noise
-        self.gain = params.add("pattern_gain",
+        self.gain = params.new("pattern_gain",
                                min=0.0, max=1.0, default=0.2,
                                subgroup=subgroup, group=group) # Gain for fractal noise
-        self.lacunarity = params.add("pattern_lacunarity",
+        self.lacunarity = params.new("pattern_lacunarity",
                                      min=1.0, max=4.0, default=2.0,
                                      subgroup=subgroup, group=group) # Lacunarity for fractal noise
 
         # controls density of bars
-        self.bar_x_freq = params.add("bar_x_freq",
+        self.bar_x_freq = params.new("bar_x_freq",
                                      min=0.01, max=0.75, default=0.01,
                                      subgroup=subgroup, group=group)
-        self.bar_y_freq = params.add("bar_y_freq",
+        self.bar_y_freq = params.new("bar_y_freq",
                                      min=0.01, max=0.75, default=0.01,
                                      subgroup=subgroup, group=group)
         # controls bar scrolling speed
-        self.bar_x_offset = params.add("bar_x_offset",
+        self.bar_x_offset = params.new("bar_x_offset",
                                        min=-100, max=100, default=2.0,
                                        subgroup=subgroup, group=group) # Offset for X bars
-        self.bar_y_offset = params.add("bar_y_offset",
+        self.bar_y_offset = params.new("bar_y_offset",
                                        min=-10, max=10, default=1.0,
                                        subgroup=subgroup, group=group) # Offset for Y bars
 
-        self.rotation = params.add("pattern_rotation",
+        self.rotation = params.new("pattern_rotation",
                                    min=-360, max=360, default=0.0,
                                    subgroup=subgroup, group=group)
 
         # creates interesting color patterns
-        self.mod = params.add("pattern_mod",
+        self.mod = params.new("pattern_mod",
                               min=0.1, max=2.0, default=1.0,
                               subgroup=subgroup, group=group) # Modulation factor for bar patterns
 
         # Color parameters for patterns # TODO: mapping seems off
-        self.r = params.add("pattern_r",
+        self.r = params.new("pattern_r",
                             min=0, max=180, default=127,
                             subgroup=subgroup, group=group)
-        self.g = params.add("pattern_g",
+        self.g = params.new("pattern_g",
                             min=0, max=180, default=127,
                             subgroup=subgroup, group=group)
-        self.b = params.add("pattern_b",
+        self.b = params.new("pattern_b",
                             min=0, max=180, default=127,
                             subgroup=subgroup, group=group)
 
-        self.grid_size = params.add("pattern_grid_size",
+        self.grid_size = params.new("pattern_grid_size",
                                     min=10, max=100, default=30,
                                     subgroup=subgroup, group=group) # Base grid size for checkers
-        self.color_shift = params.add("pattern_color_shift",
+        self.color_shift = params.new("pattern_color_shift",
                                       min=0, max=255, default=127,
                                       subgroup=subgroup, group=group)
-        self.color_blend = params.add("pattern_color_blend",
+        self.color_blend = params.new("pattern_color_blend",
                                       min=0, max=255, default=127,
                                       subgroup=subgroup, group=group)
 
-        self.wave_freq_x = params.add("pattern_wave_freq_x",
+        self.wave_freq_x = params.new("pattern_wave_freq_x",
                                       min=0.0, max=100, default=0.05,
                                       subgroup=subgroup, group=group)
-        self.wave_freq_y = params.add("pattern_wave_freq_y",
+        self.wave_freq_y = params.new("pattern_wave_freq_y",
                                       min=0.0, max=100, default=0.05,
                                       subgroup=subgroup, group=group)
-        self.brightness = params.add("pattern_brightness",
+        self.brightness = params.new("pattern_brightness",
                                      min=0.0, max=100.0, default=50.0,
                                      subgroup=subgroup, group=group)
 
-        self.radial_freq = params.add("pattern_radial_freq",
+        self.radial_freq = params.new("pattern_radial_freq",
                                       min=1, max=100, default=30,
                                       subgroup=subgroup, group=group) # Angle amount for polar warp
-        self.angular_freq = params.add("pattern_angular_freq",
+        self.angular_freq = params.new("pattern_angular_freq",
                                        min=1, max=40, default=1,
                                        subgroup=subgroup, group=group) # Radius amount for polar warp
-        self.radial_mod = params.add("pattern_radial_mod",
+        self.radial_mod = params.new("pattern_radial_mod",
                                      min=0.1, max=10.0, default=1.0,
                                      subgroup=subgroup, group=group) # Modulation factor for radial patterns
-        self.angle_mod = params.add("pattern_angle_mod",
+        self.angle_mod = params.new("pattern_angle_mod",
                                     min=0.1, max=10.0, default=1.0,
                                     subgroup=subgroup, group=group) # Modulation factor for angle patterns
 
-        self.x_hue = params.add("x_hue",
+        self.x_hue = params.new("x_hue",
                                 min=0.0, max=1.0, default=0.5,
                                 subgroup=subgroup, group=group) # Hue for X bars
-        self.y_hue = params.add("y_hue",
+        self.y_hue = params.new("y_hue",
                                 min=0.0, max=1.0, default=0.5,
                                 subgroup=subgroup, group=group) # Hue for Y bars
 
-        self.x_scale = params.add("pperlin_scale_x",
+        self.x_scale = params.new("pperlin_scale_x",
                                   min=0.001, max=0.05, default=0.005,
                                   subgroup=subgroup, group=group)
-        self.y_scale = params.add("pperlin_scale_y",
+        self.y_scale = params.new("pperlin_scale_y",
                                   min=0.001, max=0.05, default=0.005,
                                   subgroup=subgroup, group=group)
 
-        self.octaves = params.add("pperlin_octaves",
+        self.octaves = params.new("pperlin_octaves",
                                   min=1, max=10, default=6,
                                   subgroup=subgroup, group=group)
-        self.persistence = params.add("pperlin_persistence",
+        self.persistence = params.new("pperlin_persistence",
                                       min=0.1, max=1.0, default=0.5,
                                       subgroup=subgroup, group=group)
-        self.lacunarity = params.add("pperlin_lacunarity",
+        self.lacunarity = params.new("pperlin_lacunarity",
                                      min=1.0, max=4.0, default=2.0,
                                      subgroup=subgroup, group=group)
-        self.time_speed = params.add("pperlin_time_speed",
+        self.time_speed = params.new("pperlin_time_speed",
                                      min=0.01, max=1.0, default=0.1,
                                      subgroup=subgroup, group=group)
 
-        self.famp = params.add("pfractal_amplitude",
+        self.famp = params.new("pfractal_amplitude",
                                min=0.5, max=5.0, default=1.5,
                                subgroup=subgroup, group=group)
-        self.foct = params.add("pfractal_octaves",
+        self.foct = params.new("pfractal_octaves",
                                min=1, max=8, default=4,
                                subgroup=subgroup, group=group)
 
         # Fractal Sine parameters
-        self.x_perturb = params.add("x_perturb",
+        self.x_perturb = params.new("x_perturb",
                                     min=0, max=50, default=25.0,
                                     subgroup=subgroup, group=group)
-        self.y_perturb = params.add("y_perturb",
+        self.y_perturb = params.new("y_perturb",
                                     min=0, max=50, default=25.0,
                                     subgroup=subgroup, group=group)
-        self.phase_speed = params.add("phase_speed",
+        self.phase_speed = params.new("phase_speed",
                                       min=0.01, max=10.0, default=1.0,
                                       subgroup=subgroup, group=group) 
 
-        self.pattern_speed = params.add("pattern_speed",
+        self.pattern_speed = params.new("pattern_speed",
                                         min=0.0, max=5.0, default=1.0,
                                         subgroup=subgroup, group=group)
 
         # Pattern feedback parameters
-        self.pattern_fb_enable = params.add("pattern_fb_enable",
+        self.pattern_fb_enable = params.new("pattern_fb_enable",
                                             min=0, max=1, default=0,
                                             subgroup=subgroup, group=group,
                                             type=Widget.TOGGLE)
-        self.pattern_fb_decay = params.add("pattern_fb_decay",
+        self.pattern_fb_decay = params.new("pattern_fb_decay",
                                            min=0.0, max=1.0, default=0.85,
                                            subgroup=subgroup, group=group)
-        self.pattern_fb_strength = params.add("pattern_fb_strength",
+        self.pattern_fb_strength = params.new("pattern_fb_strength",
                                               min=0.0, max=1.0, default=0.5,
                                               subgroup=subgroup, group=group)
-        self.pattern_fb_warp = params.add("pattern_fb_warp",
+        self.pattern_fb_warp = params.new("pattern_fb_warp",
                                           min=0.0, max=20.0, default=5.0,
                                           subgroup=subgroup, group=group)
 

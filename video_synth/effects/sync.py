@@ -8,22 +8,22 @@ class Sync(EffectBase):
     def __init__(self, params, group):
         subgroup = self.__class__.__name__
         self.params = params
-        self.x_sync_freq = params.add("x_sync_freq",
+        self.x_sync_freq = params.new("x_sync_freq",
                                        min=0.1, max=100.0, default=1.0,
                                        subgroup=subgroup, group=group)
-        self.x_sync_amp = params.add("x_sync_amp",
+        self.x_sync_amp = params.new("x_sync_amp",
                                      min=-200, max=200, default=0.0,
                                      subgroup=subgroup, group=group)
-        self.x_sync_speed = params.add("x_sync_speed",
+        self.x_sync_speed = params.new("x_sync_speed",
                                        min=5.0, max=10.0, default=9.0,
                                        subgroup=subgroup, group=group)
-        self.y_sync_freq = params.add("y_sync_freq",
+        self.y_sync_freq = params.new("y_sync_freq",
                                       min=0.1, max=100.0, default=1.0,
                                       subgroup=subgroup, group=group)
-        self.y_sync_amp = params.add("y_sync_amp",
+        self.y_sync_amp = params.new("y_sync_amp",
                                      min=-200, max=200, default=0.0,
                                      subgroup=subgroup, group=group)
-        self.y_sync_speed = params.add("y_sync_speed",
+        self.y_sync_speed = params.new("y_sync_speed",
                                        min=5.0, max=10.0, default=9.0,
                                        subgroup=subgroup, group=group)
 

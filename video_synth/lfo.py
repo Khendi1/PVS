@@ -57,43 +57,43 @@ class LFO:
         subgroup = None
         self.param_max = max_amplitude
         self.param_min = min_amplitude
-        self.shape = params.add(f"{name}_shape",
+        self.shape = params.new(f"{name}_shape",
                                 min=0, max=len(LFOShape)-1, default=shape,
                                 group=group, subgroup=subgroup,
                                 type=Widget.DROPDOWN, options=LFOShape)
-        self.frequency = params.add(f"{name}_frequency",
+        self.frequency = params.new(f"{name}_frequency",
                                     min=0, max=1, default=float(frequency),
                                     subgroup=subgroup, group=group)
-        self.amplitude = params.add(f"{name}_amplitude",
+        self.amplitude = params.new(f"{name}_amplitude",
                                     min=min_amplitude, max=max_amplitude, default=amplitude,
                                     subgroup=subgroup, group=group)
-        self.phase = params.add(f"{name}_phase",
+        self.phase = params.new(f"{name}_phase",
                                 min=0, max=360, default=phase,
                                 subgroup=subgroup, group=group)
-        self.seed = params.add(f"{name}_seed",
+        self.seed = params.new(f"{name}_seed",
                                min=0, max=100, default=seed,
                                subgroup=subgroup, group=group) # TODO: Change ambiguous name to something more descriptive
 
-        self.noise_octaves = params.add(f"{name}_noise_octaves",
+        self.noise_octaves = params.new(f"{name}_noise_octaves",
                                         min=1, max=10, default=6,
                                         subgroup=subgroup, group=group)
-        self.noise_persistence = params.add(f"{name}_noise_persistence",
+        self.noise_persistence = params.new(f"{name}_noise_persistence",
                                             min=0.1, max=1.0, default=0.5,
                                             subgroup=subgroup, group=group)
-        self.noise_lacunarity = params.add(f"{name}_noise_lacunarity",
+        self.noise_lacunarity = params.new(f"{name}_noise_lacunarity",
                                            min=1.0, max=2.0, default=2.0,
                                            subgroup=subgroup, group=group)
-        self.noise_repeat = params.add(f"{name}_noise_repeat",
+        self.noise_repeat = params.new(f"{name}_noise_repeat",
                                        min=1, max=1000, default=100,
                                        subgroup=subgroup, group=group)
-        self.noise_base = params.add(f"{name}_noise_base",
+        self.noise_base = params.new(f"{name}_noise_base",
                                      min=0, max=1000, default=456,
                                      subgroup=subgroup, group=group)
 
-        self.cutoff_min = params.add(f"{name}_cutoff_min",
+        self.cutoff_min = params.new(f"{name}_cutoff_min",
                                       min=min_amplitude, max=max_amplitude, default=min_amplitude,
                                       subgroup=subgroup, group=group)
-        self.cutoff_max = params.add(f"{name}_cutoff_max",
+        self.cutoff_max = params.new(f"{name}_cutoff_max",
                                       min=min_amplitude, max=max_amplitude, default=max_amplitude,
                                       subgroup=subgroup, group=group)
 

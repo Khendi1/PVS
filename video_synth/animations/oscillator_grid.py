@@ -17,24 +17,24 @@ class OscillatorGrid(Animation):
         super().__init__(params, width, height, group=group)
         subgroup = self.__class__.__name__
 
-        self.osc_coupling = params.add("osc_coupling",
+        self.osc_coupling = params.new("osc_coupling",
                                         min=0.0, max=2.0, default=0.5,
                                         subgroup=subgroup, group=group)
-        self.osc_noise = params.add("osc_noise",
+        self.osc_noise = params.new("osc_noise",
                                      min=0.0, max=0.5, default=0.05,
                                      subgroup=subgroup, group=group)
-        self.osc_freq_spread = params.add("osc_freq_spread",
+        self.osc_freq_spread = params.new("osc_freq_spread",
                                            min=0.0, max=2.0, default=0.5,
                                            subgroup=subgroup, group=group)
-        self.osc_speed = params.add("osc_speed",
+        self.osc_speed = params.new("osc_speed",
                                      min=0.1, max=5.0, default=1.0,
                                      subgroup=subgroup, group=group)
-        self.osc_colormap = params.add("osc_colormap",
+        self.osc_colormap = params.new("osc_colormap",
                                         min=0, max=len(COLORMAP_OPTIONS)-1,
                                         default=int(Colormap.HSV),
                                         subgroup=subgroup, group=group,
                                         type=Widget.DROPDOWN, options=Colormap)
-        self.osc_grid_size = params.add("osc_grid_size",
+        self.osc_grid_size = params.new("osc_grid_size",
                                          min=32, max=256, default=80,
                                          subgroup=subgroup, group=group)
 

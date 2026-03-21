@@ -13,106 +13,106 @@ class StrangeAttractor(Animation):
         subgroup = self.__class__.__name__
 
         # Attractor type selector
-        self.attractor_type = params.add("attractor_type",
+        self.attractor_type = params.new("attractor_type",
                                          min=0, max=len(AttractorType)-1, default=0,
                                          group=group, subgroup=subgroup,
                                          type=Widget.DROPDOWN, options=AttractorType)
         self.prev_attractor_type = self.attractor_type.value
 
         # Common parameters
-        self.dt = params.add("attractor_dt",
+        self.dt = params.new("attractor_dt",
                              min=0.001, max=0.05, default=0.01,
                              subgroup=subgroup, group=group)
-        self.num_steps = params.add("attractor_num_steps",
+        self.num_steps = params.new("attractor_num_steps",
                                     min=1, max=50, default=10,
                                     subgroup=subgroup, group=group)
-        self.scale = params.add("attractor_scale",
+        self.scale = params.new("attractor_scale",
                                 min=1.0, max=20.0, default=5.0,
                                 subgroup=subgroup, group=group)
-        self.line_width = params.add("attractor_line_width",
+        self.line_width = params.new("attractor_line_width",
                                      min=1, max=5, default=1,
                                      subgroup=subgroup, group=group)
-        self.fade = params.add("attractor_fade",
+        self.fade = params.new("attractor_fade",
                                min=0.0, max=1.0, default=0.95,
                                subgroup=subgroup, group=group)
 
         # Color parameters
-        self.attractor_r = params.add("attractor_r",
+        self.attractor_r = params.new("attractor_r",
                                       min=0, max=255, default=255,
                                       subgroup=subgroup, group=group)
-        self.attractor_g = params.add("attractor_g",
+        self.attractor_g = params.new("attractor_g",
                                       min=0, max=255, default=255,
                                       subgroup=subgroup, group=group)
-        self.attractor_b = params.add("attractor_b",
+        self.attractor_b = params.new("attractor_b",
                                       min=0, max=255, default=255,
                                       subgroup=subgroup, group=group)
 
         # Lorenz Attractor parameters (3D)
-        self.lorenz_sigma = params.add("lorenz_sigma",
+        self.lorenz_sigma = params.new("lorenz_sigma",
                                        min=1.0, max=20.0, default=10.0,
                                        subgroup=subgroup, group=group)
-        self.lorenz_rho = params.add("lorenz_rho",
+        self.lorenz_rho = params.new("lorenz_rho",
                                      min=1.0, max=50.0, default=28.0,
                                      subgroup=subgroup, group=group)
-        self.lorenz_beta = params.add("lorenz_beta",
+        self.lorenz_beta = params.new("lorenz_beta",
                                       min=0.1, max=5.0, default=2.667,
                                       subgroup=subgroup, group=group)
 
         # Clifford Attractor parameters (2D) - Beautiful spiraling patterns
-        self.clifford_a = params.add("clifford_a",
+        self.clifford_a = params.new("clifford_a",
                                      min=-3.0, max=3.0, default=-1.4,
                                      subgroup=subgroup, group=group)
-        self.clifford_b = params.add("clifford_b",
+        self.clifford_b = params.new("clifford_b",
                                      min=-3.0, max=3.0, default=1.6,
                                      subgroup=subgroup, group=group)
-        self.clifford_c = params.add("clifford_c",
+        self.clifford_c = params.new("clifford_c",
                                      min=-3.0, max=3.0, default=1.0,
                                      subgroup=subgroup, group=group)
-        self.clifford_d = params.add("clifford_d",
+        self.clifford_d = params.new("clifford_d",
                                      min=-3.0, max=3.0, default=0.7,
                                      subgroup=subgroup, group=group)
 
         # De Jong Attractor parameters (2D) - Similar elegance, different character
-        self.dejong_a = params.add("dejong_a",
+        self.dejong_a = params.new("dejong_a",
                                    min=-3.0, max=3.0, default=-2.0,
                                    subgroup=subgroup, group=group)
-        self.dejong_b = params.add("dejong_b",
+        self.dejong_b = params.new("dejong_b",
                                    min=-3.0, max=3.0, default=-2.0,
                                    subgroup=subgroup, group=group)
-        self.dejong_c = params.add("dejong_c",
+        self.dejong_c = params.new("dejong_c",
                                    min=-3.0, max=3.0, default=-1.2,
                                    subgroup=subgroup, group=group)
-        self.dejong_d = params.add("dejong_d",
+        self.dejong_d = params.new("dejong_d",
                                    min=-3.0, max=3.0, default=2.0,
                                    subgroup=subgroup, group=group)
 
         # Aizawa Attractor parameters (3D) - Organic chaotic system
-        self.aizawa_a = params.add("aizawa_a",
+        self.aizawa_a = params.new("aizawa_a",
                                    min=0.1, max=1.5, default=0.95,
                                    subgroup=subgroup, group=group)
-        self.aizawa_b = params.add("aizawa_b",
+        self.aizawa_b = params.new("aizawa_b",
                                    min=0.1, max=1.5, default=0.7,
                                    subgroup=subgroup, group=group)
-        self.aizawa_c = params.add("aizawa_c",
+        self.aizawa_c = params.new("aizawa_c",
                                    min=0.1, max=1.0, default=0.6,
                                    subgroup=subgroup, group=group)
-        self.aizawa_d = params.add("aizawa_d",
+        self.aizawa_d = params.new("aizawa_d",
                                    min=0.1, max=5.0, default=3.5,
                                    subgroup=subgroup, group=group)
-        self.aizawa_e = params.add("aizawa_e",
+        self.aizawa_e = params.new("aizawa_e",
                                    min=0.0, max=1.0, default=0.25,
                                    subgroup=subgroup, group=group)
-        self.aizawa_f = params.add("aizawa_f",
+        self.aizawa_f = params.new("aizawa_f",
                                    min=0.0, max=0.5, default=0.1,
                                    subgroup=subgroup, group=group)
 
         # Thomas Attractor parameters (3D) - Smooth, ribbon-like trajectories
-        self.thomas_b = params.add("thomas_b",
+        self.thomas_b = params.new("thomas_b",
                                    min=0.1, max=0.3, default=0.208186,
                                    subgroup=subgroup, group=group)
 
         # Morphing - slowly interpolate coefficients over time
-        self.morph_speed = params.add("attractor_morph_speed",
+        self.morph_speed = params.new("attractor_morph_speed",
                                        min=0.0, max=1.0, default=0.0,
                                        subgroup=subgroup, group=group)
 

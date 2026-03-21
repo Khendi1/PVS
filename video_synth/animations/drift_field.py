@@ -19,26 +19,26 @@ class DriftField(Animation):
         super().__init__(params, width, height, group=group)
         subgroup = self.__class__.__name__
 
-        self.drift_speed = params.add("drift_speed",
+        self.drift_speed = params.new("drift_speed",
                                        min=0.01, max=2.0, default=0.15,
                                        subgroup=subgroup, group=group)
-        self.drift_complexity = params.add("drift_complexity",
+        self.drift_complexity = params.new("drift_complexity",
                                             min=1, max=8, default=3,
                                             subgroup=subgroup, group=group)
-        self.drift_scale = params.add("drift_scale",
+        self.drift_scale = params.new("drift_scale",
                                        min=0.5, max=10.0, default=3.0,
                                        subgroup=subgroup, group=group)
-        self.drift_viscosity = params.add("drift_viscosity",
+        self.drift_viscosity = params.new("drift_viscosity",
                                            min=0.9, max=1.0, default=0.995,
                                            subgroup=subgroup, group=group)
-        self.drift_injection = params.add("drift_injection",
+        self.drift_injection = params.new("drift_injection",
                                            min=0.0, max=1.0, default=0.02,
                                            subgroup=subgroup, group=group)
-        self.drift_colormap = params.add("drift_colormap",
+        self.drift_colormap = params.new("drift_colormap",
                                           min=0, max=len(COLORMAP_OPTIONS)-1, default=int(Colormap.TWILIGHT),
                                           subgroup=subgroup, group=group,
                                           type=Widget.DROPDOWN, options=Colormap)
-        self.drift_color_speed = params.add("drift_color_speed",
+        self.drift_color_speed = params.new("drift_color_speed",
                                              min=0.0, max=2.0, default=0.3,
                                              subgroup=subgroup, group=group)
 

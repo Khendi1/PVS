@@ -19,35 +19,35 @@ class Feedback(EffectBase):
 
         subgroup = self.__class__.__name__
 
-        self.alpha = params.add("alpha",
+        self.alpha = params.new("alpha",
                                 min=0.0, max=1.0, default=0.0,
                                 subgroup=subgroup, group=group)
-        self.temporal_filter = params.add("temporal_filter",
+        self.temporal_filter = params.new("temporal_filter",
                                           min=0, max=1.0, default=0.0,
                                           subgroup=subgroup, group=group)
-        self.feedback_luma_threshold = params.add("feedback_luma_threshold",
+        self.feedback_luma_threshold = params.new("feedback_luma_threshold",
                                                   min=0, max=255, default=0,
                                                   subgroup=subgroup, group=group)
-        self.luma_mode = params.add("luma_mode",
+        self.luma_mode = params.new("luma_mode",
                                     min=LumaMode.WHITE.value, max=LumaMode.BLACK.value, default=LumaMode.WHITE.value,
                                     group=group, subgroup=subgroup,
                                     type=Widget.RADIO, options=LumaMode)
-        self.frame_skip = params.add("frame_skip",
+        self.frame_skip = params.new("frame_skip",
                                      min=0, max=10, default=0,
                                      subgroup=subgroup, group=group)
-        self.buffer_select = params.add("buffer_frame_select",
+        self.buffer_select = params.new("buffer_frame_select",
                                         min=-1, max=20, default=-1,
                                         subgroup=subgroup, group=group)
-        self.buffer_frame_blend = params.add("buffer_frame_blend",
+        self.buffer_frame_blend = params.new("buffer_frame_blend",
                                              min=0.0, max=1.0, default=0.0,
                                              subgroup=subgroup, group=group)
 
-        self.prev_frame_scale = params.add("prev_frame_scale",
+        self.prev_frame_scale = params.new("prev_frame_scale",
                                            min=90, max=110, default=100,
                                            subgroup=subgroup, group=group)
 
         self.max_buffer_size = 30
-        self.buffer_size = params.add("buffer_size",
+        self.buffer_size = params.new("buffer_size",
                                       min=0, max=self.max_buffer_size, default=0,
                                       subgroup=subgroup, group=group)
         # this should probably be initialized in reset() to avoid issues with reloading config
@@ -57,16 +57,16 @@ class Feedback(EffectBase):
         self._prev_buffer_size = 0
 
         # Feedback painting - autonomous drift applied to the feedback frame
-        self.fb_paint_drift_x = params.add("fb_paint_drift_x",
+        self.fb_paint_drift_x = params.new("fb_paint_drift_x",
                                             min=-5.0, max=5.0, default=0.0,
                                             subgroup=subgroup, group=group)
-        self.fb_paint_drift_y = params.add("fb_paint_drift_y",
+        self.fb_paint_drift_y = params.new("fb_paint_drift_y",
                                             min=-5.0, max=5.0, default=0.0,
                                             subgroup=subgroup, group=group)
-        self.fb_paint_rotation = params.add("fb_paint_rotation",
+        self.fb_paint_rotation = params.new("fb_paint_rotation",
                                              min=-2.0, max=2.0, default=0.0,
                                              subgroup=subgroup, group=group)
-        self.fb_paint_zoom = params.add("fb_paint_zoom",
+        self.fb_paint_zoom = params.new("fb_paint_zoom",
                                          min=0.99, max=1.01, default=1.0,
                                          subgroup=subgroup, group=group)
 

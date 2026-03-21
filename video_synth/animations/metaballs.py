@@ -33,47 +33,47 @@ class Metaballs(Animation):
         p_name = group.name.lower()
         self.metaballs = []
         
-        self.num_metaballs = params.add("num_metaballs",
+        self.num_metaballs = params.new("num_metaballs",
                                         min=2, max=10, default=5,
                                         subgroup=subgroup, group=group)
-        self.min_radius = params.add("min_radius",
+        self.min_radius = params.new("min_radius",
                                      min=20, max=100, default=40,
                                      subgroup=subgroup, group=group)
-        self.max_radius = params.add("max_radius",
+        self.max_radius = params.new("max_radius",
                                      min=40, max=200, default=80,
                                      subgroup=subgroup, group=group)
-        self.radius_multiplier = params.add("radius_multiplier",
+        self.radius_multiplier = params.new("radius_multiplier",
                                             min=1.0, max=3.0, default=1.0,
                                             subgroup=subgroup, group=group)
-        self.max_speed = params.add("max_speed",
+        self.max_speed = params.new("max_speed",
                                     min=1, max=10, default=3,
                                     subgroup=subgroup, group=group)
-        self.speed_multiplier = params.add("speed_multiplier",
+        self.speed_multiplier = params.new("speed_multiplier",
                                            min=1.0, max=3.0, default=1.0,
                                            subgroup=subgroup, group=group)
-        self.threshold = params.add("threshold",
+        self.threshold = params.new("threshold",
                                     min=0.5, max=3.0, default=1.6,
                                     subgroup=subgroup, group=group)
-        self.smooth_coloring_max_field = params.add("smooth_coloring_max_field",
+        self.smooth_coloring_max_field = params.new("smooth_coloring_max_field",
                                                     min=1.0, max=3.0, default=1.5,
                                                     subgroup=subgroup, group=group)
-        self.skew_angle = params.add("metaball_skew_angle",
+        self.skew_angle = params.new("metaball_skew_angle",
                                      min=0.0, max=360.0, default=0.0,
                                      subgroup=subgroup, group=group)
-        self.skew_intensity = params.add("metaball_skew_intensity",
+        self.skew_intensity = params.new("metaball_skew_intensity",
                                          min=0.0, max=1.0, default=0.0,
                                          subgroup=subgroup, group=group)
-        self.zoom = params.add("metaball_zoom",
+        self.zoom = params.new("metaball_zoom",
                                min=1.0, max=3.0, default=1.0,
                                subgroup=subgroup, group=group)
-        self.colormap = params.add("metaball_colormap",
+        self.colormap = params.new("metaball_colormap",
                                    min=0, max=len(COLORMAP_OPTIONS)-1, default=Colormap.JET.value,
                                    group=group, subgroup=subgroup,
                                    type=Widget.DROPDOWN, options=Colormap)
-        self.feedback_alpha = params.add("metaballs_feedback",
+        self.feedback_alpha = params.new("metaballs_feedback",
                                          min=0.0, max=1.0, default=0.95,
                                          subgroup=subgroup, group=group)
-        self.render_scale = params.add("metaballs_render_scale",
+        self.render_scale = params.new("metaballs_render_scale",
                                        min=0.25, max=1.0, default=0.25,
                                        subgroup=subgroup, group=group)
 

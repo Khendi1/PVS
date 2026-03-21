@@ -15,61 +15,61 @@ class Voronoi(Animation):
         subgroup = self.__class__.__name__
 
         # Point parameters
-        self.num_points = params.add("voronoi_num_points",
+        self.num_points = params.new("voronoi_num_points",
                                      min=5, max=200, default=50,
                                      subgroup=subgroup, group=group)
-        self.relaxation_speed = params.add("voronoi_relax_speed",
+        self.relaxation_speed = params.new("voronoi_relax_speed",
                                            min=0.01, max=0.5, default=0.1,
                                            subgroup=subgroup, group=group)
-        self.jitter = params.add("voronoi_jitter",
+        self.jitter = params.new("voronoi_jitter",
                                  min=0.0, max=5.0, default=0.5,
                                  subgroup=subgroup, group=group)
 
         # Visual parameters
-        self.show_edges = params.add("voronoi_show_edges",
+        self.show_edges = params.new("voronoi_show_edges",
                                      min=0, max=1, default=1,
                                      subgroup=subgroup, group=group,
                                      type=Widget.TOGGLE)
-        self.show_points = params.add("voronoi_show_points",
+        self.show_points = params.new("voronoi_show_points",
                                       min=0, max=1, default=1,
                                       subgroup=subgroup, group=group,
                                       type=Widget.TOGGLE)
-        self.fill_cells = params.add("voronoi_fill_cells",
+        self.fill_cells = params.new("voronoi_fill_cells",
                                      min=0, max=1, default=1,
                                      subgroup=subgroup, group=group,
                                      type=Widget.TOGGLE)
-        self.edge_thickness = params.add("voronoi_edge_thickness",
+        self.edge_thickness = params.new("voronoi_edge_thickness",
                                          min=1, max=5, default=2,
                                          subgroup=subgroup, group=group)
-        self.point_size = params.add("voronoi_point_size",
+        self.point_size = params.new("voronoi_point_size",
                                      min=2, max=10, default=5,
                                      subgroup=subgroup, group=group)
 
         # Color parameters
-        self.edge_r = params.add("voronoi_edge_r",
+        self.edge_r = params.new("voronoi_edge_r",
                                  min=0, max=255, default=255,
                                  subgroup=subgroup, group=group)
-        self.edge_g = params.add("voronoi_edge_g",
+        self.edge_g = params.new("voronoi_edge_g",
                                  min=0, max=255, default=255,
                                  subgroup=subgroup, group=group)
-        self.edge_b = params.add("voronoi_edge_b",
+        self.edge_b = params.new("voronoi_edge_b",
                                  min=0, max=255, default=255,
                                  subgroup=subgroup, group=group)
-        self.colormap = params.add("voronoi_colormap",
+        self.colormap = params.new("voronoi_colormap",
                                    min=0, max=len(COLORMAP_OPTIONS)-1, default=0,
                                    subgroup=subgroup, group=group,
                                    type=Widget.DROPDOWN, options=Colormap)
 
         # Animation
-        self.color_cycle_speed = params.add("voronoi_color_speed",
+        self.color_cycle_speed = params.new("voronoi_color_speed",
                                             min=0.0, max=2.0, default=0.2,
                                             subgroup=subgroup, group=group)
 
         # Tectonics - slow autonomous drift for plate-like movement
-        self.tectonic_speed = params.add("voronoi_tectonic_speed",
+        self.tectonic_speed = params.new("voronoi_tectonic_speed",
                                           min=0.0, max=3.0, default=0.0,
                                           subgroup=subgroup, group=group)
-        self.tectonic_chaos = params.add("voronoi_tectonic_chaos",
+        self.tectonic_chaos = params.new("voronoi_tectonic_chaos",
                                           min=0.0, max=1.0, default=0.3,
                                           subgroup=subgroup, group=group)
 

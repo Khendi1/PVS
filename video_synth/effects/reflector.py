@@ -24,17 +24,17 @@ class Reflector(EffectBase):
         self.params = params
         if not isinstance(mode, ReflectionMode):
             raise ValueError("mode must be an instance of ReflectionMode Enum.")
-        self._mode = params.add("reflection_mode",
+        self._mode = params.new("reflection_mode",
                                 min=0, max=len(ReflectionMode) - 1, default=ReflectionMode.NONE.value,
                                 group=group, subgroup=subgroup,
                                 type=Widget.DROPDOWN, options=ReflectionMode)
-        self.segments = params.add("reflector_segments",
+        self.segments = params.new("reflector_segments",
                                    min=0, max=10, default=0,
                                    subgroup=subgroup, group=group)
-        self.zoom = params.add("reflector_z",
+        self.zoom = params.new("reflector_z",
                                min=0.5, max=2, default=1.0,
                                subgroup=subgroup, group=group)
-        self.rotation = params.add("reflector_r",
+        self.rotation = params.new("reflector_r",
                                    min=-360, max=360, default=0.0,
                                    subgroup=subgroup, group=group)
         self.width = None 

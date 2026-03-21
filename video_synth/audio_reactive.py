@@ -57,28 +57,28 @@ class AudioBand:
         group = None
         subgroup = None
 
-        self.band_select = params.add(
+        self.band_select = params.new(
             f"{name}_band", min=0, max=NUM_BANDS - 1, default=band_index,
             group=group, subgroup=subgroup, type=Widget.DROPDOWN,
             options={bn: i for i, bn in enumerate(BAND_NAMES)}
         )
-        self.sensitivity = params.add(
+        self.sensitivity = params.new(
             f"{name}_sensitivity", min=0.0, max=5.0, default=1.0,
             group=group, subgroup=subgroup
         )
-        self.attack = params.add(
+        self.attack = params.new(
             f"{name}_attack", min=0.0, max=1.0, default=0.3,
             group=group, subgroup=subgroup
         )
-        self.decay = params.add(
+        self.decay = params.new(
             f"{name}_decay", min=0.0, max=1.0, default=0.1,
             group=group, subgroup=subgroup
         )
-        self.cutoff_min = params.add(
+        self.cutoff_min = params.new(
             f"{name}_cutoff_min", min=-100.0, max=100.0, default=-100.0,
             group=group, subgroup=subgroup
         )
-        self.cutoff_max = params.add(
+        self.cutoff_max = params.new(
             f"{name}_cutoff_max", min=-100.0, max=100.0, default=100.0,
             group=group, subgroup=subgroup
         )

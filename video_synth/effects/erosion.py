@@ -18,19 +18,19 @@ class Erosion(EffectBase):
         self.width = width
         self.height = height
 
-        self.erosion_strength = params.add("erosion_strength",
+        self.erosion_strength = params.new("erosion_strength",
                                             min=0.0, max=1.0, default=0.0,
                                             subgroup=subgroup, group=group)
-        self.erosion_scale = params.add("erosion_scale",
+        self.erosion_scale = params.new("erosion_scale",
                                          min=1.0, max=10.0, default=3.0,
                                          subgroup=subgroup, group=group)
-        self.erosion_speed = params.add("erosion_speed",
+        self.erosion_speed = params.new("erosion_speed",
                                          min=0.0, max=2.0, default=0.2,
                                          subgroup=subgroup, group=group)
-        self.erosion_octaves = params.add("erosion_octaves",
+        self.erosion_octaves = params.new("erosion_octaves",
                                            min=1, max=6, default=4,
                                            subgroup=subgroup, group=group)
-        self.erosion_sharpness = params.add("erosion_sharpness",
+        self.erosion_sharpness = params.new("erosion_sharpness",
                                              min=0.0, max=1.0, default=0.3,
                                              subgroup=subgroup, group=group)
 

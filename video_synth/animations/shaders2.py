@@ -31,32 +31,32 @@ class Shaders2(Animation):
         self.time = time.time()
 
         # --- Parameters ---
-        self.current_shader = params.add("s2_type",
+        self.current_shader = params.new("s2_type",
                                          min=0, max=len(Shader2Type) - 1, default=0,
                                          group=group, subgroup=subgroup,
                                          type=Widget.DROPDOWN, options=Shader2Type)
-        self.zoom = params.add("s2_zoom",
+        self.zoom = params.new("s2_zoom",
                                min=0.1, max=10.0, default=1.0,
                                subgroup=subgroup, group=group)
-        self.distortion = params.add("s2_distortion",
+        self.distortion = params.new("s2_distortion",
                                      min=0.0, max=2.0, default=0.5,
                                      subgroup=subgroup, group=group)
-        self.iterations = params.add("s2_iterations",
+        self.iterations = params.new("s2_iterations",
                                      min=1.0, max=20.0, default=6.0,
                                      subgroup=subgroup, group=group)
-        self.color_shift = params.add("s2_color_shift",
+        self.color_shift = params.new("s2_color_shift",
                                       min=0.0, max=6.28, default=0.0,
                                       subgroup=subgroup, group=group)
-        self.brightness = params.add("s2_brightness",
+        self.brightness = params.new("s2_brightness",
                                      min=0.0, max=3.0, default=1.0,
                                      subgroup=subgroup, group=group)
-        self.speed = params.add("s2_speed",
+        self.speed = params.new("s2_speed",
                                 min=0.0, max=3.0, default=1.0,
                                 subgroup=subgroup, group=group)
-        self.param_a = params.add("s2_param_a",
+        self.param_a = params.new("s2_param_a",
                                   min=0.0, max=10.0, default=3.0,
                                   subgroup=subgroup, group=group)
-        self.param_b = params.add("s2_param_b",
+        self.param_b = params.new("s2_param_b",
                                   min=0.0, max=10.0, default=2.0,
                                   subgroup=subgroup, group=group)
 

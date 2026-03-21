@@ -1,31 +1,55 @@
 import { useState, useEffect, useRef } from 'react'
-import { streamUrl } from '../api.js'
+import { wsStreamUrl } from '../api.js'
 
 export default function VideoPreview() {
-  const [src, setSrc] = useState(streamUrl())
-  const [online, setOnline] = useState(true)
-  const retryRef = useRef(null)
+  const [blobUrl, setBlobUrl] = useState(null)
+  const [online, setOnline] = useState(false)
+  const wsRef = useRef(null)
+  const prevBlobRef = useRef(null)
 
-  function handleError() {
-    setOnline(false)
-    retryRef.current = setTimeout(() => {
-      setSrc(streamUrl())
-      setOnline(true)
-    }, 3000)
-  }
+  useEffect(() => {
+    let reconnectTimer = null
 
-  useEffect(() => () => clearTimeout(retryRef.current), [])
+    function connect() {
+      const ws = new WebSocket(wsStreamUrl())
+      wsRef.current = ws
+
+      ws.binaryType = 'blob'
+
+      ws.onopen = () => setOnline(true)
+
+      ws.onmessage = (e) => {
+        const url = URL.createObjectURL(e.data)
+        setBlobUrl(url)
+        if (prevBlobRef.current) URL.revokeObjectURL(prevBlobRef.current)
+        prevBlobRef.current = url
+      }
+
+      ws.onerror = () => {}
+
+      ws.onclose = () => {
+        setOnline(false)
+        reconnectTimer = setTimeout(connect, 3000)
+      }
+    }
+
+    connect()
+
+    return () => {
+      clearTimeout(reconnectTimer)
+      if (wsRef.current) wsRef.current.close()
+      if (prevBlobRef.current) URL.revokeObjectURL(prevBlobRef.current)
+    }
+  }, [])
 
   return (
     <div className="video-quadrant">
       <img
-        src={src}
+        src={blobUrl}
         alt="live output"
-        style={{ display: online ? 'block' : 'none' }}
-        onError={handleError}
-        onLoad={() => setOnline(true)}
+        style={{ display: online && blobUrl ? 'block' : 'none' }}
       />
-      {!online && (
+      {(!online || !blobUrl) && (
         <div className="video-offline">
           stream unavailable<br />
           <span style={{ fontSize: 10, marginTop: 4 }}>start synth with --api</span>

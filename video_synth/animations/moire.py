@@ -16,59 +16,59 @@ class Moire(Animation):
         p_name = group.name.lower()
         self._oscs = oscs
         
-        self.blend_mode = params.add("moire_blend",
+        self.blend_mode = params.new("moire_blend",
                                       min=0, max=len(MoireBlend)-1, default=0,
                                       group=group, subgroup=subgroup,
                                       type=Widget.DROPDOWN, options=MoireBlend)
 
         center_x, center_y = self.width//2, self.height//2
 
-        self.pattern_1 = params.add("moire_type_1",
+        self.pattern_1 = params.new("moire_type_1",
                                     min=0, max=len(MoirePattern)-1, default=0,
                                     group=group, subgroup=subgroup,
                                     type=Widget.DROPDOWN, options=MoirePattern)
-        self.freq_1 = params.add("spatial_freq_1",
+        self.freq_1 = params.new("spatial_freq_1",
                                  min=0.01, max=25, default=10.0,
                                  group=group, subgroup=subgroup,
                                  type=Widget.SLIDER)
-        self.angle_1 = params.add("angle_1",
+        self.angle_1 = params.new("angle_1",
                                   min=0, max=360, default=90.0,
                                   group=group, subgroup=subgroup,
                                   type=Widget.SLIDER)
-        self.zoom_1 = params.add("zoom_1",
+        self.zoom_1 = params.new("zoom_1",
                                  min=0.05, max=1.5, default=1.0,
                                  group=group, subgroup=subgroup,
                                  type=Widget.SLIDER)
-        self.center_x_1 = params.add("moire_center_x_1",
+        self.center_x_1 = params.new("moire_center_x_1",
                                      min=0, max=self.width, default=center_x,
                                      group=group, subgroup=subgroup,
                                      type=Widget.SLIDER)
-        self.center_y_1 = params.add("moire_center_y_1",
+        self.center_y_1 = params.new("moire_center_y_1",
                                      min=0, max=self.height, default=center_y,
                                      group=group, subgroup=subgroup,
                                      type=Widget.SLIDER)
 
-        self.pattern_2 = params.add("moire_type_2",
+        self.pattern_2 = params.new("moire_type_2",
                                     min=0, max=len(MoirePattern)-1, default=0,
                                     group=group, subgroup=subgroup,
                                     type=Widget.DROPDOWN, options=MoirePattern)
-        self.freq_2 = params.add("spatial_freq_2",
+        self.freq_2 = params.new("spatial_freq_2",
                                  min=0.01, max=25, default=1.0,
                                  group=group, subgroup=subgroup,
                                  type=Widget.SLIDER)
-        self.angle_2 = params.add("angle_2",
+        self.angle_2 = params.new("angle_2",
                                   min=0, max=360, default=0.0,
                                   group=group, subgroup=subgroup,
                                   type=Widget.SLIDER)
-        self.zoom_2 = params.add("zoom_2",
+        self.zoom_2 = params.new("zoom_2",
                                  min=0.05, max=1.5, default=1.0,
                                  group=group, subgroup=subgroup,
                                  type=Widget.SLIDER)
-        self.center_x_2 = params.add("moire_center_x_2",
+        self.center_x_2 = params.new("moire_center_x_2",
                                      min=0, max=self.width, default=center_x,
                                      group=group, subgroup=subgroup,
                                      type=Widget.SLIDER)
-        self.center_y_2 = params.add("moire_center_y_2",
+        self.center_y_2 = params.new("moire_center_y_2",
                                      min=0, max=self.height, default=center_y,
                                      group=group, subgroup=subgroup,
                                      type=Widget.SLIDER)

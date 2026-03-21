@@ -19,41 +19,41 @@ class Shaders(Animation):
         self.ctx = moderngl.create_context(standalone=True)
         self.time = time.time()
 
-        self.current_shader = params.add("s_type",
+        self.current_shader = params.new("s_type",
                                          min=0, max=len(ShaderType)-1, default=0,
                                          group=group, subgroup=subgroup,
                                          type=Widget.DROPDOWN, options=ShaderType)
-        self.zoom = params.add("s_zoom",
+        self.zoom = params.new("s_zoom",
                                min=0.1, max=5.0, default=1.5,
                                subgroup=subgroup, group=group)
-        self.distortion = params.add("s_distortion",
+        self.distortion = params.new("s_distortion",
                                      min=0.0, max=1.0, default=0.5,
                                      subgroup=subgroup, group=group)
-        self.iterations = params.add("s_iterations",
+        self.iterations = params.new("s_iterations",
                                      min=1.0, max=10.0, default=4.0,
                                      subgroup=subgroup, group=group)
-        self.color_shift = params.add("s_color_shift",
+        self.color_shift = params.new("s_color_shift",
                                       min=0.5, max=3.0, default=1.0,
                                       subgroup=subgroup, group=group)
-        self.brightness = params.add("s_brightness",
+        self.brightness = params.new("s_brightness",
                                      min=0.0, max=2.0, default=1.0,
                                      subgroup=subgroup, group=group)
-        self.hue_shift = params.add("s_hue_shift",
+        self.hue_shift = params.new("s_hue_shift",
                                     min=0.0, max=7, default=0.0,
                                     subgroup=subgroup, group=group)
-        self.saturation = params.add("s_saturation",
+        self.saturation = params.new("s_saturation",
                                      min=0.0, max=2.0, default=1.0,
                                      subgroup=subgroup, group=group)
-        self.x_shift = params.add("s_x_shift",
+        self.x_shift = params.new("s_x_shift",
                                   min=-5.0, max=5.0, default=0.0,
                                   subgroup=subgroup, group=group)
-        self.y_shift = params.add("s_y_shift",
+        self.y_shift = params.new("s_y_shift",
                                   min=-5.0, max=5.0, default=0.0,
                                   subgroup=subgroup, group=group)
-        self.rotation = params.add("s_rotation",
+        self.rotation = params.new("s_rotation",
                                    min=-3.14, max=3.14, default=0.0,
                                    subgroup=subgroup, group=group)
-        self.speed = params.add("s_speed",
+        self.speed = params.new("s_speed",
                                 min=0.0, max=2.0, default=1.0,
                                 subgroup=subgroup, group=group)
         self.prev_shader = self.current_shader.value

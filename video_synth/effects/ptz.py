@@ -10,46 +10,46 @@ class PTZ(EffectBase):
         self.height = image_height
         self.width = image_width
 
-        self.x_shift = params.add("x_shift",
+        self.x_shift = params.new("x_shift",
                                    min=-image_width, max=image_width, default=0,
                                    subgroup=subgroup, group=group)  # min/max depends on image size
-        self.y_shift = params.add("y_shift",
+        self.y_shift = params.new("y_shift",
                                   min=-image_height, max=image_height, default=0,
                                   subgroup=subgroup, group=group)  # min/max depends on image size
-        self.zoom = params.add("zoom",
+        self.zoom = params.new("zoom",
                                min=0.75, max=3, default=1.0,
                                subgroup=subgroup, group=group)
-        self.r_shift = params.add("r_shift",
+        self.r_shift = params.new("r_shift",
                                   min=-360, max=360, default=0.0,
                                   subgroup=subgroup, group=group)
 
 
-        self.prev_x_shift = params.add("prev_x_shift",
+        self.prev_x_shift = params.new("prev_x_shift",
                                        min=-image_width, max=image_width, default=0,
                                        subgroup=subgroup, group=group)  # min/max depends on image size
-        self.prev_y_shift = params.add("prev_y_shift",
+        self.prev_y_shift = params.new("prev_y_shift",
                                        min=-image_height, max=image_height, default=0,
                                        subgroup=subgroup, group=group)  # min/max depends on image size
-        self.prev_zoom = params.add("prev_zoom",
+        self.prev_zoom = params.new("prev_zoom",
                                     min=0.75, max=3, default=1.0,
                                     subgroup=subgroup, group=group)
-        self.prev_r_shift = params.add("prev_r_shift",
+        self.prev_r_shift = params.new("prev_r_shift",
                                        min=-360, max=360, default=0.0,
                                        subgroup=subgroup, group=group)
 
-        self.prev_cx = params.add("prev_cx",
+        self.prev_cx = params.new("prev_cx",
                                   min=-image_width/2, max=image_width/2, default=0,
                                   subgroup=subgroup, group=group)
-        self.prev_cy = params.add("prev_cy",
+        self.prev_cy = params.new("prev_cy",
                                   min=-image_height/2, max=image_height/2, default=0,
                                   subgroup=subgroup, group=group)
-        self.polar_x = params.add("polar_x",
+        self.polar_x = params.new("polar_x",
                                   min=-image_width // 2, max=image_width // 2, default=0,
                                   subgroup=subgroup, group=group)
-        self.polar_y = params.add("polar_y",
+        self.polar_y = params.new("polar_y",
                                   min=-image_height // 2, max=image_height // 2, default=0,
                                   subgroup=subgroup, group=group)
-        self.polar_radius = params.add("polar_radius",
+        self.polar_radius = params.new("polar_radius",
                                        min=0.1, max=100, default=1.0,
                                        subgroup=subgroup, group=group)
 

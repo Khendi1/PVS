@@ -17,146 +17,146 @@ class Color(EffectBase):
         self.params = params
         self.group = group
 
-        self.hue_shift = params.add("hue_shift",
+        self.hue_shift = params.new("hue_shift",
                                     min=0, max=180, default=0,
                                     subgroup=subgroup, group=group)
-        self.sat_shift = params.add("sat_shift",
+        self.sat_shift = params.new("sat_shift",
                                     min=0, max=255, default=0,
                                     subgroup=subgroup, group=group)
-        self.val_shift = params.add("val_shift",
+        self.val_shift = params.new("val_shift",
                                     min=0, max=255, default=0,
                                     subgroup=subgroup, group=group)
 
-        self.levels_per_channel = params.add("posterize_levels",
+        self.levels_per_channel = params.new("posterize_levels",
                                              min=0, max=100, default=0.0,
                                              subgroup=subgroup, group=group)
-        self.num_hues = params.add("num_hues",
+        self.num_hues = params.new("num_hues",
                                    min=2, max=10, default=8,
                                    subgroup=subgroup, group=group)
 
-        self.val_threshold = params.add("val_threshold",
+        self.val_threshold = params.new("val_threshold",
                                         min=0, max=255, default=0,
                                         subgroup=subgroup, group=group)
-        self.val_hue_shift = params.add("val_hue_shift",
+        self.val_hue_shift = params.new("val_hue_shift",
                                         min=0, max=255, default=0,
                                         subgroup=subgroup, group=group)
 
-        self.solarize_threshold = params.add("solarize_threshold",
+        self.solarize_threshold = params.new("solarize_threshold",
                                              min=0, max=100, default=0.0,
                                              subgroup=subgroup, group=group)
-        self.hue_invert_angle = params.add("hue_invert_angle",
+        self.hue_invert_angle = params.new("hue_invert_angle",
                                            min=0, max=360, default=0,
                                            subgroup=subgroup, group=group)
-        self.hue_invert_strength = params.add("hue_invert_strength",
+        self.hue_invert_strength = params.new("hue_invert_strength",
                                               min=0.0, max=1.0, default=0.0,
                                               subgroup=subgroup, group=group)
 
-        self.contrast = params.add("contrast",
+        self.contrast = params.new("contrast",
                                    min=0.5, max=3.0, default=1.0,
                                    subgroup=subgroup, group=group)
-        self.brightness = params.add("brightness",
+        self.brightness = params.new("brightness",
                                      min=0, max=100, default=0,
                                      subgroup=subgroup, group=group)
-        self.gamma = params.add("gamma",
+        self.gamma = params.new("gamma",
                                 min=0.1, max=3.0, default=1.0,
                                 subgroup=subgroup, group=group)
-        self.highlight_compression = params.add("highlight_compression",
+        self.highlight_compression = params.new("highlight_compression",
                                                 min=0.0, max=1.0, default=0.0,
                                                 subgroup=subgroup, group=group)
 
         # Color cycling - rotates a palette ramp over the brightness of the image
-        self.color_cycle_speed = params.add("color_cycle_speed",
+        self.color_cycle_speed = params.new("color_cycle_speed",
                                              min=0.0, max=5.0, default=0.0,
                                              subgroup=subgroup, group=group)
-        self.color_cycle_bands = params.add("color_cycle_bands",
+        self.color_cycle_bands = params.new("color_cycle_bands",
                                              min=1, max=8, default=3,
                                              subgroup=subgroup, group=group)
 
         # Channel Mixer - cross-mix RGB channels
-        self.ch_mix_rr = params.add("ch_mix_rr", min=0.0, max=2.0, default=1.0,
+        self.ch_mix_rr = params.new("ch_mix_rr", min=0.0, max=2.0, default=1.0,
                                      subgroup=subgroup, group=group)
-        self.ch_mix_rg = params.add("ch_mix_rg", min=0.0, max=2.0, default=0.0,
+        self.ch_mix_rg = params.new("ch_mix_rg", min=0.0, max=2.0, default=0.0,
                                      subgroup=subgroup, group=group)
-        self.ch_mix_rb = params.add("ch_mix_rb", min=0.0, max=2.0, default=0.0,
+        self.ch_mix_rb = params.new("ch_mix_rb", min=0.0, max=2.0, default=0.0,
                                      subgroup=subgroup, group=group)
-        self.ch_mix_gr = params.add("ch_mix_gr", min=0.0, max=2.0, default=0.0,
+        self.ch_mix_gr = params.new("ch_mix_gr", min=0.0, max=2.0, default=0.0,
                                      subgroup=subgroup, group=group)
-        self.ch_mix_gg = params.add("ch_mix_gg", min=0.0, max=2.0, default=1.0,
+        self.ch_mix_gg = params.new("ch_mix_gg", min=0.0, max=2.0, default=1.0,
                                      subgroup=subgroup, group=group)
-        self.ch_mix_gb = params.add("ch_mix_gb", min=0.0, max=2.0, default=0.0,
+        self.ch_mix_gb = params.new("ch_mix_gb", min=0.0, max=2.0, default=0.0,
                                      subgroup=subgroup, group=group)
-        self.ch_mix_br = params.add("ch_mix_br", min=0.0, max=2.0, default=0.0,
+        self.ch_mix_br = params.new("ch_mix_br", min=0.0, max=2.0, default=0.0,
                                      subgroup=subgroup, group=group)
-        self.ch_mix_bg = params.add("ch_mix_bg", min=0.0, max=2.0, default=0.0,
+        self.ch_mix_bg = params.new("ch_mix_bg", min=0.0, max=2.0, default=0.0,
                                      subgroup=subgroup, group=group)
-        self.ch_mix_bb = params.add("ch_mix_bb", min=0.0, max=2.0, default=1.0,
+        self.ch_mix_bb = params.new("ch_mix_bb", min=0.0, max=2.0, default=1.0,
                                      subgroup=subgroup, group=group)
 
         # Color Bitcrush - reduce bit depth per channel
-        self.color_bitcrush = params.add("color_bitcrush",
+        self.color_bitcrush = params.new("color_bitcrush",
                                           min=1, max=8, default=8,
                                           subgroup=subgroup, group=group)
 
         # Hue Scatter - randomize hue per-pixel
-        self.hue_scatter = params.add("hue_scatter",
+        self.hue_scatter = params.new("hue_scatter",
                                        min=0.0, max=1.0, default=0.0,
                                        subgroup=subgroup, group=group)
 
         # Duotone - map luminance to two-color gradient
-        self.duotone_strength = params.add("duotone_strength",
+        self.duotone_strength = params.new("duotone_strength",
                                             min=0.0, max=1.0, default=0.0,
                                             subgroup=subgroup, group=group)
-        self.duotone_hue_lo = params.add("duotone_hue_lo",
+        self.duotone_hue_lo = params.new("duotone_hue_lo",
                                           min=0, max=180, default=120,
                                           subgroup=subgroup, group=group)
-        self.duotone_hue_hi = params.add("duotone_hue_hi",
+        self.duotone_hue_hi = params.new("duotone_hue_hi",
                                           min=0, max=180, default=10,
                                           subgroup=subgroup, group=group)
 
         # Channel Isolation - mute individual R/G/B channels
-        self.ch_r = params.add("ch_r", min=0.0, max=1.0, default=1.0,
+        self.ch_r = params.new("ch_r", min=0.0, max=1.0, default=1.0,
                                 subgroup=subgroup, group=group)
-        self.ch_g = params.add("ch_g", min=0.0, max=1.0, default=1.0,
+        self.ch_g = params.new("ch_g", min=0.0, max=1.0, default=1.0,
                                 subgroup=subgroup, group=group)
-        self.ch_b = params.add("ch_b", min=0.0, max=1.0, default=1.0,
+        self.ch_b = params.new("ch_b", min=0.0, max=1.0, default=1.0,
                                 subgroup=subgroup, group=group)
 
         # Chromatic Aberration - offset R/G/B channels spatially
-        self.chroma_ab_x = params.add("chroma_ab_x",
+        self.chroma_ab_x = params.new("chroma_ab_x",
                                        min=0, max=30, default=0,
                                        subgroup=subgroup, group=group)
-        self.chroma_ab_y = params.add("chroma_ab_y",
+        self.chroma_ab_y = params.new("chroma_ab_y",
                                        min=0, max=30, default=0,
                                        subgroup=subgroup, group=group)
 
         # Color Temperature - warm/cool shift
-        self.color_temp = params.add("color_temp",
+        self.color_temp = params.new("color_temp",
                                       min=-1.0, max=1.0, default=0.0,
                                       subgroup=subgroup, group=group)
 
         # Saturation Curve - non-linear saturation boost/crush
-        self.sat_curve_shadows = params.add("sat_curve_shadows",
+        self.sat_curve_shadows = params.new("sat_curve_shadows",
                                              min=0.0, max=3.0, default=1.0,
                                              subgroup=subgroup, group=group)
-        self.sat_curve_mids = params.add("sat_curve_mids",
+        self.sat_curve_mids = params.new("sat_curve_mids",
                                           min=0.0, max=3.0, default=1.0,
                                           subgroup=subgroup, group=group)
-        self.sat_curve_highlights = params.add("sat_curve_highlights",
+        self.sat_curve_highlights = params.new("sat_curve_highlights",
                                                 min=0.0, max=3.0, default=1.0,
                                                 subgroup=subgroup, group=group)
 
         # False Color - apply colormap to luminance
-        self.false_color_strength = params.add("false_color_strength",
+        self.false_color_strength = params.new("false_color_strength",
                                                 min=0.0, max=1.0, default=0.0,
                                                 subgroup=subgroup, group=group)
-        self.false_color_map = params.add("false_color_map",
+        self.false_color_map = params.new("false_color_map",
                                            min=0, max=len(COLORMAP_OPTIONS)-1,
                                            default=int(Colormap.INFERNO),
                                            subgroup=subgroup, group=group,
                                            type=Widget.DROPDOWN, options=Colormap)
 
         # Invert - partial or full color inversion
-        self.invert_strength = params.add("invert_strength",
+        self.invert_strength = params.new("invert_strength",
                                            min=0.0, max=1.0, default=0.0,
                                            subgroup=subgroup, group=group)
 

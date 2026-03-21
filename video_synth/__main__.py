@@ -100,9 +100,9 @@ def parse_args():
     )
     parser.add_argument(
         '--api-host',
-        default='127.0.0.1',
+        default=None,
         type=str,
-        help='API server host (default: 127.0.0.1)'
+        help='API server host (default: 0.0.0.0 when --api is set, 127.0.0.1 otherwise)'
     )
     parser.add_argument(
         '--api-port',
@@ -209,7 +209,7 @@ def perf_timer(perf_data, key, enabled):
 
 
 """Video processing loop"""
-def video_loop(mixer, effects, should_quit, gui, settings, audio_module=None, ffmpeg_output=None, virtualcam_output=None, obs_filters=None):
+def video_loop(mixer, effects, should_quit, gui, settings, audio_module=None, ffmpeg_output=None, virtualcam_output=None, obs_filters=None, api_server=None):
     import gc  # For explicit garbage collection
 
     wet_frame = dry_frame = mixer.get_frame()
@@ -282,9 +282,11 @@ def video_loop(mixer, effects, should_quit, gui, settings, audio_module=None, ff
             with perf_timer(perf_data, 'obs', DEBUG):
                 obs_filters.update()
 
-        # Store current frame for API snapshot endpoint
+        # Store current frame for API snapshot/stream endpoints
         with perf_timer(perf_data, 'api_copy', DEBUG):
             mixer.current_frame = wet_frame.astype(np.uint8)
+            if api_server is not None:
+                api_server.push_frame(mixer.current_frame)
 
         # FFmpeg output
         if ffmpeg_output is not None:
@@ -546,7 +548,7 @@ def main(settings):
     # Start main application thread to run the video event loop
     video_thread = threading.Thread(
         target=video_loop,
-        args=(mixer, effects, should_quit, main_window, settings, audio_module, ffmpeg_output, virtualcam_output, obs_filters)
+        args=(mixer, effects, should_quit, main_window, settings, audio_module, ffmpeg_output, virtualcam_output, obs_filters, api_server)
     )
     video_thread.start()
 
@@ -604,6 +606,8 @@ def main(settings):
 
 if __name__ == "__main__":
     args = parse_args()
+    if args.api_host is None:
+        args.api_host = '0.0.0.0' if args.api else '127.0.0.1'
     log = config_log(args.log_level)
     settings = UserSettings(**args.__dict__)
     main(settings)

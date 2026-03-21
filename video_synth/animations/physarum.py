@@ -13,58 +13,58 @@ class Physarum(Animation):
         subgroup = self.__class__.__name__
 
         # Simulation parameters
-        self.num_agents = params.add("phys_num_agents",
+        self.num_agents = params.new("phys_num_agents",
                                      min=1000, max=10000, default=1000,
                                      subgroup=subgroup, group=group)
-        self.sensor_angle_spacing = params.add("phys_sensor_angle_spacing",
+        self.sensor_angle_spacing = params.new("phys_sensor_angle_spacing",
                                                min=0.0, max=np.pi/2, default=np.pi/8,
                                                subgroup=subgroup, group=group) # Radians
-        self.sensor_distance = params.add("phys_sensor_distance",
+        self.sensor_distance = params.new("phys_sensor_distance",
                                           min=1, max=20, default=9,
                                           subgroup=subgroup, group=group)
-        self.turn_angle = params.add("phys_turn_angle",
+        self.turn_angle = params.new("phys_turn_angle",
                                      min=0.0, max=np.pi/2, default=np.pi/4,
                                      subgroup=subgroup, group=group) # Radians
-        self.step_distance = params.add("phys_step_distance",
+        self.step_distance = params.new("phys_step_distance",
                                         min=1, max=10, default=1,
                                         subgroup=subgroup, group=group)
-        self.decay_factor = params.add("phys_decay_factor",
+        self.decay_factor = params.new("phys_decay_factor",
                                        min=0.0, max=1.0, default=0.1,
                                        subgroup=subgroup, group=group)
-        self.diffuse_factor = params.add("phys_diffuse_factor",
+        self.diffuse_factor = params.new("phys_diffuse_factor",
                                          min=0.0, max=1.0, default=0.5,
                                          subgroup=subgroup, group=group)
-        self.deposit_amount = params.add("phys_deposit_amount",
+        self.deposit_amount = params.new("phys_deposit_amount",
                                          min=0.1, max=5.0, default=1.0,
                                          subgroup=subgroup, group=group)
-        self.grid_resolution_scale = params.add("phys_grid_res_scale",
+        self.grid_resolution_scale = params.new("phys_grid_res_scale",
                                                 min=0.1, max=1.0, default=0.5,
                                                 subgroup=subgroup, group=group)
-        self.wrap_around = params.add("phys_wrap_around",
+        self.wrap_around = params.new("phys_wrap_around",
                                       min=0, max=1, default=1,
                                       group=group, subgroup=subgroup,
                                       type=Widget.TOGGLE) # Boolean as int
 
         # Color parameters
-        self.trail_r = params.add("phys_trail_r",
+        self.trail_r = params.new("phys_trail_r",
                                   min=0, max=255, default=0,
                                   subgroup=subgroup, group=group)
-        self.trail_g = params.add("phys_trail_g",
+        self.trail_g = params.new("phys_trail_g",
                                   min=0, max=255, default=255,
                                   subgroup=subgroup, group=group)
-        self.trail_b = params.add("phys_trail_b",
+        self.trail_b = params.new("phys_trail_b",
                                   min=0, max=255, default=0,
                                   subgroup=subgroup, group=group)
-        self.agent_r = params.add("phys_agent_r",
+        self.agent_r = params.new("phys_agent_r",
                                   min=0, max=255, default=255,
                                   subgroup=subgroup, group=group)
-        self.agent_g = params.add("phys_agent_g",
+        self.agent_g = params.new("phys_agent_g",
                                   min=0, max=255, default=0,
                                   subgroup=subgroup, group=group)
-        self.agent_b = params.add("phys_agent_b",
+        self.agent_b = params.new("phys_agent_b",
                                   min=0, max=255, default=0,
                                   subgroup=subgroup, group=group)
-        self.agent_size = params.add("phys_agent_size",
+        self.agent_size = params.new("phys_agent_size",
                                      min=1, max=5, default=1,
                                      subgroup=subgroup, group=group)
 

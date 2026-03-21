@@ -3,18 +3,24 @@ FastAPI server for remote control of the video synthesizer.
 Allows an agent or external application to control parameters via HTTP REST API.
 """
 
+import asyncio
 import logging
+import os
 import time
+from contextlib import asynccontextmanager
 from typing import Dict, List, Optional, Any
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import threading
 import uvicorn
 import io
 import cv2
 from lfo import LFO, LFOShape
+
+_WEB_DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'web', 'dist')
 
 log = logging.getLogger(__name__)
 
@@ -66,10 +72,19 @@ class APIServer:
         self._lfo_map = {}  # param_name → LFO
         self.host = host
         self.port = port
+        self._ws_clients: set[WebSocket] = set()
+        self._loop = None
+
+        @asynccontextmanager
+        async def lifespan(app):
+            self._loop = asyncio.get_running_loop()
+            yield
+
         self.app = FastAPI(
             title="Video Synth API",
             description="API for controlling video synthesizer parameters",
-            version="1.0.0"
+            version="1.0.0",
+            lifespan=lifespan,
         )
         self.app.add_middleware(
             CORSMiddleware,
@@ -79,6 +94,12 @@ class APIServer:
         )
 
         self._setup_routes()
+        if os.path.isdir(_WEB_DIST):
+            self.app.mount("/ui", StaticFiles(directory=_WEB_DIST, html=True), name="static")
+            self._web_ui = True
+        else:
+            log.warning("web/dist not found - run 'npm run build' in web/ to enable the web UI")
+            self._web_ui = False
         self._server_thread = None
         self._should_stop = False
 
@@ -370,6 +391,34 @@ class APIServer:
             log.info(f"LFO removed for '{param_name}'")
             return {"success": True}
 
+        @self.app.websocket("/ws/stream")
+        async def ws_stream(websocket: WebSocket):
+            await websocket.accept()
+            self._ws_clients.new(websocket)
+            try:
+                while True:
+                    await websocket.receive_text()
+            except (WebSocketDisconnect, Exception):
+                self._ws_clients.discard(websocket)
+
+    def push_frame(self, frame):
+        """Push a video frame to all connected WebSocket clients (call from main loop)."""
+        if not self._ws_clients or self._loop is None:
+            return
+        success, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+        if not success:
+            return
+        asyncio.run_coroutine_threadsafe(self._broadcast(buffer.tobytes()), self._loop)
+
+    async def _broadcast(self, data: bytes):
+        disconnected = set()
+        for ws in list(self._ws_clients):
+            try:
+                await ws.send_bytes(data)
+            except Exception:
+                disconnected.add(ws)
+        self._ws_clients -= disconnected
+
     def start(self):
         """Start the API server in a background thread."""
         if self._server_thread is not None:
@@ -384,6 +433,8 @@ class APIServer:
         self._server_thread.start()
         log.info(f"API server started at http://{self.host}:{self.port}")
         log.info(f"API docs available at http://{self.host}:{self.port}/docs")
+        if self._web_ui:
+            log.info(f"Web UI available at http://{self.host}:{self.port}/ui")
 
     def stop(self):
         """Stop the API server."""

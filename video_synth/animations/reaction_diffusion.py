@@ -17,20 +17,20 @@ class ReactionDiffusion(Animation):
         max_seed_size=50
         num_seeds=15
 
-        self.da = params.add("da",
+        self.da = params.new("da",
                              min=0, max=2.0, default=da,
                              subgroup=subgroup, group=group)
-        self.db = params.add("db",
+        self.db = params.new("db",
                              min=0, max=2.0, default=db,
                              subgroup=subgroup, group=group)
 
-        self.feed = params.add("feed",
+        self.feed = params.new("feed",
                                min=0, max=0.1, default=feed,
                                subgroup=subgroup, group=group)
-        self.kill = params.add("kill",
+        self.kill = params.new("kill",
                                min=0, max=0.1, default=kill,
                                subgroup=subgroup, group=group)
-        self.iterations_per_frame = params.add("iterations_per_frame",
+        self.iterations_per_frame = params.new("iterations_per_frame",
                                                min=5, max=100, default=50,
                                                subgroup=subgroup, group=group)
         

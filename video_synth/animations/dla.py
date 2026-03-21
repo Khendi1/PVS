@@ -15,47 +15,47 @@ class DLA(Animation):
         subgroup = self.__class__.__name__
 
         # Growth parameters
-        self.num_particles = params.add("dla_num_particles",
+        self.num_particles = params.new("dla_num_particles",
                                         min=10, max=500, default=100,
                                         subgroup=subgroup, group=group)
-        self.stickiness = params.add("dla_stickiness",
+        self.stickiness = params.new("dla_stickiness",
                                      min=0.1, max=1.0, default=1.0,
                                      subgroup=subgroup, group=group)
-        self.spawn_radius_ratio = params.add("dla_spawn_radius",
+        self.spawn_radius_ratio = params.new("dla_spawn_radius",
                                              min=1.1, max=2.0, default=1.3,
                                              subgroup=subgroup, group=group)
-        self.particle_speed = params.add("dla_particle_speed",
+        self.particle_speed = params.new("dla_particle_speed",
                                          min=1, max=10, default=3,
                                          subgroup=subgroup, group=group)
-        self.branch_bias = params.add("dla_branch_bias",
+        self.branch_bias = params.new("dla_branch_bias",
                                       min=-1.0, max=1.0, default=0.0,
                                       subgroup=subgroup, group=group)
-        self.fade = params.add("dla_fade",
+        self.fade = params.new("dla_fade",
                                min=0.0, max=1.0, default=0.99,
                                subgroup=subgroup, group=group)
 
         # Color parameters
-        self.crystal_r = params.add("dla_crystal_r",
+        self.crystal_r = params.new("dla_crystal_r",
                                     min=0, max=255, default=100,
                                     subgroup=subgroup, group=group)
-        self.crystal_g = params.add("dla_crystal_g",
+        self.crystal_g = params.new("dla_crystal_g",
                                     min=0, max=255, default=200,
                                     subgroup=subgroup, group=group)
-        self.crystal_b = params.add("dla_crystal_b",
+        self.crystal_b = params.new("dla_crystal_b",
                                     min=0, max=255, default=255,
                                     subgroup=subgroup, group=group)
-        self.particle_r = params.add("dla_particle_r",
+        self.particle_r = params.new("dla_particle_r",
                                      min=0, max=255, default=255,
                                      subgroup=subgroup, group=group)
-        self.particle_g = params.add("dla_particle_g",
+        self.particle_g = params.new("dla_particle_g",
                                      min=0, max=255, default=255,
                                      subgroup=subgroup, group=group)
-        self.particle_b = params.add("dla_particle_b",
+        self.particle_b = params.new("dla_particle_b",
                                      min=0, max=255, default=255,
                                      subgroup=subgroup, group=group)
 
         # Reset trigger
-        self.reset_trigger = params.add("dla_reset",
+        self.reset_trigger = params.new("dla_reset",
                                         min=0, max=1, default=0,
                                         subgroup=subgroup, group=group,
                                         type=Widget.TOGGLE)

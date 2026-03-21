@@ -18,25 +18,25 @@ class HarmonicInterference(Animation):
         super().__init__(params, width, height, group=group)
         subgroup = self.__class__.__name__
 
-        self.hi_num_layers = params.add("hi_num_layers",
+        self.hi_num_layers = params.new("hi_num_layers",
                                          min=2, max=8, default=5,
                                          subgroup=subgroup, group=group)
-        self.hi_base_freq = params.add("hi_base_freq",
+        self.hi_base_freq = params.new("hi_base_freq",
                                         min=0.5, max=20.0, default=4.0,
                                         subgroup=subgroup, group=group)
-        self.hi_freq_spread = params.add("hi_freq_spread",
+        self.hi_freq_spread = params.new("hi_freq_spread",
                                           min=0.0, max=2.0, default=0.5,
                                           subgroup=subgroup, group=group)
-        self.hi_drift_speed = params.add("hi_drift_speed",
+        self.hi_drift_speed = params.new("hi_drift_speed",
                                           min=0.0, max=2.0, default=0.3,
                                           subgroup=subgroup, group=group)
-        self.hi_rotation_speed = params.add("hi_rotation_speed",
+        self.hi_rotation_speed = params.new("hi_rotation_speed",
                                              min=0.0, max=1.0, default=0.1,
                                              subgroup=subgroup, group=group)
-        self.hi_color_speed = params.add("hi_color_speed",
+        self.hi_color_speed = params.new("hi_color_speed",
                                           min=0.0, max=2.0, default=0.2,
                                           subgroup=subgroup, group=group)
-        self.hi_colormap = params.add("hi_colormap",
+        self.hi_colormap = params.new("hi_colormap",
                                        min=0, max=len(COLORMAP_OPTIONS)-1,
                                        default=int(Colormap.TWILIGHT),
                                        subgroup=subgroup, group=group,

@@ -15,49 +15,49 @@ class Chladni(Animation):
         subgroup = self.__class__.__name__
 
         # Wave parameters
-        self.freq_m = params.add("chladni_freq_m",
+        self.freq_m = params.new("chladni_freq_m",
                                  min=1, max=20, default=5.0,
                                  subgroup=subgroup, group=group)
-        self.freq_n = params.add("chladni_freq_n",
+        self.freq_n = params.new("chladni_freq_n",
                                  min=1, max=20, default=3.0,
                                  subgroup=subgroup, group=group)
-        self.amplitude = params.add("chladni_amplitude",
+        self.amplitude = params.new("chladni_amplitude",
                                     min=0.1, max=2.0, default=1.0,
                                     subgroup=subgroup, group=group)
-        self.animation_speed = params.add("chladni_speed",
+        self.animation_speed = params.new("chladni_speed",
                                           min=0.0, max=2.0, default=0.5,
                                           subgroup=subgroup, group=group)
-        self.pattern_blend = params.add("chladni_blend",
+        self.pattern_blend = params.new("chladni_blend",
                                         min=0.0, max=1.0, default=0.5,
                                         subgroup=subgroup, group=group)
 
         # Particle simulation
-        self.num_particles = params.add("chladni_particles",
+        self.num_particles = params.new("chladni_particles",
                                         min=1000, max=50000, default=10000,
                                         subgroup=subgroup, group=group)
-        self.particle_speed = params.add("chladni_particle_speed",
+        self.particle_speed = params.new("chladni_particle_speed",
                                          min=0.1, max=5.0, default=1.0,
                                          subgroup=subgroup, group=group)
-        self.friction = params.add("chladni_friction",
+        self.friction = params.new("chladni_friction",
                                    min=0.8, max=0.99, default=0.95,
                                    subgroup=subgroup, group=group)
 
         # Visual parameters
-        self.show_wave = params.add("chladni_show_wave",
+        self.show_wave = params.new("chladni_show_wave",
                                     min=0, max=1, default=1,
                                     subgroup=subgroup, group=group,
                                     type=Widget.TOGGLE)
-        self.colormap = params.add("chladni_colormap",
+        self.colormap = params.new("chladni_colormap",
                                    min=0, max=len(COLORMAP_OPTIONS)-1, default=2,
                                    subgroup=subgroup, group=group,
                                    type=Widget.DROPDOWN, options=Colormap)
-        self.particle_r = params.add("chladni_particle_r",
+        self.particle_r = params.new("chladni_particle_r",
                                      min=0, max=255, default=255,
                                      subgroup=subgroup, group=group)
-        self.particle_g = params.add("chladni_particle_g",
+        self.particle_g = params.new("chladni_particle_g",
                                      min=0, max=255, default=255,
                                      subgroup=subgroup, group=group)
-        self.particle_b = params.add("chladni_particle_b",
+        self.particle_b = params.new("chladni_particle_b",
                                      min=0, max=255, default=200,
                                      subgroup=subgroup, group=group)
 

@@ -13,64 +13,64 @@ class Lissajous(EffectBase):
         subgroup = self.__class__.__name__
 
         # Amplitude controls (as percentage of frame size)
-        self.amplitude_x = params.add("lissajous_amp_x",
+        self.amplitude_x = params.new("lissajous_amp_x",
                                       min=0.0, max=1.0, default=0.4,
                                       subgroup=subgroup, group=group)
-        self.amplitude_y = params.add("lissajous_amp_y",
+        self.amplitude_y = params.new("lissajous_amp_y",
                                       min=0.0, max=1.0, default=0.4,
                                       subgroup=subgroup, group=group)
 
         # Frequency ratio controls (these create the pattern shape)
-        self.freq_x = params.add("lissajous_freq_x",
+        self.freq_x = params.new("lissajous_freq_x",
                                  min=1, max=12, default=3,
                                  subgroup=subgroup, group=group)
-        self.freq_y = params.add("lissajous_freq_y",
+        self.freq_y = params.new("lissajous_freq_y",
                                  min=1, max=12, default=2,
                                  subgroup=subgroup, group=group)
 
         # Phase offset (controls pattern rotation/shape)
-        self.phase = params.add("lissajous_phase",
+        self.phase = params.new("lissajous_phase",
                                 min=0.0, max=1.0, default=0.25,
                                 subgroup=subgroup, group=group)
 
         # Animation speed
-        self.speed = params.add("lissajous_speed",
+        self.speed = params.new("lissajous_speed",
                                 min=0.0, max=2.0, default=0.5,
                                 subgroup=subgroup, group=group)
 
         # Visual parameters
-        self.num_points = params.add("lissajous_points",
+        self.num_points = params.new("lissajous_points",
                                      min=100, max=5000, default=1000,
                                      subgroup=subgroup, group=group)
-        self.line_mode = params.add("lissajous_line_mode",
+        self.line_mode = params.new("lissajous_line_mode",
                                     min=0, max=1, default=1,
                                     subgroup=subgroup, group=group)
-        self.thickness = params.add("lissajous_thickness",
+        self.thickness = params.new("lissajous_thickness",
                                     min=1, max=10, default=2,
                                     subgroup=subgroup, group=group)
 
         # Color controls
-        self.hue_start = params.add("lissajous_hue_start",
+        self.hue_start = params.new("lissajous_hue_start",
                                     min=0, max=180, default=0,
                                     subgroup=subgroup, group=group)
-        self.hue_range = params.add("lissajous_hue_range",
+        self.hue_range = params.new("lissajous_hue_range",
                                     min=0, max=180, default=60,
                                     subgroup=subgroup, group=group)
-        self.saturation = params.add("lissajous_saturation",
+        self.saturation = params.new("lissajous_saturation",
                                      min=0, max=255, default=255,
                                      subgroup=subgroup, group=group)
-        self.brightness = params.add("lissajous_brightness",
+        self.brightness = params.new("lissajous_brightness",
                                      min=0, max=255, default=255,
                                      subgroup=subgroup, group=group)
-        self.rainbow_mode = params.add("lissajous_rainbow",
+        self.rainbow_mode = params.new("lissajous_rainbow",
                                        min=0, max=1, default=1,
                                        subgroup=subgroup, group=group)
 
         # Second harmonic for more complex patterns
-        self.harmonic_strength = params.add("lissajous_harmonic",
+        self.harmonic_strength = params.new("lissajous_harmonic",
                                             min=0.0, max=1.0, default=0.0,
                                             subgroup=subgroup, group=group)
-        self.harmonic_freq = params.add("lissajous_harm_freq",
+        self.harmonic_freq = params.new("lissajous_harm_freq",
                                         min=2, max=8, default=3,
                                         subgroup=subgroup, group=group)
 

@@ -17,23 +17,23 @@ class Lenia(Animation):
         super().__init__(params, width, height, group=group)
         subgroup = self.__class__.__name__
 
-        self.lenia_dt = params.add("lenia_dt",
+        self.lenia_dt = params.new("lenia_dt",
                                     min=0.01, max=0.5, default=0.1,
                                     subgroup=subgroup, group=group)
-        self.lenia_mu = params.add("lenia_mu",
+        self.lenia_mu = params.new("lenia_mu",
                                     min=0.05, max=0.5, default=0.15,
                                     subgroup=subgroup, group=group)
-        self.lenia_sigma = params.add("lenia_sigma",
+        self.lenia_sigma = params.new("lenia_sigma",
                                        min=0.005, max=0.1, default=0.017,
                                        subgroup=subgroup, group=group)
-        self.lenia_radius = params.add("lenia_radius",
+        self.lenia_radius = params.new("lenia_radius",
                                         min=5, max=30, default=13,
                                         subgroup=subgroup, group=group)
-        self.lenia_colormap = params.add("lenia_colormap",
+        self.lenia_colormap = params.new("lenia_colormap",
                                           min=0, max=len(COLORMAP_OPTIONS)-1, default=int(Colormap.INFERNO),
                                           subgroup=subgroup, group=group,
                                           type=Widget.DROPDOWN, options=Colormap)
-        self.lenia_seed_density = params.add("lenia_seed_density",
+        self.lenia_seed_density = params.new("lenia_seed_density",
                                               min=0.01, max=0.5, default=0.15,
                                               subgroup=subgroup, group=group)
 

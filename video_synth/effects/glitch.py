@@ -26,104 +26,104 @@ class Glitch(EffectBase):
         # General glitch parameters
         subgroup_general = "Glitch_General"
 
-        self.enable_pixel_shift = params.add("enable_pixel_shift",
+        self.enable_pixel_shift = params.new("enable_pixel_shift",
                                               group=group, subgroup=subgroup_general,
                                               type=Widget.TOGGLE)
-        self.enable_color_split = params.add("enable_color_split",
+        self.enable_color_split = params.new("enable_color_split",
                                              group=group, subgroup=subgroup_general,
                                              type=Widget.TOGGLE)
-        self.enable_block_corruption = params.add("enable_block_corruption",
+        self.enable_block_corruption = params.new("enable_block_corruption",
                                                   group=group, subgroup=subgroup_general,
                                                   type=Widget.TOGGLE)
-        self.enable_random_rectangles = params.add("enable_random_rectangles",
+        self.enable_random_rectangles = params.new("enable_random_rectangles",
                                                    group=group, subgroup=subgroup_general,
                                                    type=Widget.TOGGLE)
-        self.enable_horizontal_scroll_freeze = params.add("enable_horizontal_scroll_freeze",
+        self.enable_horizontal_scroll_freeze = params.new("enable_horizontal_scroll_freeze",
                                                           group=group, subgroup=subgroup_general,
                                                           type=Widget.TOGGLE)
 
-        self.glitch_duration_frames = params.add("glitch_duration_frames",
+        self.glitch_duration_frames = params.new("glitch_duration_frames",
                                                  min=1, max=300, default=60,
                                                  subgroup=subgroup_general, group=group)
-        self.glitch_intensity_max = params.add("glitch_intensity_max",
+        self.glitch_intensity_max = params.new("glitch_intensity_max",
                                                min=0, max=100, default=50,
                                                subgroup=subgroup_general, group=group)
-        self.glitch_block_size_max = params.add("glitch_block_size_max",
+        self.glitch_block_size_max = params.new("glitch_block_size_max",
                                                 min=0, max=200, default=60,
                                                 subgroup=subgroup_general, group=group)
-        self.band_div = params.add("glitch_band_div",
+        self.band_div = params.new("glitch_band_div",
                                    min=1, max=10, default=5,
                                    subgroup=subgroup_general, group=group)
-        self.num_glitches = params.add("num_glitches",
+        self.num_glitches = params.new("num_glitches",
                                        min=0, max=100, default=0,
                                        group=group, subgroup=subgroup_general)
-        self.glitch_size = params.add("glitch_size",
+        self.glitch_size = params.new("glitch_size",
                                       min=1, max=100, default=0,
                                       group=group, subgroup=subgroup_general)
 
         # Slitscan parameters
         subgroup_slitscan = "Glitch_Slitscan"
 
-        self.enable_slitscan = params.add("enable_slitscan",
+        self.enable_slitscan = params.new("enable_slitscan",
                                           group=group, subgroup=subgroup_slitscan,
                                           type=Widget.TOGGLE)
-        self.ss_dir = params.add("slitscan_direction",
+        self.ss_dir = params.new("slitscan_direction",
                                  min=0, max=1, default=0,
                                  group=group, subgroup=subgroup_slitscan,
                                  type=Widget.TOGGLE)
-        self.ss_slice_width = params.add("slitscan_slice_width",
+        self.ss_slice_width = params.new("slitscan_slice_width",
                                          min=1, max=50, default=5,
                                          group=group, subgroup=subgroup_slitscan)
-        self.ss_time_offset = params.add("slitscan_time_offset",
+        self.ss_time_offset = params.new("slitscan_time_offset",
                                          min=1, max=60, default=10,
                                          group=group, subgroup=subgroup_slitscan)
-        self.ss_speed = params.add("slitscan_speed",
+        self.ss_speed = params.new("slitscan_speed",
                                    min=0.1, max=10.0, default=1.0,
                                    group=group, subgroup=subgroup_slitscan)
-        self.ss_reverse = params.add("slitscan_reverse",
+        self.ss_reverse = params.new("slitscan_reverse",
                                      min=0, max=1, default=0,
                                      group=group, subgroup=subgroup_slitscan,
                                      type=Widget.TOGGLE)
-        self.ss_buffer_size = params.add("slitscan_buffer_size",
+        self.ss_buffer_size = params.new("slitscan_buffer_size",
                                          min=10, max=120, default=60,
                                          group=group, subgroup=subgroup_slitscan)
-        self.ss_blend_mode = params.add("slitscan_blend_mode",
+        self.ss_blend_mode = params.new("slitscan_blend_mode",
                                         min=0, max=2, default=0,
                                         group=group, subgroup=subgroup_slitscan,
                                         type=Widget.DROPDOWN, options=BlendModes)
-        self.ss_blend_alpha = params.add("slitscan_blend_alpha",
+        self.ss_blend_alpha = params.new("slitscan_blend_alpha",
                                          min=0.0, max=1.0, default=1.0,
                                          group=group, subgroup=subgroup_slitscan,
                                          type=Widget.SLIDER)
-        self.ss_position_offset = params.add("slitscan_position_offset",
+        self.ss_position_offset = params.new("slitscan_position_offset",
                                              min=-100, max=100, default=0,
                                              group=group, subgroup=subgroup_slitscan)
-        self.ss_wobble_amount = params.add("slitscan_wobble_amount",
+        self.ss_wobble_amount = params.new("slitscan_wobble_amount",
                                            min=0, max=50, default=0,
                                            group=group, subgroup=subgroup_slitscan)
-        self.ss_wobble_freq = params.add("slitscan_wobble_freq",
+        self.ss_wobble_freq = params.new("slitscan_wobble_freq",
                                          min=0.1, max=10.0, default=1.0,
                                          group=group, subgroup=subgroup_slitscan)
 
         # Echo/Stutter parameters
         subgroup_echo = "Glitch_Echo"
 
-        self.enable_echo = params.add("enable_echo",
+        self.enable_echo = params.new("enable_echo",
                                       group=group, subgroup=subgroup_echo,
                                       type=Widget.TOGGLE)
-        self.echo_probability = params.add("echo_probability",
+        self.echo_probability = params.new("echo_probability",
                                            min=0.0, max=1.0, default=0.1,
                                            group=group, subgroup=subgroup_echo)
-        self.echo_buffer_size = params.add("echo_buffer_size",
+        self.echo_buffer_size = params.new("echo_buffer_size",
                                            min=5, max=60, default=30,
                                            group=group, subgroup=subgroup_echo)
-        self.echo_freeze_min = params.add("echo_freeze_min",
+        self.echo_freeze_min = params.new("echo_freeze_min",
                                           min=1, max=30, default=2,
                                           group=group, subgroup=subgroup_echo)
-        self.echo_freeze_max = params.add("echo_freeze_max",
+        self.echo_freeze_max = params.new("echo_freeze_max",
                                           min=2, max=60, default=10,
                                           group=group, subgroup=subgroup_echo)
-        self.echo_blend_amount = params.add("echo_blend_amount",
+        self.echo_blend_amount = params.new("echo_blend_amount",
                                             min=0.0, max=1.0, default=1.0,
                                             group=group, subgroup=subgroup_echo)
 

@@ -17,33 +17,33 @@ class Pixels(EffectBase):
         self.image_width = image_width
         self.image_height = image_height
 
-        self.sharpen_type = params.add("sharpen_type",
+        self.sharpen_type = params.new("sharpen_type",
                                         min=0, max=len(SharpenType)-1, default=0,
                                         group=group, subgroup=subgroup,
                                         type=Widget.DROPDOWN, options=SharpenType)
-        self.sharpen_intensity = params.add("sharpen_intensity",
+        self.sharpen_intensity = params.new("sharpen_intensity",
                                             min=1.0, max=8.0, default=4.0,
                                             subgroup=subgroup, group=group)
-        self.mask_blur = params.add("mask_blur",
+        self.mask_blur = params.new("mask_blur",
                                     min=1, max=10, default=5,
                                     subgroup=subgroup, group=group)
-        self.k_size = params.add("k_size",
+        self.k_size = params.new("k_size",
                                  min=0, max=11, default=3,
                                  subgroup=subgroup, group=group)
 
-        self.blur_type = params.add("blur_type",
+        self.blur_type = params.new("blur_type",
                                     min=0, max=len(BlurType)-1, default=0,
                                     group=group, subgroup=subgroup,
                                     type=Widget.DROPDOWN, options=BlurType)
-        self.blur_kernel_size = params.add("blur_kernel_size",
+        self.blur_kernel_size = params.new("blur_kernel_size",
                                            min=1, max=100, default=1,
                                            subgroup=subgroup, group=group)
 
-        self.noise_type = params.add("noise_type",
+        self.noise_type = params.new("noise_type",
                                      min=NoiseType.NONE.value, max=NoiseType.RANDOM.value, default=NoiseType.NONE.value,
                                      group=group, subgroup=subgroup,
                                      type=Widget.DROPDOWN, options=NoiseType)
-        self.noise_intensity = params.add("noise_intensity",
+        self.noise_intensity = params.new("noise_intensity",
                                           min=0.0, max=1.0, default=0.1,
                                           subgroup=subgroup, group=group)
 

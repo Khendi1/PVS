@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  base: '/ui/',
   server: {
     host: true,   // listen on 0.0.0.0 so other machines on the LAN can connect
     proxy: {
@@ -12,6 +13,7 @@ export default defineConfig({
       '/patch': 'http://127.0.0.1:8000',
       '/midi': 'http://127.0.0.1:8000',
       '/lfo': 'http://127.0.0.1:8000',
+      '/ws': { target: 'ws://127.0.0.1:8000', ws: true },
     }
   }
 })

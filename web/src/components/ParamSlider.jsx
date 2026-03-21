@@ -1,10 +1,21 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { setParam, resetParam } from '../api.js'
 import LfoPanel from './LfoPanel.jsx'
 
-function debounce(fn, ms) {
-  let t
-  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms) }
+// Fire at most once per animation frame — aligns sends with display refresh rate
+function rafThrottle(fn) {
+  let rafId = null
+  let latest = null
+  return (...args) => {
+    latest = args
+    if (rafId === null) {
+      rafId = requestAnimationFrame(() => {
+        fn(...latest)
+        rafId = null
+        latest = null
+      })
+    }
+  }
 }
 
 function fmt(v) {
@@ -45,7 +56,7 @@ function ParamDropdown({ param }) {
   )
 }
 
-export default function ParamSlider({ param, onExternalSync }) {
+function ParamSlider({ param }) {
   const isDropdown = param.options && param.options.length > 0 &&
     (param.type.includes('DROPDOWN') || param.type.includes('RADIO') || typeof param.value === 'string')
 
@@ -70,8 +81,8 @@ export default function ParamSlider({ param, onExternalSync }) {
     }
   }, [param.value])
 
-  const sendDebounced = useCallback(
-    debounce((name, val) => setParam(name, val).catch(() => {}), 150),
+  const sendThrottled = useCallback(
+    rafThrottle((name, val) => setParam(name, val).catch(() => {})),
     [param.name]
   )
 
@@ -79,7 +90,7 @@ export default function ParamSlider({ param, onExternalSync }) {
     const v = parseFloat(e.target.value)
     setLocalVal(v)
     setInputVal(fmt(v))
-    sendDebounced(param.name, v)
+    sendThrottled(param.name, v)
   }
 
   function handleInputChange(e) { setInputVal(e.target.value) }
@@ -136,3 +147,9 @@ export default function ParamSlider({ param, onExternalSync }) {
     </div>
   )
 }
+
+export default memo(ParamSlider, (prev, next) =>
+  prev.param.name === next.param.name &&
+  prev.param.value === next.param.value &&
+  prev.param.options === next.param.options
+)

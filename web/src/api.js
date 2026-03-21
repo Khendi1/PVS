@@ -60,6 +60,12 @@ export function streamUrl() {
   return `${API_BASE}/stream?t=${Date.now()}`
 }
 
+export function wsStreamUrl() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws'
+  const base = API_BASE || `${proto}://${location.host}`
+  return `${base}/ws/stream`
+}
+
 export async function fetchLfos() {
   const r = await fetch(`${API_BASE}/lfo`)
   if (!r.ok) throw new Error(`HTTP ${r.status}`)
