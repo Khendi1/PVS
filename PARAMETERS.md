@@ -22,6 +22,7 @@ This document describes all parameters across every module. It is intended to gu
 - [Oscillator Grid](#oscillator-grid)
 - [Harmonic Interference](#harmonic-interference)
 - [Strange Attractor](#strange-attractor)
+- [Perlin Noise](#perlin-noise)
 - [Color Effects](#color-effects)
 - [Warp](#warp)
 - [Feedback](#feedback)
@@ -33,8 +34,10 @@ This document describes all parameters across every module. It is intended to gu
 - [Reflector](#reflector)
 - [Lissajous](#lissajous)
 - [Mixer](#mixer)
+- [Performance Controls](#performance-controls)
 - [LFO (Low Frequency Oscillator)](#lfo-low-frequency-oscillator)
 - [Audio Reactive](#audio-reactive)
+- [Beat Detector](#beat-detector)
 
 ---
 
@@ -340,6 +343,26 @@ Plots the trajectory of a strange attractor system (Lorenz, Clifford, De Jong, A
 
 ---
 
+## Perlin Noise
+
+Generative animation source built on 3D Perlin noise. Animates through the noise field over time, producing smooth organic textures. Supports four modes and any OpenCV colormap.
+
+| Parameter | Key | Min | Max | Default | Description |
+|-----------|-----|-----|-----|---------|-------------|
+| Noise Type | `pnoise_type` | — | — | PERLIN | Mode: **Perlin** (standard fBm), **Turbulence** (absolute value — harsh ridges), **Ridged** (inverted absolute value — bright ridges on dark field), **FBM** (same as Perlin but labelled for clarity) |
+| Scale | `pnoise_scale` | 0.002 | 0.1 | 0.01 | Spatial frequency of the noise field; higher = smaller/denser features |
+| Speed | `pnoise_speed` | 0.0 | 2.0 | 0.2 | Rate at which the noise field animates (z-axis scroll speed) |
+| Octaves | `pnoise_octaves` | 1 | 8 | 4 | Number of layered noise passes; more octaves add finer detail |
+| Persistence | `pnoise_persistence` | 0.1 | 1.0 | 0.5 | Amplitude falloff per octave; lower = smoother, higher = more detail |
+| Lacunarity | `pnoise_lacunarity` | 1.0 | 4.0 | 2.0 | Frequency multiplier per octave; higher = more variation between octaves |
+| Colormap | `pnoise_colormap` | — | — | INFERNO | OpenCV colormap applied to the grayscale noise field |
+| Offset X | `pnoise_offset_x` | -100 | 100 | 0 | Horizontal pan through the noise space |
+| Offset Y | `pnoise_offset_y` | -100 | 100 | 0 | Vertical pan through the noise space |
+
+> **Performance note:** The noise is computed on a 1/8-resolution grid and bicubically upscaled (~4 800 samples/frame at 640×480), so it runs in real time without GPU acceleration.
+
+---
+
 ## Color Effects
 
 Post-processing effects applied to the output image's color properties.
@@ -487,6 +510,28 @@ Simulates digital video glitch artifacts including pixel shifts, color splits, b
 | Freeze Min | `echo_freeze_min` | 1 | 30 | 2 | Minimum duration (frames) of a freeze event |
 | Freeze Max | `echo_freeze_max` | 2 | 60 | 10 | Maximum duration (frames) of a freeze event |
 | Blend Amount | `echo_blend_amount` | 0.0 | 1.0 | 1.0 | Opacity of the echoed frame when composited |
+
+### Pixel Sorting
+
+Sorts contiguous pixel spans (within a brightness/channel threshold band) by their key value per row or column, producing the classic glitch-art diagonal smear effect.
+
+| Parameter | Key | Min | Max | Default | Description |
+|-----------|-----|-----|-----|---------|-------------|
+| Enable | `enable_pixel_sort` | — | — | off | Toggle pixel sorting |
+| Direction | `ps_direction` | — | — | 0 | **0** = sort rows horizontally, **1** = sort columns vertically |
+| Sort By | `ps_sort_by` | — | — | BRIGHTNESS | Key channel: **Brightness** (luma), **Blue**, or **Green** |
+| Threshold Low | `ps_threshold_low` | 0 | 255 | 50 | Pixels with key value below this are not sorted (span boundary) |
+| Threshold High | `ps_threshold_high` | 0 | 255 | 200 | Pixels with key value above this are not sorted (span boundary) |
+
+### Chromatic Aberration
+
+Separates the red and blue color channels and shifts them in opposite directions along a configurable angle, simulating lens chromatic fringing.
+
+| Parameter | Key | Min | Max | Default | Description |
+|-----------|-----|-----|-----|---------|-------------|
+| Enable | `enable_chrom_ab` | — | — | off | Toggle chromatic aberration |
+| Amount | `chrom_ab_amount` | 0 | 50 | 5 | Pixel displacement applied to the red and blue channels |
+| Angle | `chrom_ab_angle` | 0 | 359 | 0 | Direction of the channel separation (degrees; 0 = horizontal) |
 
 ---
 
@@ -637,6 +682,40 @@ Controls which two animation sources are combined and how they are blended.
 
 ---
 
+## Performance Controls
+
+Live performance actions available as GUI buttons (Mixer tab) and keyboard shortcuts. These are not saved parameters — they are transient session controls.
+
+### Blackout / Freeze
+
+| Control | Button | Shortcut | Description |
+|---------|--------|----------|-------------|
+| Blackout | **Blackout** | `Space` | Immediately replaces output with a solid black frame. Toggle again to resume. |
+| Freeze | **Freeze** | `F` | Holds the current output frame. All effects continue processing internally; toggling off resumes live output. |
+
+### Autopilot
+
+Automatically advances to the next saved patch on a timer, enabling hands-free patch cycling during a performance.
+
+| Control | Button | Shortcut | Description |
+|---------|--------|----------|-------------|
+| Toggle autopilot | **Autopilot** | `A` | Start or stop patch cycling. Button turns green when active. |
+| Increase interval | — | `]` | Increase cycle interval by 5 s (min 2 s, max 300 s; default 10 s) |
+| Decrease interval | — | `[` | Decrease cycle interval by 5 s |
+
+### Patch Navigation
+
+| Shortcut | Action |
+|----------|--------|
+| `→` | Load next saved patch |
+| `←` | Load previous saved patch |
+| `Ctrl+R` | Load a random saved patch |
+| `Ctrl+S` | Save current state as a new patch |
+
+> Keyboard shortcuts are suppressed when a text input field has focus.
+
+---
+
 ## LFO (Low Frequency Oscillator)
 
 Each LFO modulates a target parameter over time. Parameters are prefixed with the LFO's name.
@@ -670,3 +749,23 @@ Each audio-reactive binding maps a frequency band to a target parameter. Paramet
 | Decay | `{name}_decay` | 0.0 | 1.0 | 0.1 | How quickly the output falls after the signal drops |
 | Cutoff Min | `{name}_cutoff_min` | -100 | 100 | -100 | Minimum value the audio binding will drive the target to |
 | Cutoff Max | `{name}_cutoff_max` | -100 | 100 | 100 | Maximum value the audio binding will drive the target to |
+
+---
+
+## Beat Detector
+
+Automatically analyzes the bass frequency band to detect rhythmic onsets and estimate BPM. The detected BPM is displayed live in the Mixer tab. No configuration required — detection runs whenever audio input is active.
+
+| Property | Description |
+|----------|-------------|
+| `beat_detector.bpm` | Estimated tempo in beats per minute (updated after each detected beat, using the median of the last 16 inter-beat intervals) |
+| `beat_detector.is_beat` | `True` for exactly one frame when a beat is triggered; the BPM label in the GUI flashes orange at this moment |
+
+### Detection Internals
+
+| Setting | Value | Description |
+|---------|-------|-------------|
+| Source band | Bass (20–250 Hz) | Energy used to trigger beats |
+| Sensitivity | 1.5× | Beat fires when current energy exceeds 1.5 × rolling average |
+| History window | ~43 frames (~1.4 s at 30 fps) | Window used to compute the rolling average |
+| Min inter-beat interval | 0.2 s | Prevents double-triggering; corresponds to ~300 BPM maximum |

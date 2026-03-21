@@ -11,6 +11,7 @@ Classes:
 
 import threading
 import logging
+import time
 import numpy as np
 from param import Param, ParamTable
 from common import Groups, Widget
@@ -37,6 +38,66 @@ BAND_RANGES = [
 ]
 
 NUM_BANDS = len(BAND_NAMES)
+
+
+class BeatDetector:
+    """
+    Energy-based onset detector with BPM estimation.
+
+    Each call to update() compares current frame energy to a rolling average.
+    When energy exceeds (average * sensitivity) and the minimum inter-beat
+    interval has elapsed, a beat is registered and BPM is re-estimated from
+    the median of recent inter-beat intervals.
+    """
+
+    def __init__(self, sensitivity: float = 1.5, history_size: int = 43,
+                 min_interval: float = 0.2):
+        """
+        Args:
+            sensitivity:   Multiplier above rolling average that triggers a beat.
+            history_size:  Number of frames of energy history (~1.4 s at 30 fps).
+            min_interval:  Minimum seconds allowed between consecutive beats.
+        """
+        self.sensitivity   = sensitivity
+        self.history_size  = history_size
+        self.min_interval  = min_interval
+
+        self._energy_history: list = []
+        self._beat_times:     list = []
+        self._last_beat_time: float = 0.0
+
+        self.bpm:     float = 0.0
+        self.is_beat: bool  = False
+
+    def update(self, energy: float, timestamp: float) -> bool:
+        """Feed one frame of energy. Returns True on the frame a beat fires."""
+        self.is_beat = False
+
+        self._energy_history.append(energy)
+        if len(self._energy_history) > self.history_size:
+            self._energy_history.pop(0)
+
+        if len(self._energy_history) < 10:
+            return False
+
+        avg = float(np.mean(self._energy_history))
+        if avg < 1e-7:
+            return False
+
+        if (energy > avg * self.sensitivity and
+                (timestamp - self._last_beat_time) > self.min_interval):
+            self.is_beat = True
+            self._last_beat_time = timestamp
+            self._beat_times.append(timestamp)
+            if len(self._beat_times) > 16:
+                self._beat_times.pop(0)
+            if len(self._beat_times) >= 2:
+                intervals = np.diff(self._beat_times)
+                median_interval = float(np.median(intervals))
+                if median_interval > 0:
+                    self.bpm = round(60.0 / median_interval, 1)
+
+        return self.is_beat
 
 
 class AudioBand:
@@ -174,6 +235,7 @@ class AudioReactiveModule:
             self._band_slices.append((low_bin, max(low_bin + 1, high_bin)))
 
         self._stream = None
+        self.beat_detector = BeatDetector()
 
     def _audio_callback(self, indata, frames, time_info, status):
         """sounddevice callback - runs on audio thread."""
@@ -249,6 +311,9 @@ class AudioReactiveModule:
                 self.band_energies[i] = float(np.mean(spectrum[lo:hi]))
             else:
                 self.band_energies[i] = 0.0
+
+        # Update beat detector using bass energy
+        self.beat_detector.update(self.band_energies[0], time.monotonic())
 
         # Update all linked bands
         for band in self.bands:

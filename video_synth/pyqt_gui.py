@@ -95,6 +95,23 @@ class PyQTGUI(QMainWindow):
         self.autosave_timer.timeout.connect(self.save_controller.autosave)
         self.autosave_timer.start(30_000)  # autosave every 30 seconds
 
+        # Autopilot (auto-cycle patches)
+        self.autopilot_active = False
+        self.autopilot_interval_ms = 10_000  # default 10 s
+        self.autopilot_timer = QTimer(self)
+        self.autopilot_timer.timeout.connect(self._autopilot_tick)
+
+        # Performance control button references (set when layout is built)
+        self.blackout_btn  = None
+        self.freeze_btn    = None
+        self.autopilot_btn = None
+        self.bpm_label     = None
+
+        # BPM refresh timer
+        self.bpm_refresh_timer = QTimer(self)
+        self.bpm_refresh_timer.timeout.connect(self._refresh_bpm_label)
+        self.bpm_refresh_timer.start(500)
+
     def _crash_recovery_check(self):
         """On startup, check for a previous crash and offer to restore autosave."""
         from PyQt6.QtWidgets import QMessageBox
@@ -116,8 +133,111 @@ class PyQTGUI(QMainWindow):
 
     def closeEvent(self, event):
         """Mark clean exit so crash recovery doesn't trigger on next startup."""
+        self.autopilot_timer.stop()
         self.save_controller.clear_lock()
         super().closeEvent(event)
+
+    # ------------------------------------------------------------------ #
+    #  Keyboard shortcuts                                                  #
+    # ------------------------------------------------------------------ #
+
+    def keyPressEvent(self, event):
+        """Global keyboard shortcuts for live performance."""
+        from PyQt6.QtWidgets import QLineEdit, QTextEdit
+        if isinstance(self.focusWidget(), (QLineEdit, QTextEdit)):
+            super().keyPressEvent(event)
+            return
+
+        key  = event.key()
+        ctrl = bool(event.modifiers() & Qt.KeyboardModifier.ControlModifier)
+
+        if key == Qt.Key.Key_Space:
+            self._toggle_blackout()
+        elif key == Qt.Key.Key_F:
+            self._toggle_freeze()
+        elif key == Qt.Key.Key_A:
+            self._toggle_autopilot()
+        elif key == Qt.Key.Key_Right and not ctrl:
+            self.save_controller.load_next_patch()
+        elif key == Qt.Key.Key_Left and not ctrl:
+            self.save_controller.load_prev_patch()
+        elif key == Qt.Key.Key_R and ctrl:
+            self.save_controller.load_random_patch()
+        elif key == Qt.Key.Key_S and ctrl:
+            self.save_controller.save_patch()
+        elif key == Qt.Key.Key_BracketRight:
+            # Increase autopilot interval by 5 s
+            self.autopilot_interval_ms = min(300_000, self.autopilot_interval_ms + 5_000)
+            if self.autopilot_active:
+                self.autopilot_timer.setInterval(self.autopilot_interval_ms)
+            log.info(f"Autopilot interval: {self.autopilot_interval_ms // 1000}s")
+        elif key == Qt.Key.Key_BracketLeft:
+            # Decrease autopilot interval by 5 s (min 2 s)
+            self.autopilot_interval_ms = max(2_000, self.autopilot_interval_ms - 5_000)
+            if self.autopilot_active:
+                self.autopilot_timer.setInterval(self.autopilot_interval_ms)
+            log.info(f"Autopilot interval: {self.autopilot_interval_ms // 1000}s")
+        else:
+            super().keyPressEvent(event)
+
+    # ------------------------------------------------------------------ #
+    #  Performance controls                                                #
+    # ------------------------------------------------------------------ #
+
+    def _toggle_blackout(self):
+        if self.mixer is None:
+            return
+        self.mixer.blackout = not self.mixer.blackout
+        if self.blackout_btn:
+            if self.mixer.blackout:
+                self.blackout_btn.setStyleSheet(
+                    "background-color: #000; color: #fff; font-weight: bold;")
+                self.blackout_btn.setText("■ BLACKOUT")
+            else:
+                self.blackout_btn.setStyleSheet("")
+                self.blackout_btn.setText("Blackout")
+
+    def _toggle_freeze(self):
+        if self.mixer is None:
+            return
+        self.mixer.freeze = not self.mixer.freeze
+        if self.freeze_btn:
+            if self.mixer.freeze:
+                self.freeze_btn.setStyleSheet(
+                    "background-color: #1565C0; color: #fff; font-weight: bold;")
+                self.freeze_btn.setText("❚❚ FREEZE")
+            else:
+                self.freeze_btn.setStyleSheet("")
+                self.freeze_btn.setText("Freeze")
+
+    def _toggle_autopilot(self):
+        self.autopilot_active = not self.autopilot_active
+        if self.autopilot_active:
+            self.autopilot_timer.start(self.autopilot_interval_ms)
+        else:
+            self.autopilot_timer.stop()
+        if self.autopilot_btn:
+            if self.autopilot_active:
+                self.autopilot_btn.setStyleSheet(
+                    "background-color: #4CAF50; color: #fff; font-weight: bold;")
+                self.autopilot_btn.setText("▶ AUTO")
+            else:
+                self.autopilot_btn.setStyleSheet("")
+                self.autopilot_btn.setText("Autopilot")
+
+    def _autopilot_tick(self):
+        self.save_controller.load_next_patch()
+
+    def _refresh_bpm_label(self):
+        if self.bpm_label is None:
+            return
+        if self.audio_module and hasattr(self.audio_module, 'beat_detector'):
+            bpm = self.audio_module.beat_detector.bpm
+            beat = self.audio_module.beat_detector.is_beat
+            text = f"BPM: {bpm:.1f}"
+            style = "color: #FF9800; font-weight: bold;" if beat else "color: #aaa;"
+            self.bpm_label.setText(text)
+            self.bpm_label.setStyleSheet(style)
 
     def _refresh_mod_buttons(self):
         self.all_params = ParamTable()
@@ -734,6 +854,35 @@ class PyQTGUI(QMainWindow):
                         btn.clicked.connect(slot)
                         patch_row.addWidget(btn)
                     target_layout.addLayout(patch_row)
+
+                    # Performance controls row (Blackout / Freeze / Autopilot / BPM)
+                    perf_row = QHBoxLayout()
+
+                    self.blackout_btn = QPushButton("Blackout")
+                    self.blackout_btn.setToolTip("Cut to black  [Space]")
+                    self.blackout_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+                    self.blackout_btn.clicked.connect(self._toggle_blackout)
+                    perf_row.addWidget(self.blackout_btn)
+
+                    self.freeze_btn = QPushButton("Freeze")
+                    self.freeze_btn.setToolTip("Freeze output frame  [F]")
+                    self.freeze_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+                    self.freeze_btn.clicked.connect(self._toggle_freeze)
+                    perf_row.addWidget(self.freeze_btn)
+
+                    self.autopilot_btn = QPushButton("Autopilot")
+                    self.autopilot_btn.setToolTip("Auto-cycle patches  [A]  |  [ ] adjust interval")
+                    self.autopilot_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+                    self.autopilot_btn.clicked.connect(self._toggle_autopilot)
+                    perf_row.addWidget(self.autopilot_btn)
+
+                    self.bpm_label = QLabel("BPM: --")
+                    self.bpm_label.setStyleSheet("color: #aaa;")
+                    self.bpm_label.setToolTip("Detected BPM from audio input")
+                    self.bpm_label.setFixedWidth(80)
+                    perf_row.addWidget(self.bpm_label)
+
+                    target_layout.addLayout(perf_row)
 
                     for params_in_subgroup in subgroups.values():
                         blend_mode_param, chroma_key_hue_sat_val_params, source_params, remaining_params = None, [], {}, []

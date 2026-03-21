@@ -1,10 +1,17 @@
 import cv2
 import numpy as np
 import random
+from enum import IntEnum, auto
 
 from effects.base import EffectBase
 from common import Widget, Toggle
 from effects.enums import BlendModes
+
+
+class PixelSortMode(IntEnum):
+    BRIGHTNESS = 0
+    BLUE       = auto()
+    GREEN      = auto()
 
 class Glitch(EffectBase):   
 
@@ -137,6 +144,38 @@ class Glitch(EffectBase):
         self._echo_freeze_counter = 0
 
         self.frame_count = 0
+
+        # Pixel sorting
+        subgroup_ps = "Glitch_PixelSort"
+        self.enable_pixel_sort = params.new("enable_pixel_sort",
+                                            group=group, subgroup=subgroup_ps,
+                                            type=Widget.TOGGLE)
+        self.ps_direction = params.new("ps_direction",
+                                       min=0, max=1, default=0,
+                                       group=group, subgroup=subgroup_ps,
+                                       type=Widget.TOGGLE)
+        self.ps_sort_by = params.new("ps_sort_by",
+                                     min=0, max=len(PixelSortMode) - 1, default=0,
+                                     group=group, subgroup=subgroup_ps,
+                                     type=Widget.DROPDOWN, options=PixelSortMode)
+        self.ps_threshold_low = params.new("ps_threshold_low",
+                                           min=0, max=255, default=50,
+                                           group=group, subgroup=subgroup_ps)
+        self.ps_threshold_high = params.new("ps_threshold_high",
+                                            min=0, max=255, default=200,
+                                            group=group, subgroup=subgroup_ps)
+
+        # Chromatic aberration
+        subgroup_ca = "Glitch_ChromAb"
+        self.enable_chrom_ab = params.new("enable_chrom_ab",
+                                          group=group, subgroup=subgroup_ca,
+                                          type=Widget.TOGGLE)
+        self.chrom_ab_amount = params.new("chrom_ab_amount",
+                                          min=0, max=50, default=5,
+                                          group=group, subgroup=subgroup_ca)
+        self.chrom_ab_angle = params.new("chrom_ab_angle",
+                                         min=0, max=359, default=0,
+                                         group=group, subgroup=subgroup_ca)
 
     def _create_buttons(self, gui):
         dpg.add_button(
@@ -702,3 +741,83 @@ class Glitch(EffectBase):
 
         self.frame_count += 1
         return frame
+
+    def pixel_sort(self, frame):
+        """
+        Span-based pixel sorting within a brightness/channel threshold band.
+        Within each row (or column), contiguous runs of pixels whose key value
+        falls between ps_threshold_low and ps_threshold_high are sorted by that key.
+        """
+        if not self.enable_pixel_sort.value:
+            return frame
+
+        img = frame.astype(np.uint8)
+        lo = int(self.ps_threshold_low.value)
+        hi = int(self.ps_threshold_high.value)
+        sort_by = int(self.ps_sort_by.value)
+        vertical = bool(int(self.ps_direction.value))
+
+        if vertical:
+            img = np.ascontiguousarray(img.transpose(1, 0, 2))
+
+        rows = img.shape[0]
+        result = img.copy()
+
+        for y in range(rows):
+            row = img[y]
+            if sort_by == PixelSortMode.BRIGHTNESS:
+                r = row[:, 2].astype(np.int32)
+                g = row[:, 1].astype(np.int32)
+                b = row[:, 0].astype(np.int32)
+                key = (r * 77 + g * 150 + b * 29) >> 8
+            elif sort_by == PixelSortMode.BLUE:
+                key = row[:, 0].astype(np.int32)
+            else:
+                key = row[:, 1].astype(np.int32)
+
+            in_span = (key >= lo) & (key <= hi)
+            padded = np.empty(len(in_span) + 2, dtype=bool)
+            padded[0] = False
+            padded[1:-1] = in_span
+            padded[-1] = False
+            starts = np.where(~padded[:-1] & padded[1:])[0]
+            ends   = np.where( padded[:-1] & ~padded[1:])[0]
+
+            for s, e in zip(starts, ends):
+                if e - s > 1:
+                    order = np.argsort(key[s:e])
+                    result[y, s:e] = row[s:e][order]
+
+        if vertical:
+            result = np.ascontiguousarray(result.transpose(1, 0, 2))
+
+        return result.astype(frame.dtype)
+
+    def chromatic_aberration(self, frame):
+        """
+        Splits the red and blue channels and shifts them in opposite directions
+        along chrom_ab_angle by chrom_ab_amount pixels.
+        """
+        if not self.enable_chrom_ab.value:
+            return frame
+
+        amount = int(self.chrom_ab_amount.value)
+        if amount == 0:
+            return frame
+
+        angle_rad = np.deg2rad(float(self.chrom_ab_angle.value))
+        dx = int(round(amount * np.cos(angle_rad)))
+        dy = int(round(amount * np.sin(angle_rad)))
+
+        h, w = frame.shape[:2]
+        img = frame.astype(np.uint8)
+        b, g, r = cv2.split(img)
+
+        M_r = np.float32([[1, 0,  dx], [0, 1,  dy]])
+        M_b = np.float32([[1, 0, -dx], [0, 1, -dy]])
+
+        r_shifted = cv2.warpAffine(r, M_r, (w, h))
+        b_shifted = cv2.warpAffine(b, M_b, (w, h))
+
+        result = cv2.merge([b_shifted, g, r_shifted])
+        return result.astype(frame.dtype)

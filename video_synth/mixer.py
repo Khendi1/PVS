@@ -23,6 +23,7 @@ from animations.lenia import Lenia
 from animations.fractal_zoom import FractalZoom
 from animations.oscillator_grid import OscillatorGrid
 from animations.harmonic_interference import HarmonicInterference
+from animations.perlin_noise import PerlinNoise
 import os
 from pathlib import Path
 from param import ParamTable
@@ -140,6 +141,7 @@ class Mixer:
             AnimSource.FRACTAL_ZOOM.name: FractalZoom(**anim_args),
             AnimSource.OSCILLATOR_GRID.name: OscillatorGrid(**anim_args),
             AnimSource.HARMONIC_INTERFERENCE.name: HarmonicInterference(**anim_args),
+            AnimSource.PERLIN_NOISE.name: PerlinNoise(**anim_args),
         }
 
         anim_args["group"] = Groups.SRC_2_ANIMATIONS
@@ -161,6 +163,7 @@ class Mixer:
             AnimSource.FRACTAL_ZOOM.name: FractalZoom(**anim_args),
             AnimSource.OSCILLATOR_GRID.name: OscillatorGrid(**anim_args),
             AnimSource.HARMONIC_INTERFERENCE.name: HarmonicInterference(**anim_args),
+            AnimSource.PERLIN_NOISE.name: PerlinNoise(**anim_args),
         }
 
         # --- Configure file sources ---
@@ -281,6 +284,11 @@ class Mixer:
         self._cached_frame1 = None
         self._cached_frame2 = None
         self._first_frame_received = False
+
+        # Performance controls
+        self.blackout = False
+        self.freeze = False
+        self._frozen_frame = None
 
 
     # find dir one level up from current working directory
@@ -581,11 +589,20 @@ class Mixer:
             frame1 = frame2
             frame2 = temp
 
+        if self.blackout:
+            return np.zeros((self.height, self.width, 3), dtype=np.uint8)
+
+        if self.freeze and self._frozen_frame is not None:
+            return self._frozen_frame.copy()
+
         if self.blend_mode.value == MixModes.LUMA_KEY.value:
-            return self._luma_key(frame1,frame2)
+            result = self._luma_key(frame1, frame2)
         elif self.blend_mode.value == MixModes.CHROMA_KEY.value:
             lower = (self.lower_hue.value, self.lower_saturation.value, self.lower_value.value)
             upper = (self.upper_hue.value, self.upper_saturation.value, self.upper_value.value)
-            return self._chroma_key(frame1, frame2, lower=lower, upper=upper)
+            result = self._chroma_key(frame1, frame2, lower=lower, upper=upper)
         else:
-            return self._alpha_blend(frame1, frame2)
+            result = self._alpha_blend(frame1, frame2)
+
+        self._frozen_frame = result.copy()
+        return result
