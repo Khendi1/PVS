@@ -394,7 +394,7 @@ class APIServer:
         @self.app.websocket("/ws/stream")
         async def ws_stream(websocket: WebSocket):
             await websocket.accept()
-            self._ws_clients.new(websocket)
+            self._ws_clients.add(websocket)
             try:
                 while True:
                     await websocket.receive_text()
