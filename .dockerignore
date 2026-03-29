@@ -1,0 +1,27 @@
+# Virtual environment
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Git
+.git/
+.gitignore
+
+# Node modules (web/dist is included; node_modules is not needed)
+web/node_modules/
+
+# IDE / editor
+.vscode/
+*.code-workspace
+
+# Docker artifacts (avoid recursive COPY)
+Dockerfile
+docker-compose.yml
+docker-entrypoint.sh
+.dockerignore
+
+# Dev / docs
+documentation/
+examples/
+*.md

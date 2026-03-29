@@ -1,0 +1,25 @@
+# Linux-compatible dependencies for Docker deployment
+# opencv-python replaced with headless variant (no GUI display needed)
+# pywin32, WMI, usb-monitor omitted (Windows-only)
+glcontext==3.0.0
+keyboard==0.13.5
+mido==1.3.3
+moderngl==5.12.0
+noise==1.2.2
+numpy==2.2.4
+opencv-python-headless==4.11.0.86
+packaging==25.0
+pillow==11.3.0
+PyOpenGL==3.1.10
+PyQt6==6.10.2
+PyYAML==6.0.2
+python-rtmidi==1.5.8
+python-osc==1.9.3
+pyvirtualcam==0.15.0
+sounddevice==0.5.1
+aiofiles==24.1.0
+fastapi==0.115.6
+uvicorn==0.34.0
+obsws-python
+setuptools==80.9.0
+wheel==0.45.1

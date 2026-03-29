@@ -1,0 +1,81 @@
+services:
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Ollama — local LLM inference server
+  # ──────────────────────────────────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: video_synth_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Video Synthesizer — headless API mode
+  # Serves:
+  #   http://localhost:8000/       API root / info
+  #   http://localhost:8000/docs   Interactive API docs (Swagger)
+  #   http://localhost:8000/ui/    React web UI
+  #   http://localhost:8000/stream MJPEG video stream
+  # ──────────────────────────────────────────────────────────────────────────
+  video_synth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: video_synth_app
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist patches/presets across container restarts
+      - ./save:/app/save
+    environment:
+      - DISPLAY=:99
+      - LIBGL_ALWAYS_SOFTWARE=1
+      - QT_QPA_PLATFORM=offscreen
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # AI Agent — natural-language control of the video synth via Ollama
+  # Serves:
+  #   http://localhost:8001/       Web chat UI
+  #   http://localhost:8001/chat   POST endpoint  { "message": "..." }
+  #   http://localhost:8001/docs   Agent API docs
+  # The agent pulls the model on first start (may take a few minutes).
+  # ──────────────────────────────────────────────────────────────────────────
+  agent:
+    build:
+      context: ./agent
+      dockerfile: Dockerfile
+    container_name: video_synth_agent
+    ports:
+      - "8001:8001"
+    environment:
+      - SYNTH_URL=http://video_synth:8000
+      - OLLAMA_URL=http://ollama:11434
+      # Change this to any tool-calling model available on Ollama Hub:
+      # llama3.2:3b (default, ~2 GB), llama3.1:8b (~5 GB), qwen2.5:7b (~5 GB)
+      - OLLAMA_MODEL=llama3.2:3b
+    depends_on:
+      ollama:
+        condition: service_healthy
+      video_synth:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  # Ollama model weights persist here so they aren't re-downloaded on restart
+  ollama_data:
