@@ -14,6 +14,7 @@ from animations.lenia import Lenia
 from animations.fractal_zoom import FractalZoom
 from animations.oscillator_grid import OscillatorGrid
 from animations.harmonic_interference import HarmonicInterference
+from animations.shaders3 import Shaders3
 
 __all__ = [
     "Plasma",
@@ -24,6 +25,7 @@ __all__ = [
     "Physarum",
     "Shaders",
     "Shaders2",
+    "Shaders3",
     "DLA",
     "Chladni",
     "Voronoi",

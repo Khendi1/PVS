@@ -106,6 +106,27 @@ class Shader2Type(IntEnum):
     WORMHOLE = auto()
 
 
+class Shader3Type(IntEnum):
+    WAVE_INTERFERENCE = 0
+    LISSAJOUS_GLOW    = auto()
+    SYMMETRY_BLOOM    = auto()
+    FLOW_STREAMLINES  = auto()
+    MAGNETIC_TERRAIN  = auto()
+    HYPNODROME        = auto()
+    SPECTRAL_CAUSTICS = auto()
+    GRAY_SCOTT        = auto()
+
+
+class Shader3Palette(IntEnum):
+    FIRE        = 0
+    ICE         = auto()
+    PSYCHEDELIC = auto()
+    NEON        = auto()
+    EARTH       = auto()
+    VOID        = auto()
+    SPECTRUM    = auto()
+
+
 class AnimSource(IntEnum):
     PLASMA = 1
     REACTION_DIFFUSION = 2
@@ -124,3 +145,4 @@ class AnimSource(IntEnum):
     OSCILLATOR_GRID = 15
     HARMONIC_INTERFERENCE = 16
     PERLIN_NOISE = 17
+    SHADERS_3 = 18

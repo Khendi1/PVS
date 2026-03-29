@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(python -c \":*)",
+      "Bash(.venv/Scripts/python.exe -c \":*)",
+      "Bash(find h:/Code/PVS -name *.md -newer h:/Code/PVS/README.md)",
+      "Read(//c/Users/Big Papa/.claude/projects/h--Code-PVS/memory/**)"
+    ]
+  }
+}

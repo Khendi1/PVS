@@ -24,6 +24,7 @@ from animations.fractal_zoom import FractalZoom
 from animations.oscillator_grid import OscillatorGrid
 from animations.harmonic_interference import HarmonicInterference
 from animations.perlin_noise import PerlinNoise
+from animations.shaders3 import Shaders3
 import os
 from pathlib import Path
 from param import ParamTable
@@ -142,6 +143,7 @@ class Mixer:
             AnimSource.OSCILLATOR_GRID.name: OscillatorGrid(**anim_args),
             AnimSource.HARMONIC_INTERFERENCE.name: HarmonicInterference(**anim_args),
             AnimSource.PERLIN_NOISE.name: PerlinNoise(**anim_args),
+            AnimSource.SHADERS_3.name: Shaders3(**anim_args),
         }
 
         anim_args["group"] = Groups.SRC_2_ANIMATIONS
@@ -164,6 +166,7 @@ class Mixer:
             AnimSource.OSCILLATOR_GRID.name: OscillatorGrid(**anim_args),
             AnimSource.HARMONIC_INTERFERENCE.name: HarmonicInterference(**anim_args),
             AnimSource.PERLIN_NOISE.name: PerlinNoise(**anim_args),
+            AnimSource.SHADERS_3.name: Shaders3(**anim_args),
         }
 
         # --- Configure file sources ---
