@@ -110,7 +110,7 @@ class SaveController:
             if param.options and hasattr(param.options, '__members__') and isinstance(value, str):
                 try:
                     enum_member = param.options[value]
-                    param.value = enum_member
+                    param.value = enum_member.value
                 except KeyError:
                     log.warning(f"Could not find enum member '{value}' for param '{param_name}'. Using default.")
             else:

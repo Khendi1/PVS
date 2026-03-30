@@ -145,7 +145,7 @@ entries:
   noise_intensity: 0.0
   shape_x_shift: 0
   shape_y_shift: 0
-  shape_type: 0
+  shape_type: NONE
   line_hue: 0
   line_sat: 255
   line_val: 255
@@ -428,7 +428,7 @@ entries:
   noise_intensity: 0.0
   shape_x_shift: 0
   shape_y_shift: 0
-  shape_type: 0
+  shape_type: NONE
   line_hue: 0
   line_sat: 255
   line_val: 255
@@ -721,7 +721,7 @@ entries:
   noise_intensity: 0.1
   shape_x_shift: 0
   shape_y_shift: 0
-  shape_type: 0
+  shape_type: NONE
   line_hue: 0
   line_sat: 255
   line_val: 255
@@ -1014,7 +1014,7 @@ entries:
   noise_intensity: 0.1
   shape_x_shift: 0
   shape_y_shift: 0
-  shape_type: 0
+  shape_type: NONE
   line_hue: 0
   line_sat: 255
   line_val: 255
@@ -1307,7 +1307,7 @@ entries:
   noise_intensity: 0.1
   shape_x_shift: 0
   shape_y_shift: 0
-  shape_type: 0
+  shape_type: NONE
   line_hue: 0
   line_sat: 255
   line_val: 255
@@ -1600,7 +1600,7 @@ entries:
   noise_intensity: 0.1
   shape_x_shift: 0
   shape_y_shift: 0
-  shape_type: 0
+  shape_type: NONE
   line_hue: 0
   line_sat: 255
   line_val: 255
@@ -1893,7 +1893,7 @@ entries:
   noise_intensity: 0.1
   shape_x_shift: 0
   shape_y_shift: 0
-  shape_type: 0
+  shape_type: NONE
   line_hue: 0
   line_sat: 255
   line_val: 255
@@ -2185,7 +2185,7 @@ entries:
   noise_intensity: 0.1
   shape_x_shift: 0
   shape_y_shift: 0
-  shape_type: 0
+  shape_type: NONE
   line_hue: 0
   line_sat: 255
   line_val: 255
@@ -2489,7 +2489,7 @@ entries:
   blur_kernel_size: 1
   noise_type: 0
   noise_intensity: 0.1
-  shape_type: 0
+  shape_type: NONE
   line_hue: 0
   line_sat: 255
   line_val: 255
@@ -2671,7 +2671,7 @@ entries:
   blur_kernel_size: 1
   noise_type: 0
   noise_intensity: 0.1
-  shape_type: RECTANGLE
+  shape_type: NONE
   line_hue: 0
   line_sat: 255
   line_val: 255
@@ -2949,7 +2949,7 @@ entries:
   blur_kernel_size: 1
   noise_type: 0
   noise_intensity: 0.1
-  shape_type: RECTANGLE
+  shape_type: NONE
   line_hue: 0
   line_sat: 255
   line_val: 255
@@ -3227,7 +3227,7 @@ entries:
   blur_kernel_size: 1
   noise_type: 0
   noise_intensity: 0.1
-  shape_type: RECTANGLE
+  shape_type: NONE
   line_hue: 0
   line_sat: 255
   line_val: 255
@@ -3505,7 +3505,7 @@ entries:
   blur_kernel_size: 1
   noise_type: 0
   noise_intensity: 0.1
-  shape_type: 0
+  shape_type: NONE
   line_hue: 0
   line_sat: 255
   line_val: 255
@@ -3902,7 +3902,7 @@ entries:
   blur_kernel_size: 1
   noise_type: 0
   noise_intensity: 0.1
-  shape_type: 0
+  shape_type: NONE
   line_hue: 0
   line_sat: 255
   line_val: 255
@@ -4323,7 +4323,7 @@ entries:
   blur_kernel_size: 1
   noise_type: 0
   noise_intensity: 0.1
-  shape_type: 0
+  shape_type: NONE
   line_hue: 0
   line_sat: 255
   line_val: 255
@@ -5761,7 +5761,7 @@ entries:
   num_glitches: 0
   enable_slitscan: 0
   enable_echo: 0
-  shape_type: 0
+  shape_type: NONE
   blur_type: 0
   blur_kernel_size: 1
   noise_type: 0
@@ -5946,7 +5946,7 @@ entries:
   num_glitches: 0
   enable_slitscan: 0
   enable_echo: 0
-  shape_type: 0
+  shape_type: NONE
   blur_type: 0
   blur_kernel_size: 1
   noise_type: 0
@@ -6131,7 +6131,7 @@ entries:
   num_glitches: 0
   enable_slitscan: 0
   enable_echo: 0
-  shape_type: 0
+  shape_type: NONE
   blur_type: 0
   blur_kernel_size: 1
   noise_type: 0
@@ -6309,7 +6309,7 @@ entries:
   num_glitches: 15
   enable_slitscan: 1
   enable_echo: 0
-  shape_type: 0
+  shape_type: NONE
   blur_type: 0
   blur_kernel_size: 1
   noise_type: 0
@@ -6503,7 +6503,7 @@ entries:
   num_glitches: 0
   enable_slitscan: 0
   enable_echo: 0
-  shape_type: 0
+  shape_type: NONE
   blur_type: 0
   blur_kernel_size: 1
   noise_type: 0
@@ -6682,7 +6682,7 @@ entries:
   num_glitches: 0
   enable_slitscan: 0
   enable_echo: 0
-  shape_type: 0
+  shape_type: NONE
   blur_type: 0
   blur_kernel_size: 1
   noise_type: 0
@@ -6871,7 +6871,7 @@ entries:
   num_glitches: 0
   enable_slitscan: 0
   enable_echo: 0
-  shape_type: 0
+  shape_type: NONE
   blur_type: 0
   blur_kernel_size: 1
   noise_type: 0
@@ -7050,7 +7050,7 @@ entries:
   num_glitches: 0
   enable_slitscan: 0
   enable_echo: 1
-  shape_type: 0
+  shape_type: NONE
   blur_type: 0
   blur_kernel_size: 1
   noise_type: 0
