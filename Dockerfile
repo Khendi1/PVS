@@ -44,8 +44,8 @@ WORKDIR /app
 COPY requirements_docker.txt .
 RUN pip install --no-cache-dir -r requirements_docker.txt
 
-# Copy application source
-COPY video_synth/ ./video_synth/
+# Copy application source (src/ layout)
+COPY src/ ./src/
 COPY web/ ./web/
 COPY save/ ./save/
 COPY shaders/ ./shaders/
@@ -54,6 +54,8 @@ COPY shaders/ ./shaders/
 ENV DISPLAY=:99
 ENV LIBGL_ALWAYS_SOFTWARE=1
 ENV QT_QPA_PLATFORM=offscreen
+# src/ layout: make video_synth package and its bare imports resolvable
+ENV PYTHONPATH=/app/src:/app/src/video_synth
 
 EXPOSE 8000
 

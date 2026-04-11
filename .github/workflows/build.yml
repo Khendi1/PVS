@@ -1,0 +1,113 @@
+name: Build VideoSynth
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build on Windows
+    runs-on: windows-latest
+
+    steps:
+      # ------------------------------------------------------------------
+      # 1. Checkout source
+      # ------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------------------------
+      # 2. Set up Python 3.11
+      # ------------------------------------------------------------------
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # ------------------------------------------------------------------
+      # 3. Set up Node.js 18 (for web UI build)
+      # ------------------------------------------------------------------
+      - name: Set up Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      # ------------------------------------------------------------------
+      # 4. Install Python dependencies + PyInstaller
+      # ------------------------------------------------------------------
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      # ------------------------------------------------------------------
+      # 5. Build the React web UI
+      # ------------------------------------------------------------------
+      - name: Build web UI
+        working-directory: web
+        run: |
+          npm install
+          npm run build
+
+      # ------------------------------------------------------------------
+      # 6. Build the executable with PyInstaller
+      # ------------------------------------------------------------------
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller build/video_synth.spec --clean --noconfirm
+
+      # ------------------------------------------------------------------
+      # 7. Determine the version string (tag name or 'dev')
+      # ------------------------------------------------------------------
+      - name: Determine version
+        id: version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -match '^refs/tags/(.+)$') {
+            $ver = $Matches[1]
+          } else {
+            $ver = "dev-$($env:GITHUB_SHA.Substring(0,7))"
+          }
+          echo "VERSION=$ver" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "version=$ver" >> $env:GITHUB_OUTPUT
+
+      # ------------------------------------------------------------------
+      # 8. Zip the build output
+      # ------------------------------------------------------------------
+      - name: Create ZIP archive
+        shell: pwsh
+        run: |
+          $zipName = "VideoSynth-Windows-${{ steps.version.outputs.version }}.zip"
+          Compress-Archive -Path dist/VideoSynth -DestinationPath $zipName
+          echo "ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      # ------------------------------------------------------------------
+      # 9. Upload build artifact (always, even on manual dispatch)
+      # ------------------------------------------------------------------
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VideoSynth-Windows-${{ steps.version.outputs.version }}
+          path: VideoSynth-Windows-${{ steps.version.outputs.version }}.zip
+          retention-days: 30
+
+      # ------------------------------------------------------------------
+      # 10. Create GitHub Release and attach ZIP (tag builds only)
+      # ------------------------------------------------------------------
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $zipName = "VideoSynth-Windows-${{ steps.version.outputs.version }}.zip"
+          gh release create "${{ steps.version.outputs.version }}" `
+            --title "VideoSynth ${{ steps.version.outputs.version }}" `
+            --notes "Automated Windows build for ${{ steps.version.outputs.version }}.`n`nSee BUILD.md for installation instructions." `
+            "$zipName"

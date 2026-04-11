@@ -16,6 +16,7 @@ trap cleanup EXIT INT TERM
 sleep 1
 
 echo "Starting video synthesizer in headless API mode..."
+# PYTHONPATH set in Dockerfile: /app/src (package) + /app/src/video_synth (bare imports)
 exec python -m video_synth \
     --headless \
     --api \

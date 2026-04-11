@@ -1,0 +1,50 @@
+site_name: Video Synth
+site_description: Real-time collaborative visual art synthesizer
+site_url: https://your-org.github.io/video_synth
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: green
+    accent: light green
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+
+repo_name: video_synth
+repo_url: https://github.com/your-org/video_synth
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - API Reference: api.md
+  - Parameters: parameters.md
+  - Docker & Agent: docker.md
+  - Roadmap: roadmap.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - tables
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/your-org/video_synth

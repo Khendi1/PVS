@@ -1,4 +1,4 @@
-# Virtual environment
+# Virtual environment and cache
 .venv/
 __pycache__/
 *.pyc
@@ -13,6 +13,7 @@ web/node_modules/
 
 # IDE / editor
 .vscode/
+.VSCodeCounter/
 *.code-workspace
 
 # Docker artifacts (avoid recursive COPY)
@@ -21,7 +22,14 @@ docker-compose.yml
 docker-entrypoint.sh
 .dockerignore
 
-# Dev / docs
-documentation/
+# Dev / docs / tooling (not needed at runtime)
+docs/
+build/
+tests/
+scripts/
 examples/
+agent/
 *.md
+
+# PyInstaller output
+dist/
