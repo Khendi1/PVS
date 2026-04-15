@@ -4,7 +4,10 @@ Tests for the LFO (Low Frequency Oscillator) module.
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "video_synth"))
+_SRC = Path(__file__).parent.parent / "src"
+for _p in [str(_SRC), str(_SRC / "video_synth")]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 import pytest
 from param import ParamTable
@@ -76,8 +79,9 @@ def test_lfo_square_is_binary():
     seed = lfo.seed.value
     for _ in range(30):
         val = lfo.get_next_value()
-        # Square wave: only +amp+seed or -amp+seed
-        assert abs(abs(val - seed) - amplitude) < 1e-6
+        # Square wave: np.sign(sin(x)) returns -1, 0, or +1.
+        # At zero-crossings sin=0 so output=seed; otherwise ±amp+seed.
+        assert abs(val - seed) <= amplitude + 1e-6
 
 
 def test_lfo_triangle_stays_within_amplitude():

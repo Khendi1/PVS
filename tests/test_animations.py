@@ -9,7 +9,10 @@ Animations that require GPU (moderngl) context are skipped with an explicit reas
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "video_synth"))
+_SRC = Path(__file__).parent.parent / "src"
+for _p in [str(_SRC), str(_SRC / "video_synth")]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 import numpy as np
 import pytest
