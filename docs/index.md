@@ -105,6 +105,6 @@ When running with `--api` (or via Docker):
 - `ollama` — local LLM inference server (no API key required, fully offline)
 - `agent` — FastAPI web chat UI that controls the synthesizer via natural language
 
-The agent reads `documentation/PARAMETERS.md` at startup to understand every parameter's purpose and range, then uses tool calls to drive the REST API in response to natural-language prompts like "make it more chaotic" or "create a slow ambient blue wash."
+The agent reads `docs/parameters-reference.md` at startup to understand every parameter's purpose and range, then uses tool calls to drive the REST API in response to natural-language prompts like "make it more chaotic" or "create a slow ambient blue wash."
 
 See [Docker & Agent](docker.md) for setup details, model selection, and customizing the agent's behavior.

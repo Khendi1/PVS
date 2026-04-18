@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { fetchLfo, createLfo, updateLfo, deleteLfo } from '../api.js'
 
 const SHAPES = ['NONE', 'SINE', 'SQUARE', 'TRIANGLE', 'SAWTOOTH', 'PERLIN']
@@ -26,6 +26,11 @@ export default function LfoPanel({ param, onClose }) {
   const [seed, setSeed] = useState(0)
   const [active, setActive] = useState(false)
   const [loading, setLoading] = useState(true)
+
+  // Tap-tempo state
+  const tapTimesRef = useRef([])
+  const tapResetTimerRef = useRef(null)
+  const [tapBpm, setTapBpm] = useState(null)
 
   useEffect(() => {
     fetchLfo(param.name).then(lfo => {
@@ -68,6 +73,44 @@ export default function LfoPanel({ param, onClose }) {
     } catch (e) { /* ignore */ }
   }
 
+  function handleTap() {
+    const now = Date.now()
+
+    // Reset if last tap was >3 seconds ago
+    if (tapTimesRef.current.length > 0) {
+      const last = tapTimesRef.current[tapTimesRef.current.length - 1]
+      if (now - last > 3000) {
+        tapTimesRef.current = []
+        setTapBpm(null)
+      }
+    }
+
+    tapTimesRef.current = [...tapTimesRef.current, now]
+
+    // Clear the auto-reset timer and set a fresh one
+    if (tapResetTimerRef.current) clearTimeout(tapResetTimerRef.current)
+    tapResetTimerRef.current = setTimeout(() => {
+      tapTimesRef.current = []
+      setTapBpm(null)
+    }, 3000)
+
+    const taps = tapTimesRef.current
+    if (taps.length < 2) return
+
+    // Compute average interval between successive taps
+    let totalMs = 0
+    for (let i = 1; i < taps.length; i++) {
+      totalMs += taps[i] - taps[i - 1]
+    }
+    const avgMs = totalMs / (taps.length - 1)
+    const hz = 1000 / avgMs
+    const bpm = Math.round(hz * 60)
+
+    setTapBpm(bpm)
+    setFrequency(parseFloat(hz.toFixed(3)))
+    handleApply({ frequency: hz })
+  }
+
   function update(field, value, setter) {
     setter(value)
     handleApply({ [field]: value })
@@ -95,8 +138,16 @@ export default function LfoPanel({ param, onClose }) {
       </div>
       {(active || true) && shape !== 'NONE' && (
         <>
-          <LfoSlider label="freq" value={frequency} min={0} max={2} step={0.001}
-            onChange={v => update('frequency', v, setFrequency)} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <LfoSlider label="freq" value={frequency} min={0} max={2} step={0.001}
+                onChange={v => update('frequency', v, setFrequency)} />
+            </div>
+            <button className="tap-btn" onClick={handleTap} title="Tap tempo">tap</button>
+            {tapBpm !== null && (
+              <span className="tap-bpm">{tapBpm} BPM</span>
+            )}
+          </div>
           <LfoSlider label="amp" value={amplitude} min={0} max={param.max - param.min} step={(param.max - param.min) / 200}
             onChange={v => update('amplitude', v, setAmplitude)} />
           <LfoSlider label="phase" value={phase} min={0} max={360} step={1}

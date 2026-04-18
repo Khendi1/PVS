@@ -5,6 +5,8 @@ import SubgroupPanel from './components/SubgroupPanel.jsx'
 import VideoPreview from './components/VideoPreview.jsx'
 import MixerPanel from './components/MixerPanel.jsx'
 import MidiTab from './components/MidiTab.jsx'
+import SpectrumDisplay from './components/SpectrumDisplay.jsx'
+import XYPad from './components/XYPad.jsx'
 
 // Map param.group strings to quadrant buckets.
 // The API returns group as the string form of the Groups enum,
@@ -34,6 +36,7 @@ function groupByGroup(params) {
 export default function App() {
   const [params, setParams] = useState([])   // flat array of param objects
   const [status, setStatus] = useState({ text: 'connecting...', cls: '' })
+  const [searchQuery, setSearchQuery] = useState('')
 
   // ── Fetch / poll ───────────────────────────────────────────────────────────
   const loadParams = useCallback(async () => {
@@ -119,30 +122,78 @@ export default function App() {
       label: 'MIDI',
       content: <MidiTab params={params} />,
     },
+    {
+      label: 'XY',
+      content: <XYPad params={params} />,
+    },
   ]
+
+  // ── Search filtering ───────────────────────────────────────────────────────
+  const query = searchQuery.trim().toLowerCase()
+  const searchActive = query.length > 0
+
+  // When search is active, group matching params by their subgroup for display
+  function buildSearchGroups() {
+    const matched = params.filter(p => {
+      const name = (p.name || '').toLowerCase()
+      const sub = (p.subgroup || '').toLowerCase()
+      const grp = (p.group || '').toLowerCase()
+      return name.includes(query) || sub.includes(query) || grp.includes(query)
+    })
+    const byGroup = {}
+    for (const p of matched) {
+      const key = p.subgroup || p.group || 'Other'
+      if (!byGroup[key]) byGroup[key] = []
+      byGroup[key].push(p)
+    }
+    return byGroup
+  }
 
   return (
     <>
-      <div className="app-grid">
-        {/* Top-left: Source tabs */}
-        <div className="quadrant">
-          <TabPanel tabs={srcTabs} />
-        </div>
+      <input
+        className="search-bar"
+        type="text"
+        placeholder="search params…"
+        value={searchQuery}
+        onChange={e => setSearchQuery(e.target.value)}
+      />
 
-        {/* Top-right: Video preview */}
-        <div className="quadrant">
-          <VideoPreview />
+      {searchActive ? (
+        <div className="search-results">
+          {Object.entries(buildSearchGroups()).map(([grpName, grpParams]) => (
+            <SubgroupPanel key={grpName} params={grpParams} />
+          ))}
+          {Object.keys(buildSearchGroups()).length === 0 && (
+            <div style={{ padding: 16, color: 'var(--text2)', fontSize: 12 }}>no params match "{query}"</div>
+          )}
         </div>
+      ) : (
+        <div className="app-grid">
+          {/* Top-left: Source tabs */}
+          <div className="quadrant">
+            <TabPanel tabs={srcTabs} />
+          </div>
 
-        {/* Bottom-left: Post effects */}
-        <div className="quadrant">
-          <TabPanel tabs={postTabs} />
-        </div>
+          {/* Top-right: Video preview */}
+          <div className="quadrant">
+            <VideoPreview />
+          </div>
 
-        {/* Bottom-right: Mixer / Settings / MIDI */}
-        <div className="quadrant">
-          <TabPanel tabs={mixerTabs} />
+          {/* Bottom-left: Post effects */}
+          <div className="quadrant">
+            <TabPanel tabs={postTabs} />
+          </div>
+
+          {/* Bottom-right: Mixer / Settings / MIDI / XY */}
+          <div className="quadrant">
+            <TabPanel tabs={mixerTabs} />
+          </div>
         </div>
+      )}
+
+      <div className="spectrum-wrap">
+        <SpectrumDisplay />
       </div>
 
       <div className={`status-bar ${status.cls}`}>{status.text}</div>

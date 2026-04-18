@@ -22,18 +22,64 @@ python -m video_synth --headless --api --api-host 0.0.0.0 --no-virtualcam
 
 ## Endpoint Reference
 
+### Parameters
+
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/` | Health check, returns service info |
 | `GET` | `/params` | List all parameters with current values, bounds, and metadata |
 | `GET` | `/params/{name}` | Get a single parameter by name |
 | `PUT` | `/params/{name}` | Set a parameter value |
+| `PUT` | `/params/bulk` | Set multiple parameters in one call |
 | `POST` | `/params/reset/{name}` | Reset a parameter to its default value |
+
+### Video
+
+| Method | Path | Description |
+|---|---|---|
 | `GET` | `/snapshot` | Current frame as a JPEG image |
 | `GET` | `/stream` | Continuous MJPEG stream (~30 fps) |
 | `WS` | `/ws/stream` | WebSocket binary JPEG frame stream |
-| `GET` | `/ui` | Redirect to the React web control panel |
+
+### Patches
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/patch/save` | Save the current state as a new patch |
+| `POST` | `/patch/next` | Load the next patch in the list |
+| `POST` | `/patch/prev` | Load the previous patch |
+| `POST` | `/patch/random` | Load a random patch |
+
+### LFO Modulation
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/lfo` | List all active LFOs |
+| `GET` | `/lfo/{param_name}` | Get the LFO attached to a parameter |
+| `POST` | `/lfo/{param_name}` | Create and attach an LFO to a parameter |
+| `PUT` | `/lfo/{param_name}` | Update an existing LFO's settings |
+| `DELETE` | `/lfo/{param_name}` | Remove an LFO from a parameter |
+
+### MIDI
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/midi/learn` | Start MIDI learn for a parameter |
+| `POST` | `/midi/learn/cancel` | Cancel MIDI learn mode |
+| `GET` | `/midi/learn/status` | Current MIDI learn state |
+
+### Audio
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/audio/bands` | Current FFT band energies and beat detection state |
+
+### Utility
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/` | Health check, returns service info |
 | `GET` | `/docs` | Interactive Swagger UI |
+| `GET` | `/ui` | React web control panel |
 
 ---
 
@@ -140,6 +186,94 @@ Every parameter returned by `/params` or `/params/{name}` has this shape:
     import requests
 
     requests.post('http://127.0.0.1:8000/params/reset/glitch_intensity_max')
+    ```
+
+### Set Multiple Parameters at Once
+
+=== "curl"
+
+    ```bash
+    curl -X PUT http://127.0.0.1:8000/params/bulk \
+      -H "Content-Type: application/json" \
+      -d '{"params": {"glitch_intensity_max": 80, "plasma_speed": 2.0, "color_cycle_speed": 0.5}}'
+    ```
+
+=== "Python"
+
+    ```python
+    import requests
+
+    requests.put(
+        'http://127.0.0.1:8000/params/bulk',
+        json={'params': {
+            'glitch_intensity_max': 80,
+            'plasma_speed': 2.0,
+            'color_cycle_speed': 0.5,
+        }}
+    )
+    ```
+
+### Attach an LFO to a Parameter
+
+=== "curl"
+
+    ```bash
+    curl -X POST http://127.0.0.1:8000/lfo/plasma_speed \
+      -H "Content-Type: application/json" \
+      -d '{"shape": "SINE", "frequency": 0.25, "amplitude": 1.5}'
+    ```
+
+=== "Python"
+
+    ```python
+    import requests
+
+    requests.post(
+        'http://127.0.0.1:8000/lfo/plasma_speed',
+        json={'shape': 'SINE', 'frequency': 0.25, 'amplitude': 1.5}
+    )
+    # Remove the LFO later
+    requests.delete('http://127.0.0.1:8000/lfo/plasma_speed')
+    ```
+
+LFO shapes: `NONE`, `SINE`, `SQUARE`, `TRIANGLE`, `SAWTOOTH`, `PERLIN`
+
+### Read Audio Bands
+
+=== "curl"
+
+    ```bash
+    curl http://127.0.0.1:8000/audio/bands
+    ```
+
+=== "Python"
+
+    ```python
+    import requests, time
+
+    while True:
+        data = requests.get('http://127.0.0.1:8000/audio/bands').json()
+        bands = data['bands']  # [bass, low_mid, mid, high_mid, treble] 0.0–1.0
+        beat = data['beat']    # True on detected beat frames
+        if beat:
+            print(f"BEAT  bass={bands[0]:.2f}")
+        time.sleep(0.033)
+    ```
+
+### Navigate Patches
+
+=== "curl"
+
+    ```bash
+    # Save current state
+    curl -X POST http://127.0.0.1:8000/patch/save
+
+    # Step through saved patches
+    curl -X POST http://127.0.0.1:8000/patch/next
+    curl -X POST http://127.0.0.1:8000/patch/prev
+
+    # Jump to a random patch
+    curl -X POST http://127.0.0.1:8000/patch/random
     ```
 
 ### Capture a Snapshot

@@ -11,3 +11,9 @@ nul
 web/node_modules/
 web/dist/
 web/.vite/
+
+# PyInstaller build output
+dist/
+build/VideoSynth/
+build/video_synth/
+build/__pycache__/

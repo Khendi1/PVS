@@ -183,6 +183,19 @@ def parse_args():
         type=int,
         help='OSC server port (default: 9000)'
     )
+    parser.add_argument(
+        '--resolution',
+        default=None,
+        type=str,
+        metavar='WxH',
+        help='Output resolution, e.g. 1280x720 (default: 640x480)'
+    )
+    parser.add_argument(
+        '--fps',
+        default=None,
+        type=int,
+        help='Target frame rate (default: determined by common.py)'
+    )
     parser.print_help()
     return parser.parse_args()
 
@@ -447,7 +460,7 @@ def main(settings):
             for effect_mgr in effects
         }
         api_server = APIServer(all_params, mixer=mixer, save_controller=save_controller,
-                               osc_banks=osc_banks,
+                               osc_banks=osc_banks, audio_module=audio_module,
                                host=settings.api_host, port=settings.api_port)
         api_server.start()
 
@@ -608,6 +621,21 @@ if __name__ == "__main__":
     args = parse_args()
     if args.api_host is None:
         args.api_host = '0.0.0.0' if args.api else '127.0.0.1'
+
+    # Apply --resolution WxH override before anything imports WIDTH/HEIGHT
+    if args.resolution:
+        try:
+            _w, _h = (int(x) for x in args.resolution.lower().split('x'))
+            import common as _common_mod
+            _common_mod.WIDTH = _w
+            _common_mod.HEIGHT = _h
+            # Re-bind in this module's namespace (from common import * already ran)
+            WIDTH = _w  # noqa: F841
+            HEIGHT = _h  # noqa: F841
+        except ValueError:
+            print(f"Invalid --resolution '{args.resolution}'. Expected WxH, e.g. 1280x720.")
+            raise SystemExit(1)
+
     log = config_log(args.log_level)
     settings = UserSettings(**args.__dict__)
     main(settings)

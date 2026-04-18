@@ -66,6 +66,12 @@ export function wsStreamUrl() {
   return `${base}/ws/stream`
 }
 
+export async function fetchAudioBands() {
+  const r = await fetch(`${API_BASE}/audio/bands`)
+  if (!r.ok) throw new Error(r.status)
+  return r.json()
+}
+
 export async function fetchLfos() {
   const r = await fetch(`${API_BASE}/lfo`)
   if (!r.ok) throw new Error(`HTTP ${r.status}`)

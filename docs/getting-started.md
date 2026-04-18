@@ -104,7 +104,7 @@ See [Docker & Agent](docker.md) for full details.
 
 ## Command-Line Reference
 
-```
+```text
 python -m video_synth [options]
 
 Core:
@@ -135,6 +135,11 @@ Hardware:
   --osc                 Enable OSC server
   --osc-host HOST       OSC bind host (default: 0.0.0.0)
   --osc-port PORT       OSC port (default: 9000)
+
+Output:
+  --resolution WxH      Override output resolution (default: 640x480)
+                        e.g. --resolution 1280x720
+  --fps N               Target frame rate
 ```
 
 ---
@@ -201,7 +206,7 @@ python -m video_synth --osc --osc-host 0.0.0.0 --osc-port 9000
 
 Send OSC messages with the address pattern `/params/<param_name>` and a float value:
 
-```
+```text
 /params/plasma_speed  2.5
 /params/glitch_intensity_max  75
 ```

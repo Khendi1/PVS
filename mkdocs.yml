@@ -24,8 +24,9 @@ nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - API Reference: api.md
-  - Parameters: parameters.md
+  - Parameters: parameters-reference.md
   - Docker & Agent: docker.md
+  - Building & Packaging: build.md
   - Roadmap: roadmap.md
 
 markdown_extensions:

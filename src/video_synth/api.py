@@ -67,15 +67,21 @@ class LfoRequest(BaseModel):
     seed: float = 0.0
 
 
+class BulkParamUpdate(BaseModel):
+    """Request model for bulk parameter update."""
+    params: Dict[str, Any]
+
+
 class APIServer:
     """FastAPI server for controlling video synthesizer parameters."""
 
-    def __init__(self, params, mixer=None, save_controller=None, midi_mapper=None, osc_banks=None, host="127.0.0.1", port=8000):
+    def __init__(self, params, mixer=None, save_controller=None, midi_mapper=None, osc_banks=None, audio_module=None, host="127.0.0.1", port=8000):
         self.params = params
         self.mixer = mixer
         self.save_controller = save_controller
         self.midi_mapper = midi_mapper
         self.osc_banks = osc_banks or {}  # group_prefix → OscBank
+        self.audio_module = audio_module
         self._lfo_map = {}  # param_name → LFO
         self.host = host
         self.port = port
@@ -397,6 +403,33 @@ class APIServer:
                 osc_bank.remove_oscillator(osc)
             log.info(f"LFO removed for '{param_name}'")
             return {"success": True}
+
+        # --- Audio endpoints ---
+
+        @self.app.get("/audio/bands")
+        async def get_audio_bands():
+            """Get current FFT band energies and beat detection state."""
+            if self.audio_module is None:
+                raise HTTPException(status_code=503, detail="Audio module not available")
+            return {
+                "bands": list(self.audio_module.band_energies),
+                "beat": bool(self.audio_module.beat_detector.is_beat),
+            }
+
+        # --- Bulk param update ---
+
+        @self.app.put("/params/bulk")
+        async def set_params_bulk(req: BulkParamUpdate):
+            """Set multiple parameters at once. Returns per-param result."""
+            results = {}
+            for name, value in req.params.items():
+                if name not in self.params.params:
+                    results[name] = {"success": False, "error": "not found"}
+                    continue
+                param = self.params.params[name]
+                param.value = value
+                results[name] = {"success": True, "value": param.value}
+            return results
 
         @self.app.websocket("/ws/stream")
         async def ws_stream(websocket: WebSocket):

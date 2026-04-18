@@ -17,12 +17,13 @@ block_cipher = None
 # ---------------------------------------------------------------------------
 # Helper: resolve a path relative to the spec file's directory
 # ---------------------------------------------------------------------------
-SPEC_DIR = os.path.dirname(os.path.abspath(SPEC))
+SPEC_DIR = os.path.dirname(os.path.abspath(SPEC))   # .../build/
+ROOT_DIR = os.path.dirname(SPEC_DIR)                # .../video_synth/ (project root)
 
 
 def src(rel):
-    """Return an absolute path relative to the project root (spec dir)."""
-    return os.path.join(SPEC_DIR, rel)
+    """Return an absolute path relative to the project root."""
+    return os.path.join(ROOT_DIR, rel)
 
 
 # ---------------------------------------------------------------------------
@@ -244,7 +245,7 @@ hiddenimports = sorted(set(hiddenimports))
 # ---------------------------------------------------------------------------
 # Runtime hooks directory
 # ---------------------------------------------------------------------------
-runtime_hooks = [src('hooks/runtime_opengl.py')]
+runtime_hooks = [os.path.join(SPEC_DIR, 'hooks/runtime_opengl.py')]
 
 # ---------------------------------------------------------------------------
 # Analysis
@@ -259,7 +260,7 @@ a = Analysis(
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
-    hookspath=[src('build/hooks')],
+    hookspath=[os.path.join(SPEC_DIR, 'hooks')],
     hooksconfig={},
     runtime_hooks=runtime_hooks,
     excludes=[
