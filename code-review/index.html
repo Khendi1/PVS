@@ -1,0 +1,1731 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Real-time collaborative visual art synthesizer">
+      
+      
+      
+        <link rel="canonical" href="https://your-org.github.io/video_synth/code-review/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>PVS Code Review - Video Synth</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="green" data-md-color-accent="light-green">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#pvs-code-review" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Video Synth" class="md-header__button md-logo" aria-label="Video Synth" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Video Synth
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              PVS Code Review
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/your-org/video_synth" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    video_synth
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../api/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../parameters-reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Parameters
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../docker/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Docker & Agent
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../build/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Building & Packaging
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../roadmap/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Roadmap
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Video Synth" class="md-nav__button md-logo" aria-label="Video Synth" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Video Synth
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/your-org/video_synth" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    video_synth
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../parameters-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parameters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker & Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../build/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Building & Packaging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bug-issue-registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bug &amp; Issue Registry
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bug &amp; Issue Registry">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#critical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CRITICAL
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#high" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HIGH
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="HIGH">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#h1-apply_perlin_noise-is-a-stub-feedbackpy271" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        H1 — apply_perlin_noise() is a stub (feedback.py:271)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#h2-error-recovery-frame-can-be-none-mid-chain-effects_managerpy177" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        H2 — Error recovery frame can be None mid-chain (effects_manager.py:177)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#h3-per-pixel-noise-generation-in-warppy-warppy141-152" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        H3 — Per-pixel noise generation in warp.py (warp.py:141, 152)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#h4-oscillator-linking-duplication-in-patterns3py-patterns3py283348" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        H4 — Oscillator linking duplication in patterns3.py (patterns3.py:283–348)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#medium" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MEDIUM
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MEDIUM">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#m1-duplicate-alpha-blend-logic-feedbackpy232-mixerpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M1 — Duplicate alpha-blend logic (feedback.py:232, mixer.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#m2-color-parameter-mapping-documented-as-wrong-patterns3py101" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M2 — Color parameter mapping documented as wrong (patterns3.py:101)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#m3-lfo-perlin-shape-value-mapping-incomplete-lfopy178" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M3 — LFO PERLIN shape value mapping incomplete (lfo.py:178)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#m4-feedback-class-excluded-from-sequencer-via-string-filtering-effects_managerpy103" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M4 — Feedback class excluded from sequencer via string filtering (effects_manager.py:103)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#m5-scale_frame-padding-logic-may-crop-valid-data-feedbackpy124" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M5 — scale_frame() padding logic may crop valid data (feedback.py:124)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#m6-off-by-one-risk-in-avg_frame_buffer-feedbackpy188" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M6 — Off-by-one risk in avg_frame_buffer() (feedback.py:188)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#m7-warppy-time-accumulator-coupled-to-frame-rate-warppy104" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M7 — warp.py time accumulator coupled to frame rate (warp.py:104)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#m8-warp_use_fractal-uses-float-comparison-instead-of-toggle-warppy430" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M8 — warp_use_fractal uses float comparison instead of toggle (warp.py:430)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#m9-glitch-state-management-scattered-across-instance-variables-glitchpy2031" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M9 — Glitch state management scattered across instance variables (glitch.py:20–31)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#m10-effectbase-singleton-declared-but-not-implemented-effectsbasepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M10 — EffectBase singleton declared but not implemented (effects/base.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#low" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LOW
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LOW">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#l1-ambiguous-seed-parameter-name-in-lfo-lfopy75" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L1 — Ambiguous seed parameter name in LFO (lfo.py:75)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#l2-posc_bank-global-is-unused-patterns3py10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L2 — posc_bank global is unused (patterns3.py:10)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#l3-magic-number-perlin_scale-1700-undocumented-warppy9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L3 — Magic number PERLIN_SCALE = 1700 undocumented (warp.py:9)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#l4-typo-in-animation-base-class-error-message-animationsbasepy19" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L4 — Typo in Animation base class error message (animations/base.py:19)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#l5-lfo-oscbank__init__-uses-list-comprehension-for-side-effects-lfopy234" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L5 — LFO OscBank.__init__ uses list comprehension for side effects (lfo.py:234)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#l6-commented-out-midi-code-in-__main__py-__main__py39" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L6 — Commented-out MIDI code in __main__.py (__main__.py:39)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#l7-hardcoded-20ms-slow-effect-threshold-effects_managerpy165" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L7 — Hardcoded 20ms slow-effect threshold (effects_manager.py:165)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#l8-duplicate-identity-maps-in-warp-warppy107112" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L8 — Duplicate identity maps in warp (warp.py:107–112)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#l9-excess-per-frame-param-recalculation-in-lfo-lfopy127" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        L9 — Excess per-frame param recalculation in LFO (lfo.py:127)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-concerns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance Concerns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architectural-debt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architectural Debt
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architectural Debt">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ad1-no-lazy-animation-loading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AD1 — No lazy animation loading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ad2-duplicated-alpha-blend-logic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AD2 — Duplicated alpha-blend logic
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ad3-effectbase-non-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AD3 — EffectBase non-pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ad4-frame-rate-dependent-animation-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AD4 — Frame-rate-dependent animation time
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ad5-feedback-excluded-by-string-matching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AD5 — Feedback excluded by string matching
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#roadmap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roadmap
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Roadmap">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-critical-fixes-12-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1 — Critical Fixes (1–2 sessions)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-performance-24-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2 — Performance (2–4 sessions)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-code-quality-12-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3 — Code Quality (1–2 sessions)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-architecture-4-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4 — Architecture (4+ sessions)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-user-functionality-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future User &amp; Functionality Improvements
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Future User &amp; Functionality Improvements">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ux-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UX / Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#animations-visuals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Animations &amp; Visuals
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#effects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Effects
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audio-reactivity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audio Reactivity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llm-ai-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LLM / AI Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#infrastructure-developer-experience" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Infrastructure &amp; Developer Experience
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="pvs-code-review">PVS Code Review<a class="headerlink" href="#pvs-code-review" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-03-27
+<strong>Scope:</strong> Full audit of <code>video_synth/</code> — bugs, stubs, performance, architecture, and future direction
+<strong>Reviewer:</strong> Claude (Sonnet 4.6)</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents<a class="headerlink" href="#table-of-contents" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#architecture-overview">Architecture Overview</a></li>
+<li><a href="#bug--issue-registry">Bug &amp; Issue Registry</a></li>
+<li><a href="#performance-concerns">Performance Concerns</a></li>
+<li><a href="#architectural-debt">Architectural Debt</a></li>
+<li><a href="#roadmap">Roadmap</a></li>
+<li><a href="#future-user--functionality-improvements">Future User &amp; Functionality Improvements</a></li>
+</ol>
+<hr />
+<h2 id="architecture-overview">Architecture Overview<a class="headerlink" href="#architecture-overview" title="Permanent link">&para;</a></h2>
+<p>PVS is a GPU-accelerated real-time video synthesizer combining live capture, procedural animation, effects processing, and multi-output rendering. It is structured as a pipeline:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>[Sources: Device / Animation / File]
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>        ↓  (ThreadPoolExecutor, 50ms timeout)
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>[EffectManager: per-source effects chain]
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>        ↓
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>[Mixer: alpha blend SRC_1 + SRC_2]
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        ↓
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>[EffectManager: post-mix effects]
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        ↓
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>[Outputs: GUI / VirtualCam / FFmpeg / OBS / WebSocket / OSC]
+</code></pre></div>
+<p><strong>Key subsystems:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>File</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Mixer</code></td>
+<td>mixer.py</td>
+<td>Owns both source banks, blends frames, frame caching</td>
+</tr>
+<tr>
+<td><code>Animation</code></td>
+<td>animations/base.py + 20 impls</td>
+<td>Abstract procedural content (ModernGL shaders, numpy)</td>
+</tr>
+<tr>
+<td><code>EffectManager</code></td>
+<td>effects_manager.py</td>
+<td>Configurable effects chain per group, LFO orchestration</td>
+</tr>
+<tr>
+<td><code>Param / ParamTable</code></td>
+<td>param.py</td>
+<td>Unified control layer — GUI, MIDI, OSC, API, LFO, audio</td>
+</tr>
+<tr>
+<td><code>AudioReactiveModule</code></td>
+<td>audio_reactive.py</td>
+<td>sounddevice FFT → per-band energy → param modulation</td>
+</tr>
+<tr>
+<td><code>REST API</code></td>
+<td>api.py</td>
+<td>FastAPI — GET/PUT /params, GET /snapshot, WebSocket stream</td>
+</tr>
+<tr>
+<td><code>LFO / OscBank</code></td>
+<td>lfo.py</td>
+<td>Oscillator bank for parameter automation</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="bug-issue-registry">Bug &amp; Issue Registry<a class="headerlink" href="#bug-issue-registry" title="Permanent link">&para;</a></h2>
+<p>Severity: <strong>CRITICAL</strong> → breaks functionality / data loss · <strong>HIGH</strong> → wrong output or crash under normal use · <strong>MEDIUM</strong> → degraded behavior, correctness risk · <strong>LOW</strong> → cleanup, style, documentation</p>
+<h3 id="critical">CRITICAL<a class="headerlink" href="#critical" title="Permanent link">&para;</a></h3>
+<p>None identified.</p>
+<hr />
+<h3 id="high">HIGH<a class="headerlink" href="#high" title="Permanent link">&para;</a></h3>
+<h4 id="h1-apply_perlin_noise-is-a-stub-feedbackpy271">H1 — <code>apply_perlin_noise()</code> is a stub (feedback.py:271)<a class="headerlink" href="#h1-apply_perlin_noise-is-a-stub-feedbackpy271" title="Permanent link">&para;</a></h4>
+<p>Pixel-by-pixel nested loop implementation is present but functionally incomplete. At 1080p this would take seconds per frame.
+<strong>Fix:</strong> Vectorize with <code>numpy</code> + a pre-generated perlin field (same pattern used in <code>warp.py</code>), or remove if superseded by the warp effect.</p>
+<h4 id="h2-error-recovery-frame-can-be-none-mid-chain-effects_managerpy177">H2 — Error recovery frame can be <code>None</code> mid-chain (effects_manager.py:177)<a class="headerlink" href="#h2-error-recovery-frame-can-be-none-mid-chain-effects_managerpy177" title="Permanent link">&para;</a></h4>
+<p><code>original_frame_for_recovery</code> is initialized to <code>None</code> and only assigned after the first effect processes successfully. If the first effect raises an exception, recovery falls back to <code>None</code> → likely crash or black frame propagation.
+<strong>Fix:</strong> Assign <code>original_frame_for_recovery = frame</code> before entering the effect loop.</p>
+<h4 id="h3-per-pixel-noise-generation-in-warppy-warppy141-152">H3 — Per-pixel noise generation in <code>warp.py</code> (warp.py:141, 152)<a class="headerlink" href="#h3-per-pixel-noise-generation-in-warppy-warppy141-152" title="Permanent link">&para;</a></h4>
+<p><code>_generate_perlin_flow()</code> and <code>_generate_fractal_flow()</code> use nested Python loops calling <code>pnoise2()</code> per pixel. At 1080p (~2M calls per frame) this is unusable. Currently masked by the 50ms frame timeout falling back to cache.
+<strong>Fix:</strong> Pre-generate noise fields using <code>numpy</code> vectorization and <code>noise.pnoise2</code> with array inputs, or cache and interpolate across frames (only regenerate every N frames).</p>
+<h4 id="h4-oscillator-linking-duplication-in-patterns3py-patterns3py283348">H4 — Oscillator linking duplication in <code>patterns3.py</code> (patterns3.py:283–348)<a class="headerlink" href="#h4-oscillator-linking-duplication-in-patterns3py-patterns3py283348" title="Permanent link">&para;</a></h4>
+<p><code>_set_osc_params()</code> has 65+ lines of near-identical repetitive blocks, one per oscillator parameter. Any change to oscillator linking logic requires updating every block manually.
+<strong>Fix:</strong> Refactor into a data-driven loop over a list of <code>(param_name, osc_attr)</code> pairs.</p>
+<hr />
+<h3 id="medium">MEDIUM<a class="headerlink" href="#medium" title="Permanent link">&para;</a></h3>
+<h4 id="m1-duplicate-alpha-blend-logic-feedbackpy232-mixerpy">M1 — Duplicate alpha-blend logic (feedback.py:232, mixer.py)<a class="headerlink" href="#m1-duplicate-alpha-blend-logic-feedbackpy232-mixerpy" title="Permanent link">&para;</a></h4>
+<p><code>apply_luma_feedback2()</code> in <code>feedback.py</code> duplicates alpha-blend logic already in <code>Mixer._alpha_blend()</code>. Bug fixes to one will not propagate.
+<strong>Fix:</strong> Extract to a shared utility function in <code>common.py</code>.</p>
+<h4 id="m2-color-parameter-mapping-documented-as-wrong-patterns3py101">M2 — Color parameter mapping documented as wrong (patterns3.py:101)<a class="headerlink" href="#m2-color-parameter-mapping-documented-as-wrong-patterns3py101" title="Permanent link">&para;</a></h4>
+<p><code># TODO: mapping seems off</code> — color parameters for patterns may produce incorrect visuals. Needs visual verification and correction.</p>
+<h4 id="m3-lfo-perlin-shape-value-mapping-incomplete-lfopy178">M3 — LFO PERLIN shape value mapping incomplete (lfo.py:178)<a class="headerlink" href="#m3-lfo-perlin-shape-value-mapping-incomplete-lfopy178" title="Permanent link">&para;</a></h4>
+<p><code># TODO: handle perlin noise mapping using the map_value method</code> — the PERLIN oscillator shape does not apply the same output scaling as other shapes, producing inconsistent modulation depth.
+<strong>Fix:</strong> Apply <code>map_value()</code> call consistently with other shape branches.</p>
+<h4 id="m4-feedback-class-excluded-from-sequencer-via-string-filtering-effects_managerpy103">M4 — Feedback class excluded from sequencer via string filtering (effects_manager.py:103)<a class="headerlink" href="#m4-feedback-class-excluded-from-sequencer-via-string-filtering-effects_managerpy103" title="Permanent link">&para;</a></h4>
+<p>Feedback effect methods are removed from the effect sequence by filtering on method names (<code>"feedback"</code> substring check). This is fragile — a rename silently breaks the exclusion.
+<strong>Fix:</strong> Add an explicit class-level flag (e.g. <code>SEQUENCEABLE = False</code>) and filter on that.</p>
+<h4 id="m5-scale_frame-padding-logic-may-crop-valid-data-feedbackpy124">M5 — <code>scale_frame()</code> padding logic may crop valid data (feedback.py:124)<a class="headerlink" href="#m5-scale_frame-padding-logic-may-crop-valid-data-feedbackpy124" title="Permanent link">&para;</a></h4>
+<p>Frame is padded then immediately modified with slicing that may discard the padding. Edge case: if target dimensions are smaller than source, the crop may not be applied to the right region.
+<strong>Fix:</strong> Add unit tests for upscale, downscale, and equal-size cases.</p>
+<h4 id="m6-off-by-one-risk-in-avg_frame_buffer-feedbackpy188">M6 — Off-by-one risk in <code>avg_frame_buffer()</code> (feedback.py:188)<a class="headerlink" href="#m6-off-by-one-risk-in-avg_frame_buffer-feedbackpy188" title="Permanent link">&para;</a></h4>
+<p>The oldest-frame tracking in the running-sum buffer uses a manual index that is incremented before use in one path and after in another. Needs a review pass with explicit test for buffer-full wraparound.</p>
+<h4 id="m7-warppy-time-accumulator-coupled-to-frame-rate-warppy104">M7 — <code>warp.py</code> time accumulator coupled to frame rate (warp.py:104)<a class="headerlink" href="#m7-warppy-time-accumulator-coupled-to-frame-rate-warppy104" title="Permanent link">&para;</a></h4>
+<p><code>self.t += 0.1</code> is called once per <code>get_frame()</code> call. At 60 FPS this runs twice as fast as at 30 FPS, making all time-based animations frame-rate dependent.
+<strong>Fix:</strong> Pass <code>dt</code> (elapsed seconds) into <code>get_frame()</code> and use <code>self.t += dt * speed_scale</code>.</p>
+<h4 id="m8-warp_use_fractal-uses-float-comparison-instead-of-toggle-warppy430">M8 — <code>warp_use_fractal</code> uses float comparison instead of toggle (warp.py:430)<a class="headerlink" href="#m8-warp_use_fractal-uses-float-comparison-instead-of-toggle-warppy430" title="Permanent link">&para;</a></h4>
+<p>Parameter is a SLIDER being compared as a boolean. Any non-zero value enables fractal mode, but the widget type is misleading and inconsistent with other boolean params.
+<strong>Fix:</strong> Change to <code>Widget.TOGGLE</code>.</p>
+<h4 id="m9-glitch-state-management-scattered-across-instance-variables-glitchpy2031">M9 — Glitch state management scattered across instance variables (glitch.py:20–31)<a class="headerlink" href="#m9-glitch-state-management-scattered-across-instance-variables-glitchpy2031" title="Permanent link">&para;</a></h4>
+<p>Multiple frame-counter variables (<code>current_fixed_y_end</code>, <code>last_scroll_glitch_reset_frame</code>, etc.) are declared at the top level with no grouping or reset mechanism. Hard to track and test.
+<strong>Fix:</strong> Group into a <code>@dataclass GlitchState</code> and expose a <code>reset()</code> method.</p>
+<h4 id="m10-effectbase-singleton-declared-but-not-implemented-effectsbasepy">M10 — <code>EffectBase</code> singleton declared but not implemented (effects/base.py)<a class="headerlink" href="#m10-effectbase-singleton-declared-but-not-implemented-effectsbasepy" title="Permanent link">&para;</a></h4>
+<p>The class has <code>_instance = None</code> but no <code>__init__</code>, <code>get_instance()</code>, or <code>__new__</code> override. Either complete the pattern or remove it — currently it adds confusion with no benefit.</p>
+<hr />
+<h3 id="low">LOW<a class="headerlink" href="#low" title="Permanent link">&para;</a></h3>
+<h4 id="l1-ambiguous-seed-parameter-name-in-lfo-lfopy75">L1 — Ambiguous <code>seed</code> parameter name in LFO (lfo.py:75)<a class="headerlink" href="#l1-ambiguous-seed-parameter-name-in-lfo-lfopy75" title="Permanent link">&para;</a></h4>
+<p>The variable name is unclear. Rename to reflect its actual role (e.g. <code>phase_offset</code> or <code>noise_seed</code>).</p>
+<h4 id="l2-posc_bank-global-is-unused-patterns3py10">L2 — <code>posc_bank</code> global is unused (patterns3.py:10)<a class="headerlink" href="#l2-posc_bank-global-is-unused-patterns3py10" title="Permanent link">&para;</a></h4>
+<p>Declared at module level, never referenced. Dead code — remove.</p>
+<h4 id="l3-magic-number-perlin_scale-1700-undocumented-warppy9">L3 — Magic number <code>PERLIN_SCALE = 1700</code> undocumented (warp.py:9)<a class="headerlink" href="#l3-magic-number-perlin_scale-1700-undocumented-warppy9" title="Permanent link">&para;</a></h4>
+<p>No comment explaining what this controls or how it was derived. Add a brief explanation.</p>
+<h4 id="l4-typo-in-animation-base-class-error-message-animationsbasepy19">L4 — Typo in <code>Animation</code> base class error message (animations/base.py:19)<a class="headerlink" href="#l4-typo-in-animation-base-class-error-message-animationsbasepy19" title="Permanent link">&para;</a></h4>
+<p><code>"subgroupes"</code> → <code>"subclasses"</code></p>
+<h4 id="l5-lfo-oscbank__init__-uses-list-comprehension-for-side-effects-lfopy234">L5 — LFO <code>OscBank.__init__</code> uses list comprehension for side effects (lfo.py:234)<a class="headerlink" href="#l5-lfo-oscbank__init__-uses-list-comprehension-for-side-effects-lfopy234" title="Permanent link">&para;</a></h4>
+<p><code>temp = [... for i in ...]</code> discards the result. Use a plain <code>for</code> loop.</p>
+<h4 id="l6-commented-out-midi-code-in-__main__py-__main__py39">L6 — Commented-out MIDI code in <code>__main__.py</code> (__main__.py:39)<a class="headerlink" href="#l6-commented-out-midi-code-in-__main__py-__main__py39" title="Permanent link">&para;</a></h4>
+<p>Stale commented code with no removal plan. Either document why it's kept or delete.</p>
+<h4 id="l7-hardcoded-20ms-slow-effect-threshold-effects_managerpy165">L7 — Hardcoded 20ms slow-effect threshold (effects_manager.py:165)<a class="headerlink" href="#l7-hardcoded-20ms-slow-effect-threshold-effects_managerpy165" title="Permanent link">&para;</a></h4>
+<p>Not a bug but limits flexibility. Could be a configurable setting.</p>
+<h4 id="l8-duplicate-identity-maps-in-warp-warppy107112">L8 — Duplicate identity maps in warp (warp.py:107–112)<a class="headerlink" href="#l8-duplicate-identity-maps-in-warp-warppy107112" title="Permanent link">&para;</a></h4>
+<p><code>_fb_base_x/y</code> and <code>_fb_map_x/y</code> are both stored when only one set is needed at a time. Small memory savings available.</p>
+<h4 id="l9-excess-per-frame-param-recalculation-in-lfo-lfopy127">L9 — Excess per-frame param recalculation in LFO (lfo.py:127)<a class="headerlink" href="#l9-excess-per-frame-param-recalculation-in-lfo-lfopy127" title="Permanent link">&para;</a></h4>
+<p><code>create_oscillator()</code> re-reads all param values on every <code>yield</code>. Values that don't change between frames could be cached with dirty-flag invalidation.</p>
+<hr />
+<h2 id="performance-concerns">Performance Concerns<a class="headerlink" href="#performance-concerns" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>File</th>
+<th>Issue</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Warp perlin/fractal flow</td>
+<td>warp.py:141, 152</td>
+<td>Per-pixel Python loops</td>
+<td>Catastrophic at HD — currently masked by frame cache timeout</td>
+</tr>
+<tr>
+<td>Patterns perlin blobs</td>
+<td>patterns3.py:589</td>
+<td>Multiple per-pixel <code>pnoise3()</code> loops</td>
+<td>High CPU, limits usable resolution</td>
+</tr>
+<tr>
+<td>Feedback perlin</td>
+<td>feedback.py:271</td>
+<td>Stub — per-pixel loop skeleton</td>
+<td>Unrunnable at any practical resolution</td>
+</tr>
+<tr>
+<td>Animation startup</td>
+<td>mixer.py</td>
+<td>All 40 animation objects instantiated at init</td>
+<td>~50–200MB memory for unused animations</td>
+</tr>
+<tr>
+<td>LFO oscillator</td>
+<td>lfo.py:127</td>
+<td>Full param re-read every yield</td>
+<td>Minor per-frame overhead</td>
+</tr>
+<tr>
+<td>Effects chain</td>
+<td>effects_manager.py</td>
+<td>No dynamic culling — all effects run every frame</td>
+<td>Minor; instrumentation already tracks slow effects</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Recommended priority:</strong> Fix H3 (warp perlin loops) first — it's the most impactful performance issue and likely the cause of any frame drops under warp effects.</p>
+<hr />
+<h2 id="architectural-debt">Architectural Debt<a class="headerlink" href="#architectural-debt" title="Permanent link">&para;</a></h2>
+<h3 id="ad1-no-lazy-animation-loading">AD1 — No lazy animation loading<a class="headerlink" href="#ad1-no-lazy-animation-loading" title="Permanent link">&para;</a></h3>
+<p><code>Mixer.__init__</code> instantiates every animation class for both SRC_1 and SRC_2 (currently ~40 objects including the new <code>Shaders3</code>). Many of these allocate GPU buffers or large numpy arrays on init.</p>
+<p><strong>Impact:</strong> ~50–200MB overhead at startup. ModernGL contexts per animation may also compete.
+<strong>Solution:</strong> Implement an animation factory that instantiates on first selection and optionally caches.</p>
+<h3 id="ad2-duplicated-alpha-blend-logic">AD2 — Duplicated alpha-blend logic<a class="headerlink" href="#ad2-duplicated-alpha-blend-logic" title="Permanent link">&para;</a></h3>
+<p>Present in at least <code>Mixer._alpha_blend()</code> and <code>feedback.py:apply_luma_feedback2()</code>. Likely also pattern-matched elsewhere.
+<strong>Solution:</strong> Single <code>alpha_blend(src, overlay, alpha)</code> function in <code>common.py</code>.</p>
+<h3 id="ad3-effectbase-non-pattern">AD3 — <code>EffectBase</code> non-pattern<a class="headerlink" href="#ad3-effectbase-non-pattern" title="Permanent link">&para;</a></h3>
+<p>The base class for effects provides no interface contract. Each effect defines its own method names and param registration without enforcement.
+<strong>Solution:</strong> Define abstract methods (<code>apply()</code>, <code>register_params()</code>) in <code>EffectBase</code> and enforce via <code>ABCMeta</code>.</p>
+<h3 id="ad4-frame-rate-dependent-animation-time">AD4 — Frame-rate-dependent animation time<a class="headerlink" href="#ad4-frame-rate-dependent-animation-time" title="Permanent link">&para;</a></h3>
+<p>Multiple animations/effects use frame counters or fixed-increment <code>self.t</code> instead of wall-clock time. Behavior changes with FPS settings.
+<strong>Solution:</strong> Pass <code>dt</code> through the rendering pipeline from <code>Mixer.get_frame()</code> downward.</p>
+<h3 id="ad5-feedback-excluded-by-string-matching">AD5 — Feedback excluded by string matching<a class="headerlink" href="#ad5-feedback-excluded-by-string-matching" title="Permanent link">&para;</a></h3>
+<p>See M4. The architecture places Feedback in <code>_all_services</code> then removes it, which is the wrong direction.</p>
+<hr />
+<h2 id="roadmap">Roadmap<a class="headerlink" href="#roadmap" title="Permanent link">&para;</a></h2>
+<p>Organized by effort and impact. Each phase is independently deliverable.</p>
+<hr />
+<h3 id="phase-1-critical-fixes-12-sessions">Phase 1 — Critical Fixes (1–2 sessions)<a class="headerlink" href="#phase-1-critical-fixes-12-sessions" title="Permanent link">&para;</a></h3>
+<p><em>Zero user-visible regressions. Fix things that are broken or will break.</em></p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>File(s)</th>
+<th>Issue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1.1</td>
+<td>Fix error recovery frame assignment</td>
+<td>effects_manager.py:177</td>
+<td>H2</td>
+</tr>
+<tr>
+<td>1.2</td>
+<td>Fix <code>warp_use_fractal</code> to use <code>Widget.TOGGLE</code></td>
+<td>warp.py:430</td>
+<td>M8</td>
+</tr>
+<tr>
+<td>1.3</td>
+<td>Fix <code>original_frame_for_recovery = frame</code> before loop</td>
+<td>effects_manager.py</td>
+<td>H2</td>
+</tr>
+<tr>
+<td>1.4</td>
+<td>Fix LFO PERLIN shape — apply <code>map_value()</code></td>
+<td>lfo.py:178</td>
+<td>M3</td>
+</tr>
+<tr>
+<td>1.5</td>
+<td>Fix <code>EffectBase</code> — add <code>ABCMeta</code> + abstract <code>apply()</code></td>
+<td>effects/base.py</td>
+<td>AD3</td>
+</tr>
+<tr>
+<td>1.6</td>
+<td>Remove or vectorize <code>apply_perlin_noise()</code> stub</td>
+<td>feedback.py:271</td>
+<td>H1</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="phase-2-performance-24-sessions">Phase 2 — Performance (2–4 sessions)<a class="headerlink" href="#phase-2-performance-24-sessions" title="Permanent link">&para;</a></h3>
+<p><em>Make warp and pattern effects usable at full resolution.</em></p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>File(s)</th>
+<th>Issue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2.1</td>
+<td>Vectorize <code>_generate_perlin_flow()</code> and <code>_generate_fractal_flow()</code></td>
+<td>warp.py:141, 152</td>
+<td>H3</td>
+</tr>
+<tr>
+<td>2.2</td>
+<td>Vectorize <code>_generate_perlin_blobs()</code> in patterns3</td>
+<td>patterns3.py:589</td>
+<td>Perf</td>
+</tr>
+<tr>
+<td>2.3</td>
+<td>Add frame-rate-independent <code>dt</code> to rendering pipeline</td>
+<td>mixer.py, warp.py, animations</td>
+<td>M7, AD4</td>
+</tr>
+<tr>
+<td>2.4</td>
+<td>Implement lazy animation factory</td>
+<td>mixer.py</td>
+<td>AD1</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="phase-3-code-quality-12-sessions">Phase 3 — Code Quality (1–2 sessions)<a class="headerlink" href="#phase-3-code-quality-12-sessions" title="Permanent link">&para;</a></h3>
+<p><em>Reduce duplication, fix fragile patterns, clean dead code.</em></p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>File(s)</th>
+<th>Issue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3.1</td>
+<td>Extract <code>alpha_blend()</code> to <code>common.py</code></td>
+<td>feedback.py, mixer.py</td>
+<td>M1, AD2</td>
+</tr>
+<tr>
+<td>3.2</td>
+<td>Refactor <code>_set_osc_params()</code> into data-driven loop</td>
+<td>patterns3.py:283</td>
+<td>H4</td>
+</tr>
+<tr>
+<td>3.3</td>
+<td>Replace string-based Feedback exclusion with class flag</td>
+<td>effects_manager.py:103</td>
+<td>M4</td>
+</tr>
+<tr>
+<td>3.4</td>
+<td>Group glitch state into <code>GlitchState</code> dataclass</td>
+<td>glitch.py:20</td>
+<td>M9</td>
+</tr>
+<tr>
+<td>3.5</td>
+<td>Verify and fix color parameter mapping</td>
+<td>patterns3.py:101</td>
+<td>M2</td>
+</tr>
+<tr>
+<td>3.6</td>
+<td>Remove <code>posc_bank</code> dead code</td>
+<td>patterns3.py:10</td>
+<td>L2</td>
+</tr>
+<tr>
+<td>3.7</td>
+<td>Rename <code>seed</code> → <code>phase_offset</code> in LFO</td>
+<td>lfo.py:75</td>
+<td>L1</td>
+</tr>
+<tr>
+<td>3.8</td>
+<td>Fix typo in <code>Animation</code> docstring</td>
+<td>animations/base.py:19</td>
+<td>L4</td>
+</tr>
+<tr>
+<td>3.9</td>
+<td>Document <code>PERLIN_SCALE</code> magic number</td>
+<td>warp.py:9</td>
+<td>L3</td>
+</tr>
+<tr>
+<td>3.10</td>
+<td>Fix <code>OscBank</code> list comprehension side effect</td>
+<td>lfo.py:234</td>
+<td>L5</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="phase-4-architecture-4-sessions">Phase 4 — Architecture (4+ sessions)<a class="headerlink" href="#phase-4-architecture-4-sessions" title="Permanent link">&para;</a></h3>
+<p><em>Larger structural changes. May require refactor branches.</em></p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>File(s)</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4.1</td>
+<td>Implement <code>EffectBase</code> with <code>ABCMeta</code> and enforce interface across all effects</td>
+<td>effects/</td>
+<td>Enables safe sequencer, better tooling</td>
+</tr>
+<tr>
+<td>4.2</td>
+<td>Animation lazy factory</td>
+<td>mixer.py, animations/</td>
+<td>Cuts startup memory; enables hot-swap</td>
+</tr>
+<tr>
+<td>4.3</td>
+<td>Full <code>dt</code>-based time in all animations and effects</td>
+<td>All</td>
+<td>Enables frame-rate independence</td>
+</tr>
+<tr>
+<td>4.4</td>
+<td>Audit <code>avg_frame_buffer()</code> and <code>scale_frame()</code> with unit tests</td>
+<td>feedback.py</td>
+<td>Catch M5, M6 definitively</td>
+</tr>
+<tr>
+<td>4.5</td>
+<td>Effects chain validation / integration test suite</td>
+<td>effects_manager.py</td>
+<td>Covers TODO at line 140</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="future-user-functionality-improvements">Future User &amp; Functionality Improvements<a class="headerlink" href="#future-user-functionality-improvements" title="Permanent link">&para;</a></h2>
+<h3 id="ux-control">UX / Control<a class="headerlink" href="#ux-control" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Preset system with named snapshots</strong>: Save/load full parameter state (beyond current save patches). Support banks of presets browsable from the web UI and keyboard shortcut cycling.</li>
+<li><strong>Macro knobs</strong>: Map a single MIDI knob to a named group of parameters with configurable scaling per-param. Useful for "one knob does the vibe" performance control.</li>
+<li><strong>Undo/redo for parameter changes</strong>: Ring buffer of param states, reversible via keyboard or MIDI.</li>
+<li><strong>Parameter lock</strong>: Prevent a param from being modified by audio-reactive, LFO, or API during performance.</li>
+<li><strong>MIDI scene recall</strong>: Store full parameter snapshots to MIDI program change messages.</li>
+</ul>
+<h3 id="animations-visuals">Animations &amp; Visuals<a class="headerlink" href="#animations-visuals" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Shader animation authoring in the web UI</strong>: Live-editable GLSL fragment shader input field with hot-reload. <code>Shaders3</code> already proves the ModernGL infrastructure works.</li>
+<li><strong>Video file looping with beat-sync</strong>: Sync video file loop points to BPM detected from audio or manual tap-tempo.</li>
+<li><strong>Image/texture injection</strong>: Load static images or sprite sheets as texture inputs to animations.</li>
+<li><strong>Animation crossfade</strong>: Smooth interpolated transition between two animation types on the same source (blend parameters over N frames).</li>
+<li><strong>More <code>Shaders3</code> presets</strong>: Voronoi flow, curl noise, domain-warped fractals, SDF shapes.</li>
+</ul>
+<h3 id="effects">Effects<a class="headerlink" href="#effects" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Spectral blur / frequency-domain effects</strong>: Apply effects in FFT space (blur specific frequencies, smear, etc.).</li>
+<li><strong>Chromatic aberration as a proper effect</strong>: Currently ad-hoc in some animations; should be a first-class effect with configurable split distance and angle.</li>
+<li><strong>AI upscaling integration</strong>: Optional Real-ESRGAN or EDSR pass on the output frame for higher-quality recording at lower render cost.</li>
+<li><strong>3D LUT support</strong>: Apply color grading via .cube LUT files as a post-processing effect.</li>
+</ul>
+<h3 id="audio-reactivity">Audio Reactivity<a class="headerlink" href="#audio-reactivity" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Onset / transient detection</strong>: Separate from beat detection — trigger one-shot parameter jumps on percussive hits (snare, kick individually).</li>
+<li><strong>Pitch tracking</strong>: Map fundamental frequency of audio input to a parameter (e.g. drive animation speed or hue with melody).</li>
+<li><strong>MIDI clock sync</strong>: Sync LFO and beat detection to incoming MIDI clock for tight DAW integration.</li>
+<li><strong>Audio stem separation</strong> (offline/background): Route kick, snare, melody stems to independent parameter groups.</li>
+</ul>
+<h3 id="llm-ai-control">LLM / AI Control<a class="headerlink" href="#llm-ai-control" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Local LLM skill set (Qwen / Ollama)</strong>: A directory of Python tool functions wrapping the REST API, with a JSON schema for Ollama tool-use mode and a system prompt describing the parameter space. Enables Qwen to autonomously explore and drive the engine. <em>(In progress — see separate skills work)</em></li>
+<li><strong>Vision-in-the-loop</strong>: Expose <code>GET /snapshot</code> to the LLM so it can evaluate what it sees and adjust parameters toward a described aesthetic.</li>
+<li><strong>Natural language preset authoring</strong>: Describe a mood ("slow hypnotic blue waveforms") and have the LLM translate it to a set of parameter values.</li>
+<li><strong>Autonomous performance mode</strong>: LLM-driven session that evolves visuals over a set duration, avoiding repetition.</li>
+</ul>
+<h3 id="infrastructure-developer-experience">Infrastructure &amp; Developer Experience<a class="headerlink" href="#infrastructure-developer-experience" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Configurable slow-effect threshold</strong>: Currently hardcoded at 20ms (effects_manager.py:165). Expose via settings.</li>
+<li><strong>Web UI parameter search</strong>: Filter parameter list by name in the web control panel.</li>
+<li><strong>Hot-reload for shader files</strong>: Watch <code>shaders3.py</code> / GLSL source files and reload without restarting the engine.</li>
+<li><strong>Headless test mode</strong>: CLI flag that runs one frame through the full pipeline and saves to disk — enables CI visual regression testing.</li>
+<li><strong>OSC namespace documentation</strong>: Auto-generate OSC address list from the Param system (similar to how PARAMETERS.md is generated).</li>
+<li><strong>Plugin/extension architecture</strong>: Allow external Python files in a <code>plugins/</code> directory to register new animation types or effects at startup without modifying core files.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/your-org/video_synth" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

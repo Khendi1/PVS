@@ -1,0 +1,5400 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Real-time collaborative visual art synthesizer">
+      
+      
+      
+        <link rel="canonical" href="https://your-org.github.io/video_synth/parameters-reference/">
+      
+      
+        <link rel="prev" href="../api/">
+      
+      
+        <link rel="next" href="../docker/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Parameters - Video Synth</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="green" data-md-color-accent="light-green">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#video-synth-parameter-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Video Synth" class="md-header__button md-logo" aria-label="Video Synth" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Video Synth
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Parameters
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/your-org/video_synth" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    video_synth
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../api/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Parameters
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../docker/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Docker & Agent
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../build/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Building & Packaging
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../roadmap/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Roadmap
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Video Synth" class="md-nav__button md-logo" aria-label="Video Synth" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Video Synth
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/your-org/video_synth" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    video_synth
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parameters
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parameters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#plasma" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plasma
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reaction-diffusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reaction Diffusion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#drift-field" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drift Field
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shaders-s1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shaders (S1)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shaders-2-s2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shaders 2 (S2)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#voronoi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Voronoi
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metaballs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metaballs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#moire" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Moire
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chladni" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chladni
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dla-diffusion-limited-aggregation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DLA (Diffusion-Limited Aggregation)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#physarum" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Physarum
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lenia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lenia
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fractal-zoom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fractal Zoom
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#oscillator-grid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Oscillator Grid
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#harmonic-interference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Harmonic Interference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#strange-attractor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strange Attractor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#perlin-noise" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Perlin Noise
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#color-effects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Color Effects
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#warp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Warp
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feedback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feedback
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#glitch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Glitch
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Glitch">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#general" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        General
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slit-scan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slit-Scan
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#echo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Echo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixel-sorting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pixel Sorting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chromatic-aberration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chromatic Aberration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#erosion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Erosion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shapes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shapes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pixels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pixels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ptz-pantiltzoom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PTZ (Pan/Tilt/Zoom)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reflector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reflector
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lissajous" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lissajous
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mixer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mixer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance Controls
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Performance Controls">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#blackout-freeze" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Blackout / Freeze
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#autopilot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Autopilot
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#patch-navigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Patch Navigation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lfo-low-frequency-oscillator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LFO (Low Frequency Oscillator)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#audio-reactive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audio Reactive
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#beat-detector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Beat Detector
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Beat Detector">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#detection-internals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detection Internals
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker & Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../build/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Building & Packaging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#plasma" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plasma
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reaction-diffusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reaction Diffusion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#drift-field" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drift Field
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shaders-s1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shaders (S1)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shaders-2-s2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shaders 2 (S2)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#voronoi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Voronoi
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metaballs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metaballs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#moire" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Moire
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chladni" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chladni
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dla-diffusion-limited-aggregation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DLA (Diffusion-Limited Aggregation)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#physarum" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Physarum
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lenia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lenia
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fractal-zoom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fractal Zoom
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#oscillator-grid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Oscillator Grid
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#harmonic-interference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Harmonic Interference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#strange-attractor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strange Attractor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#perlin-noise" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Perlin Noise
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#color-effects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Color Effects
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#warp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Warp
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feedback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feedback
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#glitch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Glitch
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Glitch">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#general" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        General
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slit-scan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slit-Scan
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#echo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Echo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixel-sorting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pixel Sorting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chromatic-aberration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chromatic Aberration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#erosion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Erosion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shapes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shapes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pixels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pixels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ptz-pantiltzoom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PTZ (Pan/Tilt/Zoom)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reflector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reflector
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lissajous" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lissajous
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mixer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mixer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance Controls
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Performance Controls">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#blackout-freeze" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Blackout / Freeze
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#autopilot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Autopilot
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#patch-navigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Patch Navigation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lfo-low-frequency-oscillator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LFO (Low Frequency Oscillator)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#audio-reactive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audio Reactive
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#beat-detector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Beat Detector
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Beat Detector">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#detection-internals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detection Internals
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="video-synth-parameter-reference">Video Synth Parameter Reference<a class="headerlink" href="#video-synth-parameter-reference" title="Permanent link">&para;</a></h1>
+<p>This document describes all parameters across every module. It is intended to guide the addition of <code>info</code> fields for in-app tooltips.</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents<a class="headerlink" href="#table-of-contents" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="#plasma">Plasma</a></li>
+<li><a href="#reaction-diffusion">Reaction Diffusion</a></li>
+<li><a href="#drift-field">Drift Field</a></li>
+<li><a href="#shaders-s1">Shaders (S1)</a></li>
+<li><a href="#shaders-2-s2">Shaders 2 (S2)</a></li>
+<li><a href="#voronoi">Voronoi</a></li>
+<li><a href="#metaballs">Metaballs</a></li>
+<li><a href="#moire">Moire</a></li>
+<li><a href="#chladni">Chladni</a></li>
+<li><a href="#dla-diffusion-limited-aggregation">DLA (Diffusion-Limited Aggregation)</a></li>
+<li><a href="#physarum">Physarum</a></li>
+<li><a href="#lenia">Lenia</a></li>
+<li><a href="#fractal-zoom">Fractal Zoom</a></li>
+<li><a href="#oscillator-grid">Oscillator Grid</a></li>
+<li><a href="#harmonic-interference">Harmonic Interference</a></li>
+<li><a href="#strange-attractor">Strange Attractor</a></li>
+<li><a href="#perlin-noise">Perlin Noise</a></li>
+<li><a href="#color-effects">Color Effects</a></li>
+<li><a href="#warp">Warp</a></li>
+<li><a href="#feedback">Feedback</a></li>
+<li><a href="#glitch">Glitch</a></li>
+<li><a href="#erosion">Erosion</a></li>
+<li><a href="#shapes">Shapes</a></li>
+<li><a href="#pixels">Pixels</a></li>
+<li><a href="#ptz-pantiltzoom">PTZ (Pan/Tilt/Zoom)</a></li>
+<li><a href="#reflector">Reflector</a></li>
+<li><a href="#lissajous">Lissajous</a></li>
+<li><a href="#mixer">Mixer</a></li>
+<li><a href="#performance-controls">Performance Controls</a></li>
+<li><a href="#lfo-low-frequency-oscillator">LFO (Low Frequency Oscillator)</a></li>
+<li><a href="#audio-reactive">Audio Reactive</a></li>
+<li><a href="#beat-detector">Beat Detector</a></li>
+</ul>
+<hr />
+<h2 id="plasma">Plasma<a class="headerlink" href="#plasma" title="Permanent link">&para;</a></h2>
+<p>Generates animated plasma-style patterns using layered sine wave functions.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Speed</td>
+<td><code>plasma_speed</code></td>
+<td>0.01</td>
+<td>10</td>
+<td>1.0</td>
+<td>Overall animation speed of the plasma pattern</td>
+</tr>
+<tr>
+<td>Distance</td>
+<td><code>plasma_distance</code></td>
+<td>0.01</td>
+<td>10</td>
+<td>1.0</td>
+<td>Spatial scale/spread of the sine wave pattern</td>
+</tr>
+<tr>
+<td>Color Speed</td>
+<td><code>plasma_color_speed</code></td>
+<td>0.01</td>
+<td>10</td>
+<td>1.0</td>
+<td>Rate at which colors cycle through the palette</td>
+</tr>
+<tr>
+<td>Flow Speed</td>
+<td><code>plasma_flow_speed</code></td>
+<td>0.01</td>
+<td>10</td>
+<td>1.0</td>
+<td>Speed of directional flow/drift through the pattern</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="reaction-diffusion">Reaction Diffusion<a class="headerlink" href="#reaction-diffusion" title="Permanent link">&para;</a></h2>
+<p>Simulates a two-chemical reaction-diffusion system (Gray-Scott model) producing organic-looking patterns.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Diffusion A</td>
+<td><code>da</code></td>
+<td>0</td>
+<td>2.0</td>
+<td>varies</td>
+<td>Diffusion rate of chemical A; higher values spread it faster</td>
+</tr>
+<tr>
+<td>Diffusion B</td>
+<td><code>db</code></td>
+<td>0</td>
+<td>2.0</td>
+<td>varies</td>
+<td>Diffusion rate of chemical B; typically slower than A</td>
+</tr>
+<tr>
+<td>Feed Rate</td>
+<td><code>feed</code></td>
+<td>0</td>
+<td>0.1</td>
+<td>varies</td>
+<td>Rate at which chemical A is added to the system; controls pattern type</td>
+</tr>
+<tr>
+<td>Kill Rate</td>
+<td><code>kill</code></td>
+<td>0</td>
+<td>0.1</td>
+<td>varies</td>
+<td>Rate at which chemical B is removed; controls pattern density</td>
+</tr>
+<tr>
+<td>Iterations/Frame</td>
+<td><code>iterations_per_frame</code></td>
+<td>5</td>
+<td>100</td>
+<td>50</td>
+<td>Number of simulation steps computed per rendered frame</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="drift-field">Drift Field<a class="headerlink" href="#drift-field" title="Permanent link">&para;</a></h2>
+<p>Animates a vector/flow field where particles or colors drift along evolving noise-based paths.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Speed</td>
+<td><code>drift_speed</code></td>
+<td>0.01</td>
+<td>2.0</td>
+<td>0.15</td>
+<td>How fast the field evolves over time</td>
+</tr>
+<tr>
+<td>Complexity</td>
+<td><code>drift_complexity</code></td>
+<td>1</td>
+<td>8</td>
+<td>3</td>
+<td>Number of noise layers; higher values produce more tangled paths</td>
+</tr>
+<tr>
+<td>Scale</td>
+<td><code>drift_scale</code></td>
+<td>0.5</td>
+<td>10.0</td>
+<td>3.0</td>
+<td>Spatial scale of the noise field; larger values zoom out the pattern</td>
+</tr>
+<tr>
+<td>Viscosity</td>
+<td><code>drift_viscosity</code></td>
+<td>0.9</td>
+<td>1.0</td>
+<td>0.995</td>
+<td>How much the previous frame persists; near 1.0 creates long trails</td>
+</tr>
+<tr>
+<td>Injection</td>
+<td><code>drift_injection</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.02</td>
+<td>Rate at which new color/energy is injected into the field</td>
+</tr>
+<tr>
+<td>Colormap</td>
+<td><code>drift_colormap</code></td>
+<td>—</td>
+<td>—</td>
+<td>TWILIGHT</td>
+<td>Color palette applied to the field intensity</td>
+</tr>
+<tr>
+<td>Color Speed</td>
+<td><code>drift_color_speed</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>0.3</td>
+<td>Rate at which the colormap offset shifts over time</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="shaders-s1">Shaders (S1)<a class="headerlink" href="#shaders-s1" title="Permanent link">&para;</a></h2>
+<p>First shader bank — applies GLSL-based generative visuals with a selectable shader type.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Shader Type</td>
+<td><code>s_type</code></td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>Selects which shader pattern to render</td>
+</tr>
+<tr>
+<td>Zoom</td>
+<td><code>s_zoom</code></td>
+<td>0.1</td>
+<td>5.0</td>
+<td>1.5</td>
+<td>Zoom level into the shader pattern</td>
+</tr>
+<tr>
+<td>Distortion</td>
+<td><code>s_distortion</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.5</td>
+<td>Amount of spatial distortion applied to the pattern</td>
+</tr>
+<tr>
+<td>Iterations</td>
+<td><code>s_iterations</code></td>
+<td>1.0</td>
+<td>10.0</td>
+<td>4.0</td>
+<td>Number of fractal/fold iterations; higher = more detail</td>
+</tr>
+<tr>
+<td>Color Shift</td>
+<td><code>s_color_shift</code></td>
+<td>0.5</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>Shifts the color mapping of the output</td>
+</tr>
+<tr>
+<td>Brightness</td>
+<td><code>s_brightness</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>1.0</td>
+<td>Output brightness multiplier</td>
+</tr>
+<tr>
+<td>Hue Shift</td>
+<td><code>s_hue_shift</code></td>
+<td>0.0</td>
+<td>7.0</td>
+<td>0.0</td>
+<td>Rotates the hue of the shader output</td>
+</tr>
+<tr>
+<td>Saturation</td>
+<td><code>s_saturation</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>1.0</td>
+<td>Saturation multiplier of the output</td>
+</tr>
+<tr>
+<td>X Shift</td>
+<td><code>s_x_shift</code></td>
+<td>-5.0</td>
+<td>5.0</td>
+<td>0.0</td>
+<td>Horizontal pan/offset into the shader space</td>
+</tr>
+<tr>
+<td>Y Shift</td>
+<td><code>s_y_shift</code></td>
+<td>-5.0</td>
+<td>5.0</td>
+<td>0.0</td>
+<td>Vertical pan/offset into the shader space</td>
+</tr>
+<tr>
+<td>Rotation</td>
+<td><code>s_rotation</code></td>
+<td>-3.14</td>
+<td>3.14</td>
+<td>0.0</td>
+<td>Rotation of the shader coordinate space (radians)</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td><code>s_speed</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>1.0</td>
+<td>Animation speed of the shader</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="shaders-2-s2">Shaders 2 (S2)<a class="headerlink" href="#shaders-2-s2" title="Permanent link">&para;</a></h2>
+<p>Second shader bank — a separate set of GLSL patterns with extended parameter range.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Shader Type</td>
+<td><code>s2_type</code></td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>Selects which shader pattern to render</td>
+</tr>
+<tr>
+<td>Zoom</td>
+<td><code>s2_zoom</code></td>
+<td>0.1</td>
+<td>10.0</td>
+<td>1.0</td>
+<td>Zoom level into the shader pattern</td>
+</tr>
+<tr>
+<td>Distortion</td>
+<td><code>s2_distortion</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>0.5</td>
+<td>Amount of spatial distortion applied to the pattern</td>
+</tr>
+<tr>
+<td>Iterations</td>
+<td><code>s2_iterations</code></td>
+<td>1.0</td>
+<td>20.0</td>
+<td>6.0</td>
+<td>Number of fractal/fold iterations</td>
+</tr>
+<tr>
+<td>Color Shift</td>
+<td><code>s2_color_shift</code></td>
+<td>0.0</td>
+<td>6.28</td>
+<td>0.0</td>
+<td>Hue/phase offset for color mapping (0–2π)</td>
+</tr>
+<tr>
+<td>Brightness</td>
+<td><code>s2_brightness</code></td>
+<td>0.0</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>Output brightness multiplier</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td><code>s2_speed</code></td>
+<td>0.0</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>Animation speed of the shader</td>
+</tr>
+<tr>
+<td>Param A</td>
+<td><code>s2_param_a</code></td>
+<td>0.0</td>
+<td>10.0</td>
+<td>3.0</td>
+<td>Shader-specific parameter A (meaning varies by type)</td>
+</tr>
+<tr>
+<td>Param B</td>
+<td><code>s2_param_b</code></td>
+<td>0.0</td>
+<td>10.0</td>
+<td>2.0</td>
+<td>Shader-specific parameter B (meaning varies by type)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="voronoi">Voronoi<a class="headerlink" href="#voronoi" title="Permanent link">&para;</a></h2>
+<p>Renders animated Voronoi diagrams with relaxation, tectonic drift, and color cycling.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Num Points</td>
+<td><code>voronoi_num_points</code></td>
+<td>5</td>
+<td>200</td>
+<td>50</td>
+<td>Number of Voronoi seed points</td>
+</tr>
+<tr>
+<td>Relax Speed</td>
+<td><code>voronoi_relax_speed</code></td>
+<td>0.01</td>
+<td>0.5</td>
+<td>0.1</td>
+<td>Rate at which points drift toward cell centroids (Lloyd's relaxation)</td>
+</tr>
+<tr>
+<td>Jitter</td>
+<td><code>voronoi_jitter</code></td>
+<td>0.0</td>
+<td>5.0</td>
+<td>0.5</td>
+<td>Random perturbation added to point positions each frame</td>
+</tr>
+<tr>
+<td>Show Edges</td>
+<td><code>voronoi_show_edges</code></td>
+<td>—</td>
+<td>—</td>
+<td>on</td>
+<td>Toggle rendering of cell boundary lines</td>
+</tr>
+<tr>
+<td>Show Points</td>
+<td><code>voronoi_show_points</code></td>
+<td>—</td>
+<td>—</td>
+<td>on</td>
+<td>Toggle rendering of seed point dots</td>
+</tr>
+<tr>
+<td>Fill Cells</td>
+<td><code>voronoi_fill_cells</code></td>
+<td>—</td>
+<td>—</td>
+<td>on</td>
+<td>Toggle filling cells with color</td>
+</tr>
+<tr>
+<td>Edge Thickness</td>
+<td><code>voronoi_edge_thickness</code></td>
+<td>1</td>
+<td>5</td>
+<td>2</td>
+<td>Pixel width of cell boundary lines</td>
+</tr>
+<tr>
+<td>Point Size</td>
+<td><code>voronoi_point_size</code></td>
+<td>2</td>
+<td>10</td>
+<td>5</td>
+<td>Pixel radius of seed point dots</td>
+</tr>
+<tr>
+<td>Edge R</td>
+<td><code>voronoi_edge_r</code></td>
+<td>0</td>
+<td>255</td>
+<td>255</td>
+<td>Red channel of edge color</td>
+</tr>
+<tr>
+<td>Edge G</td>
+<td><code>voronoi_edge_g</code></td>
+<td>0</td>
+<td>255</td>
+<td>255</td>
+<td>Green channel of edge color</td>
+</tr>
+<tr>
+<td>Edge B</td>
+<td><code>voronoi_edge_b</code></td>
+<td>0</td>
+<td>255</td>
+<td>255</td>
+<td>Blue channel of edge color</td>
+</tr>
+<tr>
+<td>Colormap</td>
+<td><code>voronoi_colormap</code></td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>Color palette used to fill cells</td>
+</tr>
+<tr>
+<td>Color Speed</td>
+<td><code>voronoi_color_speed</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>0.2</td>
+<td>Rate at which colormap offset shifts over time</td>
+</tr>
+<tr>
+<td>Tectonic Speed</td>
+<td><code>voronoi_tectonic_speed</code></td>
+<td>0.0</td>
+<td>3.0</td>
+<td>0.0</td>
+<td>Speed of large-scale directional drift across all points</td>
+</tr>
+<tr>
+<td>Tectonic Chaos</td>
+<td><code>voronoi_tectonic_chaos</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.3</td>
+<td>Randomness in tectonic drift direction per point</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="metaballs">Metaballs<a class="headerlink" href="#metaballs" title="Permanent link">&para;</a></h2>
+<p>Renders smooth organic blobs (metaballs) that merge and separate.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Num Metaballs</td>
+<td><code>num_metaballs</code></td>
+<td>2</td>
+<td>10</td>
+<td>5</td>
+<td>Number of metaball blobs</td>
+</tr>
+<tr>
+<td>Min Radius</td>
+<td><code>min_radius</code></td>
+<td>20</td>
+<td>100</td>
+<td>40</td>
+<td>Minimum radius (px) a metaball can have</td>
+</tr>
+<tr>
+<td>Max Radius</td>
+<td><code>max_radius</code></td>
+<td>40</td>
+<td>200</td>
+<td>80</td>
+<td>Maximum radius (px) a metaball can have</td>
+</tr>
+<tr>
+<td>Radius Multiplier</td>
+<td><code>radius_multiplier</code></td>
+<td>1.0</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>Global scale applied to all metaball radii</td>
+</tr>
+<tr>
+<td>Max Speed</td>
+<td><code>max_speed</code></td>
+<td>1</td>
+<td>10</td>
+<td>3</td>
+<td>Maximum velocity of each metaball</td>
+</tr>
+<tr>
+<td>Speed Multiplier</td>
+<td><code>speed_multiplier</code></td>
+<td>1.0</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>Global scale applied to all metaball velocities</td>
+</tr>
+<tr>
+<td>Threshold</td>
+<td><code>threshold</code></td>
+<td>0.5</td>
+<td>3.0</td>
+<td>1.6</td>
+<td>Isosurface threshold; controls where blob surfaces appear</td>
+</tr>
+<tr>
+<td>Smooth Coloring Max</td>
+<td><code>smooth_coloring_max_field</code></td>
+<td>1.0</td>
+<td>3.0</td>
+<td>1.5</td>
+<td>Upper field value used to normalize smooth color gradient</td>
+</tr>
+<tr>
+<td>Skew Angle</td>
+<td><code>metaball_skew_angle</code></td>
+<td>0.0</td>
+<td>360.0</td>
+<td>0.0</td>
+<td>Direction of coordinate skew applied to the canvas</td>
+</tr>
+<tr>
+<td>Skew Intensity</td>
+<td><code>metaball_skew_intensity</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>Strength of the skew distortion</td>
+</tr>
+<tr>
+<td>Zoom</td>
+<td><code>metaball_zoom</code></td>
+<td>1.0</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>Zoom level into the metaball field</td>
+</tr>
+<tr>
+<td>Colormap</td>
+<td><code>metaball_colormap</code></td>
+<td>—</td>
+<td>—</td>
+<td>JET</td>
+<td>Color palette used to shade blobs</td>
+</tr>
+<tr>
+<td>Feedback</td>
+<td><code>metaballs_feedback</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.95</td>
+<td>Alpha blend of previous frame over current; creates trails</td>
+</tr>
+<tr>
+<td>Render Scale</td>
+<td><code>metaballs_render_scale</code></td>
+<td>0.25</td>
+<td>1.0</td>
+<td>0.25</td>
+<td>Internal resolution as a fraction of output size; lower = faster</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="moire">Moire<a class="headerlink" href="#moire" title="Permanent link">&para;</a></h2>
+<p>Creates interference patterns by overlaying two independently controllable grids or radial patterns.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Blend Mode</td>
+<td><code>moire_blend</code></td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>How the two layers are composited (e.g. multiply, XOR)</td>
+</tr>
+<tr>
+<td>Pattern 1 Type</td>
+<td><code>moire_type_1</code></td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>Shape of layer 1 (lines, circles, dots, etc.)</td>
+</tr>
+<tr>
+<td>Spatial Freq 1</td>
+<td><code>spatial_freq_1</code></td>
+<td>0.01</td>
+<td>25</td>
+<td>10.0</td>
+<td>Spatial frequency (line density) of layer 1</td>
+</tr>
+<tr>
+<td>Angle 1</td>
+<td><code>angle_1</code></td>
+<td>0</td>
+<td>360</td>
+<td>90.0</td>
+<td>Rotation angle of layer 1 (degrees)</td>
+</tr>
+<tr>
+<td>Zoom 1</td>
+<td><code>zoom_1</code></td>
+<td>0.05</td>
+<td>1.5</td>
+<td>1.0</td>
+<td>Zoom level of layer 1</td>
+</tr>
+<tr>
+<td>Center X 1</td>
+<td><code>moire_center_x_1</code></td>
+<td>0</td>
+<td>width</td>
+<td>center</td>
+<td>Horizontal center point of layer 1</td>
+</tr>
+<tr>
+<td>Center Y 1</td>
+<td><code>moire_center_y_1</code></td>
+<td>0</td>
+<td>height</td>
+<td>center</td>
+<td>Vertical center point of layer 1</td>
+</tr>
+<tr>
+<td>Pattern 2 Type</td>
+<td><code>moire_type_2</code></td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>Shape of layer 2</td>
+</tr>
+<tr>
+<td>Spatial Freq 2</td>
+<td><code>spatial_freq_2</code></td>
+<td>0.01</td>
+<td>25</td>
+<td>1.0</td>
+<td>Spatial frequency of layer 2</td>
+</tr>
+<tr>
+<td>Angle 2</td>
+<td><code>angle_2</code></td>
+<td>0</td>
+<td>360</td>
+<td>0.0</td>
+<td>Rotation angle of layer 2 (degrees)</td>
+</tr>
+<tr>
+<td>Zoom 2</td>
+<td><code>zoom_2</code></td>
+<td>0.05</td>
+<td>1.5</td>
+<td>1.0</td>
+<td>Zoom level of layer 2</td>
+</tr>
+<tr>
+<td>Center X 2</td>
+<td><code>moire_center_x_2</code></td>
+<td>0</td>
+<td>width</td>
+<td>center</td>
+<td>Horizontal center point of layer 2</td>
+</tr>
+<tr>
+<td>Center Y 2</td>
+<td><code>moire_center_y_2</code></td>
+<td>0</td>
+<td>height</td>
+<td>center</td>
+<td>Vertical center point of layer 2</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="chladni">Chladni<a class="headerlink" href="#chladni" title="Permanent link">&para;</a></h2>
+<p>Simulates Chladni figures — sand particles settling at the nodes of a vibrating plate.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Freq M</td>
+<td><code>chladni_freq_m</code></td>
+<td>1</td>
+<td>20</td>
+<td>5.0</td>
+<td>X-axis modal frequency of the vibrating plate</td>
+</tr>
+<tr>
+<td>Freq N</td>
+<td><code>chladni_freq_n</code></td>
+<td>1</td>
+<td>20</td>
+<td>3.0</td>
+<td>Y-axis modal frequency of the vibrating plate</td>
+</tr>
+<tr>
+<td>Amplitude</td>
+<td><code>chladni_amplitude</code></td>
+<td>0.1</td>
+<td>2.0</td>
+<td>1.0</td>
+<td>Vibration amplitude; affects how strongly particles are repelled from antinodes</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td><code>chladni_speed</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>0.5</td>
+<td>Rate at which the wave pattern evolves</td>
+</tr>
+<tr>
+<td>Blend</td>
+<td><code>chladni_blend</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.5</td>
+<td>Mix between two wave modes</td>
+</tr>
+<tr>
+<td>Num Particles</td>
+<td><code>chladni_particles</code></td>
+<td>1000</td>
+<td>50000</td>
+<td>10000</td>
+<td>Total number of simulated particles</td>
+</tr>
+<tr>
+<td>Particle Speed</td>
+<td><code>chladni_particle_speed</code></td>
+<td>0.1</td>
+<td>5.0</td>
+<td>1.0</td>
+<td>Velocity at which particles move toward nodal lines</td>
+</tr>
+<tr>
+<td>Friction</td>
+<td><code>chladni_friction</code></td>
+<td>0.8</td>
+<td>0.99</td>
+<td>0.95</td>
+<td>Velocity damping per frame; higher = more retained momentum</td>
+</tr>
+<tr>
+<td>Show Wave</td>
+<td><code>chladni_show_wave</code></td>
+<td>—</td>
+<td>—</td>
+<td>on</td>
+<td>Toggle rendering the underlying wave field</td>
+</tr>
+<tr>
+<td>Colormap</td>
+<td><code>chladni_colormap</code></td>
+<td>—</td>
+<td>—</td>
+<td>2</td>
+<td>Color palette applied to the wave field visualization</td>
+</tr>
+<tr>
+<td>Particle R</td>
+<td><code>chladni_particle_r</code></td>
+<td>0</td>
+<td>255</td>
+<td>255</td>
+<td>Red channel of particle color</td>
+</tr>
+<tr>
+<td>Particle G</td>
+<td><code>chladni_particle_g</code></td>
+<td>0</td>
+<td>255</td>
+<td>255</td>
+<td>Green channel of particle color</td>
+</tr>
+<tr>
+<td>Particle B</td>
+<td><code>chladni_particle_b</code></td>
+<td>0</td>
+<td>255</td>
+<td>200</td>
+<td>Blue channel of particle color</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="dla-diffusion-limited-aggregation">DLA (Diffusion-Limited Aggregation)<a class="headerlink" href="#dla-diffusion-limited-aggregation" title="Permanent link">&para;</a></h2>
+<p>Grows fractal crystal structures by randomly walking particles that stick on contact.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Num Particles</td>
+<td><code>dla_num_particles</code></td>
+<td>10</td>
+<td>500</td>
+<td>100</td>
+<td>Number of active random-walking particles</td>
+</tr>
+<tr>
+<td>Stickiness</td>
+<td><code>dla_stickiness</code></td>
+<td>0.1</td>
+<td>1.0</td>
+<td>1.0</td>
+<td>Probability a particle sticks when it touches the crystal</td>
+</tr>
+<tr>
+<td>Spawn Radius</td>
+<td><code>dla_spawn_radius</code></td>
+<td>1.1</td>
+<td>2.0</td>
+<td>1.3</td>
+<td>How far from the crystal edge new particles spawn (as a ratio)</td>
+</tr>
+<tr>
+<td>Particle Speed</td>
+<td><code>dla_particle_speed</code></td>
+<td>1</td>
+<td>10</td>
+<td>3</td>
+<td>Steps per frame each particle moves</td>
+</tr>
+<tr>
+<td>Branch Bias</td>
+<td><code>dla_branch_bias</code></td>
+<td>-1.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>Directional bias in particle walk; negative = inward, positive = outward</td>
+</tr>
+<tr>
+<td>Fade</td>
+<td><code>dla_fade</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.99</td>
+<td>How quickly old crystal deposits fade; near 1.0 = persistent</td>
+</tr>
+<tr>
+<td>Crystal R/G/B</td>
+<td><code>dla_crystal_r/g/b</code></td>
+<td>0</td>
+<td>255</td>
+<td>100/200/255</td>
+<td>RGB color of the crystal structure</td>
+</tr>
+<tr>
+<td>Particle R/G/B</td>
+<td><code>dla_particle_r/g/b</code></td>
+<td>0</td>
+<td>255</td>
+<td>255/255/255</td>
+<td>RGB color of active walking particles</td>
+</tr>
+<tr>
+<td>Reset</td>
+<td><code>dla_reset</code></td>
+<td>—</td>
+<td>—</td>
+<td>off</td>
+<td>Toggle to clear the crystal and restart the simulation</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="physarum">Physarum<a class="headerlink" href="#physarum" title="Permanent link">&para;</a></h2>
+<p>Simulates slime mold (Physarum polycephalum) agent behavior — agents deposit trail and steer toward chemical gradients.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Num Agents</td>
+<td><code>phys_num_agents</code></td>
+<td>1000</td>
+<td>10000</td>
+<td>1000</td>
+<td>Number of simulated slime mold agents</td>
+</tr>
+<tr>
+<td>Sensor Angle</td>
+<td><code>phys_sensor_angle_spacing</code></td>
+<td>0.0</td>
+<td>π/2</td>
+<td>π/8</td>
+<td>Angular offset of the forward sensors from the heading</td>
+</tr>
+<tr>
+<td>Sensor Distance</td>
+<td><code>phys_sensor_distance</code></td>
+<td>1</td>
+<td>20</td>
+<td>9</td>
+<td>How far ahead each sensor samples the trail map</td>
+</tr>
+<tr>
+<td>Turn Angle</td>
+<td><code>phys_turn_angle</code></td>
+<td>0.0</td>
+<td>π/2</td>
+<td>π/4</td>
+<td>Maximum turn angle per step when steering</td>
+</tr>
+<tr>
+<td>Step Distance</td>
+<td><code>phys_step_distance</code></td>
+<td>1</td>
+<td>10</td>
+<td>1</td>
+<td>Pixels each agent moves per simulation step</td>
+</tr>
+<tr>
+<td>Decay Factor</td>
+<td><code>phys_decay_factor</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.1</td>
+<td>Rate at which trail pheromone evaporates each frame</td>
+</tr>
+<tr>
+<td>Diffuse Factor</td>
+<td><code>phys_diffuse_factor</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.5</td>
+<td>Amount of trail blur/diffusion applied each frame</td>
+</tr>
+<tr>
+<td>Deposit Amount</td>
+<td><code>phys_deposit_amount</code></td>
+<td>0.1</td>
+<td>5.0</td>
+<td>1.0</td>
+<td>How much pheromone each agent deposits per step</td>
+</tr>
+<tr>
+<td>Grid Resolution</td>
+<td><code>phys_grid_res_scale</code></td>
+<td>0.1</td>
+<td>1.0</td>
+<td>0.5</td>
+<td>Internal grid resolution as fraction of output (lower = faster)</td>
+</tr>
+<tr>
+<td>Wrap Around</td>
+<td><code>phys_wrap_around</code></td>
+<td>—</td>
+<td>—</td>
+<td>on</td>
+<td>Toggle whether agents wrap at canvas edges</td>
+</tr>
+<tr>
+<td>Trail R/G/B</td>
+<td><code>phys_trail_r/g/b</code></td>
+<td>0</td>
+<td>255</td>
+<td>0/255/0</td>
+<td>RGB color of the pheromone trail</td>
+</tr>
+<tr>
+<td>Agent R/G/B</td>
+<td><code>phys_agent_r/g/b</code></td>
+<td>0</td>
+<td>255</td>
+<td>255/0/0</td>
+<td>RGB color of rendered agents</td>
+</tr>
+<tr>
+<td>Agent Size</td>
+<td><code>phys_agent_size</code></td>
+<td>1</td>
+<td>5</td>
+<td>1</td>
+<td>Pixel size of each rendered agent dot</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="lenia">Lenia<a class="headerlink" href="#lenia" title="Permanent link">&para;</a></h2>
+<p>A continuous cellular automaton producing smooth, life-like moving organisms.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dt</td>
+<td><code>lenia_dt</code></td>
+<td>0.01</td>
+<td>0.5</td>
+<td>0.1</td>
+<td>Time step per frame; smaller = more stable but slower evolution</td>
+</tr>
+<tr>
+<td>Mu</td>
+<td><code>lenia_mu</code></td>
+<td>0.05</td>
+<td>0.5</td>
+<td>0.15</td>
+<td>Center of the growth function; where cells grow most strongly</td>
+</tr>
+<tr>
+<td>Sigma</td>
+<td><code>lenia_sigma</code></td>
+<td>0.005</td>
+<td>0.1</td>
+<td>0.017</td>
+<td>Width of the growth function bell curve</td>
+</tr>
+<tr>
+<td>Radius</td>
+<td><code>lenia_radius</code></td>
+<td>5</td>
+<td>30</td>
+<td>13</td>
+<td>Neighborhood radius each cell samples</td>
+</tr>
+<tr>
+<td>Colormap</td>
+<td><code>lenia_colormap</code></td>
+<td>—</td>
+<td>—</td>
+<td>INFERNO</td>
+<td>Color palette for cell values</td>
+</tr>
+<tr>
+<td>Seed Density</td>
+<td><code>lenia_seed_density</code></td>
+<td>0.01</td>
+<td>0.5</td>
+<td>0.15</td>
+<td>Initial fraction of cells populated when reseeding</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="fractal-zoom">Fractal Zoom<a class="headerlink" href="#fractal-zoom" title="Permanent link">&para;</a></h2>
+<p>Continuously zooms into a Mandelbrot/Julia-style fractal while drifting through parameter space.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Zoom Speed</td>
+<td><code>fractal_zoom_speed</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.1</td>
+<td>Rate at which the view zooms in</td>
+</tr>
+<tr>
+<td>Drift Speed</td>
+<td><code>fractal_drift_speed</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.2</td>
+<td>Speed of lateral drift through the fractal plane</td>
+</tr>
+<tr>
+<td>Max Iterations</td>
+<td><code>fractal_max_iter</code></td>
+<td>20</td>
+<td>200</td>
+<td>64</td>
+<td>Maximum iteration count; higher = more detail but slower</td>
+</tr>
+<tr>
+<td>Color Speed</td>
+<td><code>fractal_color_speed</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>0.5</td>
+<td>Rate at which the colormap offset cycles</td>
+</tr>
+<tr>
+<td>Colormap</td>
+<td><code>fractal_colormap</code></td>
+<td>—</td>
+<td>—</td>
+<td>TWILIGHT_SHIFTED</td>
+<td>Color palette applied to iteration depth</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="oscillator-grid">Oscillator Grid<a class="headerlink" href="#oscillator-grid" title="Permanent link">&para;</a></h2>
+<p>A grid of coupled oscillators rendered as a phase/amplitude field.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Coupling</td>
+<td><code>osc_coupling</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>0.5</td>
+<td>Strength of phase coupling between neighboring oscillators</td>
+</tr>
+<tr>
+<td>Noise</td>
+<td><code>osc_noise</code></td>
+<td>0.0</td>
+<td>0.5</td>
+<td>0.05</td>
+<td>Random perturbation added to each oscillator per frame</td>
+</tr>
+<tr>
+<td>Freq Spread</td>
+<td><code>osc_freq_spread</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>0.5</td>
+<td>Variance in natural frequencies across the grid</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td><code>osc_speed</code></td>
+<td>0.1</td>
+<td>5.0</td>
+<td>1.0</td>
+<td>Overall simulation speed multiplier</td>
+</tr>
+<tr>
+<td>Colormap</td>
+<td><code>osc_colormap</code></td>
+<td>—</td>
+<td>—</td>
+<td>HSV</td>
+<td>Color palette for phase visualization</td>
+</tr>
+<tr>
+<td>Grid Size</td>
+<td><code>osc_grid_size</code></td>
+<td>32</td>
+<td>256</td>
+<td>80</td>
+<td>Number of oscillators per side (N×N grid)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="harmonic-interference">Harmonic Interference<a class="headerlink" href="#harmonic-interference" title="Permanent link">&para;</a></h2>
+<p>Layers multiple sinusoidal waves at different frequencies and orientations to create interference patterns.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Num Layers</td>
+<td><code>hi_num_layers</code></td>
+<td>2</td>
+<td>8</td>
+<td>5</td>
+<td>Number of overlaid wave layers</td>
+</tr>
+<tr>
+<td>Base Freq</td>
+<td><code>hi_base_freq</code></td>
+<td>0.5</td>
+<td>20.0</td>
+<td>4.0</td>
+<td>Spatial frequency of the first/base wave layer</td>
+</tr>
+<tr>
+<td>Freq Spread</td>
+<td><code>hi_freq_spread</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>0.5</td>
+<td>How much each successive layer's frequency differs</td>
+</tr>
+<tr>
+<td>Drift Speed</td>
+<td><code>hi_drift_speed</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>0.3</td>
+<td>Speed at which wave phases drift over time</td>
+</tr>
+<tr>
+<td>Rotation Speed</td>
+<td><code>hi_rotation_speed</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.1</td>
+<td>Rate at which wave orientations rotate</td>
+</tr>
+<tr>
+<td>Color Speed</td>
+<td><code>hi_color_speed</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>0.2</td>
+<td>Rate at which the colormap offset shifts</td>
+</tr>
+<tr>
+<td>Colormap</td>
+<td><code>hi_colormap</code></td>
+<td>—</td>
+<td>—</td>
+<td>TWILIGHT</td>
+<td>Color palette for rendering the interference field</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="strange-attractor">Strange Attractor<a class="headerlink" href="#strange-attractor" title="Permanent link">&para;</a></h2>
+<p>Plots the trajectory of a strange attractor system (Lorenz, Clifford, De Jong, Aizawa, Thomas).</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Attractor Type</td>
+<td><code>attractor_type</code></td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>Selects which attractor system to simulate</td>
+</tr>
+<tr>
+<td>dt</td>
+<td><code>attractor_dt</code></td>
+<td>0.001</td>
+<td>0.05</td>
+<td>0.01</td>
+<td>Integration time step; smaller = more accurate but slower growth</td>
+</tr>
+<tr>
+<td>Num Steps</td>
+<td><code>attractor_num_steps</code></td>
+<td>1</td>
+<td>50</td>
+<td>10</td>
+<td>Steps computed per rendered frame</td>
+</tr>
+<tr>
+<td>Scale</td>
+<td><code>attractor_scale</code></td>
+<td>1.0</td>
+<td>20.0</td>
+<td>5.0</td>
+<td>Zoom level / coordinate scaling</td>
+</tr>
+<tr>
+<td>Line Width</td>
+<td><code>attractor_line_width</code></td>
+<td>1</td>
+<td>5</td>
+<td>1</td>
+<td>Width of the drawn trajectory line</td>
+</tr>
+<tr>
+<td>Fade</td>
+<td><code>attractor_fade</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.95</td>
+<td>Alpha of previous frame overlay; near 1.0 = long persistent trails</td>
+</tr>
+<tr>
+<td>Trail R/G/B</td>
+<td><code>attractor_r/g/b</code></td>
+<td>0</td>
+<td>255</td>
+<td>255/255/255</td>
+<td>RGB color of the attractor trail</td>
+</tr>
+<tr>
+<td>Morph Speed</td>
+<td><code>attractor_morph_speed</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>Rate at which attractor parameters slowly drift/morph</td>
+</tr>
+<tr>
+<td><strong>Lorenz</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Sigma</td>
+<td><code>lorenz_sigma</code></td>
+<td>1.0</td>
+<td>20.0</td>
+<td>10.0</td>
+<td>Lorenz σ (Prandtl number)</td>
+</tr>
+<tr>
+<td>Rho</td>
+<td><code>lorenz_rho</code></td>
+<td>1.0</td>
+<td>50.0</td>
+<td>28.0</td>
+<td>Lorenz ρ (Rayleigh number); near 28 produces the classic butterfly</td>
+</tr>
+<tr>
+<td>Beta</td>
+<td><code>lorenz_beta</code></td>
+<td>0.1</td>
+<td>5.0</td>
+<td>2.667</td>
+<td>Lorenz β (geometric factor)</td>
+</tr>
+<tr>
+<td><strong>Clifford</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>A / B / C / D</td>
+<td><code>clifford_a/b/c/d</code></td>
+<td>-3.0</td>
+<td>3.0</td>
+<td>varies</td>
+<td>Clifford attractor coefficients</td>
+</tr>
+<tr>
+<td><strong>De Jong</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>A / B / C / D</td>
+<td><code>dejong_a/b/c/d</code></td>
+<td>-3.0</td>
+<td>3.0</td>
+<td>varies</td>
+<td>De Jong attractor coefficients</td>
+</tr>
+<tr>
+<td><strong>Aizawa</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>A–F</td>
+<td><code>aizawa_a/b/c/d/e/f</code></td>
+<td>varies</td>
+<td>varies</td>
+<td>varies</td>
+<td>Aizawa attractor coefficients</td>
+</tr>
+<tr>
+<td><strong>Thomas</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>B</td>
+<td><code>thomas_b</code></td>
+<td>0.1</td>
+<td>0.3</td>
+<td>0.208</td>
+<td>Thomas cyclically symmetric attractor dissipation coefficient</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="perlin-noise">Perlin Noise<a class="headerlink" href="#perlin-noise" title="Permanent link">&para;</a></h2>
+<p>Generative animation source built on 3D Perlin noise. Animates through the noise field over time, producing smooth organic textures. Supports four modes and any OpenCV colormap.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Noise Type</td>
+<td><code>pnoise_type</code></td>
+<td>—</td>
+<td>—</td>
+<td>PERLIN</td>
+<td>Mode: <strong>Perlin</strong> (standard fBm), <strong>Turbulence</strong> (absolute value — harsh ridges), <strong>Ridged</strong> (inverted absolute value — bright ridges on dark field), <strong>FBM</strong> (same as Perlin but labelled for clarity)</td>
+</tr>
+<tr>
+<td>Scale</td>
+<td><code>pnoise_scale</code></td>
+<td>0.002</td>
+<td>0.1</td>
+<td>0.01</td>
+<td>Spatial frequency of the noise field; higher = smaller/denser features</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td><code>pnoise_speed</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>0.2</td>
+<td>Rate at which the noise field animates (z-axis scroll speed)</td>
+</tr>
+<tr>
+<td>Octaves</td>
+<td><code>pnoise_octaves</code></td>
+<td>1</td>
+<td>8</td>
+<td>4</td>
+<td>Number of layered noise passes; more octaves add finer detail</td>
+</tr>
+<tr>
+<td>Persistence</td>
+<td><code>pnoise_persistence</code></td>
+<td>0.1</td>
+<td>1.0</td>
+<td>0.5</td>
+<td>Amplitude falloff per octave; lower = smoother, higher = more detail</td>
+</tr>
+<tr>
+<td>Lacunarity</td>
+<td><code>pnoise_lacunarity</code></td>
+<td>1.0</td>
+<td>4.0</td>
+<td>2.0</td>
+<td>Frequency multiplier per octave; higher = more variation between octaves</td>
+</tr>
+<tr>
+<td>Colormap</td>
+<td><code>pnoise_colormap</code></td>
+<td>—</td>
+<td>—</td>
+<td>INFERNO</td>
+<td>OpenCV colormap applied to the grayscale noise field</td>
+</tr>
+<tr>
+<td>Offset X</td>
+<td><code>pnoise_offset_x</code></td>
+<td>-100</td>
+<td>100</td>
+<td>0</td>
+<td>Horizontal pan through the noise space</td>
+</tr>
+<tr>
+<td>Offset Y</td>
+<td><code>pnoise_offset_y</code></td>
+<td>-100</td>
+<td>100</td>
+<td>0</td>
+<td>Vertical pan through the noise space</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Performance note:</strong> The noise is computed on a 1/8-resolution grid and bicubically upscaled (~4 800 samples/frame at 640×480), so it runs in real time without GPU acceleration.</p>
+</blockquote>
+<hr />
+<h2 id="color-effects">Color Effects<a class="headerlink" href="#color-effects" title="Permanent link">&para;</a></h2>
+<p>Post-processing effects applied to the output image's color properties.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hue Shift</td>
+<td><code>hue_shift</code></td>
+<td>0</td>
+<td>180</td>
+<td>0</td>
+<td>Rotates all hues by this amount (OpenCV hue units, 0–180)</td>
+</tr>
+<tr>
+<td>Saturation Shift</td>
+<td><code>sat_shift</code></td>
+<td>0</td>
+<td>255</td>
+<td>0</td>
+<td>Adds to the saturation channel</td>
+</tr>
+<tr>
+<td>Value Shift</td>
+<td><code>val_shift</code></td>
+<td>0</td>
+<td>255</td>
+<td>0</td>
+<td>Adds to the value/brightness channel</td>
+</tr>
+<tr>
+<td>Posterize Levels</td>
+<td><code>posterize_levels</code></td>
+<td>0</td>
+<td>100</td>
+<td>0</td>
+<td>Number of discrete color levels per channel; 0 = disabled</td>
+</tr>
+<tr>
+<td>Num Hues</td>
+<td><code>num_hues</code></td>
+<td>2</td>
+<td>10</td>
+<td>8</td>
+<td>Number of hue steps when posterize is active</td>
+</tr>
+<tr>
+<td>Val Threshold</td>
+<td><code>val_threshold</code></td>
+<td>0</td>
+<td>255</td>
+<td>0</td>
+<td>Brightness threshold below which hue shift is applied</td>
+</tr>
+<tr>
+<td>Val Hue Shift</td>
+<td><code>val_hue_shift</code></td>
+<td>0</td>
+<td>255</td>
+<td>0</td>
+<td>Hue shift applied to pixels below the value threshold</td>
+</tr>
+<tr>
+<td>Solarize Threshold</td>
+<td><code>solarize_threshold</code></td>
+<td>0</td>
+<td>100</td>
+<td>0</td>
+<td>Pixels above this brightness get their values inverted</td>
+</tr>
+<tr>
+<td>Hue Invert Angle</td>
+<td><code>hue_invert_angle</code></td>
+<td>0</td>
+<td>360</td>
+<td>0</td>
+<td>Target hue to selectively invert</td>
+</tr>
+<tr>
+<td>Hue Invert Strength</td>
+<td><code>hue_invert_strength</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>How strongly the hue inversion is applied</td>
+</tr>
+<tr>
+<td>Contrast</td>
+<td><code>contrast</code></td>
+<td>0.5</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>Contrast multiplier around the midpoint</td>
+</tr>
+<tr>
+<td>Brightness</td>
+<td><code>brightness</code></td>
+<td>0</td>
+<td>100</td>
+<td>0</td>
+<td>Additive brightness offset</td>
+</tr>
+<tr>
+<td>Gamma</td>
+<td><code>gamma</code></td>
+<td>0.1</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>Gamma correction curve; &lt; 1 brightens shadows</td>
+</tr>
+<tr>
+<td>Highlight Compression</td>
+<td><code>highlight_compression</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>Rolls off highlights to prevent clipping</td>
+</tr>
+<tr>
+<td>Color Cycle Speed</td>
+<td><code>color_cycle_speed</code></td>
+<td>0.0</td>
+<td>5.0</td>
+<td>0.0</td>
+<td>Speed at which all hues continuously rotate</td>
+</tr>
+<tr>
+<td>Color Cycle Bands</td>
+<td><code>color_cycle_bands</code></td>
+<td>1</td>
+<td>8</td>
+<td>3</td>
+<td>Number of hue bands used in color cycling</td>
+</tr>
+<tr>
+<td>Channel Mix RR/RG/RB</td>
+<td><code>ch_mix_rr/rg/rb</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>1/0/0</td>
+<td>How much R, G, B contribute to the output Red channel</td>
+</tr>
+<tr>
+<td>Channel Mix GR/GG/GB</td>
+<td><code>ch_mix_gr/gg/gb</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>0/1/0</td>
+<td>How much R, G, B contribute to the output Green channel</td>
+</tr>
+<tr>
+<td>Channel Mix BR/BG/BB</td>
+<td><code>ch_mix_br/bg/bb</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>0/0/1</td>
+<td>How much R, G, B contribute to the output Blue channel</td>
+</tr>
+<tr>
+<td>Color Bitcrush</td>
+<td><code>color_bitcrush</code></td>
+<td>1</td>
+<td>8</td>
+<td>8</td>
+<td>Reduces color bit depth; lower = more posterized/banded look</td>
+</tr>
+<tr>
+<td>Hue Scatter</td>
+<td><code>hue_scatter</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>Adds random per-pixel hue variation</td>
+</tr>
+<tr>
+<td>Duotone Strength</td>
+<td><code>duotone_strength</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>Blends image toward a two-hue palette</td>
+</tr>
+<tr>
+<td>Duotone Hue Lo</td>
+<td><code>duotone_hue_lo</code></td>
+<td>0</td>
+<td>180</td>
+<td>120</td>
+<td>Hue assigned to the shadow/low end of the duotone</td>
+</tr>
+<tr>
+<td>Duotone Hue Hi</td>
+<td><code>duotone_hue_hi</code></td>
+<td>0</td>
+<td>180</td>
+<td>10</td>
+<td>Hue assigned to the highlight/high end of the duotone</td>
+</tr>
+<tr>
+<td>Ch R / G / B</td>
+<td><code>ch_r/g/b</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>1.0</td>
+<td>Per-channel gain multiplier (simple RGB scaling)</td>
+</tr>
+<tr>
+<td>Chromatic Ab X</td>
+<td><code>chroma_ab_x</code></td>
+<td>0</td>
+<td>30</td>
+<td>0</td>
+<td>Horizontal chromatic aberration offset between channels</td>
+</tr>
+<tr>
+<td>Chromatic Ab Y</td>
+<td><code>chroma_ab_y</code></td>
+<td>0</td>
+<td>30</td>
+<td>0</td>
+<td>Vertical chromatic aberration offset between channels</td>
+</tr>
+<tr>
+<td>Color Temp</td>
+<td><code>color_temp</code></td>
+<td>-1.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>Shifts color temperature; negative = cool/blue, positive = warm/orange</td>
+</tr>
+<tr>
+<td>Sat Shadows</td>
+<td><code>sat_curve_shadows</code></td>
+<td>0.0</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>Saturation multiplier for shadow tones</td>
+</tr>
+<tr>
+<td>Sat Midtones</td>
+<td><code>sat_curve_mids</code></td>
+<td>0.0</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>Saturation multiplier for midtones</td>
+</tr>
+<tr>
+<td>Sat Highlights</td>
+<td><code>sat_curve_highlights</code></td>
+<td>0.0</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>Saturation multiplier for highlight tones</td>
+</tr>
+<tr>
+<td>False Color Strength</td>
+<td><code>false_color_strength</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>Blends a false-color (luma-mapped) version over the image</td>
+</tr>
+<tr>
+<td>False Color Map</td>
+<td><code>false_color_map</code></td>
+<td>—</td>
+<td>—</td>
+<td>INFERNO</td>
+<td>Colormap used for the false color overlay</td>
+</tr>
+<tr>
+<td>Invert Strength</td>
+<td><code>invert_strength</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>Blends an inverted version of the image; 1.0 = fully inverted</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="warp">Warp<a class="headerlink" href="#warp" title="Permanent link">&para;</a></h2>
+<p>Applies spatial displacement/warping to the image using various noise and feedback methods.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Warp Type</td>
+<td><code>warp_type</code></td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>Selects the warp method (noise, feedback, displacement, etc.)</td>
+</tr>
+<tr>
+<td>Angle Amount</td>
+<td><code>warp_angle_amt</code></td>
+<td>0</td>
+<td>360</td>
+<td>30</td>
+<td>Angular displacement amount for rotation-based warps</td>
+</tr>
+<tr>
+<td>Radius Amount</td>
+<td><code>warp_radius_amt</code></td>
+<td>0</td>
+<td>360</td>
+<td>30</td>
+<td>Radial displacement amount for radial warps</td>
+</tr>
+<tr>
+<td>Warp Speed</td>
+<td><code>warp_speed</code></td>
+<td>0</td>
+<td>100</td>
+<td>10</td>
+<td>Rate at which the warp field animates</td>
+</tr>
+<tr>
+<td>Use Fractal</td>
+<td><code>warp_use_fractal</code></td>
+<td>—</td>
+<td>—</td>
+<td>off</td>
+<td>Toggle fractal (multi-octave) noise for warp field</td>
+</tr>
+<tr>
+<td>Octaves</td>
+<td><code>warp_octaves</code></td>
+<td>1</td>
+<td>8</td>
+<td>4</td>
+<td>Number of noise octaves when fractal mode is on</td>
+</tr>
+<tr>
+<td>Gain</td>
+<td><code>warp_gain</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.5</td>
+<td>Amplitude falloff per octave in fractal noise</td>
+</tr>
+<tr>
+<td>Lacunarity</td>
+<td><code>warp_lacunarity</code></td>
+<td>1.0</td>
+<td>4.0</td>
+<td>2.0</td>
+<td>Frequency multiplier per octave in fractal noise</td>
+</tr>
+<tr>
+<td>X Speed</td>
+<td><code>x_speed</code></td>
+<td>0.0</td>
+<td>100.0</td>
+<td>1.0</td>
+<td>Horizontal drift speed of the warp field</td>
+</tr>
+<tr>
+<td>X Size</td>
+<td><code>x_size</code></td>
+<td>0.25</td>
+<td>100.0</td>
+<td>20.0</td>
+<td>Horizontal scale of the noise warp</td>
+</tr>
+<tr>
+<td>Y Speed</td>
+<td><code>y_speed</code></td>
+<td>0.0</td>
+<td>10.0</td>
+<td>1.0</td>
+<td>Vertical drift speed of the warp field</td>
+</tr>
+<tr>
+<td>Y Size</td>
+<td><code>y_size</code></td>
+<td>0.25</td>
+<td>100.0</td>
+<td>10.0</td>
+<td>Vertical scale of the noise warp</td>
+</tr>
+<tr>
+<td>FB Warp Decay</td>
+<td><code>fb_warp_decay</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.95</td>
+<td>How quickly the feedback warp field decays</td>
+</tr>
+<tr>
+<td>FB Warp Strength</td>
+<td><code>fb_warp_strength</code></td>
+<td>0.0</td>
+<td>50.0</td>
+<td>5.0</td>
+<td>Intensity of feedback-driven displacement</td>
+</tr>
+<tr>
+<td>FB Warp Freq</td>
+<td><code>fb_warp_freq</code></td>
+<td>0.1</td>
+<td>20.0</td>
+<td>3.0</td>
+<td>Frequency of the noise used in feedback warp</td>
+</tr>
+<tr>
+<td>Disp Strength</td>
+<td><code>disp_strength</code></td>
+<td>0.0</td>
+<td>30.0</td>
+<td>5.0</td>
+<td>Magnitude of displacement map warping</td>
+</tr>
+<tr>
+<td>Disp Decay</td>
+<td><code>disp_decay</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.92</td>
+<td>Decay rate of the displacement map</td>
+</tr>
+<tr>
+<td>Disp Blur</td>
+<td><code>disp_blur</code></td>
+<td>1</td>
+<td>15</td>
+<td>5</td>
+<td>Blur kernel size applied to the displacement map</td>
+</tr>
+<tr>
+<td>Conv Rise Speed</td>
+<td><code>conv_rise_speed</code></td>
+<td>0.0</td>
+<td>10.0</td>
+<td>2.0</td>
+<td>Speed at which convection field intensity rises</td>
+</tr>
+<tr>
+<td>Conv Diffusion</td>
+<td><code>conv_diffusion</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.5</td>
+<td>Spatial diffusion rate of the convection field</td>
+</tr>
+<tr>
+<td>Conv Turbulence</td>
+<td><code>conv_turbulence</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.3</td>
+<td>Amount of turbulent noise in the convection field</td>
+</tr>
+<tr>
+<td>Conv Decay</td>
+<td><code>conv_decay</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.95</td>
+<td>Decay rate of the convection field</td>
+</tr>
+<tr>
+<td>RD Warp Strength</td>
+<td><code>rd_warp_strength</code></td>
+<td>0.0</td>
+<td>30.0</td>
+<td>10.0</td>
+<td>Strength of reaction-diffusion driven warping</td>
+</tr>
+<tr>
+<td>RD Warp Feed</td>
+<td><code>rd_warp_feed</code></td>
+<td>0.01</td>
+<td>0.1</td>
+<td>0.055</td>
+<td>Feed rate for the internal RD warp simulation</td>
+</tr>
+<tr>
+<td>RD Warp Kill</td>
+<td><code>rd_warp_kill</code></td>
+<td>0.03</td>
+<td>0.08</td>
+<td>0.062</td>
+<td>Kill rate for the internal RD warp simulation</td>
+</tr>
+<tr>
+<td>RD Warp Speed</td>
+<td><code>rd_warp_speed</code></td>
+<td>0.1</td>
+<td>5.0</td>
+<td>1.0</td>
+<td>Simulation speed of the RD warp field</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="feedback">Feedback<a class="headerlink" href="#feedback" title="Permanent link">&para;</a></h2>
+<p>Controls how previous frames are blended back into the current frame.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Alpha</td>
+<td><code>alpha</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>Blend strength of the feedback frame over the current frame</td>
+</tr>
+<tr>
+<td>Temporal Filter</td>
+<td><code>temporal_filter</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>Low-pass filter applied across frames to smooth flickering</td>
+</tr>
+<tr>
+<td>Luma Threshold</td>
+<td><code>feedback_luma_threshold</code></td>
+<td>0</td>
+<td>255</td>
+<td>0</td>
+<td>Feedback is only applied to pixels above this brightness</td>
+</tr>
+<tr>
+<td>Luma Mode</td>
+<td><code>luma_mode</code></td>
+<td>—</td>
+<td>—</td>
+<td>WHITE</td>
+<td>Whether the threshold selects bright or dark pixels for feedback</td>
+</tr>
+<tr>
+<td>Frame Skip</td>
+<td><code>frame_skip</code></td>
+<td>0</td>
+<td>10</td>
+<td>0</td>
+<td>Number of frames to skip when reading back the feedback buffer</td>
+</tr>
+<tr>
+<td>Buffer Frame Select</td>
+<td><code>buffer_frame_select</code></td>
+<td>-1</td>
+<td>20</td>
+<td>-1</td>
+<td>Selects a specific past frame from the buffer; -1 = latest</td>
+</tr>
+<tr>
+<td>Buffer Frame Blend</td>
+<td><code>buffer_frame_blend</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>Mix between the live feed and the selected buffer frame</td>
+</tr>
+<tr>
+<td>Prev Frame Scale</td>
+<td><code>prev_frame_scale</code></td>
+<td>90</td>
+<td>110</td>
+<td>100</td>
+<td>Scales the previous frame before blending (100 = no change)</td>
+</tr>
+<tr>
+<td>Buffer Size</td>
+<td><code>buffer_size</code></td>
+<td>0</td>
+<td>max</td>
+<td>0</td>
+<td>Number of past frames held in memory</td>
+</tr>
+<tr>
+<td>Paint Drift X</td>
+<td><code>fb_paint_drift_x</code></td>
+<td>-5.0</td>
+<td>5.0</td>
+<td>0.0</td>
+<td>Horizontal pixel offset applied to the feedback frame each cycle</td>
+</tr>
+<tr>
+<td>Paint Drift Y</td>
+<td><code>fb_paint_drift_y</code></td>
+<td>-5.0</td>
+<td>5.0</td>
+<td>0.0</td>
+<td>Vertical pixel offset applied to the feedback frame each cycle</td>
+</tr>
+<tr>
+<td>Paint Rotation</td>
+<td><code>fb_paint_rotation</code></td>
+<td>-2.0</td>
+<td>2.0</td>
+<td>0.0</td>
+<td>Rotation applied to the feedback frame each cycle (degrees)</td>
+</tr>
+<tr>
+<td>Paint Zoom</td>
+<td><code>fb_paint_zoom</code></td>
+<td>0.99</td>
+<td>1.01</td>
+<td>1.0</td>
+<td>Subtle zoom applied to the feedback frame each cycle</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="glitch">Glitch<a class="headerlink" href="#glitch" title="Permanent link">&para;</a></h2>
+<p>Simulates digital video glitch artifacts including pixel shifts, color splits, block corruption, and slit-scan effects.</p>
+<h3 id="general">General<a class="headerlink" href="#general" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pixel Shift</td>
+<td><code>enable_pixel_shift</code></td>
+<td>off</td>
+<td>Randomly shifts horizontal scanline slices</td>
+</tr>
+<tr>
+<td>Color Split</td>
+<td><code>enable_color_split</code></td>
+<td>off</td>
+<td>Offsets R/G/B channels from each other</td>
+</tr>
+<tr>
+<td>Block Corruption</td>
+<td><code>enable_block_corruption</code></td>
+<td>off</td>
+<td>Replaces random blocks with noise or solid color</td>
+</tr>
+<tr>
+<td>Random Rectangles</td>
+<td><code>enable_random_rectangles</code></td>
+<td>off</td>
+<td>Draws random colored rectangles over the image</td>
+</tr>
+<tr>
+<td>H-Scroll Freeze</td>
+<td><code>enable_horizontal_scroll_freeze</code></td>
+<td>off</td>
+<td>Freezes a horizontal band and scrolls it</td>
+</tr>
+<tr>
+<td>Duration Frames</td>
+<td><code>glitch_duration_frames</code></td>
+<td>1–300</td>
+<td>60</td>
+</tr>
+<tr>
+<td>Intensity Max</td>
+<td><code>glitch_intensity_max</code></td>
+<td>0–100</td>
+<td>50</td>
+</tr>
+<tr>
+<td>Block Size Max</td>
+<td><code>glitch_block_size_max</code></td>
+<td>0–200</td>
+<td>60</td>
+</tr>
+<tr>
+<td>Band Div</td>
+<td><code>glitch_band_div</code></td>
+<td>1–10</td>
+<td>5</td>
+</tr>
+<tr>
+<td>Num Glitches</td>
+<td><code>num_glitches</code></td>
+<td>0–100</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Glitch Size</td>
+<td><code>glitch_size</code></td>
+<td>1–100</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="slit-scan">Slit-Scan<a class="headerlink" href="#slit-scan" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Enable</td>
+<td><code>enable_slitscan</code></td>
+<td>—</td>
+<td>—</td>
+<td>off</td>
+<td>Toggle slit-scan effect</td>
+</tr>
+<tr>
+<td>Direction</td>
+<td><code>slitscan_direction</code></td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>Horizontal or vertical scan direction</td>
+</tr>
+<tr>
+<td>Slice Width</td>
+<td><code>slitscan_slice_width</code></td>
+<td>1</td>
+<td>50</td>
+<td>5</td>
+<td>Width (px) of each captured time slice</td>
+</tr>
+<tr>
+<td>Time Offset</td>
+<td><code>slitscan_time_offset</code></td>
+<td>1</td>
+<td>60</td>
+<td>10</td>
+<td>Frame delay between consecutive slices</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td><code>slitscan_speed</code></td>
+<td>0.1</td>
+<td>10.0</td>
+<td>1.0</td>
+<td>Rate at which the scan position advances</td>
+</tr>
+<tr>
+<td>Reverse</td>
+<td><code>slitscan_reverse</code></td>
+<td>—</td>
+<td>—</td>
+<td>off</td>
+<td>Toggle to scan in the opposite direction</td>
+</tr>
+<tr>
+<td>Buffer Size</td>
+<td><code>slitscan_buffer_size</code></td>
+<td>10</td>
+<td>120</td>
+<td>60</td>
+<td>Number of past frames held for slit-scan compositing</td>
+</tr>
+<tr>
+<td>Blend Mode</td>
+<td><code>slitscan_blend_mode</code></td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>How slices are composited onto the canvas</td>
+</tr>
+<tr>
+<td>Blend Alpha</td>
+<td><code>slitscan_blend_alpha</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>1.0</td>
+<td>Opacity of each composited slice</td>
+</tr>
+<tr>
+<td>Position Offset</td>
+<td><code>slitscan_position_offset</code></td>
+<td>-100</td>
+<td>100</td>
+<td>0</td>
+<td>Shifts the scan start position</td>
+</tr>
+<tr>
+<td>Wobble Amount</td>
+<td><code>slitscan_wobble_amount</code></td>
+<td>0</td>
+<td>50</td>
+<td>0</td>
+<td>Oscillating positional wobble applied to the scan</td>
+</tr>
+<tr>
+<td>Wobble Freq</td>
+<td><code>slitscan_wobble_freq</code></td>
+<td>0.1</td>
+<td>10.0</td>
+<td>1.0</td>
+<td>Frequency of the position wobble</td>
+</tr>
+</tbody>
+</table>
+<h3 id="echo">Echo<a class="headerlink" href="#echo" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Enable</td>
+<td><code>enable_echo</code></td>
+<td>—</td>
+<td>—</td>
+<td>off</td>
+<td>Toggle echo/stutter glitch</td>
+</tr>
+<tr>
+<td>Probability</td>
+<td><code>echo_probability</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.1</td>
+<td>Chance per frame that an echo event triggers</td>
+</tr>
+<tr>
+<td>Buffer Size</td>
+<td><code>echo_buffer_size</code></td>
+<td>5</td>
+<td>60</td>
+<td>30</td>
+<td>Number of past frames held for echo</td>
+</tr>
+<tr>
+<td>Freeze Min</td>
+<td><code>echo_freeze_min</code></td>
+<td>1</td>
+<td>30</td>
+<td>2</td>
+<td>Minimum duration (frames) of a freeze event</td>
+</tr>
+<tr>
+<td>Freeze Max</td>
+<td><code>echo_freeze_max</code></td>
+<td>2</td>
+<td>60</td>
+<td>10</td>
+<td>Maximum duration (frames) of a freeze event</td>
+</tr>
+<tr>
+<td>Blend Amount</td>
+<td><code>echo_blend_amount</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>1.0</td>
+<td>Opacity of the echoed frame when composited</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pixel-sorting">Pixel Sorting<a class="headerlink" href="#pixel-sorting" title="Permanent link">&para;</a></h3>
+<p>Sorts contiguous pixel spans (within a brightness/channel threshold band) by their key value per row or column, producing the classic glitch-art diagonal smear effect.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Enable</td>
+<td><code>enable_pixel_sort</code></td>
+<td>—</td>
+<td>—</td>
+<td>off</td>
+<td>Toggle pixel sorting</td>
+</tr>
+<tr>
+<td>Direction</td>
+<td><code>ps_direction</code></td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td><strong>0</strong> = sort rows horizontally, <strong>1</strong> = sort columns vertically</td>
+</tr>
+<tr>
+<td>Sort By</td>
+<td><code>ps_sort_by</code></td>
+<td>—</td>
+<td>—</td>
+<td>BRIGHTNESS</td>
+<td>Key channel: <strong>Brightness</strong> (luma), <strong>Blue</strong>, or <strong>Green</strong></td>
+</tr>
+<tr>
+<td>Threshold Low</td>
+<td><code>ps_threshold_low</code></td>
+<td>0</td>
+<td>255</td>
+<td>50</td>
+<td>Pixels with key value below this are not sorted (span boundary)</td>
+</tr>
+<tr>
+<td>Threshold High</td>
+<td><code>ps_threshold_high</code></td>
+<td>0</td>
+<td>255</td>
+<td>200</td>
+<td>Pixels with key value above this are not sorted (span boundary)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="chromatic-aberration">Chromatic Aberration<a class="headerlink" href="#chromatic-aberration" title="Permanent link">&para;</a></h3>
+<p>Separates the red and blue color channels and shifts them in opposite directions along a configurable angle, simulating lens chromatic fringing.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Enable</td>
+<td><code>enable_chrom_ab</code></td>
+<td>—</td>
+<td>—</td>
+<td>off</td>
+<td>Toggle chromatic aberration</td>
+</tr>
+<tr>
+<td>Amount</td>
+<td><code>chrom_ab_amount</code></td>
+<td>0</td>
+<td>50</td>
+<td>5</td>
+<td>Pixel displacement applied to the red and blue channels</td>
+</tr>
+<tr>
+<td>Angle</td>
+<td><code>chrom_ab_angle</code></td>
+<td>0</td>
+<td>359</td>
+<td>0</td>
+<td>Direction of the channel separation (degrees; 0 = horizontal)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="erosion">Erosion<a class="headerlink" href="#erosion" title="Permanent link">&para;</a></h2>
+<p>Applies a terrain-erosion-style noise displacement to the image.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Strength</td>
+<td><code>erosion_strength</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>Overall intensity of the erosion effect; 0 = disabled</td>
+</tr>
+<tr>
+<td>Scale</td>
+<td><code>erosion_scale</code></td>
+<td>1.0</td>
+<td>10.0</td>
+<td>3.0</td>
+<td>Spatial scale of the erosion noise pattern</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td><code>erosion_speed</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>0.2</td>
+<td>Rate at which the erosion pattern evolves</td>
+</tr>
+<tr>
+<td>Octaves</td>
+<td><code>erosion_octaves</code></td>
+<td>1</td>
+<td>6</td>
+<td>4</td>
+<td>Number of noise octaves; higher = more fine detail</td>
+</tr>
+<tr>
+<td>Sharpness</td>
+<td><code>erosion_sharpness</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.3</td>
+<td>Sharpens/ridges the erosion pattern</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="shapes">Shapes<a class="headerlink" href="#shapes" title="Permanent link">&para;</a></h2>
+<p>Overlays procedural geometric shapes onto the output frame.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Shape Type</td>
+<td><code>shape_type</code></td>
+<td>—</td>
+<td>—</td>
+<td>NONE</td>
+<td>Selects which shape to render</td>
+</tr>
+<tr>
+<td>Line Hue</td>
+<td><code>line_hue</code></td>
+<td>0</td>
+<td>179</td>
+<td>0</td>
+<td>Hue of the shape outline</td>
+</tr>
+<tr>
+<td>Line Sat</td>
+<td><code>line_sat</code></td>
+<td>0</td>
+<td>255</td>
+<td>255</td>
+<td>Saturation of the shape outline</td>
+</tr>
+<tr>
+<td>Line Val</td>
+<td><code>line_val</code></td>
+<td>0</td>
+<td>255</td>
+<td>255</td>
+<td>Brightness of the shape outline</td>
+</tr>
+<tr>
+<td>Line Weight</td>
+<td><code>line_weight</code></td>
+<td>1</td>
+<td>20</td>
+<td>2</td>
+<td>Stroke width (px) of the shape outline</td>
+</tr>
+<tr>
+<td>Line Opacity</td>
+<td><code>line_opacity</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.66</td>
+<td>Transparency of the shape outline</td>
+</tr>
+<tr>
+<td>Size Multiplier</td>
+<td><code>size_multiplier</code></td>
+<td>0.1</td>
+<td>10.0</td>
+<td>0.9</td>
+<td>Scale of the shape relative to canvas</td>
+</tr>
+<tr>
+<td>Aspect Ratio</td>
+<td><code>aspect_ratio</code></td>
+<td>0.1</td>
+<td>10.0</td>
+<td>1.0</td>
+<td>Width-to-height ratio of the shape</td>
+</tr>
+<tr>
+<td>Rotation Angle</td>
+<td><code>rotation_angle</code></td>
+<td>0</td>
+<td>360</td>
+<td>0</td>
+<td>Rotation of the shape (degrees)</td>
+</tr>
+<tr>
+<td>X Shift</td>
+<td><code>shape_x_shift</code></td>
+<td>-width</td>
+<td>width</td>
+<td>center</td>
+<td>Horizontal position offset</td>
+</tr>
+<tr>
+<td>Y Shift</td>
+<td><code>shape_y_shift</code></td>
+<td>-height</td>
+<td>height</td>
+<td>center</td>
+<td>Vertical position offset</td>
+</tr>
+<tr>
+<td>Grid X</td>
+<td><code>multiply_grid_x</code></td>
+<td>1</td>
+<td>10</td>
+<td>2</td>
+<td>Number of columns when tiling the shape in a grid</td>
+</tr>
+<tr>
+<td>Grid Y</td>
+<td><code>multiply_grid_y</code></td>
+<td>1</td>
+<td>10</td>
+<td>2</td>
+<td>Number of rows when tiling the shape in a grid</td>
+</tr>
+<tr>
+<td>Grid Pitch X</td>
+<td><code>grid_pitch_x</code></td>
+<td>0</td>
+<td>width</td>
+<td>100</td>
+<td>Horizontal spacing between grid tiles (px)</td>
+</tr>
+<tr>
+<td>Grid Pitch Y</td>
+<td><code>grid_pitch_y</code></td>
+<td>0</td>
+<td>height</td>
+<td>100</td>
+<td>Vertical spacing between grid tiles (px)</td>
+</tr>
+<tr>
+<td>Fill Hue</td>
+<td><code>fill_hue</code></td>
+<td>0</td>
+<td>179</td>
+<td>120</td>
+<td>Hue of the shape fill</td>
+</tr>
+<tr>
+<td>Fill Sat</td>
+<td><code>fill_sat</code></td>
+<td>0</td>
+<td>255</td>
+<td>100</td>
+<td>Saturation of the shape fill</td>
+</tr>
+<tr>
+<td>Fill Val</td>
+<td><code>fill_val</code></td>
+<td>0</td>
+<td>255</td>
+<td>255</td>
+<td>Brightness of the shape fill</td>
+</tr>
+<tr>
+<td>Fill Opacity</td>
+<td><code>fill_opacity</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.25</td>
+<td>Transparency of the fill</td>
+</tr>
+<tr>
+<td>Canvas Rotation</td>
+<td><code>canvas_rotation</code></td>
+<td>0</td>
+<td>360</td>
+<td>0</td>
+<td>Rotates the entire shapes layer</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="pixels">Pixels<a class="headerlink" href="#pixels" title="Permanent link">&para;</a></h2>
+<p>Controls sharpening, blurring, and noise applied at the pixel level.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sharpen Type</td>
+<td><code>sharpen_type</code></td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>Sharpening algorithm (unsharp mask, laplacian, etc.)</td>
+</tr>
+<tr>
+<td>Sharpen Intensity</td>
+<td><code>sharpen_intensity</code></td>
+<td>1.0</td>
+<td>8.0</td>
+<td>4.0</td>
+<td>Strength of the sharpening effect</td>
+</tr>
+<tr>
+<td>Mask Blur</td>
+<td><code>mask_blur</code></td>
+<td>1</td>
+<td>10</td>
+<td>5</td>
+<td>Blur radius used to generate the unsharp mask</td>
+</tr>
+<tr>
+<td>K Size</td>
+<td><code>k_size</code></td>
+<td>0</td>
+<td>11</td>
+<td>3</td>
+<td>Kernel size for various pixel operations</td>
+</tr>
+<tr>
+<td>Blur Type</td>
+<td><code>blur_type</code></td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>Blur algorithm (gaussian, box, median, etc.)</td>
+</tr>
+<tr>
+<td>Blur Kernel Size</td>
+<td><code>blur_kernel_size</code></td>
+<td>1</td>
+<td>100</td>
+<td>1</td>
+<td>Kernel size of the blur (forced odd); 1 = no blur</td>
+</tr>
+<tr>
+<td>Noise Type</td>
+<td><code>noise_type</code></td>
+<td>—</td>
+<td>—</td>
+<td>NONE</td>
+<td>Type of noise to overlay (Gaussian, salt-and-pepper, etc.)</td>
+</tr>
+<tr>
+<td>Noise Intensity</td>
+<td><code>noise_intensity</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.1</td>
+<td>Strength of the noise overlay</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="ptz-pantiltzoom">PTZ (Pan/Tilt/Zoom)<a class="headerlink" href="#ptz-pantiltzoom" title="Permanent link">&para;</a></h2>
+<p>Applies pan, tilt, zoom, and rotation transforms to the output — simulating a camera move.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>X Shift</td>
+<td><code>x_shift</code></td>
+<td>-width</td>
+<td>width</td>
+<td>0</td>
+<td>Horizontal pan offset (px)</td>
+</tr>
+<tr>
+<td>Y Shift</td>
+<td><code>y_shift</code></td>
+<td>-height</td>
+<td>height</td>
+<td>0</td>
+<td>Vertical tilt offset (px)</td>
+</tr>
+<tr>
+<td>Zoom</td>
+<td><code>zoom</code></td>
+<td>0.75</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>Zoom level; &gt; 1 zooms in</td>
+</tr>
+<tr>
+<td>Rotation</td>
+<td><code>r_shift</code></td>
+<td>-360</td>
+<td>360</td>
+<td>0.0</td>
+<td>Rotation in degrees</td>
+</tr>
+<tr>
+<td>Prev X Shift</td>
+<td><code>prev_x_shift</code></td>
+<td>-width</td>
+<td>width</td>
+<td>0</td>
+<td>X shift applied to the previous-frame layer</td>
+</tr>
+<tr>
+<td>Prev Y Shift</td>
+<td><code>prev_y_shift</code></td>
+<td>-height</td>
+<td>height</td>
+<td>0</td>
+<td>Y shift applied to the previous-frame layer</td>
+</tr>
+<tr>
+<td>Prev Zoom</td>
+<td><code>prev_zoom</code></td>
+<td>0.75</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>Zoom applied to the previous-frame layer</td>
+</tr>
+<tr>
+<td>Prev Rotation</td>
+<td><code>prev_r_shift</code></td>
+<td>-360</td>
+<td>360</td>
+<td>0.0</td>
+<td>Rotation applied to the previous-frame layer</td>
+</tr>
+<tr>
+<td>Prev CX</td>
+<td><code>prev_cx</code></td>
+<td>-width/2</td>
+<td>width/2</td>
+<td>0</td>
+<td>Center X for previous-frame transform</td>
+</tr>
+<tr>
+<td>Prev CY</td>
+<td><code>prev_cy</code></td>
+<td>-height/2</td>
+<td>height/2</td>
+<td>0</td>
+<td>Center Y for previous-frame transform</td>
+</tr>
+<tr>
+<td>Polar X</td>
+<td><code>polar_x</code></td>
+<td>-width/2</td>
+<td>width/2</td>
+<td>0</td>
+<td>X origin for polar coordinate transform</td>
+</tr>
+<tr>
+<td>Polar Y</td>
+<td><code>polar_y</code></td>
+<td>-height/2</td>
+<td>height/2</td>
+<td>0</td>
+<td>Y origin for polar coordinate transform</td>
+</tr>
+<tr>
+<td>Polar Radius</td>
+<td><code>polar_radius</code></td>
+<td>0.1</td>
+<td>100</td>
+<td>1.0</td>
+<td>Radius scale for polar transform</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="reflector">Reflector<a class="headerlink" href="#reflector" title="Permanent link">&para;</a></h2>
+<p>Applies mirror/kaleidoscope reflections to the image.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reflection Mode</td>
+<td><code>reflection_mode</code></td>
+<td>—</td>
+<td>—</td>
+<td>NONE</td>
+<td>Selects the reflection type (horizontal, vertical, radial, etc.)</td>
+</tr>
+<tr>
+<td>Segments</td>
+<td><code>reflector_segments</code></td>
+<td>0</td>
+<td>10</td>
+<td>0</td>
+<td>Number of kaleidoscope segments for radial mode</td>
+</tr>
+<tr>
+<td>Zoom</td>
+<td><code>reflector_z</code></td>
+<td>0.5</td>
+<td>2.0</td>
+<td>1.0</td>
+<td>Zoom level applied before reflection</td>
+</tr>
+<tr>
+<td>Rotation</td>
+<td><code>reflector_r</code></td>
+<td>-360</td>
+<td>360</td>
+<td>0.0</td>
+<td>Rotation of the canvas before reflection (degrees)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="lissajous">Lissajous<a class="headerlink" href="#lissajous" title="Permanent link">&para;</a></h2>
+<p>Draws an animated Lissajous figure as a colored curve overlay.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Amplitude X</td>
+<td><code>lissajous_amp_x</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.4</td>
+<td>Horizontal amplitude as a fraction of canvas size</td>
+</tr>
+<tr>
+<td>Amplitude Y</td>
+<td><code>lissajous_amp_y</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.4</td>
+<td>Vertical amplitude as a fraction of canvas size</td>
+</tr>
+<tr>
+<td>Freq X</td>
+<td><code>lissajous_freq_x</code></td>
+<td>1</td>
+<td>12</td>
+<td>3</td>
+<td>Horizontal frequency ratio</td>
+</tr>
+<tr>
+<td>Freq Y</td>
+<td><code>lissajous_freq_y</code></td>
+<td>1</td>
+<td>12</td>
+<td>2</td>
+<td>Vertical frequency ratio</td>
+</tr>
+<tr>
+<td>Phase</td>
+<td><code>lissajous_phase</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.25</td>
+<td>Phase offset between X and Y oscillations (as fraction of 2π)</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td><code>lissajous_speed</code></td>
+<td>0.0</td>
+<td>2.0</td>
+<td>0.5</td>
+<td>Rate at which the phase evolves</td>
+</tr>
+<tr>
+<td>Num Points</td>
+<td><code>lissajous_points</code></td>
+<td>100</td>
+<td>5000</td>
+<td>1000</td>
+<td>Number of points sampled along the curve</td>
+</tr>
+<tr>
+<td>Line Mode</td>
+<td><code>lissajous_line_mode</code></td>
+<td>—</td>
+<td>—</td>
+<td>1</td>
+<td>Whether to draw continuous lines or individual dots</td>
+</tr>
+<tr>
+<td>Thickness</td>
+<td><code>lissajous_thickness</code></td>
+<td>1</td>
+<td>10</td>
+<td>2</td>
+<td>Stroke width of the curve</td>
+</tr>
+<tr>
+<td>Hue Start</td>
+<td><code>lissajous_hue_start</code></td>
+<td>0</td>
+<td>180</td>
+<td>0</td>
+<td>Starting hue when not in rainbow mode</td>
+</tr>
+<tr>
+<td>Hue Range</td>
+<td><code>lissajous_hue_range</code></td>
+<td>0</td>
+<td>180</td>
+<td>60</td>
+<td>Range of hues spanned along the curve</td>
+</tr>
+<tr>
+<td>Saturation</td>
+<td><code>lissajous_saturation</code></td>
+<td>0</td>
+<td>255</td>
+<td>255</td>
+<td>Saturation of the curve color</td>
+</tr>
+<tr>
+<td>Brightness</td>
+<td><code>lissajous_brightness</code></td>
+<td>0</td>
+<td>255</td>
+<td>255</td>
+<td>Brightness of the curve color</td>
+</tr>
+<tr>
+<td>Rainbow Mode</td>
+<td><code>lissajous_rainbow</code></td>
+<td>—</td>
+<td>—</td>
+<td>on</td>
+<td>Colors cycle through the full hue wheel along the curve</td>
+</tr>
+<tr>
+<td>Harmonic Strength</td>
+<td><code>lissajous_harmonic</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>Adds a secondary harmonic frequency to the curve</td>
+</tr>
+<tr>
+<td>Harmonic Freq</td>
+<td><code>lissajous_harm_freq</code></td>
+<td>2</td>
+<td>8</td>
+<td>3</td>
+<td>Frequency multiplier for the harmonic component</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="mixer">Mixer<a class="headerlink" href="#mixer" title="Permanent link">&para;</a></h2>
+<p>Controls which two animation sources are combined and how they are blended.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Source 1</td>
+<td><code>source_1</code></td>
+<td>Selects the animation/source for layer 1</td>
+</tr>
+<tr>
+<td>Source 2</td>
+<td><code>source_2</code></td>
+<td>Selects the animation/source for layer 2</td>
+</tr>
+<tr>
+<td>Video File Src 1</td>
+<td><code>video_file_src1</code></td>
+<td>Selects a video file as source 1</td>
+</tr>
+<tr>
+<td>Video File Src 2</td>
+<td><code>video_file_src2</code></td>
+<td>Selects a video file as source 2</td>
+</tr>
+<tr>
+<td>Image File Src 1</td>
+<td><code>image_file_src1</code></td>
+<td>Selects an image file as source 1</td>
+</tr>
+<tr>
+<td>Image File Src 2</td>
+<td><code>image_file_src2</code></td>
+<td>Selects an image file as source 2</td>
+</tr>
+<tr>
+<td>Blend Mode</td>
+<td><code>blend_mode</code></td>
+<td>How the two sources are combined (alpha, luma key, chroma key)</td>
+</tr>
+<tr>
+<td>Luma Threshold</td>
+<td><code>luma_threshold</code></td>
+<td>Brightness level that defines the luma key boundary (0–255)</td>
+</tr>
+<tr>
+<td>Luma Selection</td>
+<td><code>luma_selection</code></td>
+<td>Whether to key out bright or dark pixels</td>
+</tr>
+<tr>
+<td>Luma Blur</td>
+<td><code>luma_blur</code></td>
+<td>Feathers the edges of the luma key mask</td>
+</tr>
+<tr>
+<td>Upper Hue</td>
+<td><code>upper_hue</code></td>
+<td>Upper bound of the chroma key hue range</td>
+</tr>
+<tr>
+<td>Upper Sat</td>
+<td><code>upper_sat</code></td>
+<td>Upper bound of the chroma key saturation range</td>
+</tr>
+<tr>
+<td>Upper Val</td>
+<td><code>upper_val</code></td>
+<td>Upper bound of the chroma key value range</td>
+</tr>
+<tr>
+<td>Lower Hue</td>
+<td><code>lower_hue</code></td>
+<td>Lower bound of the chroma key hue range</td>
+</tr>
+<tr>
+<td>Lower Sat</td>
+<td><code>lower_sat</code></td>
+<td>Lower bound of the chroma key saturation range</td>
+</tr>
+<tr>
+<td>Lower Val</td>
+<td><code>lower_val</code></td>
+<td>Lower bound of the chroma key value range</td>
+</tr>
+<tr>
+<td>Alpha Blend</td>
+<td><code>alpha_blend</code></td>
+<td>Mix ratio between source 1 and source 2 (0 = all S1, 1 = all S2)</td>
+</tr>
+<tr>
+<td>Swap Sources</td>
+<td><code>swap_sources</code></td>
+<td>Toggle to swap source 1 and source 2</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="performance-controls">Performance Controls<a class="headerlink" href="#performance-controls" title="Permanent link">&para;</a></h2>
+<p>Live performance actions available as GUI buttons (Mixer tab) and keyboard shortcuts. These are not saved parameters — they are transient session controls.</p>
+<h3 id="blackout-freeze">Blackout / Freeze<a class="headerlink" href="#blackout-freeze" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Button</th>
+<th>Shortcut</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Blackout</td>
+<td><strong>Blackout</strong></td>
+<td><code>Space</code></td>
+<td>Immediately replaces output with a solid black frame. Toggle again to resume.</td>
+</tr>
+<tr>
+<td>Freeze</td>
+<td><strong>Freeze</strong></td>
+<td><code>F</code></td>
+<td>Holds the current output frame. All effects continue processing internally; toggling off resumes live output.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="autopilot">Autopilot<a class="headerlink" href="#autopilot" title="Permanent link">&para;</a></h3>
+<p>Automatically advances to the next saved patch on a timer, enabling hands-free patch cycling during a performance.</p>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Button</th>
+<th>Shortcut</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Toggle autopilot</td>
+<td><strong>Autopilot</strong></td>
+<td><code>A</code></td>
+<td>Start or stop patch cycling. Button turns green when active.</td>
+</tr>
+<tr>
+<td>Increase interval</td>
+<td>—</td>
+<td><code>]</code></td>
+<td>Increase cycle interval by 5 s (min 2 s, max 300 s; default 10 s)</td>
+</tr>
+<tr>
+<td>Decrease interval</td>
+<td>—</td>
+<td><code>[</code></td>
+<td>Decrease cycle interval by 5 s</td>
+</tr>
+</tbody>
+</table>
+<h3 id="patch-navigation">Patch Navigation<a class="headerlink" href="#patch-navigation" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Shortcut</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>→</code></td>
+<td>Load next saved patch</td>
+</tr>
+<tr>
+<td><code>←</code></td>
+<td>Load previous saved patch</td>
+</tr>
+<tr>
+<td><code>Ctrl+R</code></td>
+<td>Load a random saved patch</td>
+</tr>
+<tr>
+<td><code>Ctrl+S</code></td>
+<td>Save current state as a new patch</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Keyboard shortcuts are suppressed when a text input field has focus.</p>
+</blockquote>
+<hr />
+<h2 id="lfo-low-frequency-oscillator">LFO (Low Frequency Oscillator)<a class="headerlink" href="#lfo-low-frequency-oscillator" title="Permanent link">&para;</a></h2>
+<p>Each LFO modulates a target parameter over time. Parameters are prefixed with the LFO's name.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key Pattern</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Shape</td>
+<td><code>{name}_shape</code></td>
+<td>—</td>
+<td>—</td>
+<td>varies</td>
+<td>Waveform shape (sine, triangle, square, sawtooth, noise, etc.)</td>
+</tr>
+<tr>
+<td>Frequency</td>
+<td><code>{name}_frequency</code></td>
+<td>0</td>
+<td>1</td>
+<td>varies</td>
+<td>Oscillation frequency (normalized; 1 = once per second)</td>
+</tr>
+<tr>
+<td>Amplitude</td>
+<td><code>{name}_amplitude</code></td>
+<td>varies</td>
+<td>varies</td>
+<td>varies</td>
+<td>Peak deviation from center applied to the target parameter</td>
+</tr>
+<tr>
+<td>Phase</td>
+<td><code>{name}_phase</code></td>
+<td>0</td>
+<td>360</td>
+<td>varies</td>
+<td>Starting phase offset of the waveform (degrees)</td>
+</tr>
+<tr>
+<td>Seed</td>
+<td><code>{name}_seed</code></td>
+<td>0</td>
+<td>100</td>
+<td>varies</td>
+<td>Random seed for noise-based waveforms</td>
+</tr>
+<tr>
+<td>Noise Octaves</td>
+<td><code>{name}_noise_octaves</code></td>
+<td>1</td>
+<td>10</td>
+<td>6</td>
+<td>Noise complexity; more octaves = more detail</td>
+</tr>
+<tr>
+<td>Noise Persistence</td>
+<td><code>{name}_noise_persistence</code></td>
+<td>0.1</td>
+<td>1.0</td>
+<td>0.5</td>
+<td>Amplitude falloff per octave in noise LFO</td>
+</tr>
+<tr>
+<td>Noise Lacunarity</td>
+<td><code>{name}_noise_lacunarity</code></td>
+<td>1.0</td>
+<td>2.0</td>
+<td>2.0</td>
+<td>Frequency multiplier per octave in noise LFO</td>
+</tr>
+<tr>
+<td>Noise Repeat</td>
+<td><code>{name}_noise_repeat</code></td>
+<td>1</td>
+<td>1000</td>
+<td>100</td>
+<td>Period at which the noise pattern loops</td>
+</tr>
+<tr>
+<td>Noise Base</td>
+<td><code>{name}_noise_base</code></td>
+<td>0</td>
+<td>1000</td>
+<td>456</td>
+<td>Offset into the noise field; changes the pattern shape</td>
+</tr>
+<tr>
+<td>Cutoff Min</td>
+<td><code>{name}_cutoff_min</code></td>
+<td>varies</td>
+<td>varies</td>
+<td>min</td>
+<td>Clamps the LFO output to a minimum value</td>
+</tr>
+<tr>
+<td>Cutoff Max</td>
+<td><code>{name}_cutoff_max</code></td>
+<td>varies</td>
+<td>varies</td>
+<td>max</td>
+<td>Clamps the LFO output to a maximum value</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="audio-reactive">Audio Reactive<a class="headerlink" href="#audio-reactive" title="Permanent link">&para;</a></h2>
+<p>Each audio-reactive binding maps a frequency band to a target parameter. Parameters are prefixed with the binding's name.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Key Pattern</th>
+<th>Min</th>
+<th>Max</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Band</td>
+<td><code>{name}_band</code></td>
+<td>—</td>
+<td>—</td>
+<td>varies</td>
+<td>Frequency band to listen to (sub, bass, mid, high, etc.)</td>
+</tr>
+<tr>
+<td>Sensitivity</td>
+<td><code>{name}_sensitivity</code></td>
+<td>0.0</td>
+<td>5.0</td>
+<td>1.0</td>
+<td>Gain applied to the audio signal before mapping to the parameter</td>
+</tr>
+<tr>
+<td>Attack</td>
+<td><code>{name}_attack</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.3</td>
+<td>How quickly the output rises in response to a transient</td>
+</tr>
+<tr>
+<td>Decay</td>
+<td><code>{name}_decay</code></td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.1</td>
+<td>How quickly the output falls after the signal drops</td>
+</tr>
+<tr>
+<td>Cutoff Min</td>
+<td><code>{name}_cutoff_min</code></td>
+<td>-100</td>
+<td>100</td>
+<td>-100</td>
+<td>Minimum value the audio binding will drive the target to</td>
+</tr>
+<tr>
+<td>Cutoff Max</td>
+<td><code>{name}_cutoff_max</code></td>
+<td>-100</td>
+<td>100</td>
+<td>100</td>
+<td>Maximum value the audio binding will drive the target to</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="beat-detector">Beat Detector<a class="headerlink" href="#beat-detector" title="Permanent link">&para;</a></h2>
+<p>Automatically analyzes the bass frequency band to detect rhythmic onsets and estimate BPM. The detected BPM is displayed live in the Mixer tab. No configuration required — detection runs whenever audio input is active.</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>beat_detector.bpm</code></td>
+<td>Estimated tempo in beats per minute (updated after each detected beat, using the median of the last 16 inter-beat intervals)</td>
+</tr>
+<tr>
+<td><code>beat_detector.is_beat</code></td>
+<td><code>True</code> for exactly one frame when a beat is triggered; the BPM label in the GUI flashes orange at this moment</td>
+</tr>
+</tbody>
+</table>
+<h3 id="detection-internals">Detection Internals<a class="headerlink" href="#detection-internals" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Source band</td>
+<td>Bass (20–250 Hz)</td>
+<td>Energy used to trigger beats</td>
+</tr>
+<tr>
+<td>Sensitivity</td>
+<td>1.5×</td>
+<td>Beat fires when current energy exceeds 1.5 × rolling average</td>
+</tr>
+<tr>
+<td>History window</td>
+<td>~43 frames (~1.4 s at 30 fps)</td>
+<td>Window used to compute the rolling average</td>
+</tr>
+<tr>
+<td>Min inter-beat interval</td>
+<td>0.2 s</td>
+<td>Prevents double-triggering; corresponds to ~300 BPM maximum</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/your-org/video_synth" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
