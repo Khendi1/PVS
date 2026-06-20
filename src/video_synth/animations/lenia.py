@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 """
 Lenia - Continuous cellular automata that produces organic, amoeba-like
 forms that breathe, pulse, and slowly evolve. A smooth generalization
@@ -19,23 +35,29 @@ class Lenia(Animation):
 
         self.lenia_dt = params.new("lenia_dt",
                                     min=0.01, max=0.5, default=0.1,
-                                    subgroup=subgroup, group=group)
+                                    subgroup=subgroup, group=group,
+                                    info="Time step per frame; smaller = more stable but slower evolution")
         self.lenia_mu = params.new("lenia_mu",
                                     min=0.05, max=0.5, default=0.15,
-                                    subgroup=subgroup, group=group)
+                                    subgroup=subgroup, group=group,
+                                    info="Center of the growth function; where cells grow most strongly")
         self.lenia_sigma = params.new("lenia_sigma",
                                        min=0.005, max=0.1, default=0.017,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Width of the growth function bell curve")
         self.lenia_radius = params.new("lenia_radius",
                                         min=5, max=30, default=13,
-                                        subgroup=subgroup, group=group)
+                                        subgroup=subgroup, group=group,
+                                        info="Neighborhood radius each cell samples")
         self.lenia_colormap = params.new("lenia_colormap",
                                           min=0, max=len(COLORMAP_OPTIONS)-1, default=int(Colormap.INFERNO),
                                           subgroup=subgroup, group=group,
-                                          type=Widget.DROPDOWN, options=Colormap)
+                                          type=Widget.DROPDOWN, options=Colormap,
+                                          info="Color palette for cell values")
         self.lenia_seed_density = params.new("lenia_seed_density",
                                               min=0.01, max=0.5, default=0.15,
-                                              subgroup=subgroup, group=group)
+                                              subgroup=subgroup, group=group,
+                                              info="Initial fraction of cells populated when reseeding")
 
         # Work at reduced resolution for performance
         self.rw = width // 4

@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 
@@ -17,49 +33,62 @@ class Chladni(Animation):
         # Wave parameters
         self.freq_m = params.new("chladni_freq_m",
                                  min=1, max=20, default=5.0,
-                                 subgroup=subgroup, group=group)
+                                 subgroup=subgroup, group=group,
+                                 info="X-axis modal frequency of the vibrating plate")
         self.freq_n = params.new("chladni_freq_n",
                                  min=1, max=20, default=3.0,
-                                 subgroup=subgroup, group=group)
+                                 subgroup=subgroup, group=group,
+                                 info="Y-axis modal frequency of the vibrating plate")
         self.amplitude = params.new("chladni_amplitude",
                                     min=0.1, max=2.0, default=1.0,
-                                    subgroup=subgroup, group=group)
+                                    subgroup=subgroup, group=group,
+                                    info="Vibration amplitude; affects how strongly particles are repelled from antinodes")
         self.animation_speed = params.new("chladni_speed",
                                           min=0.0, max=2.0, default=0.5,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Rate at which the wave pattern evolves")
         self.pattern_blend = params.new("chladni_blend",
                                         min=0.0, max=1.0, default=0.5,
-                                        subgroup=subgroup, group=group)
+                                        subgroup=subgroup, group=group,
+                                        info="Mix between two wave modes")
 
         # Particle simulation
         self.num_particles = params.new("chladni_particles",
                                         min=1000, max=50000, default=10000,
-                                        subgroup=subgroup, group=group)
+                                        subgroup=subgroup, group=group,
+                                        info="Total number of simulated particles")
         self.particle_speed = params.new("chladni_particle_speed",
                                          min=0.1, max=5.0, default=1.0,
-                                         subgroup=subgroup, group=group)
+                                         subgroup=subgroup, group=group,
+                                         info="Velocity at which particles move toward nodal lines")
         self.friction = params.new("chladni_friction",
                                    min=0.8, max=0.99, default=0.95,
-                                   subgroup=subgroup, group=group)
+                                   subgroup=subgroup, group=group,
+                                   info="Velocity damping per frame; higher = more retained momentum")
 
         # Visual parameters
         self.show_wave = params.new("chladni_show_wave",
                                     min=0, max=1, default=1,
                                     subgroup=subgroup, group=group,
-                                    type=Widget.TOGGLE)
+                                    type=Widget.TOGGLE,
+                                    info="Toggle rendering the underlying wave field")
         self.colormap = params.new("chladni_colormap",
                                    min=0, max=len(COLORMAP_OPTIONS)-1, default=2,
                                    subgroup=subgroup, group=group,
-                                   type=Widget.DROPDOWN, options=Colormap)
+                                   type=Widget.DROPDOWN, options=Colormap,
+                                   info="Color palette applied to the wave field visualization")
         self.particle_r = params.new("chladni_particle_r",
                                      min=0, max=255, default=255,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Red channel of particle color")
         self.particle_g = params.new("chladni_particle_g",
                                      min=0, max=255, default=255,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Green channel of particle color")
         self.particle_b = params.new("chladni_particle_b",
                                      min=0, max=255, default=200,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Blue channel of particle color")
 
         self.time = 0.0
         self._init_particles()

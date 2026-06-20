@@ -147,6 +147,10 @@ hiddenimports += [
     # Noise / generative
     'noise',
 
+    # Screen capture
+    'mss',
+    'mss.windows',
+
     # Virtual camera
     'pyvirtualcam',
 

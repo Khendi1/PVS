@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 import logging
@@ -19,146 +35,188 @@ class Color(EffectBase):
 
         self.hue_shift = params.new("hue_shift",
                                     min=0, max=180, default=0,
-                                    subgroup=subgroup, group=group)
+                                    subgroup=subgroup, group=group,
+                                    info="Rotates all hues by this amount (OpenCV hue units, 0–180)")
         self.sat_shift = params.new("sat_shift",
                                     min=0, max=255, default=0,
-                                    subgroup=subgroup, group=group)
+                                    subgroup=subgroup, group=group,
+                                    info="Adds to the saturation channel")
         self.val_shift = params.new("val_shift",
                                     min=0, max=255, default=0,
-                                    subgroup=subgroup, group=group)
+                                    subgroup=subgroup, group=group,
+                                    info="Adds to the value/brightness channel")
 
         self.levels_per_channel = params.new("posterize_levels",
                                              min=0, max=100, default=0.0,
-                                             subgroup=subgroup, group=group)
+                                             subgroup=subgroup, group=group,
+                                             info="Number of discrete color levels per channel; 0 = disabled")
         self.num_hues = params.new("num_hues",
                                    min=2, max=10, default=8,
-                                   subgroup=subgroup, group=group)
+                                   subgroup=subgroup, group=group,
+                                   info="Number of hue steps when posterize is active")
 
         self.val_threshold = params.new("val_threshold",
                                         min=0, max=255, default=0,
-                                        subgroup=subgroup, group=group)
+                                        subgroup=subgroup, group=group,
+                                        info="Brightness threshold below which hue shift is applied")
         self.val_hue_shift = params.new("val_hue_shift",
                                         min=0, max=255, default=0,
-                                        subgroup=subgroup, group=group)
+                                        subgroup=subgroup, group=group,
+                                        info="Hue shift applied to pixels below the value threshold")
 
         self.solarize_threshold = params.new("solarize_threshold",
                                              min=0, max=100, default=0.0,
-                                             subgroup=subgroup, group=group)
+                                             subgroup=subgroup, group=group,
+                                             info="Pixels above this brightness get their values inverted")
         self.hue_invert_angle = params.new("hue_invert_angle",
                                            min=0, max=360, default=0,
-                                           subgroup=subgroup, group=group)
+                                           subgroup=subgroup, group=group,
+                                           info="Target hue to selectively invert")
         self.hue_invert_strength = params.new("hue_invert_strength",
                                               min=0.0, max=1.0, default=0.0,
-                                              subgroup=subgroup, group=group)
+                                              subgroup=subgroup, group=group,
+                                              info="How strongly the hue inversion is applied")
 
         self.contrast = params.new("contrast",
                                    min=0.5, max=3.0, default=1.0,
-                                   subgroup=subgroup, group=group)
+                                   subgroup=subgroup, group=group,
+                                   info="Contrast multiplier around the midpoint")
         self.brightness = params.new("brightness",
                                      min=0, max=100, default=0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Additive brightness offset")
         self.gamma = params.new("gamma",
                                 min=0.1, max=3.0, default=1.0,
-                                subgroup=subgroup, group=group)
+                                subgroup=subgroup, group=group,
+                                info="Gamma correction curve; < 1 brightens shadows")
         self.highlight_compression = params.new("highlight_compression",
                                                 min=0.0, max=1.0, default=0.0,
-                                                subgroup=subgroup, group=group)
+                                                subgroup=subgroup, group=group,
+                                                info="Rolls off highlights to prevent clipping")
 
         # Color cycling - rotates a palette ramp over the brightness of the image
         self.color_cycle_speed = params.new("color_cycle_speed",
                                              min=0.0, max=5.0, default=0.0,
-                                             subgroup=subgroup, group=group)
+                                             subgroup=subgroup, group=group,
+                                             info="Speed at which all hues continuously rotate")
         self.color_cycle_bands = params.new("color_cycle_bands",
                                              min=1, max=8, default=3,
-                                             subgroup=subgroup, group=group)
+                                             subgroup=subgroup, group=group,
+                                             info="Number of hue bands used in color cycling")
 
         # Channel Mixer - cross-mix RGB channels
         self.ch_mix_rr = params.new("ch_mix_rr", min=0.0, max=2.0, default=1.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="How much R contributes to the output Red channel")
         self.ch_mix_rg = params.new("ch_mix_rg", min=0.0, max=2.0, default=0.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="How much G contributes to the output Red channel")
         self.ch_mix_rb = params.new("ch_mix_rb", min=0.0, max=2.0, default=0.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="How much B contributes to the output Red channel")
         self.ch_mix_gr = params.new("ch_mix_gr", min=0.0, max=2.0, default=0.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="How much R contributes to the output Green channel")
         self.ch_mix_gg = params.new("ch_mix_gg", min=0.0, max=2.0, default=1.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="How much G contributes to the output Green channel")
         self.ch_mix_gb = params.new("ch_mix_gb", min=0.0, max=2.0, default=0.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="How much B contributes to the output Green channel")
         self.ch_mix_br = params.new("ch_mix_br", min=0.0, max=2.0, default=0.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="How much R contributes to the output Blue channel")
         self.ch_mix_bg = params.new("ch_mix_bg", min=0.0, max=2.0, default=0.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="How much G contributes to the output Blue channel")
         self.ch_mix_bb = params.new("ch_mix_bb", min=0.0, max=2.0, default=1.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="How much B contributes to the output Blue channel")
 
         # Color Bitcrush - reduce bit depth per channel
         self.color_bitcrush = params.new("color_bitcrush",
                                           min=1, max=8, default=8,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Reduces color bit depth; lower = more posterized/banded look")
 
         # Hue Scatter - randomize hue per-pixel
         self.hue_scatter = params.new("hue_scatter",
                                        min=0.0, max=1.0, default=0.0,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Adds random per-pixel hue variation")
 
         # Duotone - map luminance to two-color gradient
         self.duotone_strength = params.new("duotone_strength",
                                             min=0.0, max=1.0, default=0.0,
-                                            subgroup=subgroup, group=group)
+                                            subgroup=subgroup, group=group,
+                                            info="Blends image toward a two-hue palette")
         self.duotone_hue_lo = params.new("duotone_hue_lo",
                                           min=0, max=180, default=120,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Hue assigned to the shadow/low end of the duotone")
         self.duotone_hue_hi = params.new("duotone_hue_hi",
                                           min=0, max=180, default=10,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Hue assigned to the highlight/high end of the duotone")
 
         # Channel Isolation - mute individual R/G/B channels
         self.ch_r = params.new("ch_r", min=0.0, max=1.0, default=1.0,
-                                subgroup=subgroup, group=group)
+                                subgroup=subgroup, group=group,
+                                info="Per-channel gain multiplier for Red channel")
         self.ch_g = params.new("ch_g", min=0.0, max=1.0, default=1.0,
-                                subgroup=subgroup, group=group)
+                                subgroup=subgroup, group=group,
+                                info="Per-channel gain multiplier for Green channel")
         self.ch_b = params.new("ch_b", min=0.0, max=1.0, default=1.0,
-                                subgroup=subgroup, group=group)
+                                subgroup=subgroup, group=group,
+                                info="Per-channel gain multiplier for Blue channel")
 
         # Chromatic Aberration - offset R/G/B channels spatially
         self.chroma_ab_x = params.new("chroma_ab_x",
                                        min=0, max=30, default=0,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Horizontal chromatic aberration offset between channels")
         self.chroma_ab_y = params.new("chroma_ab_y",
                                        min=0, max=30, default=0,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Vertical chromatic aberration offset between channels")
 
         # Color Temperature - warm/cool shift
         self.color_temp = params.new("color_temp",
                                       min=-1.0, max=1.0, default=0.0,
-                                      subgroup=subgroup, group=group)
+                                      subgroup=subgroup, group=group,
+                                      info="Shifts color temperature; negative = cool/blue, positive = warm/orange")
 
         # Saturation Curve - non-linear saturation boost/crush
         self.sat_curve_shadows = params.new("sat_curve_shadows",
                                              min=0.0, max=3.0, default=1.0,
-                                             subgroup=subgroup, group=group)
+                                             subgroup=subgroup, group=group,
+                                             info="Saturation multiplier for shadow tones")
         self.sat_curve_mids = params.new("sat_curve_mids",
                                           min=0.0, max=3.0, default=1.0,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Saturation multiplier for midtones")
         self.sat_curve_highlights = params.new("sat_curve_highlights",
                                                 min=0.0, max=3.0, default=1.0,
-                                                subgroup=subgroup, group=group)
+                                                subgroup=subgroup, group=group,
+                                                info="Saturation multiplier for highlight tones")
 
         # False Color - apply colormap to luminance
         self.false_color_strength = params.new("false_color_strength",
                                                 min=0.0, max=1.0, default=0.0,
-                                                subgroup=subgroup, group=group)
+                                                subgroup=subgroup, group=group,
+                                                info="Blends a false-color (luma-mapped) version over the image")
         self.false_color_map = params.new("false_color_map",
                                            min=0, max=len(COLORMAP_OPTIONS)-1,
                                            default=int(Colormap.INFERNO),
                                            subgroup=subgroup, group=group,
-                                           type=Widget.DROPDOWN, options=Colormap)
+                                           type=Widget.DROPDOWN, options=Colormap,
+                                           info="Colormap used for the false color overlay")
 
         # Invert - partial or full color inversion
         self.invert_strength = params.new("invert_strength",
                                            min=0.0, max=1.0, default=0.0,
-                                           subgroup=subgroup, group=group)
+                                           subgroup=subgroup, group=group,
+                                           info="Blends an inverted version of the image; 1.0 = fully inverted")
 
     def _shift_hue(self, hue: int):
         """

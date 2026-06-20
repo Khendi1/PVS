@@ -2,10 +2,16 @@
   "permissions": {
     "allow": [
       "WebSearch",
+      "Bash(python run.py:*)",
+      "Bash(.venv/Scripts/python.exe run.py:*)",
+      "Bash(python -m video_synth:*)",
       "Bash(python -c \":*)",
       "Bash(.venv/Scripts/python.exe -c \":*)",
-      "Bash(find h:/Code/PVS -name *.md -newer h:/Code/PVS/README.md)",
-      "Read(//c/Users/Big Papa/.claude/projects/h--Code-PVS/memory/**)"
+      "Bash(pytest:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(.venv/Scripts/python.exe -m pytest:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }

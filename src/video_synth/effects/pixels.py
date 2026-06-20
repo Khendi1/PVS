@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 import random
@@ -20,32 +36,40 @@ class Pixels(EffectBase):
         self.sharpen_type = params.new("sharpen_type",
                                         min=0, max=len(SharpenType)-1, default=0,
                                         group=group, subgroup=subgroup,
-                                        type=Widget.DROPDOWN, options=SharpenType)
+                                        type=Widget.DROPDOWN, options=SharpenType,
+                                        info="Sharpening algorithm (unsharp mask, laplacian, etc.)")
         self.sharpen_intensity = params.new("sharpen_intensity",
                                             min=1.0, max=8.0, default=4.0,
-                                            subgroup=subgroup, group=group)
+                                            subgroup=subgroup, group=group,
+                                            info="Strength of the sharpening effect")
         self.mask_blur = params.new("mask_blur",
                                     min=1, max=10, default=5,
-                                    subgroup=subgroup, group=group)
+                                    subgroup=subgroup, group=group,
+                                    info="Blur radius used to generate the unsharp mask")
         self.k_size = params.new("k_size",
                                  min=0, max=11, default=3,
-                                 subgroup=subgroup, group=group)
+                                 subgroup=subgroup, group=group,
+                                 info="Kernel size for various pixel operations")
 
         self.blur_type = params.new("blur_type",
                                     min=0, max=len(BlurType)-1, default=0,
                                     group=group, subgroup=subgroup,
-                                    type=Widget.DROPDOWN, options=BlurType)
+                                    type=Widget.DROPDOWN, options=BlurType,
+                                    info="Blur algorithm (gaussian, box, median, etc.)")
         self.blur_kernel_size = params.new("blur_kernel_size",
                                            min=1, max=100, default=1,
-                                           subgroup=subgroup, group=group)
+                                           subgroup=subgroup, group=group,
+                                           info="Kernel size of the blur (forced odd); 1 = no blur")
 
         self.noise_type = params.new("noise_type",
                                      min=NoiseType.NONE.value, max=NoiseType.RANDOM.value, default=NoiseType.NONE.value,
                                      group=group, subgroup=subgroup,
-                                     type=Widget.DROPDOWN, options=NoiseType)
+                                     type=Widget.DROPDOWN, options=NoiseType,
+                                     info="Type of noise to overlay (Gaussian, salt-and-pepper, etc.)")
         self.noise_intensity = params.new("noise_intensity",
                                           min=0.0, max=1.0, default=0.1,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Strength of the noise overlay")
 
     def apply_noise(self, image: np.ndarray) -> np.ndarray:
         """

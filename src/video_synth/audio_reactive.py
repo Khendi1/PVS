@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 """
 Audio reactive module for the video synthesizer.
 
@@ -121,27 +137,33 @@ class AudioBand:
         self.band_select = params.new(
             f"{name}_band", min=0, max=NUM_BANDS - 1, default=band_index,
             group=group, subgroup=subgroup, type=Widget.DROPDOWN,
-            options={bn: i for i, bn in enumerate(BAND_NAMES)}
+            options={bn: i for i, bn in enumerate(BAND_NAMES)},
+            info="Frequency band to listen to (sub, bass, mid, high, etc.)"
         )
         self.sensitivity = params.new(
             f"{name}_sensitivity", min=0.0, max=5.0, default=1.0,
-            group=group, subgroup=subgroup
+            group=group, subgroup=subgroup,
+            info="Gain applied to the audio signal before mapping to the parameter"
         )
         self.attack = params.new(
             f"{name}_attack", min=0.0, max=1.0, default=0.3,
-            group=group, subgroup=subgroup
+            group=group, subgroup=subgroup,
+            info="How quickly the output rises in response to a transient"
         )
         self.decay = params.new(
             f"{name}_decay", min=0.0, max=1.0, default=0.1,
-            group=group, subgroup=subgroup
+            group=group, subgroup=subgroup,
+            info="How quickly the output falls after the signal drops"
         )
         self.cutoff_min = params.new(
             f"{name}_cutoff_min", min=-100.0, max=100.0, default=-100.0,
-            group=group, subgroup=subgroup
+            group=group, subgroup=subgroup,
+            info="Minimum value the audio binding will drive the target to"
         )
         self.cutoff_max = params.new(
             f"{name}_cutoff_max", min=-100.0, max=100.0, default=100.0,
-            group=group, subgroup=subgroup
+            group=group, subgroup=subgroup,
+            info="Maximum value the audio binding will drive the target to"
         )
 
     def link_param(self, param: Param):

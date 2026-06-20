@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 from param import Param, ParamTable
 from common import *
 
@@ -10,6 +26,7 @@ class UserSettings():
                  headless: bool = False,
                  obs: bool = False, obs_host: str = "localhost", obs_port: int = 4455, obs_password: str = "",
                  osc: bool = False, osc_host: str = "0.0.0.0", osc_port: int = 9000,
+                 cv: bool = False, cv_device=None, cv_channels: int = 2,
                  **kwargs):
         """Initialize user settings with given parameters."""
         group = Groups.USER_SETTINGS
@@ -43,6 +60,11 @@ class UserSettings():
         self.osc = osc
         self.osc_host = osc_host
         self.osc_port = osc_port
+
+        # CV-Gate input settings
+        self.cv = cv
+        self.cv_device = cv_device
+        self.cv_channels = cv_channels
 
         self.layout = self.params.new("layout",
                                        min=0, max=len(Layout), default=Layout[control_layout].value,

@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import yaml
 import os
 import random
@@ -27,8 +43,10 @@ class SaveController:
             # Running inside a PyInstaller bundle: use the bundle root (dist/VideoSynth/)
             project_root = _sys._MEIPASS
         else:
+            # save.py lives at <root>/src/video_synth/, so the project root
+            # (which holds save/) is two levels up.
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            project_root = os.path.abspath(os.path.join(script_dir, os.pardir))
+            project_root = os.path.abspath(os.path.join(script_dir, os.pardir, os.pardir))
         save_dir_path = os.path.join(project_root, save_dir_name)
         os.makedirs(save_dir_path, exist_ok=True)
         return save_dir_path

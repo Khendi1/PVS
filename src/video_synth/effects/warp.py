@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 from noise import pnoise2
@@ -17,89 +33,115 @@ class Warp(EffectBase):
         self.warp_type = params.new("warp_type",
                                     min=0, max=len(WarpType)-1, default=0,
                                     group=group, subgroup=subgroup,
-                                    type=Widget.DROPDOWN, options=WarpType)
+                                    type=Widget.DROPDOWN, options=WarpType,
+                                    info="Selects the warp method (noise, feedback, displacement, etc.)")
         self.warp_angle_amt = params.new("warp_angle_amt",
                                          min=0, max=360, default=30,
-                                         subgroup=subgroup, group=group)
+                                         subgroup=subgroup, group=group,
+                                         info="Angular displacement amount for rotation-based warps")
         self.warp_radius_amt = params.new("warp_radius_amt",
                                           min=0, max=360, default=30,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Radial displacement amount for radial warps")
         self.warp_speed = params.new("warp_speed",
                                      min=0, max=100, default=10,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Rate at which the warp field animates")
         self.warp_use_fractal = params.new("warp_use_fractal",
                                            min=0, max=1, default=0,
-                                           subgroup=subgroup, group=group)
+                                           subgroup=subgroup, group=group,
+                                           info="Toggle fractal (multi-octave) noise for warp field")
         self.warp_octaves = params.new("warp_octaves",
                                        min=1, max=8, default=4,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Number of noise octaves when fractal mode is on")
         self.warp_gain = params.new("warp_gain",
                                     min=0.0, max=1.0, default=0.5,
-                                    subgroup=subgroup, group=group)
+                                    subgroup=subgroup, group=group,
+                                    info="Amplitude falloff per octave in fractal noise")
         self.warp_lacunarity = params.new("warp_lacunarity",
                                           min=1.0, max=4.0, default=2.0,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Frequency multiplier per octave in fractal noise")
         self.x_speed = params.new("x_speed",
                                   min=0.0, max=100.0, default=1.0,
-                                  subgroup=subgroup, group=group)
+                                  subgroup=subgroup, group=group,
+                                  info="Horizontal drift speed of the warp field")
         self.x_size = params.new("x_size",
                                  min=0.25, max=100.0, default=20.0,
-                                 subgroup=subgroup, group=group)
+                                 subgroup=subgroup, group=group,
+                                 info="Horizontal scale of the noise warp")
         self.y_speed = params.new("y_speed",
                                   min=0.0, max=10.0, default=1.0,
-                                  subgroup=subgroup, group=group)
+                                  subgroup=subgroup, group=group,
+                                  info="Vertical drift speed of the warp field")
         self.y_size = params.new("y_size",
                                  min=0.25, max=100.0, default=10.0,
-                                 subgroup=subgroup, group=group)
+                                 subgroup=subgroup, group=group,
+                                 info="Vertical scale of the noise warp")
 
         self.fb_warp_decay = params.new("fb_warp_decay",
                                          min=0.0, max=1.0, default=0.95,
-                                         subgroup=subgroup, group=group)
+                                         subgroup=subgroup, group=group,
+                                         info="How quickly the feedback warp field decays")
         self.fb_warp_strength = params.new("fb_warp_strength",
                                             min=0.0, max=50.0, default=5.0,
-                                            subgroup=subgroup, group=group)
+                                            subgroup=subgroup, group=group,
+                                            info="Intensity of feedback-driven displacement")
         self.fb_warp_freq = params.new("fb_warp_freq",
                                         min=0.1, max=20.0, default=3.0,
-                                        subgroup=subgroup, group=group)
+                                        subgroup=subgroup, group=group,
+                                        info="Frequency of the noise used in feedback warp")
 
         # Displacement feedback params
         self.disp_strength = params.new("disp_strength",
                                          min=0.0, max=30.0, default=5.0,
-                                         subgroup=subgroup, group=group)
+                                         subgroup=subgroup, group=group,
+                                         info="Magnitude of displacement map warping")
         self.disp_decay = params.new("disp_decay",
                                       min=0.0, max=1.0, default=0.92,
-                                      subgroup=subgroup, group=group)
+                                      subgroup=subgroup, group=group,
+                                      info="Decay rate of the displacement map")
         self.disp_blur = params.new("disp_blur",
                                      min=1, max=15, default=5,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Blur kernel size applied to the displacement map")
 
         # Convection params
         self.conv_rise_speed = params.new("conv_rise_speed",
                                            min=0.0, max=10.0, default=2.0,
-                                           subgroup=subgroup, group=group)
+                                           subgroup=subgroup, group=group,
+                                           info="Speed at which convection field intensity rises")
         self.conv_diffusion = params.new("conv_diffusion",
                                           min=0.0, max=1.0, default=0.5,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Spatial diffusion rate of the convection field")
         self.conv_turbulence = params.new("conv_turbulence",
                                            min=0.0, max=1.0, default=0.3,
-                                           subgroup=subgroup, group=group)
+                                           subgroup=subgroup, group=group,
+                                           info="Amount of turbulent noise in the convection field")
         self.conv_decay = params.new("conv_decay",
                                       min=0.0, max=1.0, default=0.95,
-                                      subgroup=subgroup, group=group)
+                                      subgroup=subgroup, group=group,
+                                      info="Decay rate of the convection field")
 
         # Reaction-Diffusion warp params
         self.rd_warp_strength = params.new("rd_warp_strength",
                                             min=0.0, max=30.0, default=10.0,
-                                            subgroup=subgroup, group=group)
+                                            subgroup=subgroup, group=group,
+                                            info="Strength of reaction-diffusion driven warping")
         self.rd_warp_feed = params.new("rd_warp_feed",
                                         min=0.01, max=0.1, default=0.055,
-                                        subgroup=subgroup, group=group)
+                                        subgroup=subgroup, group=group,
+                                        info="Feed rate for the internal RD warp simulation")
         self.rd_warp_kill = params.new("rd_warp_kill",
                                         min=0.03, max=0.08, default=0.062,
-                                        subgroup=subgroup, group=group)
+                                        subgroup=subgroup, group=group,
+                                        info="Kill rate for the internal RD warp simulation")
         self.rd_warp_speed = params.new("rd_warp_speed",
                                          min=0.1, max=5.0, default=1.0,
-                                         subgroup=subgroup, group=group)
+                                         subgroup=subgroup, group=group,
+                                         info="Simulation speed of the RD warp field")
 
         self.t = 0
 

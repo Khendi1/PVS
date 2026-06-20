@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 import logging
@@ -15,58 +31,75 @@ class Physarum(Animation):
         # Simulation parameters
         self.num_agents = params.new("phys_num_agents",
                                      min=1000, max=10000, default=1000,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Number of simulated slime mold agents")
         self.sensor_angle_spacing = params.new("phys_sensor_angle_spacing",
                                                min=0.0, max=np.pi/2, default=np.pi/8,
-                                               subgroup=subgroup, group=group) # Radians
+                                               subgroup=subgroup, group=group,
+                                               info="Angular offset of the forward sensors from the heading") # Radians
         self.sensor_distance = params.new("phys_sensor_distance",
                                           min=1, max=20, default=9,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="How far ahead each sensor samples the trail map")
         self.turn_angle = params.new("phys_turn_angle",
                                      min=0.0, max=np.pi/2, default=np.pi/4,
-                                     subgroup=subgroup, group=group) # Radians
+                                     subgroup=subgroup, group=group,
+                                     info="Maximum turn angle per step when steering") # Radians
         self.step_distance = params.new("phys_step_distance",
                                         min=1, max=10, default=1,
-                                        subgroup=subgroup, group=group)
+                                        subgroup=subgroup, group=group,
+                                        info="Pixels each agent moves per simulation step")
         self.decay_factor = params.new("phys_decay_factor",
                                        min=0.0, max=1.0, default=0.1,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Rate at which trail pheromone evaporates each frame")
         self.diffuse_factor = params.new("phys_diffuse_factor",
                                          min=0.0, max=1.0, default=0.5,
-                                         subgroup=subgroup, group=group)
+                                         subgroup=subgroup, group=group,
+                                         info="Amount of trail blur/diffusion applied each frame")
         self.deposit_amount = params.new("phys_deposit_amount",
                                          min=0.1, max=5.0, default=1.0,
-                                         subgroup=subgroup, group=group)
+                                         subgroup=subgroup, group=group,
+                                         info="How much pheromone each agent deposits per step")
         self.grid_resolution_scale = params.new("phys_grid_res_scale",
                                                 min=0.1, max=1.0, default=0.5,
-                                                subgroup=subgroup, group=group)
+                                                subgroup=subgroup, group=group,
+                                                info="Internal grid resolution as fraction of output (lower = faster)")
         self.wrap_around = params.new("phys_wrap_around",
                                       min=0, max=1, default=1,
                                       group=group, subgroup=subgroup,
-                                      type=Widget.TOGGLE) # Boolean as int
+                                      type=Widget.TOGGLE,
+                                      info="Toggle whether agents wrap at canvas edges") # Boolean as int
 
         # Color parameters
         self.trail_r = params.new("phys_trail_r",
                                   min=0, max=255, default=0,
-                                  subgroup=subgroup, group=group)
+                                  subgroup=subgroup, group=group,
+                                  info="Red channel of the pheromone trail")
         self.trail_g = params.new("phys_trail_g",
                                   min=0, max=255, default=255,
-                                  subgroup=subgroup, group=group)
+                                  subgroup=subgroup, group=group,
+                                  info="Green channel of the pheromone trail")
         self.trail_b = params.new("phys_trail_b",
                                   min=0, max=255, default=0,
-                                  subgroup=subgroup, group=group)
+                                  subgroup=subgroup, group=group,
+                                  info="Blue channel of the pheromone trail")
         self.agent_r = params.new("phys_agent_r",
                                   min=0, max=255, default=255,
-                                  subgroup=subgroup, group=group)
+                                  subgroup=subgroup, group=group,
+                                  info="Red channel of rendered agents")
         self.agent_g = params.new("phys_agent_g",
                                   min=0, max=255, default=0,
-                                  subgroup=subgroup, group=group)
+                                  subgroup=subgroup, group=group,
+                                  info="Green channel of rendered agents")
         self.agent_b = params.new("phys_agent_b",
                                   min=0, max=255, default=0,
-                                  subgroup=subgroup, group=group)
+                                  subgroup=subgroup, group=group,
+                                  info="Blue channel of rendered agents")
         self.agent_size = params.new("phys_agent_size",
                                      min=1, max=5, default=1,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Pixel size of each rendered agent dot")
 
 
         self.grid_width = int(self.width * self.grid_resolution_scale.value)

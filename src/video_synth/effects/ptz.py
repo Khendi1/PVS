@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 
@@ -12,46 +28,59 @@ class PTZ(EffectBase):
 
         self.x_shift = params.new("x_shift",
                                    min=-image_width, max=image_width, default=0,
-                                   subgroup=subgroup, group=group)  # min/max depends on image size
+                                   subgroup=subgroup, group=group,
+                                   info="Horizontal pan offset (px)")  # min/max depends on image size
         self.y_shift = params.new("y_shift",
                                   min=-image_height, max=image_height, default=0,
-                                  subgroup=subgroup, group=group)  # min/max depends on image size
+                                  subgroup=subgroup, group=group,
+                                  info="Vertical tilt offset (px)")  # min/max depends on image size
         self.zoom = params.new("zoom",
                                min=0.75, max=3, default=1.0,
-                               subgroup=subgroup, group=group)
+                               subgroup=subgroup, group=group,
+                               info="Zoom level; > 1 zooms in")
         self.r_shift = params.new("r_shift",
                                   min=-360, max=360, default=0.0,
-                                  subgroup=subgroup, group=group)
+                                  subgroup=subgroup, group=group,
+                                  info="Rotation in degrees")
 
 
         self.prev_x_shift = params.new("prev_x_shift",
                                        min=-image_width, max=image_width, default=0,
-                                       subgroup=subgroup, group=group)  # min/max depends on image size
+                                       subgroup=subgroup, group=group,
+                                       info="X shift applied to the previous-frame layer")  # min/max depends on image size
         self.prev_y_shift = params.new("prev_y_shift",
                                        min=-image_height, max=image_height, default=0,
-                                       subgroup=subgroup, group=group)  # min/max depends on image size
+                                       subgroup=subgroup, group=group,
+                                       info="Y shift applied to the previous-frame layer")  # min/max depends on image size
         self.prev_zoom = params.new("prev_zoom",
                                     min=0.75, max=3, default=1.0,
-                                    subgroup=subgroup, group=group)
+                                    subgroup=subgroup, group=group,
+                                    info="Zoom applied to the previous-frame layer")
         self.prev_r_shift = params.new("prev_r_shift",
                                        min=-360, max=360, default=0.0,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Rotation applied to the previous-frame layer")
 
         self.prev_cx = params.new("prev_cx",
                                   min=-image_width/2, max=image_width/2, default=0,
-                                  subgroup=subgroup, group=group)
+                                  subgroup=subgroup, group=group,
+                                  info="Center X for previous-frame transform")
         self.prev_cy = params.new("prev_cy",
                                   min=-image_height/2, max=image_height/2, default=0,
-                                  subgroup=subgroup, group=group)
+                                  subgroup=subgroup, group=group,
+                                  info="Center Y for previous-frame transform")
         self.polar_x = params.new("polar_x",
                                   min=-image_width // 2, max=image_width // 2, default=0,
-                                  subgroup=subgroup, group=group)
+                                  subgroup=subgroup, group=group,
+                                  info="X origin for polar coordinate transform")
         self.polar_y = params.new("polar_y",
                                   min=-image_height // 2, max=image_height // 2, default=0,
-                                  subgroup=subgroup, group=group)
+                                  subgroup=subgroup, group=group,
+                                  info="Y origin for polar coordinate transform")
         self.polar_radius = params.new("polar_radius",
                                        min=0.1, max=100, default=1.0,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Radius scale for polar transform")
 
     def shift_frame(self, frame: np.ndarray):
         """

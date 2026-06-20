@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 
@@ -16,51 +32,71 @@ class Shapes:
         self.shape_type = params.new("shape_type",
                                       min=0, max=len(Shape)-1, default=Shape.NONE.value,
                                       group=group, subgroup=subgroup,
-                                      type=Widget.DROPDOWN, options=Shape)
+                                      type=Widget.DROPDOWN, options=Shape,
+                                      info="Selects which shape to render")
 
         self.line_h = params.new("line_hue", min=0, max=179, default=0,
-                                 subgroup=subgroup, group=group)
+                                 subgroup=subgroup, group=group,
+                                 info="Hue of the shape outline")
         self.line_s = params.new("line_sat", min=0, max=255, default=255,
-                                 subgroup=subgroup, group=group)
+                                 subgroup=subgroup, group=group,
+                                 info="Saturation of the shape outline")
         self.line_v = params.new("line_val", min=0, max=255, default=255,
-                                 subgroup=subgroup, group=group)
+                                 subgroup=subgroup, group=group,
+                                 info="Brightness of the shape outline")
         self.line_weight = params.new("line_weight", min=1, max=20, default=2,
-                                      subgroup=subgroup, group=group)
+                                      subgroup=subgroup, group=group,
+                                      info="Stroke width (px) of the shape outline")
         self.line_opacity = params.new("line_opacity", min=0.0, max=1.0, default=0.66,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Transparency of the shape outline")
 
         self.size_multiplier = params.new("size_multiplier", min=0.1, max=10.0, default=0.9,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Scale of the shape relative to canvas")
         self.aspect_ratio = params.new("aspect_ratio", min=0.1, max=10.0, default=1.0,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Width-to-height ratio of the shape")
         self.rotation_angle = params.new("rotation_angle", min=0, max=360, default=0,
-                                         subgroup=subgroup, group=group)
+                                         subgroup=subgroup, group=group,
+                                         info="Rotation of the shape (degrees)")
 
         self.shape_x_shift = params.new("shape_x_shift", min=-width, max=width, default=shape_x_shift,
-                                        subgroup=subgroup, group=group)
+                                        subgroup=subgroup, group=group,
+                                        info="Horizontal position offset")
         self.shape_y_shift = params.new("shape_y_shift", min=-height, max=height, default=shape_y_shift,
-                                        subgroup=subgroup, group=group)
+                                        subgroup=subgroup, group=group,
+                                        info="Vertical position offset")
 
         self.multiply_grid_x = params.new("multiply_grid_x", min=1, max=10, default=2,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Number of columns when tiling the shape in a grid")
         self.multiply_grid_y = params.new("multiply_grid_y", min=1, max=10, default=2,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Number of rows when tiling the shape in a grid")
         self.grid_pitch_x = params.new("grid_pitch_x", min=0, max=width, default=100,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Horizontal spacing between grid tiles (px)")
         self.grid_pitch_y = params.new("grid_pitch_y", min=0, max=height, default=100,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Vertical spacing between grid tiles (px)")
 
         self.fill_h = params.new("fill_hue", min=0, max=179, default=120,
-                                 subgroup=subgroup, group=group)
+                                 subgroup=subgroup, group=group,
+                                 info="Hue of the shape fill")
         self.fill_s = params.new("fill_sat", min=0, max=255, default=100,
-                                 subgroup=subgroup, group=group)
+                                 subgroup=subgroup, group=group,
+                                 info="Saturation of the shape fill")
         self.fill_v = params.new("fill_val", min=0, max=255, default=255,
-                                 subgroup=subgroup, group=group)
+                                 subgroup=subgroup, group=group,
+                                 info="Brightness of the shape fill")
         self.fill_opacity = params.new("fill_opacity", min=0.0, max=1.0, default=0.25,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Transparency of the fill")
 
         self.canvas_rotation = params.new("canvas_rotation", min=0, max=360, default=0,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Rotates the entire shapes layer")
 
         self._draw_fn = {
             Shape.RECTANGLE.value: self._draw_rectangle,

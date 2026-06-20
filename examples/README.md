@@ -31,7 +31,7 @@ pip install -r ../requirements.txt
 ### 3. Start Video Synthesizer
 
 ```bash
-python ./video_synth --api --ffmpeg \
+python run.py --api --ffmpeg \
   --ffmpeg-output udp://127.0.0.1:1234 \
   --ffmpeg-preset veryfast
 ```
@@ -269,6 +269,6 @@ def audio_reactive_control():
 
 ## Further Reading
 
-- [API Usage Guide](../API_USAGE.md) - Complete API documentation
+- [API Usage Guide](../docs/api.md) - Complete API documentation
 - [OBS WebSocket Protocol](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md)
 - [FFmpeg Documentation](https://ffmpeg.org/documentation.html)

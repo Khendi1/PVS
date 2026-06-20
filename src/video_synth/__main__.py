@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 """
 Main module for the video synthesizer application.
 This module initializes the gui and video mixer, applies effects, and manages the main loop.
@@ -33,6 +49,8 @@ from virtualcam import VirtualCamOutput
 from obs_controller import OBSController
 from obs_filters import OBSFilters
 from osc_controller import OSCController
+from cv_controller import CVController
+from bpm_clock import BPMClock
 from save import SaveController
 
 
@@ -46,9 +64,21 @@ def parse_args():
     parser.add_argument(
         '-l',
         '--log-level',
-        default=DEFAULT_LOG_LEVEL,  
+        default=DEFAULT_LOG_LEVEL,
         choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'],
         help='Set the logging level (CRITICAL, ERROR, WARNING, INFO, DEBUG)'
+    )
+    parser.add_argument(
+        '-v',
+        '--verbose',
+        action='store_true',
+        help='Verbose output: force DEBUG log level (overrides --log-level)'
+    )
+    parser.add_argument(
+        '-q',
+        '--quiet',
+        action='store_true',
+        help='Quiet output: force WARNING log level (overrides --log-level)'
     )
     parser.add_argument(
         '-nd',
@@ -182,6 +212,23 @@ def parse_args():
         default=9000,
         type=int,
         help='OSC server port (default: 9000)'
+    )
+    parser.add_argument(
+        '--cv',
+        action='store_true',
+        help='Enable Eurorack/CV-Gate input via audio interface line-in'
+    )
+    parser.add_argument(
+        '--cv-device',
+        default=None,
+        type=str,
+        help='Audio device index or name substring for CV input (default: system default)'
+    )
+    parser.add_argument(
+        '--cv-channels',
+        default=2,
+        type=int,
+        help='Number of CV input channels to open (default: 2)'
     )
     parser.add_argument(
         '--resolution',
@@ -526,6 +573,18 @@ def main(settings):
     if api_server is not None:
         api_server.midi_mapper = midi_mapper
 
+    # --- BPM Clock ---
+    # Global beat clock — receives MIDI clock from any connected device,
+    # provides beat_phase to LFOs in tempo-sync mode.
+    bpm_clock = BPMClock(default_bpm=120.0)
+    bpm_clock.start()  # auto-connects to first available MIDI port with clock messages
+    # Propagate clock reference to all LFOs in every OscBank
+    for effect_mgr in effects:
+        for osc in effect_mgr.oscs.oscillators:
+            osc.bpm_clock = bpm_clock
+    if api_server is not None:
+        api_server.bpm_clock = bpm_clock
+
     # --- OSC Controller ---
     # Open Sound Control server for real-time control from TouchOSC, SuperCollider, DAWs, etc.
     # Reuses the same param_tables dict as the MIDI mapper.
@@ -537,6 +596,25 @@ def main(settings):
             port=settings.osc_port
         )
         osc_controller.start()
+
+    # --- CV-Gate Controller ---
+    cv_controller = None
+    if settings.cv:
+        # Parse device: try int first (device index), fall back to string (name substring)
+        cv_device = settings.cv_device
+        if cv_device is not None:
+            try:
+                cv_device = int(cv_device)
+            except (ValueError, TypeError):
+                pass  # keep as string — sounddevice accepts name substrings
+        cv_controller = CVController(
+            midi_param_tables,
+            device=cv_device,
+            num_channels=settings.cv_channels,
+        )
+        cv_controller.start()
+        if api_server is not None:
+            api_server.cv_controller = cv_controller
 
     # Validate headless mode
     if settings.headless and not (settings.api or settings.ffmpeg):
@@ -617,7 +695,16 @@ def main(settings):
     #             log.info("MIDI thread stopped successfully.")
 
 
-if __name__ == "__main__":
+""" Console entry point: parse args, configure logging, build settings, run.
+
+Zero-argument so it can be used as a ``console_scripts`` target
+(``video-synth = video_synth.__main__:cli``) as well as by ``run.py`` and
+``python -m video_synth``. ``log``/``WIDTH``/``HEIGHT`` are declared global so
+the assignments here rebind the module-level names that ``main`` and
+``video_loop`` read.
+"""
+def cli():
+    global log, WIDTH, HEIGHT
     args = parse_args()
     if args.api_host is None:
         args.api_host = '0.0.0.0' if args.api else '127.0.0.1'
@@ -636,6 +723,16 @@ if __name__ == "__main__":
             print(f"Invalid --resolution '{args.resolution}'. Expected WxH, e.g. 1280x720.")
             raise SystemExit(1)
 
+    # --verbose / --quiet override the explicit --log-level (verbose wins).
+    if args.verbose:
+        args.log_level = 'DEBUG'
+    elif args.quiet:
+        args.log_level = 'WARNING'
+
     log = config_log(args.log_level)
     settings = UserSettings(**args.__dict__)
     main(settings)
+
+
+if __name__ == "__main__":
+    cli()

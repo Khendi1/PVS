@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 import time
@@ -22,40 +38,52 @@ class Shaders(Animation):
         self.current_shader = params.new("s_type",
                                          min=0, max=len(ShaderType)-1, default=0,
                                          group=group, subgroup=subgroup,
-                                         type=Widget.DROPDOWN, options=ShaderType)
+                                         type=Widget.DROPDOWN, options=ShaderType,
+                                         info="Selects which shader pattern to render")
         self.zoom = params.new("s_zoom",
                                min=0.1, max=5.0, default=1.5,
-                               subgroup=subgroup, group=group)
+                               subgroup=subgroup, group=group,
+                               info="Zoom level into the shader pattern")
         self.distortion = params.new("s_distortion",
                                      min=0.0, max=1.0, default=0.5,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Amount of spatial distortion applied to the pattern")
         self.iterations = params.new("s_iterations",
                                      min=1.0, max=10.0, default=4.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Number of fractal/fold iterations; higher = more detail")
         self.color_shift = params.new("s_color_shift",
                                       min=0.5, max=3.0, default=1.0,
-                                      subgroup=subgroup, group=group)
+                                      subgroup=subgroup, group=group,
+                                      info="Shifts the color mapping of the output")
         self.brightness = params.new("s_brightness",
                                      min=0.0, max=2.0, default=1.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Output brightness multiplier")
         self.hue_shift = params.new("s_hue_shift",
                                     min=0.0, max=7, default=0.0,
-                                    subgroup=subgroup, group=group)
+                                    subgroup=subgroup, group=group,
+                                    info="Rotates the hue of the shader output")
         self.saturation = params.new("s_saturation",
                                      min=0.0, max=2.0, default=1.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Saturation multiplier of the output")
         self.x_shift = params.new("s_x_shift",
                                   min=-5.0, max=5.0, default=0.0,
-                                  subgroup=subgroup, group=group)
+                                  subgroup=subgroup, group=group,
+                                  info="Horizontal pan/offset into the shader space")
         self.y_shift = params.new("s_y_shift",
                                   min=-5.0, max=5.0, default=0.0,
-                                  subgroup=subgroup, group=group)
+                                  subgroup=subgroup, group=group,
+                                  info="Vertical pan/offset into the shader space")
         self.rotation = params.new("s_rotation",
                                    min=-3.14, max=3.14, default=0.0,
-                                   subgroup=subgroup, group=group)
+                                   subgroup=subgroup, group=group,
+                                   info="Rotation of the shader coordinate space (radians)")
         self.speed = params.new("s_speed",
                                 min=0.0, max=2.0, default=1.0,
-                                subgroup=subgroup, group=group)
+                                subgroup=subgroup, group=group,
+                                info="Animation speed of the shader")
         self.prev_shader = self.current_shader.value
         
         vertex_shader, code = self.get_shader_code()

@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 
@@ -35,47 +51,61 @@ class Metaballs(Animation):
         
         self.num_metaballs = params.new("num_metaballs",
                                         min=2, max=10, default=5,
-                                        subgroup=subgroup, group=group)
+                                        subgroup=subgroup, group=group,
+                                        info="Number of metaball blobs")
         self.min_radius = params.new("min_radius",
                                      min=20, max=100, default=40,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Minimum radius (px) a metaball can have")
         self.max_radius = params.new("max_radius",
                                      min=40, max=200, default=80,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Maximum radius (px) a metaball can have")
         self.radius_multiplier = params.new("radius_multiplier",
                                             min=1.0, max=3.0, default=1.0,
-                                            subgroup=subgroup, group=group)
+                                            subgroup=subgroup, group=group,
+                                            info="Global scale applied to all metaball radii")
         self.max_speed = params.new("max_speed",
                                     min=1, max=10, default=3,
-                                    subgroup=subgroup, group=group)
+                                    subgroup=subgroup, group=group,
+                                    info="Maximum velocity of each metaball")
         self.speed_multiplier = params.new("speed_multiplier",
                                            min=1.0, max=3.0, default=1.0,
-                                           subgroup=subgroup, group=group)
+                                           subgroup=subgroup, group=group,
+                                           info="Global scale applied to all metaball velocities")
         self.threshold = params.new("threshold",
                                     min=0.5, max=3.0, default=1.6,
-                                    subgroup=subgroup, group=group)
+                                    subgroup=subgroup, group=group,
+                                    info="Isosurface threshold; controls where blob surfaces appear")
         self.smooth_coloring_max_field = params.new("smooth_coloring_max_field",
                                                     min=1.0, max=3.0, default=1.5,
-                                                    subgroup=subgroup, group=group)
+                                                    subgroup=subgroup, group=group,
+                                                    info="Upper field value used to normalize smooth color gradient")
         self.skew_angle = params.new("metaball_skew_angle",
                                      min=0.0, max=360.0, default=0.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Direction of coordinate skew applied to the canvas")
         self.skew_intensity = params.new("metaball_skew_intensity",
                                          min=0.0, max=1.0, default=0.0,
-                                         subgroup=subgroup, group=group)
+                                         subgroup=subgroup, group=group,
+                                         info="Strength of the skew distortion")
         self.zoom = params.new("metaball_zoom",
                                min=1.0, max=3.0, default=1.0,
-                               subgroup=subgroup, group=group)
+                               subgroup=subgroup, group=group,
+                               info="Zoom level into the metaball field")
         self.colormap = params.new("metaball_colormap",
                                    min=0, max=len(COLORMAP_OPTIONS)-1, default=Colormap.JET.value,
                                    group=group, subgroup=subgroup,
-                                   type=Widget.DROPDOWN, options=Colormap)
+                                   type=Widget.DROPDOWN, options=Colormap,
+                                   info="Color palette used to shade blobs")
         self.feedback_alpha = params.new("metaballs_feedback",
                                          min=0.0, max=1.0, default=0.95,
-                                         subgroup=subgroup, group=group)
+                                         subgroup=subgroup, group=group,
+                                         info="Alpha blend of previous frame over current; creates trails")
         self.render_scale = params.new("metaballs_render_scale",
                                        min=0.25, max=1.0, default=0.25,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Internal resolution as a fraction of output size; lower = faster")
 
         self.current_num_metaballs = self.num_metaballs.value
         self.current_radius_multiplier = self.radius_multiplier.value

@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 """
 The Mixer object is used for managing and mixing video sources into a single frame
 A single mixed frame is retrieved every iteration of the main loop.
@@ -25,6 +41,8 @@ from animations.oscillator_grid import OscillatorGrid
 from animations.harmonic_interference import HarmonicInterference
 from animations.perlin_noise import PerlinNoise
 from animations.shaders3 import Shaders3
+from animations.text_engine import TextEngine
+from animations.screen_capture import ScreenCapture
 import os
 from pathlib import Path
 from param import ParamTable
@@ -144,6 +162,8 @@ class Mixer:
             AnimSource.HARMONIC_INTERFERENCE.name: HarmonicInterference(**anim_args),
             AnimSource.PERLIN_NOISE.name: PerlinNoise(**anim_args),
             AnimSource.SHADERS_3.name: Shaders3(**anim_args),
+            AnimSource.TEXT_ENGINE.name: TextEngine(**anim_args),
+            AnimSource.SCREEN_CAPTURE.name: ScreenCapture(**anim_args),
         }
 
         anim_args["group"] = Groups.SRC_2_ANIMATIONS
@@ -167,6 +187,8 @@ class Mixer:
             AnimSource.HARMONIC_INTERFERENCE.name: HarmonicInterference(**anim_args),
             AnimSource.PERLIN_NOISE.name: PerlinNoise(**anim_args),
             AnimSource.SHADERS_3.name: Shaders3(**anim_args),
+            AnimSource.TEXT_ENGINE.name: TextEngine(**anim_args),
+            AnimSource.SCREEN_CAPTURE.name: ScreenCapture(**anim_args),
         }
 
         # --- Configure file sources ---
@@ -188,13 +210,15 @@ class Mixer:
         self.selected_source1 = self.params.new("source_1",
                                                       min=0, max=len(self.sources), default=default_src1,
                                                       subgroup=subgroup, group=self.group,
-                                                      type=Widget.DROPDOWN, options=list(self.sources.keys()))
+                                                      type=Widget.DROPDOWN, options=list(self.sources.keys()),
+                                                      info="Selects the animation/source for layer 1")
 
         # init source 2 to metaballs
         self.selected_source2 = self.params.new("source_2",
                                                       min=0, max=len(self.sources), default=AnimSource.METABALLS.name,
                                                       subgroup=subgroup, group=self.group,
-                                                      type=Widget.DROPDOWN, options=list(self.sources.keys()))
+                                                      type=Widget.DROPDOWN, options=list(self.sources.keys()),
+                                                      info="Selects the animation/source for layer 2")
 
         # --- File selection params ---
         video_options = self.video_samples if self.video_samples else ["(none)"]
@@ -204,66 +228,103 @@ class Mixer:
                                                min=0, max=len(video_options),
                                                default=video_options[0],
                                                subgroup=subgroup, group=self.group,
-                                               type=Widget.DROPDOWN, options=video_options)
+                                               type=Widget.DROPDOWN, options=video_options,
+                                               info="Selects a video file as source 1")
         self.video_file_src2 = self.params.new("video_file_src2",
                                                min=0, max=len(video_options),
                                                default=video_options[0],
                                                subgroup=subgroup, group=self.group,
-                                               type=Widget.DROPDOWN, options=video_options)
+                                               type=Widget.DROPDOWN, options=video_options,
+                                               info="Selects a video file as source 2")
         self.image_file_src1 = self.params.new("image_file_src1",
                                                min=0, max=len(image_options),
                                                default=image_options[0],
                                                subgroup=subgroup, group=self.group,
-                                               type=Widget.DROPDOWN, options=image_options)
+                                               type=Widget.DROPDOWN, options=image_options,
+                                               info="Selects an image file as source 1")
         self.image_file_src2 = self.params.new("image_file_src2",
                                                min=0, max=len(image_options),
                                                default=image_options[0],
                                                subgroup=subgroup, group=self.group,
-                                               type=Widget.DROPDOWN, options=image_options)
+                                               type=Widget.DROPDOWN, options=image_options,
+                                               info="Selects an image file as source 2")
+
+        # --- Video playback controls (only meaningful for VIDEO file sources) ---
+
+        self.video_pause_src1 = self.params.new("video_pause_src1",
+                                                min=0, max=1, default=0,
+                                                subgroup=subgroup, group=self.group,
+                                                type=Widget.TOGGLE,
+                                                info="Pause/resume playback of the source 1 video file")
+        self.video_pause_src2 = self.params.new("video_pause_src2",
+                                                min=0, max=1, default=0,
+                                                subgroup=subgroup, group=self.group,
+                                                type=Widget.TOGGLE,
+                                                info="Pause/resume playback of the source 2 video file")
+        self.video_scrub_src1 = self.params.new("video_scrub_src1",
+                                                min=0.0, max=100.0, default=0.0,
+                                                subgroup=subgroup, group=self.group,
+                                                info="Scrub position in the source 1 video file (0–100%)")
+        self.video_scrub_src2 = self.params.new("video_scrub_src2",
+                                                min=0.0, max=100.0, default=0.0,
+                                                subgroup=subgroup, group=self.group,
+                                                info="Scrub position in the source 2 video file (0–100%)")
 
         # --- Parameters for blending and keying ---
 
         self.blend_mode = self.params.new("blend_mode",
                                                min=0, max=2, default=0,
                                                subgroup=subgroup, group=self.group,
-                                               type=Widget.RADIO, options=MixModes)
+                                               type=Widget.RADIO, options=MixModes,
+                                               info="How the two sources are combined (alpha, luma key, chroma key)")
         self.luma_threshold = self.params.new("luma_threshold",
                                                    min=0, max=255, default=128,
-                                                   subgroup=subgroup, group=self.group)
+                                                   subgroup=subgroup, group=self.group,
+                                                   info="Brightness level that defines the luma key boundary (0–255)")
         self.luma_selection = self.params.new("luma_selection",
                                                    min=LumaMode.WHITE.value, max=LumaMode.BLACK.value, default=LumaMode.WHITE.value,
                                                    subgroup=subgroup, group=self.group,
-                                                   type=Widget.RADIO, options=LumaMode)
+                                                   type=Widget.RADIO, options=LumaMode,
+                                                   info="Whether to key out bright or dark pixels")
         self.luma_blur = self.params.new("luma_blur",
                                               min=1, max=51, default=1,
-                                              subgroup=subgroup, group=self.group)
+                                              subgroup=subgroup, group=self.group,
+                                              info="Feathers the edges of the luma key mask")
         self.upper_hue = self.params.new("upper_hue",
                                               min=0, max=179, default=80,
-                                              subgroup=subgroup, group=self.group)
+                                              subgroup=subgroup, group=self.group,
+                                              info="Upper bound of the chroma key hue range")
         self.upper_saturation = self.params.new("upper_sat",
                                                      min=0, max=255, default=255,
-                                                     subgroup=subgroup, group=self.group)
+                                                     subgroup=subgroup, group=self.group,
+                                                     info="Upper bound of the chroma key saturation range")
         self.upper_value = self.params.new("upper_val",
                                                 min=0, max=255, default=255,
-                                                subgroup=subgroup, group=self.group)
+                                                subgroup=subgroup, group=self.group,
+                                                info="Upper bound of the chroma key value range")
         self.lower_hue = self.params.new("lower_hue",
                                               min=0, max=179, default=0,
-                                              subgroup=subgroup, group=self.group)
+                                              subgroup=subgroup, group=self.group,
+                                              info="Lower bound of the chroma key hue range")
         self.lower_saturation = self.params.new("lower_sat",
                                                      min=0, max=255, default=100,
-                                                     subgroup=subgroup, group=self.group)
+                                                     subgroup=subgroup, group=self.group,
+                                                     info="Lower bound of the chroma key saturation range")
         self.lower_value = self.params.new("lower_val",
                                                 min=0, max=255, default=100,
-                                                subgroup=subgroup, group=self.group)
-                                                
+                                                subgroup=subgroup, group=self.group,
+                                                info="Lower bound of the chroma key value range")
+
         self.alpha_blend = self.params.new("alpha_blend",
                                                 min=0.0, max=1.0, default=0.5,
-                                                subgroup=subgroup, group=self.group)
-                                                
+                                                subgroup=subgroup, group=self.group,
+                                                info="Mix ratio between source 1 and source 2 (0 = all S1, 1 = all S2)")
+
         self.swap = self.params.new("swap_sources",
                                          min=0, max=1, default=0,
                                          subgroup=subgroup, group=self.group,
-                                         type=Widget.TOGGLE)
+                                         type=Widget.TOGGLE,
+                                         info="Toggle to swap source 1 and source 2")
 
         # --- Initialize previous and wet frames for each source ---
 
@@ -278,6 +339,12 @@ class Mixer:
         self.src_1_count = 0
         self.src_2_count = 0
         self.post_count = 0
+
+        # --- Video playback state (per source) ---
+        # Last decoded raw video frame, replayed while a video source is paused.
+        self._last_video_frame = {MixerSource.SRC_1: None, MixerSource.SRC_2: None}
+        # Last scrub value applied to each capture, used to seek only on change.
+        self._scrub_last = {MixerSource.SRC_1: None, MixerSource.SRC_2: None}
 
         # --- Start video sources ---
         self.start_video(self.selected_source1.value, MixerSource.SRC_1)
@@ -296,13 +363,13 @@ class Mixer:
 
     # find dir one level up from current working directory
     def _find_dir(self, dir_name: str, file_name: str = None):
-
-        script_dir = Path(__file__).parent
+        # __file__ is src/video_synth/mixer.py — go up two levels to project root
+        project_root = Path(__file__).parent.parent.parent
 
         video_path_object = (
-            script_dir / ".." / dir_name / file_name
+            project_root / dir_name / file_name
             if file_name is not None
-            else script_dir / ".." / dir_name
+            else project_root / dir_name
         )
 
         return str(video_path_object.resolve().as_posix())
@@ -433,12 +500,34 @@ class Mixer:
         return result.astype(np.float32)
 
 
+    def _get_pause_param(self, source_index):
+        return self.video_pause_src1 if source_index == MixerSource.SRC_1 else self.video_pause_src2
+
+    def _get_scrub_param(self, source_index):
+        return self.video_scrub_src1 if source_index == MixerSource.SRC_1 else self.video_scrub_src2
+
+    def _apply_scrub(self, cap, source_index):
+        """Seek a video capture when its scrub param has changed since the last applied value."""
+        scrub = self._get_scrub_param(source_index)
+        last = self._scrub_last[source_index]
+        if last is not None and abs(scrub.value - last) < 1e-6:
+            return  # scrub unchanged — let playback advance normally
+
+        total = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        if total and total > 0:
+            target = int((scrub.value / 100.0) * total)
+            target = max(0, min(target, int(total) - 1))
+            cap.set(cv2.CAP_PROP_POS_FRAMES, target)
+            # Drop the paused freeze-frame so the new position is shown even while paused
+            self._last_video_frame[source_index] = None
+        self._scrub_last[source_index] = scrub.value
+
     def _process_single_source(self, source_index):
         ret, frame = False, None
 
         cap = self.cap1 if source_index == MixerSource.SRC_1 else self.cap2
         selected_source = self.selected_source1 if source_index == MixerSource.SRC_1 else self.selected_source2
-        
+
         # Read frame
         if not isinstance(cap, cv2.VideoCapture):
             frame = cap.get_frame(frame)
@@ -449,26 +538,42 @@ class Mixer:
             is_live_camera = isinstance(selected_source.value, str) and (
                 selected_source.value.startswith("DEVICE_") or selected_source.value == "VIRTUAL_CAM"
             )
+            is_video_file = selected_source.value == FileSource.VIDEO.name
 
-            if is_live_camera:
-                # Grab() is non-blocking, retrieve() decodes - this is faster for live sources
-                # Also helps flush any stale frames from the internal buffer
-                ret = cap.grab()
-                if ret:
-                    ret, frame = cap.retrieve()
-            else:
-                ret, frame = cap.read()
+            # Video file playback controls: scrub (seek on change) then pause (replay last frame)
+            if is_video_file:
+                self._apply_scrub(cap, source_index)
+                if self._get_pause_param(source_index).value and self._last_video_frame[source_index] is not None:
+                    ret, frame = True, self._last_video_frame[source_index].copy()
 
-            if not ret:
-                if selected_source.value == FileSource.VIDEO.name:
-                    log.info(f"Video end reached for source {source_index}. Looping back to start.")
-                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                    ret, frame = cap.read()
+            if frame is None:
+                if is_live_camera:
+                    # Grab() is non-blocking, retrieve() decodes - this is faster for live sources
+                    # Also helps flush any stale frames from the internal buffer
+                    ret = cap.grab()
+                    if ret:
+                        ret, frame = cap.retrieve()
                 else:
-                    log.error(f"Source {source_index} '{selected_source.value}' read failed")
+                    ret, frame = cap.read()
+
+                if not ret:
+                    if is_video_file:
+                        log.info(f"Video end reached for source {source_index}. Looping back to start.")
+                        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                        ret, frame = cap.read()
+                    else:
+                        log.error(f"Source {source_index} '{selected_source.value}' read failed")
+
+                # Cache the latest raw video frame for pause/freeze replay
+                if is_video_file and ret and frame is not None:
+                    self._last_video_frame[source_index] = frame.copy()
 
         # Apply effects if frame is successfully read
         if ret and frame is not None:
+            # Normalise to mixer resolution before effects so cached wet/prev frames never mismatch
+            if frame.shape[1] != self.width or frame.shape[0] != self.height:
+                frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_LINEAR)
+
             wet_frame = self.src_1_wet if source_index == MixerSource.SRC_1 else self.src_2_wet
             prev_frame = self.src_1_prev if source_index == MixerSource.SRC_1 else self.src_2_prev
             count = self.src_1_count if source_index == MixerSource.SRC_1 else self.src_2_count
@@ -498,6 +603,11 @@ class Mixer:
 
     def start_video(self, source_name, index):
         log.info(f"Requested mixer source {index}: {source_name}")
+
+        # Reset playback state so the new source plays from the current scrub position
+        # and the paused freeze-frame from a previous clip is discarded.
+        self._last_video_frame[index] = None
+        self._scrub_last[index] = None
 
         if index == MixerSource.SRC_1:
             self.src_1_wet = None

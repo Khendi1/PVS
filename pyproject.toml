@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "video-synth"
+description = "Real-time collaborative visual art synthesizer for live performance."
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "AGPL-3.0-or-later" }
+authors = [
+    { name = "Kyle Henderson", email = "khenderson@albers.aero" },
+]
+dynamic = ["version", "dependencies"]
+
+[project.scripts]
+video-synth = "video_synth.__main__:cli"
+
+[tool.setuptools.dynamic]
+version = { attr = "video_synth.__version__" }
+dependencies = { file = ["requirements.txt"] }
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]

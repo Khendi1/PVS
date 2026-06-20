@@ -1,5 +1,10 @@
 # Python Video Synthesizer
 
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](./LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![Code style: Ruff](https://img.shields.io/badge/code%20style-ruff-261230.svg)](https://github.com/astral-sh/ruff)
+[![Tests](https://github.com/Khendi1/PVS/actions/workflows/test.yml/badge.svg)](https://github.com/Khendi1/PVS/actions/workflows/test.yml)
+
 A real-time video synthesizer for creating live visual effects and generative animations. Control video processing pipelines with MIDI controllers, OSC, or a web UI - featuring modular effects, LFO modulation, procedural animations, and a REST API for remote and programmatic control.
 
 **No expensive hardware required** - works with just a laptop webcam, though it integrates seamlessly with capture cards, MIDI controllers, and external displays.
@@ -539,3 +544,11 @@ To preview the documentation site locally:
 pip install -r requirements_docs.txt
 mkdocs serve
 ```
+
+---
+
+## License
+
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** — see the [LICENSE](./LICENSE) file for the full text.
+
+You are free to use, modify, and redistribute it, but the AGPL is a strong copyleft license: **any modified version you distribute _or make available to users over a network_ (e.g. running the API/web UI as a hosted service) must also be released under the AGPL, with its complete corresponding source code made available to those users.** This network-use requirement (section 13) is what distinguishes the AGPL from the ordinary GPL and is the reason it was chosen for this server application.

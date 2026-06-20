@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 """
 Phase-Coupled Oscillators (Kuramoto model) - A grid of oscillators that
 slowly synchronize and desynchronize in clusters. Visualized as color phase,
@@ -19,24 +35,30 @@ class OscillatorGrid(Animation):
 
         self.osc_coupling = params.new("osc_coupling",
                                         min=0.0, max=2.0, default=0.5,
-                                        subgroup=subgroup, group=group)
+                                        subgroup=subgroup, group=group,
+                                        info="Strength of phase coupling between neighboring oscillators")
         self.osc_noise = params.new("osc_noise",
                                      min=0.0, max=0.5, default=0.05,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Random perturbation added to each oscillator per frame")
         self.osc_freq_spread = params.new("osc_freq_spread",
                                            min=0.0, max=2.0, default=0.5,
-                                           subgroup=subgroup, group=group)
+                                           subgroup=subgroup, group=group,
+                                           info="Variance in natural frequencies across the grid")
         self.osc_speed = params.new("osc_speed",
                                      min=0.1, max=5.0, default=1.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Overall simulation speed multiplier")
         self.osc_colormap = params.new("osc_colormap",
                                         min=0, max=len(COLORMAP_OPTIONS)-1,
                                         default=int(Colormap.HSV),
                                         subgroup=subgroup, group=group,
-                                        type=Widget.DROPDOWN, options=Colormap)
+                                        type=Widget.DROPDOWN, options=Colormap,
+                                        info="Color palette for phase visualization")
         self.osc_grid_size = params.new("osc_grid_size",
                                          min=32, max=256, default=80,
-                                         subgroup=subgroup, group=group)
+                                         subgroup=subgroup, group=group,
+                                         info="Number of oscillators per side (N×N grid)")
 
         self._init_grid()
 

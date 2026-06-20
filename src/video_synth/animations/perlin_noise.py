@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 from enum import IntEnum, auto
@@ -32,47 +48,56 @@ class PerlinNoise(Animation):
             min=0, max=len(PerlinNoiseType) - 1, default=0,
             group=group, subgroup=subgroup,
             type=Widget.DROPDOWN, options=PerlinNoiseType,
+            info="Mode: Perlin (standard fBm), Turbulence (absolute value — harsh ridges), Ridged (inverted absolute value — bright ridges on dark field), FBM (same as Perlin but labelled for clarity)",
         )
         self.pnoise_scale = params.new(
             "pnoise_scale",
             min=0.002, max=0.1, default=0.01,
             group=group, subgroup=subgroup,
+            info="Spatial frequency of the noise field; higher = smaller/denser features",
         )
         self.pnoise_speed = params.new(
             "pnoise_speed",
             min=0.0, max=2.0, default=0.2,
             group=group, subgroup=subgroup,
+            info="Rate at which the noise field animates (z-axis scroll speed)",
         )
         self.pnoise_octaves = params.new(
             "pnoise_octaves",
             min=1, max=8, default=4,
             group=group, subgroup=subgroup,
+            info="Number of layered noise passes; more octaves add finer detail",
         )
         self.pnoise_persistence = params.new(
             "pnoise_persistence",
             min=0.1, max=1.0, default=0.5,
             group=group, subgroup=subgroup,
+            info="Amplitude falloff per octave; lower = smoother, higher = more detail",
         )
         self.pnoise_lacunarity = params.new(
             "pnoise_lacunarity",
             min=1.0, max=4.0, default=2.0,
             group=group, subgroup=subgroup,
+            info="Frequency multiplier per octave; higher = more variation between octaves",
         )
         self.pnoise_colormap = params.new(
             "pnoise_colormap",
             min=0, max=len(Colormap) - 1, default=int(Colormap.INFERNO),
             group=group, subgroup=subgroup,
             type=Widget.DROPDOWN, options=Colormap,
+            info="OpenCV colormap applied to the grayscale noise field",
         )
         self.pnoise_offset_x = params.new(
             "pnoise_offset_x",
             min=-100.0, max=100.0, default=0.0,
             group=group, subgroup=subgroup,
+            info="Horizontal pan through the noise space",
         )
         self.pnoise_offset_y = params.new(
             "pnoise_offset_y",
             min=-100.0, max=100.0, default=0.0,
             group=group, subgroup=subgroup,
+            info="Vertical pan through the noise space",
         )
 
     def get_frame(self, frame=None):

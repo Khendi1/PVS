@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 """
 FastAPI server for remote control of the video synthesizer.
 Allows an agent or external application to control parameters via HTTP REST API.
@@ -25,11 +41,21 @@ if getattr(_sys, 'frozen', False):
     # Running inside a PyInstaller bundle: _MEIPASS is the bundle root
     _BUNDLE_ROOT = _sys._MEIPASS
 else:
-    # Running from source: go up one level from video_synth/ to the project root
-    _BUNDLE_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+    # Running from source: api.py lives at <root>/src/video_synth/, so the
+    # project root (which holds web/dist) is two levels up.
+    _BUNDLE_ROOT = os.path.abspath(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
+    )
 _WEB_DIST = os.path.join(_BUNDLE_ROOT, 'web', 'dist')
 
 log = logging.getLogger(__name__)
+
+# --- AGPL §13: where network users can obtain the Corresponding Source ---
+SOURCE_URL = "https://github.com/Khendi1/PVS"
+try:
+    from video_synth import __version__ as _VERSION
+except Exception:  # pragma: no cover - version lookup is best-effort
+    _VERSION = "unknown"
 
 
 class ParamValue(BaseModel):
@@ -48,6 +74,7 @@ class ParamInfo(BaseModel):
     subgroup: str
     type: str
     options: Optional[List[str]] = None
+    info: str = ""
 
 
 class LfoInfo(BaseModel):
@@ -82,6 +109,8 @@ class APIServer:
         self.midi_mapper = midi_mapper
         self.osc_banks = osc_banks or {}  # group_prefix → OscBank
         self.audio_module = audio_module
+        self.cv_controller = None  # set after construction if --cv is active
+        self.bpm_clock = None      # set after construction
         self._lfo_map = {}  # param_name → LFO
         self.host = host
         self.port = port
@@ -125,13 +154,37 @@ class APIServer:
             return {
                 "name": "Video Synth API",
                 "version": "1.0.0",
+                "license": "AGPL-3.0-or-later",
+                "source": SOURCE_URL,
                 "endpoints": {
                     "GET /params": "List all parameters",
                     "GET /params/{name}": "Get specific parameter",
                     "PUT /params/{name}": "Set parameter value",
                     "POST /params/reset/{name}": "Reset parameter to default",
-                    "GET /snapshot": "Get current frame as JPEG"
+                    "GET /snapshot": "Get current frame as JPEG",
+                    "GET /source": "Corresponding source location (AGPL §13)"
                 }
+            }
+
+        @self.app.get("/source")
+        async def source():
+            """AGPL §13 source offer: where to obtain this instance's source.
+
+            The AGPL requires that users who interact with a modified version
+            over a network be offered the Corresponding Source. This endpoint
+            (and the link in the web UI) provides that offer.
+            """
+            return {
+                "program": "Video Synth",
+                "version": _VERSION,
+                "license": "AGPL-3.0-or-later",
+                "source_url": SOURCE_URL,
+                "notice": (
+                    "This program is free software under the GNU Affero General "
+                    "Public License v3 or later. As required by AGPL section 13, "
+                    "the Corresponding Source for this running instance is "
+                    "available at source_url."
+                ),
             }
 
         def _serialize_options(param) -> Optional[List[str]]:
@@ -164,6 +217,7 @@ class APIServer:
                 subgroup=_enum_name(param.subgroup),
                 type=_enum_name(param.type),
                 options=_serialize_options(param),
+                info=param.info or "",
             )
 
         @self.app.get("/params", response_model=List[ParamInfo])
@@ -415,6 +469,119 @@ class APIServer:
                 "bands": list(self.audio_module.band_energies),
                 "beat": bool(self.audio_module.beat_detector.is_beat),
             }
+
+        # --- BPM Clock endpoints ---
+
+        class BPMRequest(BaseModel):
+            bpm: float
+
+        @self.app.get("/bpm")
+        async def get_bpm():
+            """Get the current BPM clock status (BPM, beat phase, MIDI active)."""
+            if self.bpm_clock is None:
+                raise HTTPException(status_code=503, detail="BPM clock not available")
+            return self.bpm_clock.get_status()
+
+        @self.app.put("/bpm")
+        async def set_bpm(req: BPMRequest):
+            """Manually set BPM (overrides MIDI clock until next MIDI clock message)."""
+            if self.bpm_clock is None:
+                raise HTTPException(status_code=503, detail="BPM clock not available")
+            self.bpm_clock.bpm = req.bpm
+            return {"success": True, "bpm": self.bpm_clock.bpm}
+
+        @self.app.post("/bpm/tap")
+        async def tap_tempo():
+            """Record a tap for tap-tempo BPM detection."""
+            if self.bpm_clock is None:
+                raise HTTPException(status_code=503, detail="BPM clock not available")
+            self.bpm_clock.record_tap()
+            return {"success": True, "bpm": self.bpm_clock.bpm}
+
+        # --- CV-Gate endpoints ---
+
+        class CVMapRequest(BaseModel):
+            channel: int
+            param: str          # qualified key "GroupLabel/param_name"
+            volt_min: float = -5.0
+            volt_max: float = 5.0
+            smoothing: float = 0.05
+
+        @self.app.get("/cv/devices")
+        async def cv_list_devices():
+            """List audio input devices available for CV input."""
+            from cv_controller import CVController
+            return {"devices": CVController.list_devices()}
+
+        @self.app.get("/cv/mappings")
+        async def cv_get_mappings():
+            """Get current CV channel → parameter mappings."""
+            if self.cv_controller is None:
+                raise HTTPException(status_code=503, detail="CV controller not active (start with --cv)")
+            return {"mappings": self.cv_controller.get_mappings()}
+
+        @self.app.get("/cv/values")
+        async def cv_get_values():
+            """Get the current smoothed voltage reading for each mapped channel."""
+            if self.cv_controller is None:
+                raise HTTPException(status_code=503, detail="CV controller not active")
+            return {"values": self.cv_controller.get_channel_values()}
+
+        @self.app.post("/cv/map")
+        async def cv_map_channel(req: CVMapRequest):
+            """Map an audio channel to a parameter."""
+            if self.cv_controller is None:
+                raise HTTPException(status_code=503, detail="CV controller not active (start with --cv)")
+            self.cv_controller.map_channel(
+                channel=req.channel,
+                qualified_key=req.param,
+                volt_min=req.volt_min,
+                volt_max=req.volt_max,
+                smoothing=req.smoothing,
+            )
+            return {"success": True, "channel": req.channel, "param": req.param}
+
+        @self.app.delete("/cv/map/{channel}")
+        async def cv_unmap_channel(channel: int):
+            """Remove the CV mapping for a channel."""
+            if self.cv_controller is None:
+                raise HTTPException(status_code=503, detail="CV controller not active")
+            self.cv_controller.unmap_channel(channel)
+            return {"success": True, "channel": channel}
+
+        # --- Text engine endpoints ---
+
+        class TextRequest(BaseModel):
+            message: Optional[str] = None  # None clears custom message, restores default rotation
+            source: int = 1                 # 1 = src_1, 2 = src_2
+
+        def _get_text_engine(source: int):
+            from animations.text_engine import TextEngine
+            from animations.enums import AnimSource
+            anim_map = (self.mixer.src_1_animations if source == 1
+                        else self.mixer.src_2_animations)
+            return anim_map.get(AnimSource.TEXT_ENGINE.name)
+
+        @self.app.put("/text")
+        async def set_text(req: TextRequest):
+            """Set or clear the ticker message on a TextEngine animation source."""
+            if self.mixer is None:
+                raise HTTPException(status_code=503, detail="Mixer not available")
+            engine = _get_text_engine(req.source)
+            if engine is None:
+                raise HTTPException(status_code=503, detail="TextEngine not found — is TEXT_ENGINE the active source?")
+            engine.set_message(req.message)
+            return {"success": True, "message": req.message, "source": req.source}
+
+        @self.app.get("/text")
+        async def get_text(source: int = 1):
+            """Get the current message displayed by a TextEngine animation source."""
+            if self.mixer is None:
+                raise HTTPException(status_code=503, detail="Mixer not available")
+            engine = _get_text_engine(source)
+            if engine is None:
+                raise HTTPException(status_code=503, detail="TextEngine not found")
+            return {"message": engine.get_message(), "source": source}
 
         # --- Bulk param update ---
 

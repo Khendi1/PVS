@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 """
 Second GPU shader collection: abstract & generative visual programs.
 
@@ -34,31 +50,40 @@ class Shaders2(Animation):
         self.current_shader = params.new("s2_type",
                                          min=0, max=len(Shader2Type) - 1, default=0,
                                          group=group, subgroup=subgroup,
-                                         type=Widget.DROPDOWN, options=Shader2Type)
+                                         type=Widget.DROPDOWN, options=Shader2Type,
+                                         info="Selects which shader pattern to render")
         self.zoom = params.new("s2_zoom",
                                min=0.1, max=10.0, default=1.0,
-                               subgroup=subgroup, group=group)
+                               subgroup=subgroup, group=group,
+                               info="Zoom level into the shader pattern")
         self.distortion = params.new("s2_distortion",
                                      min=0.0, max=2.0, default=0.5,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Amount of spatial distortion applied to the pattern")
         self.iterations = params.new("s2_iterations",
                                      min=1.0, max=20.0, default=6.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Number of fractal/fold iterations")
         self.color_shift = params.new("s2_color_shift",
                                       min=0.0, max=6.28, default=0.0,
-                                      subgroup=subgroup, group=group)
+                                      subgroup=subgroup, group=group,
+                                      info="Hue/phase offset for color mapping (0–2π)")
         self.brightness = params.new("s2_brightness",
                                      min=0.0, max=3.0, default=1.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Output brightness multiplier")
         self.speed = params.new("s2_speed",
                                 min=0.0, max=3.0, default=1.0,
-                                subgroup=subgroup, group=group)
+                                subgroup=subgroup, group=group,
+                                info="Animation speed of the shader")
         self.param_a = params.new("s2_param_a",
                                   min=0.0, max=10.0, default=3.0,
-                                  subgroup=subgroup, group=group)
+                                  subgroup=subgroup, group=group,
+                                  info="Shader-specific parameter A (meaning varies by type)")
         self.param_b = params.new("s2_param_b",
                                   min=0.0, max=10.0, default=2.0,
-                                  subgroup=subgroup, group=group)
+                                  subgroup=subgroup, group=group,
+                                  info="Shader-specific parameter B (meaning varies by type)")
 
         # --- Build shader programs ---
         vertex_shader, code = self._get_shader_code()
