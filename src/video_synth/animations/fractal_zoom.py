@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 """
 Fractal Zoom - Continuous slow zoom into a Julia set with the Julia constant
 slowly orbiting. The deeper you go, the more structures emerge. The parameter
@@ -20,21 +36,26 @@ class FractalZoom(Animation):
 
         self.fractal_zoom_speed = params.new("fractal_zoom_speed",
                                               min=0.0, max=1.0, default=0.1,
-                                              subgroup=subgroup, group=group)
+                                              subgroup=subgroup, group=group,
+                                              info="Rate at which the view zooms in")
         self.fractal_drift_speed = params.new("fractal_drift_speed",
                                                min=0.0, max=1.0, default=0.2,
-                                               subgroup=subgroup, group=group)
+                                               subgroup=subgroup, group=group,
+                                               info="Speed of lateral drift through the fractal plane")
         self.fractal_max_iter = params.new("fractal_max_iter",
                                             min=20, max=200, default=64,
-                                            subgroup=subgroup, group=group)
+                                            subgroup=subgroup, group=group,
+                                            info="Maximum iteration count; higher = more detail but slower")
         self.fractal_color_speed = params.new("fractal_color_speed",
                                                min=0.0, max=2.0, default=0.5,
-                                               subgroup=subgroup, group=group)
+                                               subgroup=subgroup, group=group,
+                                               info="Rate at which the colormap offset cycles")
         self.fractal_colormap = params.new("fractal_colormap",
                                             min=0, max=len(COLORMAP_OPTIONS)-1,
                                             default=int(Colormap.TWILIGHT_SHIFTED),
                                             subgroup=subgroup, group=group,
-                                            type=Widget.DROPDOWN, options=Colormap)
+                                            type=Widget.DROPDOWN, options=Colormap,
+                                            info="Color palette applied to iteration depth")
 
         # Work at reduced resolution
         self.rw = width // 2

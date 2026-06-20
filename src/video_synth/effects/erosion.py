@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 """
 Layered Noise Erosion - Stacks animated Perlin noise as a height map and
 applies simulated erosion. Over time, ridges and valleys form and shift.
@@ -20,19 +36,24 @@ class Erosion(EffectBase):
 
         self.erosion_strength = params.new("erosion_strength",
                                             min=0.0, max=1.0, default=0.0,
-                                            subgroup=subgroup, group=group)
+                                            subgroup=subgroup, group=group,
+                                            info="Overall intensity of the erosion effect; 0 = disabled")
         self.erosion_scale = params.new("erosion_scale",
                                          min=1.0, max=10.0, default=3.0,
-                                         subgroup=subgroup, group=group)
+                                         subgroup=subgroup, group=group,
+                                         info="Spatial scale of the erosion noise pattern")
         self.erosion_speed = params.new("erosion_speed",
                                          min=0.0, max=2.0, default=0.2,
-                                         subgroup=subgroup, group=group)
+                                         subgroup=subgroup, group=group,
+                                         info="Rate at which the erosion pattern evolves")
         self.erosion_octaves = params.new("erosion_octaves",
                                            min=1, max=6, default=4,
-                                           subgroup=subgroup, group=group)
+                                           subgroup=subgroup, group=group,
+                                           info="Number of noise octaves; higher = more fine detail")
         self.erosion_sharpness = params.new("erosion_sharpness",
                                              min=0.0, max=1.0, default=0.3,
-                                             subgroup=subgroup, group=group)
+                                             subgroup=subgroup, group=group,
+                                             info="Sharpens/ridges the erosion pattern")
 
         # Work at half res
         self.rw = width // 2

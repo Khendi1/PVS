@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import enum
 import logging
 from param import ParamTable, Param
@@ -73,6 +89,12 @@ class PyQTGUI(QMainWindow):
 
         self.mixer_widgets = {}
         self.param_widgets = {}
+
+        # Section-pane dropdown state (populated by _create_section_scrolls / _build_dropdown_pane)
+        self._section_scrolls = {}      # key → QScrollArea
+        self._pane_dropdowns = {}       # pane_id → QComboBox
+        self._pane_current = {}         # pane_id → current section key
+        self._pane_content_layouts = {} # pane_id → QVBoxLayout of content holder
 
         self.osc_banks = [(effect_manager.oscs, effect_manager.group.name) for effect_manager in effects]
 
@@ -289,6 +311,10 @@ class PyQTGUI(QMainWindow):
         # Clear widget tracking
         self.mixer_widgets.clear()
         self.param_widgets.clear()
+        self._section_scrolls.clear()
+        self._pane_dropdowns.clear()
+        self._pane_current.clear()
+        self._pane_content_layouts.clear()
 
         # Replace central widget (destroys all child widgets)
         old_widget = self.central_widget
@@ -311,64 +337,141 @@ class PyQTGUI(QMainWindow):
                 self._create_tabbed_layout()
 
 
+    # ------------------------------------------------------------------ #
+    #  Shared section-pane helpers (dropdown-driven content areas)        #
+    # ------------------------------------------------------------------ #
+
+    _SECTION_KEYS = ['src1_effects', 'src1_animations', 'src2_effects', 'src2_animations', 'post_effects']
+    _SECTION_LABELS = {
+        'src1_effects':    'Src 1 Effects',
+        'src1_animations': 'Src 1 Animations',
+        'src2_effects':    'Src 2 Effects',
+        'src2_animations': 'Src 2 Animations',
+        'post_effects':    'Post Effects',
+    }
+
+    def _create_section_scrolls(self):
+        """Create the 5 section scroll areas and wire up layout attributes used by create_ui()."""
+        self._section_scrolls = {}
+        for key in self._SECTION_KEYS:
+            container = QWidget()
+            QVBoxLayout(container)  # layout owned by container
+            scroll = QScrollArea()
+            scroll.setWidgetResizable(True)
+            scroll.setWidget(container)
+            self._section_scrolls[key] = scroll
+
+        # Assign the layout attributes create_ui() depends on
+        self.src1_effects_layout    = self._section_scrolls['src1_effects'].widget().layout()
+        self.src1_animations_layout = self._section_scrolls['src1_animations'].widget().layout()
+        self.src2_effects_layout    = self._section_scrolls['src2_effects'].widget().layout()
+        self.src2_animations_layout = self._section_scrolls['src2_animations'].widget().layout()
+        self.post_effects_layout    = self._section_scrolls['post_effects'].widget().layout()
+        self.post_effects_container = self._section_scrolls['post_effects'].widget()
+
+        # uncategorized_layout must exist for create_ui() even though it isn't in any pane
+        _unc = QWidget()
+        self.uncategorized_layout = QVBoxLayout(_unc)
+        self._uncategorized_container = _unc  # keep alive
+
+    def _build_dropdown_pane(self, pane_id, initial_key):
+        """Return a QWidget containing a section-select dropdown and a content holder."""
+        pane = QWidget()
+        pane_layout = QVBoxLayout(pane)
+        pane_layout.setContentsMargins(0, 0, 0, 0)
+        pane_layout.setSpacing(2)
+
+        dropdown = QComboBox()
+        for key in self._SECTION_KEYS:
+            dropdown.addItem(self._SECTION_LABELS[key], key)
+        dropdown.setCurrentIndex(self._SECTION_KEYS.index(initial_key))
+        pane_layout.addWidget(dropdown)
+
+        content_holder = QWidget()
+        holder_layout = QVBoxLayout(content_holder)
+        holder_layout.setContentsMargins(0, 0, 0, 0)
+        holder_layout.setSpacing(0)
+        holder_layout.addWidget(self._section_scrolls[initial_key])
+        pane_layout.addWidget(content_holder, 1)
+
+        self._pane_dropdowns[pane_id]        = dropdown
+        self._pane_current[pane_id]          = initial_key
+        self._pane_content_layouts[pane_id]  = holder_layout
+
+        dropdown.currentIndexChanged.connect(
+            lambda idx, pid=pane_id, cb=dropdown: self._on_section_changed(pid, cb.itemData(idx))
+        )
+        return pane
+
+    def _sync_pane_exclusion(self):
+        """After all panes are built, disable each pane's current selection in every other pane."""
+        pane_ids = list(self._pane_dropdowns.keys())
+        for pid in pane_ids:
+            current_key = self._pane_current[pid]
+            for other_pid in pane_ids:
+                if other_pid == pid:
+                    continue
+                other_cb = self._pane_dropdowns[other_pid]
+                for i in range(other_cb.count()):
+                    if other_cb.itemData(i) == current_key:
+                        item = other_cb.model().item(i)
+                        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+                        break
+
+    def _on_section_changed(self, pane_id, new_key):
+        """Handle a section dropdown change: reparent content and update cross-pane exclusion."""
+        if not new_key or new_key == self._pane_current.get(pane_id):
+            return
+        old_key = self._pane_current[pane_id]
+        pane_ids = list(self._pane_dropdowns.keys())
+
+        # Update cross-pane disable/enable in all other panes
+        for other_pid in pane_ids:
+            if other_pid == pane_id:
+                continue
+            other_cb = self._pane_dropdowns[other_pid]
+            for i in range(other_cb.count()):
+                item_key = other_cb.itemData(i)
+                item = other_cb.model().item(i)
+                if item_key == old_key:
+                    # old_key is now free — re-enable unless another pane still uses it
+                    still_used = any(
+                        self._pane_current[p] == old_key
+                        for p in pane_ids if p != pane_id
+                    )
+                    if not still_used:
+                        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEnabled)
+                elif item_key == new_key:
+                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+
+        # Swap content widgets
+        holder_layout = self._pane_content_layouts[pane_id]
+        old_scroll = self._section_scrolls[old_key]
+        holder_layout.removeWidget(old_scroll)
+        old_scroll.setParent(None)
+
+        new_scroll = self._section_scrolls[new_key]
+        holder_layout.addWidget(new_scroll)
+
+        self._pane_current[pane_id] = new_key
+
     def _create_quad_layout(self):
         self.root_layout = QGridLayout(self.central_widget)
-        self.root_layout.setContentsMargins(0, 0, 0, 0) # No margins around the grid
-        self.root_layout.setSpacing(0) # No space between cells in the grid
+        self.root_layout.setContentsMargins(0, 0, 0, 0)
+        self.root_layout.setSpacing(0)
 
-        # --- Left Column (as a single widget spanning two rows) ---
+        # --- Left Column: two dropdown-driven section panes ---
+        self._create_section_scrolls()
+
         left_column_widget = QWidget()
         left_column_layout = QVBoxLayout(left_column_widget)
-        
-        # Top-Left Tabs
-        top_left_tabs = QTabWidget()
-        left_column_layout.addWidget(top_left_tabs, 1) # 50% height
 
-        # Src 1 Effects Tab
-        src1_effects_container = QWidget()
-        self.src1_effects_layout = QVBoxLayout(src1_effects_container)
-        src1_effects_scroll = QScrollArea()
-        src1_effects_scroll.setWidgetResizable(True)
-        src1_effects_scroll.setWidget(src1_effects_container)
-        top_left_tabs.addTab(src1_effects_scroll, "Src 1 Effects")
+        top_left_pane    = self._build_dropdown_pane('top',    'src1_effects')
+        bottom_left_pane = self._build_dropdown_pane('bottom', 'post_effects')
+        self._sync_pane_exclusion()
 
-        # Src 1 Animations Tab
-        src1_animations_container = QWidget()
-        self.src1_animations_layout = QVBoxLayout(src1_animations_container)
-        src1_animations_scroll = QScrollArea()
-        src1_animations_scroll.setWidgetResizable(True)
-        src1_animations_scroll.setWidget(src1_animations_container)
-        top_left_tabs.addTab(src1_animations_scroll, "Src 1 Animations")
-
-        # Src 2 Effects Tab
-        src2_effects_container = QWidget()
-        self.src2_effects_layout = QVBoxLayout(src2_effects_container)
-        src2_effects_scroll = QScrollArea()
-        src2_effects_scroll.setWidgetResizable(True)
-        src2_effects_scroll.setWidget(src2_effects_container)
-        top_left_tabs.addTab(src2_effects_scroll, "Src 2 Effects")
-
-        # Src 2 Animations Tab
-        src2_animations_container = QWidget()
-        self.src2_animations_layout = QVBoxLayout(src2_animations_container)
-        src2_animations_scroll = QScrollArea()
-        src2_animations_scroll.setWidgetResizable(True)
-        src2_animations_scroll.setWidget(src2_animations_container)
-        top_left_tabs.addTab(src2_animations_scroll, "Src 2 Animations")
-
-        # Bottom-Left Tabs
-        bottom_left_tabs = QTabWidget()
-        left_column_layout.addWidget(bottom_left_tabs, 1) # 50% height
-        self.post_effects_container = QWidget() # Make it an attribute
-        self.post_effects_layout = QVBoxLayout(self.post_effects_container)
-        bottom_left_tabs.addTab(self.post_effects_container, "Post Effects") # Directly add the container
-
-        uncategorized_container = QWidget()
-        self.uncategorized_layout = QVBoxLayout(uncategorized_container)
-        uncategorized_scroll = QScrollArea()
-        uncategorized_scroll.setWidgetResizable(True)
-        uncategorized_scroll.setWidget(uncategorized_container)
-        bottom_left_tabs.addTab(uncategorized_scroll, "Uncategorized")
+        left_column_layout.addWidget(top_left_pane,    1)
+        left_column_layout.addWidget(bottom_left_pane, 1)
 
         self.root_layout.addWidget(left_column_widget, 0, 0, 2, 1)
 
@@ -466,104 +569,54 @@ class PyQTGUI(QMainWindow):
     def _create_quad_full_layout(self):
         """
         4-quadrant layout without video preview.
-        Src 2 Effects/Animations tabs replace the video player in the top-right.
-        All 4 quadrants are equal size.
+        All three source/post panes are dropdown-driven (mutually exclusive).
         """
         self.root_layout = QGridLayout(self.central_widget)
         self.root_layout.setContentsMargins(0, 0, 0, 0)
         self.root_layout.setSpacing(0)
 
-        # --- Top-Left: Src 1 Effects + Src 1 Animations ---
-        top_left_tabs = QTabWidget()
+        self._create_section_scrolls()
 
-        src1_effects_container = QWidget()
-        self.src1_effects_layout = QVBoxLayout(src1_effects_container)
-        src1_effects_scroll = QScrollArea()
-        src1_effects_scroll.setWidgetResizable(True)
-        src1_effects_scroll.setWidget(src1_effects_container)
-        top_left_tabs.addTab(src1_effects_scroll, "Src 1 Effects")
+        # --- Top-Left: dropdown pane (default: Src 1 Effects) ---
+        self.root_layout.addWidget(self._build_dropdown_pane('top_left', 'src1_effects'), 0, 0)
 
-        src1_animations_container = QWidget()
-        self.src1_animations_layout = QVBoxLayout(src1_animations_container)
-        src1_animations_scroll = QScrollArea()
-        src1_animations_scroll.setWidgetResizable(True)
-        src1_animations_scroll.setWidget(src1_animations_container)
-        top_left_tabs.addTab(src1_animations_scroll, "Src 1 Animations")
-
-        self.root_layout.addWidget(top_left_tabs, 0, 0)
-
-        # --- Top-Right: Src 2 Effects + Src 2 Animations + Reset Buttons ---
+        # --- Top-Right: reset buttons + dropdown pane (default: Src 2 Effects) ---
         top_right_widget = QWidget()
         top_right_outer = QHBoxLayout(top_right_widget)
         top_right_outer.setContentsMargins(0, 0, 0, 0)
         top_right_outer.setSpacing(0)
 
-        # Reset button column
         button_column_layout = QVBoxLayout()
-
         button_r1 = QPushButton("R1")
         button_r1.setFixedWidth(30)
         button_r1.setToolTip("Reset Source 1 Params")
         button_r1.clicked.connect(self._reset_src1_params)
         button_column_layout.addWidget(button_r1)
-
         button_r2 = QPushButton("R2")
         button_r2.setFixedWidth(30)
         button_r2.setToolTip("Reset Source 2 Params")
         button_r2.clicked.connect(self._reset_src2_params)
         button_column_layout.addWidget(button_r2)
-
         button_rp = QPushButton("RP")
         button_rp.setFixedWidth(30)
         button_rp.setToolTip("Reset Post-Processing Params")
         button_rp.clicked.connect(self._reset_post_params)
         button_column_layout.addWidget(button_rp)
-
         button_ra = QPushButton("RA")
         button_ra.setFixedWidth(30)
         button_ra.setToolTip("Reset All Params")
         button_ra.clicked.connect(self._reset_all_params)
         button_column_layout.addWidget(button_ra)
-
         button_column_layout.addStretch(1)
         top_right_outer.addLayout(button_column_layout)
-
-        # Src 2 tabs
-        top_right_tabs = QTabWidget()
-
-        src2_effects_container = QWidget()
-        self.src2_effects_layout = QVBoxLayout(src2_effects_container)
-        src2_effects_scroll = QScrollArea()
-        src2_effects_scroll.setWidgetResizable(True)
-        src2_effects_scroll.setWidget(src2_effects_container)
-        top_right_tabs.addTab(src2_effects_scroll, "Src 2 Effects")
-
-        src2_animations_container = QWidget()
-        self.src2_animations_layout = QVBoxLayout(src2_animations_container)
-        src2_animations_scroll = QScrollArea()
-        src2_animations_scroll.setWidgetResizable(True)
-        src2_animations_scroll.setWidget(src2_animations_container)
-        top_right_tabs.addTab(src2_animations_scroll, "Src 2 Animations")
-
-        top_right_outer.addWidget(top_right_tabs, 1)
+        top_right_outer.addWidget(self._build_dropdown_pane('top_right', 'src2_effects'), 1)
 
         self.root_layout.addWidget(top_right_widget, 0, 1)
 
-        # --- Bottom-Left: Post Effects + Uncategorized ---
-        bottom_left_tabs = QTabWidget()
+        # --- Bottom-Left: dropdown pane (default: Post Effects) ---
+        self.root_layout.addWidget(self._build_dropdown_pane('bottom_left', 'post_effects'), 1, 0)
 
-        self.post_effects_container = QWidget()
-        self.post_effects_layout = QVBoxLayout(self.post_effects_container)
-        bottom_left_tabs.addTab(self.post_effects_container, "Post Effects")
-
-        uncategorized_container = QWidget()
-        self.uncategorized_layout = QVBoxLayout(uncategorized_container)
-        uncategorized_scroll = QScrollArea()
-        uncategorized_scroll.setWidgetResizable(True)
-        uncategorized_scroll.setWidget(uncategorized_container)
-        bottom_left_tabs.addTab(uncategorized_scroll, "Uncategorized")
-
-        self.root_layout.addWidget(bottom_left_tabs, 1, 0)
+        self._sync_pane_exclusion()
 
         # --- Bottom-Right: Mixer + User Settings + Logs ---
         bottom_right_tabs = QTabWidget()
@@ -614,45 +667,19 @@ class PyQTGUI(QMainWindow):
     def _create_tabbed_layout(self):
         self.root_layout = QVBoxLayout(self.central_widget)
 
-        # Top Pane
-        top_pane_tabs = QTabWidget()
-        self.root_layout.addWidget(top_pane_tabs)
+        self._create_section_scrolls()
 
-        # Src 1 Effects Tab
-        src1_effects_container = QWidget()
-        self.src1_effects_layout = QVBoxLayout(src1_effects_container)
-        src1_effects_scroll = QScrollArea()
-        src1_effects_scroll.setWidgetResizable(True)
-        src1_effects_scroll.setWidget(src1_effects_container)
-        top_pane_tabs.addTab(src1_effects_scroll, "Src 1 Effects")
+        # Top Pane: dropdown-driven section selector
+        top_pane = self._build_dropdown_pane('top', 'src1_effects')
+        self.root_layout.addWidget(top_pane)
 
-        # Src 1 Animations Tab
-        src1_animations_container = QWidget()
-        self.src1_animations_layout = QVBoxLayout(src1_animations_container)
-        src1_animations_scroll = QScrollArea()
-        src1_animations_scroll.setWidgetResizable(True)
-        src1_animations_scroll.setWidget(src1_animations_container)
-        top_pane_tabs.addTab(src1_animations_scroll, "Src 1 Animations")
-
-        # Src 2 Effects Tab
-        src2_effects_container = QWidget()
-        self.src2_effects_layout = QVBoxLayout(src2_effects_container)
-        src2_effects_scroll = QScrollArea()
-        src2_effects_scroll.setWidgetResizable(True)
-        src2_effects_scroll.setWidget(src2_effects_container)
-        top_pane_tabs.addTab(src2_effects_scroll, "Src 2 Effects")
-
-        # Src 2 Animations Tab
-        src2_animations_container = QWidget()
-        self.src2_animations_layout = QVBoxLayout(src2_animations_container)
-        src2_animations_scroll = QScrollArea()
-        src2_animations_scroll.setWidgetResizable(True)
-        src2_animations_scroll.setWidget(src2_animations_container)
-        top_pane_tabs.addTab(src2_animations_scroll, "Src 2 Animations")
-
-        # Bottom Pane
+        # Bottom Pane: dropdown-driven section selector + Mixer/Settings/MIDI/OSC tabs
         bottom_pane_tabs = QTabWidget()
         self.root_layout.addWidget(bottom_pane_tabs)
+
+        bottom_section_pane = self._build_dropdown_pane('bottom', 'post_effects')
+        self._sync_pane_exclusion()
+        bottom_pane_tabs.addTab(bottom_section_pane, "Section")
 
         # Mixer Tab
         mixer_container = QWidget()
@@ -661,19 +688,6 @@ class PyQTGUI(QMainWindow):
         mixer_scroll.setWidgetResizable(True)
         mixer_scroll.setWidget(mixer_container)
         bottom_pane_tabs.addTab(mixer_scroll, "Mixer")
-
-        # Post Effects Tab
-        self.post_effects_container = QWidget()
-        self.post_effects_layout = QVBoxLayout(self.post_effects_container)
-        bottom_pane_tabs.addTab(self.post_effects_container, "Post Effects")
-
-        # Uncategorized Tab
-        uncategorized_container = QWidget()
-        self.uncategorized_layout = QVBoxLayout(uncategorized_container)
-        uncategorized_scroll = QScrollArea()
-        uncategorized_scroll.setWidgetResizable(True)
-        uncategorized_scroll.setWidget(uncategorized_container)
-        bottom_pane_tabs.addTab(uncategorized_scroll, "Uncategorized")
 
         # User Settings Tab
         user_settings_container = QWidget()
@@ -908,6 +922,7 @@ class PyQTGUI(QMainWindow):
                             s1_combo.addItems([str(o) for o in s1_param.options])
                             s1_combo.setCurrentText(str(s1_param.value))
                             s1_combo.currentTextChanged.connect(lambda text, p=s1_param: self._on_dropdown_change(p, text))
+                            s1_combo.currentTextChanged.connect(lambda _: self._update_mixer_visibility())
                             source_layout.addWidget(s1_label)
                             source_layout.addWidget(s1_combo)
 
@@ -917,6 +932,7 @@ class PyQTGUI(QMainWindow):
                             s2_combo.addItems([str(o) for o in s2_param.options])
                             s2_combo.setCurrentText(str(s2_param.value))
                             s2_combo.currentTextChanged.connect(lambda text, p=s2_param: self._on_dropdown_change(p, text))
+                            s2_combo.currentTextChanged.connect(lambda _: self._update_mixer_visibility())
                             source_layout.addWidget(s2_label)
                             source_layout.addWidget(s2_combo)
 
@@ -928,25 +944,30 @@ class PyQTGUI(QMainWindow):
 
                         if blend_mode_param:
                             widget = self._create_param_widget(blend_mode_param)
+                            self.mixer_widgets['blend_mode'] = widget
                             target_layout.addWidget(widget)
 
                         if len(chroma_key_hue_sat_val_params) == 6:
                             chroma_key_dict = {p.name: p for p in chroma_key_hue_sat_val_params}
-                            color_pickers_layout = QHBoxLayout()
-                            
+                            chroma_container = QWidget()
+                            color_pickers_layout = QHBoxLayout(chroma_container)
+                            color_pickers_layout.setContentsMargins(0, 0, 0, 0)
+
                             upper_picker = ColorPickerWidget('Upper Color', chroma_key_dict['upper_hue'], chroma_key_dict['upper_sat'], chroma_key_dict['upper_val'])
                             lower_picker = ColorPickerWidget('Lower Color', chroma_key_dict['lower_hue'], chroma_key_dict['lower_sat'], chroma_key_dict['lower_val'])
-                            
+
                             color_pickers_layout.addWidget(upper_picker)
                             color_pickers_layout.addWidget(lower_picker)
-                            
-                            target_layout.addLayout(color_pickers_layout)
-                            
+
+                            target_layout.addWidget(chroma_container)
+
                             self.mixer_widgets['upper_color_picker'] = upper_picker
                             self.mixer_widgets['lower_color_picker'] = lower_picker
+                            self.mixer_widgets['chroma_pickers'] = chroma_container
 
                         for param in remaining_params:
                             widget = self._create_param_widget(param)
+                            self.mixer_widgets[param.name] = widget
                             target_layout.addWidget(widget)
 
                 else:
@@ -1004,6 +1025,10 @@ class PyQTGUI(QMainWindow):
         label_text = display_name if display_name else param.name.replace("_", " ").title()
         label = QLabel(label_text)
         label.setFixedWidth(100)
+        if param.info:
+            tooltip = f"{param.info}\n[{param.name}]"
+            label.setToolTip(tooltip)
+            widget.setToolTip(tooltip)
         layout.addWidget(label)
 
         if param.type == Widget.RADIO:
@@ -1322,21 +1347,41 @@ class PyQTGUI(QMainWindow):
 
 
     def _update_mixer_visibility(self):
+        if not self.mixer:
+            return
         blend_mode = self.mixer.blend_mode.value
+        is_alpha  = blend_mode == MixModes.ALPHA_BLEND.value
+        is_luma   = blend_mode == MixModes.LUMA_KEY.value
+        is_chroma = blend_mode == MixModes.CHROMA_KEY.value
 
-        widgets_visibility = {
-            'alpha_blend': blend_mode == MixModes.ALPHA_BLEND.value,
-            'luma_threshold': blend_mode == MixModes.LUMA_KEY.value,
-            'luma_selection': blend_mode == MixModes.LUMA_KEY.value,
-            'upper_color_picker': blend_mode == MixModes.CHROMA_KEY.value,
-            'lower_color_picker': blend_mode == MixModes.CHROMA_KEY.value,
+        # Which params are visible per mode
+        _alpha_only  = {'alpha_blend'}
+        _luma_only   = {'luma_threshold', 'luma_selection', 'luma_blur'}
+        _chroma_only = {'chroma_pickers', 'upper_color_picker', 'lower_color_picker'}
+        # Source-conditional params — visible only when the matching source type is selected
+        src1 = str(self.mixer.selected_source1.value) if self.mixer else ''
+        src2 = str(self.mixer.selected_source2.value) if self.mixer else ''
+        _src_conditional = {
+            'video_file_src1': src1 == 'VIDEO',
+            'video_file_src2': src2 == 'VIDEO',
+            'video_pause_src1': src1 == 'VIDEO',
+            'video_pause_src2': src2 == 'VIDEO',
+            'video_scrub_src1': src1 == 'VIDEO',
+            'video_scrub_src2': src2 == 'VIDEO',
+            'image_file_src1': src1 == 'IMAGE',
+            'image_file_src2': src2 == 'IMAGE',
         }
 
         for name, widget in self.mixer_widgets.items():
-            if name in widgets_visibility:
-                widget.setVisible(widgets_visibility[name])
-            elif name == 'blend_mode':
-                widget.setVisible(True) # Always show the blend mode selector
+            if name in _alpha_only:
+                widget.setVisible(is_alpha)
+            elif name in _luma_only:
+                widget.setVisible(is_luma)
+            elif name in _chroma_only:
+                widget.setVisible(is_chroma)
+            elif name in _src_conditional:
+                widget.setVisible(_src_conditional[name])
+            # blend_mode, source_1/2 dropdowns, swap_sources — always visible
 
 
     def _refresh_all_widgets(self):

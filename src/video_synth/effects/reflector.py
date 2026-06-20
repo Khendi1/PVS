@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 import logging
@@ -27,16 +43,20 @@ class Reflector(EffectBase):
         self._mode = params.new("reflection_mode",
                                 min=0, max=len(ReflectionMode) - 1, default=ReflectionMode.NONE.value,
                                 group=group, subgroup=subgroup,
-                                type=Widget.DROPDOWN, options=ReflectionMode)
+                                type=Widget.DROPDOWN, options=ReflectionMode,
+                                info="Selects the reflection type (horizontal, vertical, radial, etc.)")
         self.segments = params.new("reflector_segments",
                                    min=0, max=10, default=0,
-                                   subgroup=subgroup, group=group)
+                                   subgroup=subgroup, group=group,
+                                   info="Number of kaleidoscope segments for radial mode")
         self.zoom = params.new("reflector_z",
                                min=0.5, max=2, default=1.0,
-                               subgroup=subgroup, group=group)
+                               subgroup=subgroup, group=group,
+                               info="Zoom level applied before reflection")
         self.rotation = params.new("reflector_r",
                                    min=-360, max=360, default=0.0,
-                                   subgroup=subgroup, group=group)
+                                   subgroup=subgroup, group=group,
+                                   info="Rotation of the canvas before reflection (degrees)")
         self.width = None 
         self.height = None
 

@@ -1,3 +1,21 @@
+/*
+ * Video Synth — real-time collaborative visual art synthesizer.
+ * Copyright (C) 2026 Kyle Henderson
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { setParam, resetParam } from '../api.js'
 import LfoPanel from './LfoPanel.jsx'
@@ -38,8 +56,10 @@ function ParamDropdown({ param }) {
   const label = param.name.replace(/^[A-Z0-9_]+\./, '').replace(/_/g, ' ')
   const options = param.options || []
 
+  const tooltip = param.info ? `${param.info}\n[${param.name}]` : param.name
+
   return (
-    <div className="param-row dropdown" title={param.name}>
+    <div className="param-row dropdown" title={tooltip}>
       <span className="param-label">{label}</span>
       <select
         className="param-select"
@@ -56,14 +76,42 @@ function ParamDropdown({ param }) {
   )
 }
 
+function ParamToggle({ param }) {
+  const [checked, setChecked] = useState(!!param.value)
+
+  useEffect(() => { setChecked(!!param.value) }, [param.value])
+
+  function handleChange(e) {
+    const on = e.target.checked
+    setChecked(on)
+    setParam(param.name, on ? 1 : 0).catch(() => {})
+  }
+
+  const label = param.name.replace(/^[A-Z0-9_]+\./, '').replace(/_/g, ' ')
+  const tooltip = param.info ? `${param.info}\n[${param.name}]` : param.name
+
+  return (
+    <div className="param-row toggle" title={tooltip}>
+      <span className="param-label">{label}</span>
+      <label className="param-toggle-switch">
+        <input type="checkbox" checked={checked} onChange={handleChange} />
+        <span className="param-toggle-track" />
+      </label>
+    </div>
+  )
+}
+
 function ParamSlider({ param }) {
   const isDropdown = param.options && param.options.length > 0 &&
     (param.type.includes('DROPDOWN') || param.type.includes('RADIO') || typeof param.value === 'string')
+
+  const isToggle = param.type.includes('TOGGLE')
 
   // showLfo must be declared before any early return to satisfy React's hook rules
   const [showLfo, setShowLfo] = useState(false)
 
   if (isDropdown) return <ParamDropdown param={param} />
+  if (isToggle) return <ParamToggle param={param} />
 
   const range = param.max - param.min
   const step = range > 0 ? range / 200 : 0.01
@@ -115,9 +163,11 @@ function ParamSlider({ param }) {
 
   const label = param.name.replace(/^[A-Z0-9_]+\./, '').replace(/_/g, ' ')
 
+  const tooltip = param.info ? `${param.info}\n[${param.name}]` : param.name
+
   return (
     <div className="param-col">
-      <div className="param-row" title={param.name}>
+      <div className="param-row" title={tooltip}>
         <span className="param-label">{label}</span>
         <input
           type="range"

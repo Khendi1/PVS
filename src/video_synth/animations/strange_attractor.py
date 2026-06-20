@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 import math
@@ -16,105 +32,133 @@ class StrangeAttractor(Animation):
         self.attractor_type = params.new("attractor_type",
                                          min=0, max=len(AttractorType)-1, default=0,
                                          group=group, subgroup=subgroup,
-                                         type=Widget.DROPDOWN, options=AttractorType)
+                                         type=Widget.DROPDOWN, options=AttractorType,
+                                         info="Selects which attractor system to simulate")
         self.prev_attractor_type = self.attractor_type.value
 
         # Common parameters
         self.dt = params.new("attractor_dt",
                              min=0.001, max=0.05, default=0.01,
-                             subgroup=subgroup, group=group)
+                             subgroup=subgroup, group=group,
+                             info="Integration time step; smaller = more accurate but slower growth")
         self.num_steps = params.new("attractor_num_steps",
                                     min=1, max=50, default=10,
-                                    subgroup=subgroup, group=group)
+                                    subgroup=subgroup, group=group,
+                                    info="Steps computed per rendered frame")
         self.scale = params.new("attractor_scale",
                                 min=1.0, max=20.0, default=5.0,
-                                subgroup=subgroup, group=group)
+                                subgroup=subgroup, group=group,
+                                info="Zoom level / coordinate scaling")
         self.line_width = params.new("attractor_line_width",
                                      min=1, max=5, default=1,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Width of the drawn trajectory line")
         self.fade = params.new("attractor_fade",
                                min=0.0, max=1.0, default=0.95,
-                               subgroup=subgroup, group=group)
+                               subgroup=subgroup, group=group,
+                               info="Alpha of previous frame overlay; near 1.0 = long persistent trails")
 
         # Color parameters
         self.attractor_r = params.new("attractor_r",
                                       min=0, max=255, default=255,
-                                      subgroup=subgroup, group=group)
+                                      subgroup=subgroup, group=group,
+                                      info="Red channel of the attractor trail")
         self.attractor_g = params.new("attractor_g",
                                       min=0, max=255, default=255,
-                                      subgroup=subgroup, group=group)
+                                      subgroup=subgroup, group=group,
+                                      info="Green channel of the attractor trail")
         self.attractor_b = params.new("attractor_b",
                                       min=0, max=255, default=255,
-                                      subgroup=subgroup, group=group)
+                                      subgroup=subgroup, group=group,
+                                      info="Blue channel of the attractor trail")
 
         # Lorenz Attractor parameters (3D)
         self.lorenz_sigma = params.new("lorenz_sigma",
                                        min=1.0, max=20.0, default=10.0,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Lorenz σ (Prandtl number)")
         self.lorenz_rho = params.new("lorenz_rho",
                                      min=1.0, max=50.0, default=28.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Lorenz ρ (Rayleigh number); near 28 produces the classic butterfly")
         self.lorenz_beta = params.new("lorenz_beta",
                                       min=0.1, max=5.0, default=2.667,
-                                      subgroup=subgroup, group=group)
+                                      subgroup=subgroup, group=group,
+                                      info="Lorenz β (geometric factor)")
 
         # Clifford Attractor parameters (2D) - Beautiful spiraling patterns
         self.clifford_a = params.new("clifford_a",
                                      min=-3.0, max=3.0, default=-1.4,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Clifford attractor coefficient A")
         self.clifford_b = params.new("clifford_b",
                                      min=-3.0, max=3.0, default=1.6,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Clifford attractor coefficient B")
         self.clifford_c = params.new("clifford_c",
                                      min=-3.0, max=3.0, default=1.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Clifford attractor coefficient C")
         self.clifford_d = params.new("clifford_d",
                                      min=-3.0, max=3.0, default=0.7,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Clifford attractor coefficient D")
 
         # De Jong Attractor parameters (2D) - Similar elegance, different character
         self.dejong_a = params.new("dejong_a",
                                    min=-3.0, max=3.0, default=-2.0,
-                                   subgroup=subgroup, group=group)
+                                   subgroup=subgroup, group=group,
+                                   info="De Jong attractor coefficient A")
         self.dejong_b = params.new("dejong_b",
                                    min=-3.0, max=3.0, default=-2.0,
-                                   subgroup=subgroup, group=group)
+                                   subgroup=subgroup, group=group,
+                                   info="De Jong attractor coefficient B")
         self.dejong_c = params.new("dejong_c",
                                    min=-3.0, max=3.0, default=-1.2,
-                                   subgroup=subgroup, group=group)
+                                   subgroup=subgroup, group=group,
+                                   info="De Jong attractor coefficient C")
         self.dejong_d = params.new("dejong_d",
                                    min=-3.0, max=3.0, default=2.0,
-                                   subgroup=subgroup, group=group)
+                                   subgroup=subgroup, group=group,
+                                   info="De Jong attractor coefficient D")
 
         # Aizawa Attractor parameters (3D) - Organic chaotic system
         self.aizawa_a = params.new("aizawa_a",
                                    min=0.1, max=1.5, default=0.95,
-                                   subgroup=subgroup, group=group)
+                                   subgroup=subgroup, group=group,
+                                   info="Aizawa attractor coefficient A")
         self.aizawa_b = params.new("aizawa_b",
                                    min=0.1, max=1.5, default=0.7,
-                                   subgroup=subgroup, group=group)
+                                   subgroup=subgroup, group=group,
+                                   info="Aizawa attractor coefficient B")
         self.aizawa_c = params.new("aizawa_c",
                                    min=0.1, max=1.0, default=0.6,
-                                   subgroup=subgroup, group=group)
+                                   subgroup=subgroup, group=group,
+                                   info="Aizawa attractor coefficient C")
         self.aizawa_d = params.new("aizawa_d",
                                    min=0.1, max=5.0, default=3.5,
-                                   subgroup=subgroup, group=group)
+                                   subgroup=subgroup, group=group,
+                                   info="Aizawa attractor coefficient D")
         self.aizawa_e = params.new("aizawa_e",
                                    min=0.0, max=1.0, default=0.25,
-                                   subgroup=subgroup, group=group)
+                                   subgroup=subgroup, group=group,
+                                   info="Aizawa attractor coefficient E")
         self.aizawa_f = params.new("aizawa_f",
                                    min=0.0, max=0.5, default=0.1,
-                                   subgroup=subgroup, group=group)
+                                   subgroup=subgroup, group=group,
+                                   info="Aizawa attractor coefficient F")
 
         # Thomas Attractor parameters (3D) - Smooth, ribbon-like trajectories
         self.thomas_b = params.new("thomas_b",
                                    min=0.1, max=0.3, default=0.208186,
-                                   subgroup=subgroup, group=group)
+                                   subgroup=subgroup, group=group,
+                                   info="Thomas cyclically symmetric attractor dissipation coefficient")
 
         # Morphing - slowly interpolate coefficients over time
         self.morph_speed = params.new("attractor_morph_speed",
                                        min=0.0, max=1.0, default=0.0,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Rate at which attractor parameters slowly drift/morph")
 
         # Preset coefficient targets for morphing (2D attractors: Clifford/De Jong)
         self._morph_presets = [

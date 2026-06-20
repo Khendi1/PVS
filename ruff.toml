@@ -1,0 +1,38 @@
+# Ruff configuration for the Video Synth project.
+# Standalone config (NOT under [tool.ruff] in pyproject.toml) — pyproject.toml
+# is owned by another agent and must not be touched.
+
+line-length = 100
+target-version = "py311"
+
+# Paths Ruff should never look at. Generated output, vendored web assets,
+# build artifacts, the virtualenv, and runtime YAML state.
+exclude = [
+    ".venv",
+    "web",
+    "build",
+    "dist",
+    ".VSCodeCounter",
+    "save",
+]
+
+[lint]
+# Pragmatic selection for a large existing codebase. These rule groups are
+# mostly auto-fixable or low-noise; intentionally avoiding broad families
+# (e.g. ANN, D, PL, S) that would flag thousands of existing lines.
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort (import sorting)
+    "UP",  # pyupgrade (modernize syntax for the target Python)
+    "B",   # flake8-bugbear (likely bugs / bad practices)
+    "C4",  # flake8-comprehensions
+]
+
+[format]
+# Enable the Ruff formatter (Black-compatible style).
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true

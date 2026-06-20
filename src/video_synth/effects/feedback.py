@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 from collections import deque
@@ -21,35 +37,44 @@ class Feedback(EffectBase):
 
         self.alpha = params.new("alpha",
                                 min=0.0, max=1.0, default=0.0,
-                                subgroup=subgroup, group=group)
+                                subgroup=subgroup, group=group,
+                                info="Blend strength of the feedback frame over the current frame")
         self.temporal_filter = params.new("temporal_filter",
                                           min=0, max=1.0, default=0.0,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Low-pass filter applied across frames to smooth flickering")
         self.feedback_luma_threshold = params.new("feedback_luma_threshold",
                                                   min=0, max=255, default=0,
-                                                  subgroup=subgroup, group=group)
+                                                  subgroup=subgroup, group=group,
+                                                  info="Feedback is only applied to pixels above this brightness")
         self.luma_mode = params.new("luma_mode",
                                     min=LumaMode.WHITE.value, max=LumaMode.BLACK.value, default=LumaMode.WHITE.value,
                                     group=group, subgroup=subgroup,
-                                    type=Widget.RADIO, options=LumaMode)
+                                    type=Widget.RADIO, options=LumaMode,
+                                    info="Whether the threshold selects bright or dark pixels for feedback")
         self.frame_skip = params.new("frame_skip",
                                      min=0, max=10, default=0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Number of frames to skip when reading back the feedback buffer")
         self.buffer_select = params.new("buffer_frame_select",
                                         min=-1, max=20, default=-1,
-                                        subgroup=subgroup, group=group)
+                                        subgroup=subgroup, group=group,
+                                        info="Selects a specific past frame from the buffer; -1 = latest")
         self.buffer_frame_blend = params.new("buffer_frame_blend",
                                              min=0.0, max=1.0, default=0.0,
-                                             subgroup=subgroup, group=group)
+                                             subgroup=subgroup, group=group,
+                                             info="Mix between the live feed and the selected buffer frame")
 
         self.prev_frame_scale = params.new("prev_frame_scale",
                                            min=90, max=110, default=100,
-                                           subgroup=subgroup, group=group)
+                                           subgroup=subgroup, group=group,
+                                           info="Scales the previous frame before blending (100 = no change)")
 
         self.max_buffer_size = 30
         self.buffer_size = params.new("buffer_size",
                                       min=0, max=self.max_buffer_size, default=0,
-                                      subgroup=subgroup, group=group)
+                                      subgroup=subgroup, group=group,
+                                      info="Number of past frames held in memory")
         # this should probably be initialized in reset() to avoid issues with reloading config
         self.frame_buffer = deque(maxlen=self.max_buffer_size)
         # Running sum for efficient frame averaging (avoids converting deque to array every frame)
@@ -59,16 +84,20 @@ class Feedback(EffectBase):
         # Feedback painting - autonomous drift applied to the feedback frame
         self.fb_paint_drift_x = params.new("fb_paint_drift_x",
                                             min=-5.0, max=5.0, default=0.0,
-                                            subgroup=subgroup, group=group)
+                                            subgroup=subgroup, group=group,
+                                            info="Horizontal pixel offset applied to the feedback frame each cycle")
         self.fb_paint_drift_y = params.new("fb_paint_drift_y",
                                             min=-5.0, max=5.0, default=0.0,
-                                            subgroup=subgroup, group=group)
+                                            subgroup=subgroup, group=group,
+                                            info="Vertical pixel offset applied to the feedback frame each cycle")
         self.fb_paint_rotation = params.new("fb_paint_rotation",
                                              min=-2.0, max=2.0, default=0.0,
-                                             subgroup=subgroup, group=group)
+                                             subgroup=subgroup, group=group,
+                                             info="Rotation applied to the feedback frame each cycle (degrees)")
         self.fb_paint_zoom = params.new("fb_paint_zoom",
                                          min=0.99, max=1.01, default=1.0,
-                                         subgroup=subgroup, group=group)
+                                         subgroup=subgroup, group=group,
+                                         info="Subtle zoom applied to the feedback frame each cycle")
 
 
     def paint_drift(self, frame):

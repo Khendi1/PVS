@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 import math
@@ -19,59 +35,72 @@ class Moire(Animation):
         self.blend_mode = params.new("moire_blend",
                                       min=0, max=len(MoireBlend)-1, default=0,
                                       group=group, subgroup=subgroup,
-                                      type=Widget.DROPDOWN, options=MoireBlend)
+                                      type=Widget.DROPDOWN, options=MoireBlend,
+                                      info="How the two layers are composited (e.g. multiply, XOR)")
 
         center_x, center_y = self.width//2, self.height//2
 
         self.pattern_1 = params.new("moire_type_1",
                                     min=0, max=len(MoirePattern)-1, default=0,
                                     group=group, subgroup=subgroup,
-                                    type=Widget.DROPDOWN, options=MoirePattern)
+                                    type=Widget.DROPDOWN, options=MoirePattern,
+                                    info="Shape of layer 1 (lines, circles, dots, etc.)")
         self.freq_1 = params.new("spatial_freq_1",
                                  min=0.01, max=25, default=10.0,
                                  group=group, subgroup=subgroup,
-                                 type=Widget.SLIDER)
+                                 type=Widget.SLIDER,
+                                 info="Spatial frequency (line density) of layer 1")
         self.angle_1 = params.new("angle_1",
                                   min=0, max=360, default=90.0,
                                   group=group, subgroup=subgroup,
-                                  type=Widget.SLIDER)
+                                  type=Widget.SLIDER,
+                                  info="Rotation angle of layer 1 (degrees)")
         self.zoom_1 = params.new("zoom_1",
                                  min=0.05, max=1.5, default=1.0,
                                  group=group, subgroup=subgroup,
-                                 type=Widget.SLIDER)
+                                 type=Widget.SLIDER,
+                                 info="Zoom level of layer 1")
         self.center_x_1 = params.new("moire_center_x_1",
                                      min=0, max=self.width, default=center_x,
                                      group=group, subgroup=subgroup,
-                                     type=Widget.SLIDER)
+                                     type=Widget.SLIDER,
+                                     info="Horizontal center point of layer 1")
         self.center_y_1 = params.new("moire_center_y_1",
                                      min=0, max=self.height, default=center_y,
                                      group=group, subgroup=subgroup,
-                                     type=Widget.SLIDER)
+                                     type=Widget.SLIDER,
+                                     info="Vertical center point of layer 1")
 
         self.pattern_2 = params.new("moire_type_2",
                                     min=0, max=len(MoirePattern)-1, default=0,
                                     group=group, subgroup=subgroup,
-                                    type=Widget.DROPDOWN, options=MoirePattern)
+                                    type=Widget.DROPDOWN, options=MoirePattern,
+                                    info="Shape of layer 2")
         self.freq_2 = params.new("spatial_freq_2",
                                  min=0.01, max=25, default=1.0,
                                  group=group, subgroup=subgroup,
-                                 type=Widget.SLIDER)
+                                 type=Widget.SLIDER,
+                                 info="Spatial frequency of layer 2")
         self.angle_2 = params.new("angle_2",
                                   min=0, max=360, default=0.0,
                                   group=group, subgroup=subgroup,
-                                  type=Widget.SLIDER)
+                                  type=Widget.SLIDER,
+                                  info="Rotation angle of layer 2 (degrees)")
         self.zoom_2 = params.new("zoom_2",
                                  min=0.05, max=1.5, default=1.0,
                                  group=group, subgroup=subgroup,
-                                 type=Widget.SLIDER)
+                                 type=Widget.SLIDER,
+                                 info="Zoom level of layer 2")
         self.center_x_2 = params.new("moire_center_x_2",
                                      min=0, max=self.width, default=center_x,
                                      group=group, subgroup=subgroup,
-                                     type=Widget.SLIDER)
+                                     type=Widget.SLIDER,
+                                     info="Horizontal center point of layer 2")
         self.center_y_2 = params.new("moire_center_y_2",
                                      min=0, max=self.height, default=center_y,
                                      group=group, subgroup=subgroup,
-                                     type=Widget.SLIDER)
+                                     type=Widget.SLIDER,
+                                     info="Vertical center point of layer 2")
 
         # Performance optimization: cache meshgrid (created once, reused every frame)
         self._X, self._Y = np.meshgrid(np.arange(self.width), np.arange(self.height))

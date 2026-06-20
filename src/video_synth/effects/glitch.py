@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 import random
@@ -35,104 +51,133 @@ class Glitch(EffectBase):
 
         self.enable_pixel_shift = params.new("enable_pixel_shift",
                                               group=group, subgroup=subgroup_general,
-                                              type=Widget.TOGGLE)
+                                              type=Widget.TOGGLE,
+                                              info="Randomly shifts horizontal scanline slices")
         self.enable_color_split = params.new("enable_color_split",
                                              group=group, subgroup=subgroup_general,
-                                             type=Widget.TOGGLE)
+                                             type=Widget.TOGGLE,
+                                             info="Offsets R/G/B channels from each other")
         self.enable_block_corruption = params.new("enable_block_corruption",
                                                   group=group, subgroup=subgroup_general,
-                                                  type=Widget.TOGGLE)
+                                                  type=Widget.TOGGLE,
+                                                  info="Replaces random blocks with noise or solid color")
         self.enable_random_rectangles = params.new("enable_random_rectangles",
                                                    group=group, subgroup=subgroup_general,
-                                                   type=Widget.TOGGLE)
+                                                   type=Widget.TOGGLE,
+                                                   info="Draws random colored rectangles over the image")
         self.enable_horizontal_scroll_freeze = params.new("enable_horizontal_scroll_freeze",
                                                           group=group, subgroup=subgroup_general,
-                                                          type=Widget.TOGGLE)
+                                                          type=Widget.TOGGLE,
+                                                          info="Freezes a horizontal band and scrolls it")
 
         self.glitch_duration_frames = params.new("glitch_duration_frames",
                                                  min=1, max=300, default=60,
-                                                 subgroup=subgroup_general, group=group)
+                                                 subgroup=subgroup_general, group=group,
+                                                 info="How many frames a triggered glitch event lasts")
         self.glitch_intensity_max = params.new("glitch_intensity_max",
                                                min=0, max=100, default=50,
-                                               subgroup=subgroup_general, group=group)
+                                               subgroup=subgroup_general, group=group,
+                                               info="Maximum displacement/intensity of glitch artifacts")
         self.glitch_block_size_max = params.new("glitch_block_size_max",
                                                 min=0, max=200, default=60,
-                                                subgroup=subgroup_general, group=group)
+                                                subgroup=subgroup_general, group=group,
+                                                info="Maximum size of corrupted block regions")
         self.band_div = params.new("glitch_band_div",
                                    min=1, max=10, default=5,
-                                   subgroup=subgroup_general, group=group)
+                                   subgroup=subgroup_general, group=group,
+                                   info="Number of horizontal bands scanned for glitching")
         self.num_glitches = params.new("num_glitches",
                                        min=0, max=100, default=0,
-                                       group=group, subgroup=subgroup_general)
+                                       group=group, subgroup=subgroup_general,
+                                       info="Number of simultaneous glitch events")
         self.glitch_size = params.new("glitch_size",
                                       min=1, max=100, default=0,
-                                      group=group, subgroup=subgroup_general)
+                                      group=group, subgroup=subgroup_general,
+                                      info="Size of each individual glitch artifact")
 
         # Slitscan parameters
         subgroup_slitscan = "Glitch_Slitscan"
 
         self.enable_slitscan = params.new("enable_slitscan",
                                           group=group, subgroup=subgroup_slitscan,
-                                          type=Widget.TOGGLE)
+                                          type=Widget.TOGGLE,
+                                          info="Toggle slit-scan effect")
         self.ss_dir = params.new("slitscan_direction",
                                  min=0, max=1, default=0,
                                  group=group, subgroup=subgroup_slitscan,
-                                 type=Widget.TOGGLE)
+                                 type=Widget.TOGGLE,
+                                 info="Horizontal or vertical scan direction")
         self.ss_slice_width = params.new("slitscan_slice_width",
                                          min=1, max=50, default=5,
-                                         group=group, subgroup=subgroup_slitscan)
+                                         group=group, subgroup=subgroup_slitscan,
+                                         info="Width (px) of each captured time slice")
         self.ss_time_offset = params.new("slitscan_time_offset",
                                          min=1, max=60, default=10,
-                                         group=group, subgroup=subgroup_slitscan)
+                                         group=group, subgroup=subgroup_slitscan,
+                                         info="Frame delay between consecutive slices")
         self.ss_speed = params.new("slitscan_speed",
                                    min=0.1, max=10.0, default=1.0,
-                                   group=group, subgroup=subgroup_slitscan)
+                                   group=group, subgroup=subgroup_slitscan,
+                                   info="Rate at which the scan position advances")
         self.ss_reverse = params.new("slitscan_reverse",
                                      min=0, max=1, default=0,
                                      group=group, subgroup=subgroup_slitscan,
-                                     type=Widget.TOGGLE)
+                                     type=Widget.TOGGLE,
+                                     info="Toggle to scan in the opposite direction")
         self.ss_buffer_size = params.new("slitscan_buffer_size",
                                          min=10, max=120, default=60,
-                                         group=group, subgroup=subgroup_slitscan)
+                                         group=group, subgroup=subgroup_slitscan,
+                                         info="Number of past frames held for slit-scan compositing")
         self.ss_blend_mode = params.new("slitscan_blend_mode",
                                         min=0, max=2, default=0,
                                         group=group, subgroup=subgroup_slitscan,
-                                        type=Widget.DROPDOWN, options=BlendModes)
+                                        type=Widget.DROPDOWN, options=BlendModes,
+                                        info="How slices are composited onto the canvas")
         self.ss_blend_alpha = params.new("slitscan_blend_alpha",
                                          min=0.0, max=1.0, default=1.0,
                                          group=group, subgroup=subgroup_slitscan,
-                                         type=Widget.SLIDER)
+                                         type=Widget.SLIDER,
+                                         info="Opacity of each composited slice")
         self.ss_position_offset = params.new("slitscan_position_offset",
                                              min=-100, max=100, default=0,
-                                             group=group, subgroup=subgroup_slitscan)
+                                             group=group, subgroup=subgroup_slitscan,
+                                             info="Shifts the scan start position")
         self.ss_wobble_amount = params.new("slitscan_wobble_amount",
                                            min=0, max=50, default=0,
-                                           group=group, subgroup=subgroup_slitscan)
+                                           group=group, subgroup=subgroup_slitscan,
+                                           info="Oscillating positional wobble applied to the scan")
         self.ss_wobble_freq = params.new("slitscan_wobble_freq",
                                          min=0.1, max=10.0, default=1.0,
-                                         group=group, subgroup=subgroup_slitscan)
+                                         group=group, subgroup=subgroup_slitscan,
+                                         info="Frequency of the position wobble")
 
         # Echo/Stutter parameters
         subgroup_echo = "Glitch_Echo"
 
         self.enable_echo = params.new("enable_echo",
                                       group=group, subgroup=subgroup_echo,
-                                      type=Widget.TOGGLE)
+                                      type=Widget.TOGGLE,
+                                      info="Toggle echo/stutter glitch")
         self.echo_probability = params.new("echo_probability",
                                            min=0.0, max=1.0, default=0.1,
-                                           group=group, subgroup=subgroup_echo)
+                                           group=group, subgroup=subgroup_echo,
+                                           info="Chance per frame that an echo event triggers")
         self.echo_buffer_size = params.new("echo_buffer_size",
                                            min=5, max=60, default=30,
-                                           group=group, subgroup=subgroup_echo)
+                                           group=group, subgroup=subgroup_echo,
+                                           info="Number of past frames held for echo")
         self.echo_freeze_min = params.new("echo_freeze_min",
                                           min=1, max=30, default=2,
-                                          group=group, subgroup=subgroup_echo)
+                                          group=group, subgroup=subgroup_echo,
+                                          info="Minimum duration (frames) of a freeze event")
         self.echo_freeze_max = params.new("echo_freeze_max",
                                           min=2, max=60, default=10,
-                                          group=group, subgroup=subgroup_echo)
+                                          group=group, subgroup=subgroup_echo,
+                                          info="Maximum duration (frames) of a freeze event")
         self.echo_blend_amount = params.new("echo_blend_amount",
                                             min=0.0, max=1.0, default=1.0,
-                                            group=group, subgroup=subgroup_echo)
+                                            group=group, subgroup=subgroup_echo,
+                                            info="Opacity of the echoed frame when composited")
 
         # Slitscan frame buffer
         self.ss_buffer = []
@@ -149,33 +194,41 @@ class Glitch(EffectBase):
         subgroup_ps = "Glitch_PixelSort"
         self.enable_pixel_sort = params.new("enable_pixel_sort",
                                             group=group, subgroup=subgroup_ps,
-                                            type=Widget.TOGGLE)
+                                            type=Widget.TOGGLE,
+                                            info="Toggle pixel sorting")
         self.ps_direction = params.new("ps_direction",
                                        min=0, max=1, default=0,
                                        group=group, subgroup=subgroup_ps,
-                                       type=Widget.TOGGLE)
+                                       type=Widget.TOGGLE,
+                                       info="0 = sort rows horizontally, 1 = sort columns vertically")
         self.ps_sort_by = params.new("ps_sort_by",
                                      min=0, max=len(PixelSortMode) - 1, default=0,
                                      group=group, subgroup=subgroup_ps,
-                                     type=Widget.DROPDOWN, options=PixelSortMode)
+                                     type=Widget.DROPDOWN, options=PixelSortMode,
+                                     info="Key channel: Brightness (luma), Blue, or Green")
         self.ps_threshold_low = params.new("ps_threshold_low",
                                            min=0, max=255, default=50,
-                                           group=group, subgroup=subgroup_ps)
+                                           group=group, subgroup=subgroup_ps,
+                                           info="Pixels with key value below this are not sorted (span boundary)")
         self.ps_threshold_high = params.new("ps_threshold_high",
                                             min=0, max=255, default=200,
-                                            group=group, subgroup=subgroup_ps)
+                                            group=group, subgroup=subgroup_ps,
+                                            info="Pixels with key value above this are not sorted (span boundary)")
 
         # Chromatic aberration
         subgroup_ca = "Glitch_ChromAb"
         self.enable_chrom_ab = params.new("enable_chrom_ab",
                                           group=group, subgroup=subgroup_ca,
-                                          type=Widget.TOGGLE)
+                                          type=Widget.TOGGLE,
+                                          info="Toggle chromatic aberration")
         self.chrom_ab_amount = params.new("chrom_ab_amount",
                                           min=0, max=50, default=5,
-                                          group=group, subgroup=subgroup_ca)
+                                          group=group, subgroup=subgroup_ca,
+                                          info="Pixel displacement applied to the red and blue channels")
         self.chrom_ab_angle = params.new("chrom_ab_angle",
                                          min=0, max=359, default=0,
-                                         group=group, subgroup=subgroup_ca)
+                                         group=group, subgroup=subgroup_ca,
+                                         info="Direction of the channel separation (degrees; 0 = horizontal)")
 
     def _create_buttons(self, gui):
         dpg.add_button(

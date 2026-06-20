@@ -12,19 +12,29 @@ Real-time collaborative visual art synthesizer for live performance. Dual-source
 
 ## Running the App
 
+Use the root launcher `run.py` — it sets up `sys.path` itself, so **no
+`PYTHONPATH` is needed** and the same command works on Windows (PowerShell),
+macOS, and Linux. All CLI args are forwarded to `video_synth.__main__`.
+
 ```bash
 # Desktop GUI (default — run from project root)
-PYTHONPATH=src:src/video_synth python -m video_synth
+python run.py
 
 # Headless API server (web UI only, no Qt window)
-PYTHONPATH=src:src/video_synth python -m video_synth --headless --api --api-host 0.0.0.0
+python run.py --headless --api --api-host 0.0.0.0
 
 # With virtual camera disabled (required in Docker / CI)
-PYTHONPATH=src:src/video_synth python -m video_synth --headless --api --no-virtualcam
+python run.py --headless --api --no-virtualcam
 
 # Full Docker stack (video synth + Ollama agent)
 docker compose up --build
 ```
+
+> The old `PYTHONPATH=src:src/video_synth python -m video_synth` form still
+> works, but the colon path separator and inline env-var syntax are bash-only —
+> they fail in PowerShell. Prefer `python run.py`. (The package also
+> self-bootstraps via `src/video_synth/__init__.py`, so `python -m video_synth`
+> works once `src` is importable.)
 
 Service URLs when running:
 

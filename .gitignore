@@ -17,3 +17,12 @@ dist/
 build/VideoSynth/
 build/video_synth/
 build/__pycache__/
+
+# Sample media (large binaries / third-party clips kept local only)
+samples/*
+!samples/Big_Buck_Bunny_1080_10s_2MB.mp4
+!samples/.gitkeep
+
+# Stray runtime logs at repo root
+/server_out.log
+/server_err.log

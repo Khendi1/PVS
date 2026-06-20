@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 """
 Harmonic Interference Textures - Layer multiple sine gratings at slightly
 different frequencies and orientations, all drifting at different speeds.
@@ -20,27 +36,34 @@ class HarmonicInterference(Animation):
 
         self.hi_num_layers = params.new("hi_num_layers",
                                          min=2, max=8, default=5,
-                                         subgroup=subgroup, group=group)
+                                         subgroup=subgroup, group=group,
+                                         info="Number of overlaid wave layers")
         self.hi_base_freq = params.new("hi_base_freq",
                                         min=0.5, max=20.0, default=4.0,
-                                        subgroup=subgroup, group=group)
+                                        subgroup=subgroup, group=group,
+                                        info="Spatial frequency of the first/base wave layer")
         self.hi_freq_spread = params.new("hi_freq_spread",
                                           min=0.0, max=2.0, default=0.5,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="How much each successive layer's frequency differs")
         self.hi_drift_speed = params.new("hi_drift_speed",
                                           min=0.0, max=2.0, default=0.3,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Speed at which wave phases drift over time")
         self.hi_rotation_speed = params.new("hi_rotation_speed",
                                              min=0.0, max=1.0, default=0.1,
-                                             subgroup=subgroup, group=group)
+                                             subgroup=subgroup, group=group,
+                                             info="Rate at which wave orientations rotate")
         self.hi_color_speed = params.new("hi_color_speed",
                                           min=0.0, max=2.0, default=0.2,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Rate at which the colormap offset shifts")
         self.hi_colormap = params.new("hi_colormap",
                                        min=0, max=len(COLORMAP_OPTIONS)-1,
                                        default=int(Colormap.TWILIGHT),
                                        subgroup=subgroup, group=group,
-                                       type=Widget.DROPDOWN, options=Colormap)
+                                       type=Widget.DROPDOWN, options=Colormap,
+                                       info="Color palette for rendering the interference field")
 
         # Precompute normalized coordinate grids [-1, 1]
         x = np.linspace(-1, 1, width, dtype=np.float32)

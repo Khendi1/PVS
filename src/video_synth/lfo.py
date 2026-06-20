@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 
 import random
 import math
@@ -7,6 +23,7 @@ import noise
 from param import Param, ParamTable
 import logging
 from common import Groups, Widget
+from bpm_clock import NOTE_DIVISION_NAMES
 
 log = logging.getLogger(__name__)
 
@@ -51,51 +68,76 @@ class LFOShape(Enum):
 
 
 class LFO:
-    def __init__(self, params: ParamTable, name, frequency, amplitude, phase, shape, seed=0, linked_param_name=None, max_amplitude=100, min_amplitude=-100):
+    def __init__(self, params: ParamTable, name, frequency, amplitude, phase, shape, seed=0, linked_param_name=None, max_amplitude=100, min_amplitude=-100, bpm_clock=None):
         self.name = name
         group = None
         subgroup = None
         self.param_max = max_amplitude
         self.param_min = min_amplitude
+        # Optional reference to the global BPM clock (set after construction if needed)
+        self.bpm_clock = bpm_clock
         self.shape = params.new(f"{name}_shape",
                                 min=0, max=len(LFOShape)-1, default=shape,
                                 group=group, subgroup=subgroup,
-                                type=Widget.DROPDOWN, options=LFOShape)
+                                type=Widget.DROPDOWN, options=LFOShape,
+                                info="Waveform shape (sine, triangle, square, sawtooth, noise, etc.)")
         self.frequency = params.new(f"{name}_frequency",
                                     min=0, max=1, default=float(frequency),
-                                    subgroup=subgroup, group=group)
+                                    subgroup=subgroup, group=group,
+                                    info="Oscillation frequency (normalized; 1 = once per second)")
         self.amplitude = params.new(f"{name}_amplitude",
                                     min=min_amplitude, max=max_amplitude, default=amplitude,
-                                    subgroup=subgroup, group=group)
+                                    subgroup=subgroup, group=group,
+                                    info="Peak deviation from center applied to the target parameter")
         self.phase = params.new(f"{name}_phase",
                                 min=0, max=360, default=phase,
-                                subgroup=subgroup, group=group)
+                                subgroup=subgroup, group=group,
+                                info="Starting phase offset of the waveform (degrees)")
         self.seed = params.new(f"{name}_seed",
                                min=0, max=100, default=seed,
-                               subgroup=subgroup, group=group) # TODO: Change ambiguous name to something more descriptive
+                               subgroup=subgroup, group=group,
+                               info="Random seed for noise-based waveforms") # TODO: Change ambiguous name to something more descriptive
 
         self.noise_octaves = params.new(f"{name}_noise_octaves",
                                         min=1, max=10, default=6,
-                                        subgroup=subgroup, group=group)
+                                        subgroup=subgroup, group=group,
+                                        info="Noise complexity; more octaves = more detail")
         self.noise_persistence = params.new(f"{name}_noise_persistence",
                                             min=0.1, max=1.0, default=0.5,
-                                            subgroup=subgroup, group=group)
+                                            subgroup=subgroup, group=group,
+                                            info="Amplitude falloff per octave in noise LFO")
         self.noise_lacunarity = params.new(f"{name}_noise_lacunarity",
                                            min=1.0, max=2.0, default=2.0,
-                                           subgroup=subgroup, group=group)
+                                           subgroup=subgroup, group=group,
+                                           info="Frequency multiplier per octave in noise LFO")
         self.noise_repeat = params.new(f"{name}_noise_repeat",
                                        min=1, max=1000, default=100,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Period at which the noise pattern loops")
         self.noise_base = params.new(f"{name}_noise_base",
                                      min=0, max=1000, default=456,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Offset into the noise field; changes the pattern shape")
 
         self.cutoff_min = params.new(f"{name}_cutoff_min",
                                       min=min_amplitude, max=max_amplitude, default=min_amplitude,
-                                      subgroup=subgroup, group=group)
+                                      subgroup=subgroup, group=group,
+                                      info="Clamps the LFO output to a minimum value")
         self.cutoff_max = params.new(f"{name}_cutoff_max",
                                       min=min_amplitude, max=max_amplitude, default=max_amplitude,
-                                      subgroup=subgroup, group=group)
+                                      subgroup=subgroup, group=group,
+                                      info="Clamps the LFO output to a maximum value")
+
+        self.tempo_sync = params.new(f"{name}_tempo_sync",
+                                     min=0, max=1, default=0,
+                                     subgroup=subgroup, group=group,
+                                     type=Widget.DROPDOWN,
+                                     options=["FREE", "SYNC"])
+        self.note_division = params.new(f"{name}_note_division",
+                                        min=0, max=len(NOTE_DIVISION_NAMES) - 1, default=3,
+                                        subgroup=subgroup, group=group,
+                                        type=Widget.DROPDOWN,
+                                        options=NOTE_DIVISION_NAMES)
 
         self.sample_rate = 30
         self.direction = 1
@@ -134,12 +176,19 @@ class LFO:
         t = 0.0
 
         while True:
-            freq = self.frequency.value
             amp = self.amplitude.value
             phase_offset = self.phase.value
             seed = self.seed.value
             shape = int(self.shape.value)
             direction = self.direction
+
+            # Determine effective frequency: tempo-sync overrides free Hz
+            sync_on = int(self.tempo_sync.value) == 1
+            if sync_on and self.bpm_clock is not None:
+                division_name = NOTE_DIVISION_NAMES[int(self.note_division.value)]
+                freq = self.bpm_clock.frequency_for_division(division_name)
+            else:
+                freq = self.frequency.value
 
             # Calculate the argument for the waveform functions
             arg = 2 * np.pi * freq * t + np.deg2rad(phase_offset)

@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 import time
@@ -16,16 +32,20 @@ class Plasma(Animation):
 
         self.plasma_speed = params.new("plasma_speed",
                                        min=0.01, max=10, default=1.0,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Overall animation speed of the plasma pattern")
         self.plasma_distance = params.new("plasma_distance",
                                           min=0.01, max=10, default=1.0,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Spatial scale/spread of the sine wave pattern")
         self.plasma_color_speed = params.new("plasma_color_speed",
                                              min=0.01, max=10, default=1.0,
-                                             subgroup=subgroup, group=group)
+                                             subgroup=subgroup, group=group,
+                                             info="Rate at which colors cycle through the palette")
         self.plasma_flow_speed = params.new("plasma_flow_speed",
                                             min=0.01, max=10, default=1.0,
-                                            subgroup=subgroup, group=group)
+                                            subgroup=subgroup, group=group,
+                                            info="Speed of directional flow/drift through the pattern")
 
         self.plasma_params = [
             "plasma_speed",

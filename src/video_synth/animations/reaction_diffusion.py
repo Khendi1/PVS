@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 import random
@@ -19,20 +35,25 @@ class ReactionDiffusion(Animation):
 
         self.da = params.new("da",
                              min=0, max=2.0, default=da,
-                             subgroup=subgroup, group=group)
+                             subgroup=subgroup, group=group,
+                             info="Diffusion rate of chemical A; higher values spread it faster")
         self.db = params.new("db",
                              min=0, max=2.0, default=db,
-                             subgroup=subgroup, group=group)
+                             subgroup=subgroup, group=group,
+                             info="Diffusion rate of chemical B; typically slower than A")
 
         self.feed = params.new("feed",
                                min=0, max=0.1, default=feed,
-                               subgroup=subgroup, group=group)
+                               subgroup=subgroup, group=group,
+                               info="Rate at which chemical A is added to the system; controls pattern type")
         self.kill = params.new("kill",
                                min=0, max=0.1, default=kill,
-                               subgroup=subgroup, group=group)
+                               subgroup=subgroup, group=group,
+                               info="Rate at which chemical B is removed; controls pattern density")
         self.iterations_per_frame = params.new("iterations_per_frame",
                                                min=5, max=100, default=50,
-                                               subgroup=subgroup, group=group)
+                                               subgroup=subgroup, group=group,
+                                               info="Number of simulation steps computed per rendered frame")
         
         self.dt = 0.15
         self.current_A = np.ones((height, width), dtype=np.float32)

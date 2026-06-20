@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 """
 Drift Fields - A 2D vector field that slowly advects color through it.
 Like ink dropped into slowly stirring water. The field is driven by
@@ -21,26 +37,33 @@ class DriftField(Animation):
 
         self.drift_speed = params.new("drift_speed",
                                        min=0.01, max=2.0, default=0.15,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="How fast the field evolves over time")
         self.drift_complexity = params.new("drift_complexity",
                                             min=1, max=8, default=3,
-                                            subgroup=subgroup, group=group)
+                                            subgroup=subgroup, group=group,
+                                            info="Number of noise layers; higher values produce more tangled paths")
         self.drift_scale = params.new("drift_scale",
                                        min=0.5, max=10.0, default=3.0,
-                                       subgroup=subgroup, group=group)
+                                       subgroup=subgroup, group=group,
+                                       info="Spatial scale of the noise field; larger values zoom out the pattern")
         self.drift_viscosity = params.new("drift_viscosity",
                                            min=0.9, max=1.0, default=0.995,
-                                           subgroup=subgroup, group=group)
+                                           subgroup=subgroup, group=group,
+                                           info="How much the previous frame persists; near 1.0 creates long trails")
         self.drift_injection = params.new("drift_injection",
                                            min=0.0, max=1.0, default=0.02,
-                                           subgroup=subgroup, group=group)
+                                           subgroup=subgroup, group=group,
+                                           info="Rate at which new color/energy is injected into the field")
         self.drift_colormap = params.new("drift_colormap",
                                           min=0, max=len(COLORMAP_OPTIONS)-1, default=int(Colormap.TWILIGHT),
                                           subgroup=subgroup, group=group,
-                                          type=Widget.DROPDOWN, options=Colormap)
+                                          type=Widget.DROPDOWN, options=Colormap,
+                                          info="Color palette applied to the field intensity")
         self.drift_color_speed = params.new("drift_color_speed",
                                              min=0.0, max=2.0, default=0.3,
-                                             subgroup=subgroup, group=group)
+                                             subgroup=subgroup, group=group,
+                                             info="Rate at which the colormap offset shifts over time")
 
         # Work at half resolution for performance
         self.rw = width // 2

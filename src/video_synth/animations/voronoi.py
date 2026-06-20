@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 
@@ -17,61 +33,76 @@ class Voronoi(Animation):
         # Point parameters
         self.num_points = params.new("voronoi_num_points",
                                      min=5, max=200, default=50,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Number of Voronoi seed points")
         self.relaxation_speed = params.new("voronoi_relax_speed",
                                            min=0.01, max=0.5, default=0.1,
-                                           subgroup=subgroup, group=group)
+                                           subgroup=subgroup, group=group,
+                                           info="Rate at which points drift toward cell centroids (Lloyd's relaxation)")
         self.jitter = params.new("voronoi_jitter",
                                  min=0.0, max=5.0, default=0.5,
-                                 subgroup=subgroup, group=group)
+                                 subgroup=subgroup, group=group,
+                                 info="Random perturbation added to point positions each frame")
 
         # Visual parameters
         self.show_edges = params.new("voronoi_show_edges",
                                      min=0, max=1, default=1,
                                      subgroup=subgroup, group=group,
-                                     type=Widget.TOGGLE)
+                                     type=Widget.TOGGLE,
+                                     info="Toggle rendering of cell boundary lines")
         self.show_points = params.new("voronoi_show_points",
                                       min=0, max=1, default=1,
                                       subgroup=subgroup, group=group,
-                                      type=Widget.TOGGLE)
+                                      type=Widget.TOGGLE,
+                                      info="Toggle rendering of seed point dots")
         self.fill_cells = params.new("voronoi_fill_cells",
                                      min=0, max=1, default=1,
                                      subgroup=subgroup, group=group,
-                                     type=Widget.TOGGLE)
+                                     type=Widget.TOGGLE,
+                                     info="Toggle filling cells with color")
         self.edge_thickness = params.new("voronoi_edge_thickness",
                                          min=1, max=5, default=2,
-                                         subgroup=subgroup, group=group)
+                                         subgroup=subgroup, group=group,
+                                         info="Pixel width of cell boundary lines")
         self.point_size = params.new("voronoi_point_size",
                                      min=2, max=10, default=5,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Pixel radius of seed point dots")
 
         # Color parameters
         self.edge_r = params.new("voronoi_edge_r",
                                  min=0, max=255, default=255,
-                                 subgroup=subgroup, group=group)
+                                 subgroup=subgroup, group=group,
+                                 info="Red channel of edge color")
         self.edge_g = params.new("voronoi_edge_g",
                                  min=0, max=255, default=255,
-                                 subgroup=subgroup, group=group)
+                                 subgroup=subgroup, group=group,
+                                 info="Green channel of edge color")
         self.edge_b = params.new("voronoi_edge_b",
                                  min=0, max=255, default=255,
-                                 subgroup=subgroup, group=group)
+                                 subgroup=subgroup, group=group,
+                                 info="Blue channel of edge color")
         self.colormap = params.new("voronoi_colormap",
                                    min=0, max=len(COLORMAP_OPTIONS)-1, default=0,
                                    subgroup=subgroup, group=group,
-                                   type=Widget.DROPDOWN, options=Colormap)
+                                   type=Widget.DROPDOWN, options=Colormap,
+                                   info="Color palette used to fill cells")
 
         # Animation
         self.color_cycle_speed = params.new("voronoi_color_speed",
                                             min=0.0, max=2.0, default=0.2,
-                                            subgroup=subgroup, group=group)
+                                            subgroup=subgroup, group=group,
+                                            info="Rate at which colormap offset shifts over time")
 
         # Tectonics - slow autonomous drift for plate-like movement
         self.tectonic_speed = params.new("voronoi_tectonic_speed",
                                           min=0.0, max=3.0, default=0.0,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Speed of large-scale directional drift across all points")
         self.tectonic_chaos = params.new("voronoi_tectonic_chaos",
                                           min=0.0, max=1.0, default=0.3,
-                                          subgroup=subgroup, group=group)
+                                          subgroup=subgroup, group=group,
+                                          info="Randomness in tectonic drift direction per point")
 
         self.time = 0.0
         self._init_points()

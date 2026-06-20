@@ -1,0 +1,25 @@
+# Pre-commit hooks for the Video Synth project.
+# Install with:  pre-commit install
+# Run on all files:  pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-merge-conflict
+      # Guard against accidentally committing huge binaries. This repo once
+      # had ~1.2 GB of video committed; cap added files at ~1 MB.
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.7
+    hooks:
+      # Linter (auto-fix what it safely can).
+      - id: ruff
+        args: ["--fix"]
+      # Formatter.
+      - id: ruff-format

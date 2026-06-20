@@ -39,17 +39,8 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-          pip install \
-            pytest \
-            numpy \
-            opencv-python-headless \
-            fastapi \
-            httpx \
-            uvicorn \
-            aiofiles \
-            noise \
-            pydantic \
-            PyYAML
+          pip install -r requirements.txt
+          pip install pytest
 
       - name: Run tests
         run: pytest tests/ -v --tb=short

@@ -1,3 +1,19 @@
+# Video Synth — real-time collaborative visual art synthesizer.
+# Copyright (C) 2026 Kyle Henderson
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import cv2
 import numpy as np
 import math
@@ -17,48 +33,61 @@ class DLA(Animation):
         # Growth parameters
         self.num_particles = params.new("dla_num_particles",
                                         min=10, max=500, default=100,
-                                        subgroup=subgroup, group=group)
+                                        subgroup=subgroup, group=group,
+                                        info="Number of active random-walking particles")
         self.stickiness = params.new("dla_stickiness",
                                      min=0.1, max=1.0, default=1.0,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Probability a particle sticks when it touches the crystal")
         self.spawn_radius_ratio = params.new("dla_spawn_radius",
                                              min=1.1, max=2.0, default=1.3,
-                                             subgroup=subgroup, group=group)
+                                             subgroup=subgroup, group=group,
+                                             info="How far from the crystal edge new particles spawn (as a ratio)")
         self.particle_speed = params.new("dla_particle_speed",
                                          min=1, max=10, default=3,
-                                         subgroup=subgroup, group=group)
+                                         subgroup=subgroup, group=group,
+                                         info="Steps per frame each particle moves")
         self.branch_bias = params.new("dla_branch_bias",
                                       min=-1.0, max=1.0, default=0.0,
-                                      subgroup=subgroup, group=group)
+                                      subgroup=subgroup, group=group,
+                                      info="Directional bias in particle walk; negative = inward, positive = outward")
         self.fade = params.new("dla_fade",
                                min=0.0, max=1.0, default=0.99,
-                               subgroup=subgroup, group=group)
+                               subgroup=subgroup, group=group,
+                               info="How quickly old crystal deposits fade; near 1.0 = persistent")
 
         # Color parameters
         self.crystal_r = params.new("dla_crystal_r",
                                     min=0, max=255, default=100,
-                                    subgroup=subgroup, group=group)
+                                    subgroup=subgroup, group=group,
+                                    info="Red channel of the crystal structure color")
         self.crystal_g = params.new("dla_crystal_g",
                                     min=0, max=255, default=200,
-                                    subgroup=subgroup, group=group)
+                                    subgroup=subgroup, group=group,
+                                    info="Green channel of the crystal structure color")
         self.crystal_b = params.new("dla_crystal_b",
                                     min=0, max=255, default=255,
-                                    subgroup=subgroup, group=group)
+                                    subgroup=subgroup, group=group,
+                                    info="Blue channel of the crystal structure color")
         self.particle_r = params.new("dla_particle_r",
                                      min=0, max=255, default=255,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Red channel of active walking particles")
         self.particle_g = params.new("dla_particle_g",
                                      min=0, max=255, default=255,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Green channel of active walking particles")
         self.particle_b = params.new("dla_particle_b",
                                      min=0, max=255, default=255,
-                                     subgroup=subgroup, group=group)
+                                     subgroup=subgroup, group=group,
+                                     info="Blue channel of active walking particles")
 
         # Reset trigger
         self.reset_trigger = params.new("dla_reset",
                                         min=0, max=1, default=0,
                                         subgroup=subgroup, group=group,
-                                        type=Widget.TOGGLE)
+                                        type=Widget.TOGGLE,
+                                        info="Toggle to clear the crystal and restart the simulation")
 
         self._initialize_simulation()
 

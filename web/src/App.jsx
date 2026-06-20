@@ -1,3 +1,21 @@
+/*
+ * Video Synth — real-time collaborative visual art synthesizer.
+ * Copyright (C) 2026 Kyle Henderson
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 import { useState, useEffect, useCallback } from 'react'
 import { fetchParams } from './api.js'
 import TabPanel from './components/TabPanel.jsx'
@@ -88,13 +106,23 @@ export default function App() {
       .replace(/\b\w/g, c => c.toUpperCase())
   }
 
+  // ── Active animation sources from mixer ───────────────────────────────────
+  const src1Source = mixerParams.find(p => p.name === 'source_1')?.value ?? null
+  const src2Source = mixerParams.find(p => p.name === 'source_2')?.value ?? null
+
   // ── Tab definitions ────────────────────────────────────────────────────────
 
   // Top-left: source tabs
-  const srcTabs = Object.entries(srcGroups).map(([gName, gParams]) => ({
-    label: tabLabel(gName),
-    content: <SubgroupPanel params={gParams} />,
-  }))
+  const srcTabs = Object.entries(srcGroups).map(([gName, gParams]) => {
+    const upper = gName.toUpperCase()
+    const isAnim = upper.includes('ANIMATION')
+    const isSrc1 = upper.includes('SRC_1') || upper.includes('SRC1')
+    const jumpTarget = isAnim ? (isSrc1 ? src1Source : src2Source) : null
+    return {
+      label: tabLabel(gName),
+      content: <SubgroupPanel params={gParams} jumpTarget={jumpTarget} />,
+    }
+  })
 
   // Bottom-left: post effects + any unclassified
   const postTabs = [
@@ -197,6 +225,13 @@ export default function App() {
       </div>
 
       <div className={`status-bar ${status.cls}`}>{status.text}</div>
+
+      {/* AGPL §13: offer the Corresponding Source to network users */}
+      <footer className="agpl-footer">
+        <a href="https://github.com/Khendi1/PVS" target="_blank" rel="noopener noreferrer">
+          Source &amp; license · AGPL-3.0
+        </a>
+      </footer>
     </>
   )
 }
