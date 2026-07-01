@@ -48,6 +48,7 @@ python -m video_synth --headless --api --api-host 0.0.0.0 --no-virtualcam
 | `POST` | `/patch/next` | Load the next patch in the list |
 | `POST` | `/patch/prev` | Load the previous patch |
 | `POST` | `/patch/random` | Load a random patch |
+| `POST` | `/patch/morph?target={index}&duration={seconds}` | Lerp all numeric params to patch `target` over `duration` seconds (default 5.0) in a background thread |
 
 ### LFO Modulation
 
@@ -274,6 +275,9 @@ LFO shapes: `NONE`, `SINE`, `SQUARE`, `TRIANGLE`, `SAWTOOTH`, `PERLIN`
 
     # Jump to a random patch
     curl -X POST http://127.0.0.1:8000/patch/random
+
+    # Smoothly morph (lerp) to patch index 2 over 8 seconds
+    curl -X POST "http://127.0.0.1:8000/patch/morph?target=2&duration=8"
     ```
 
 ### Capture a Snapshot

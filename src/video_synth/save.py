@@ -17,6 +17,9 @@
 import yaml
 import os
 import random
+import threading
+import time
+import numbers
 from param import Param
 import logging
 
@@ -36,6 +39,11 @@ class SaveController:
         self.save_dir_path = self.init_save_dir(save_dir_name)
         self.yaml_file_path = os.path.join(self.save_dir_path, yaml_filename)
         self.patch_loaded_callback = None
+
+        # --- Morph / interpolation state ---
+        self._morph_lock = threading.Lock()
+        self._morph_thread = None
+        self._morph_stop = None  # threading.Event for the active morph, if any
 
     def init_save_dir(self, save_dir_name: str):
         import sys as _sys
@@ -124,6 +132,135 @@ class SaveController:
 
     def load_random_patch(self):
         self.load_patch('random')
+
+    def get_patch_entry(self, index):
+        """
+        Read a single patch entry (a flat {param_name: value} dict) from
+        saved_values.yaml by integer index.
+
+        Returns None if the file is missing/empty or the index is out of range.
+        """
+        if not os.path.exists(self.yaml_file_path):
+            log.warning(f"YAML file not found at {self.yaml_file_path}.")
+            return None
+        try:
+            with open(self.yaml_file_path, 'r') as f:
+                saved_values = yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            log.exception(f"Error loading YAML file {self.yaml_file_path}: {e}")
+            return None
+
+        if not saved_values or 'entries' not in saved_values or not saved_values['entries']:
+            log.warning("No patches found in the YAML file.")
+            return None
+
+        entries = saved_values['entries']
+        if not isinstance(index, int) or index < 0 or index >= len(entries):
+            return None
+        return entries[index]
+
+    # --- Patch morph / interpolation ---
+
+    def stop_morph(self):
+        """Signal any running morph thread to stop and wait briefly for it."""
+        with self._morph_lock:
+            stop = self._morph_stop
+            thread = self._morph_thread
+        if stop is not None:
+            stop.set()
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(timeout=2.0)
+
+    def morph_to(self, index, duration, hz=60.0):
+        """
+        Linearly interpolate all numeric param values from their current values
+        to the target patch (by integer index) over ``duration`` seconds in a
+        background daemon thread.
+
+        Only params that exist in the target entry, resolve to a real Param, and
+        are numeric on both ends are lerped. Non-numeric / enum / string params
+        are snapped to the target value once, at the end of the morph.
+
+        If a morph is already running it is cancelled before this one starts.
+        ``duration <= 0`` applies the target instantly. Returns True if a valid
+        target was found and the morph was started/applied, else False.
+        """
+        target = self.get_patch_entry(index)
+        if target is None:
+            return False
+
+        # Split target keys into numeric lerp candidates and snap-only keys.
+        lerp_items = []   # list of (Param, start_value, end_value)
+        snap_values = {}  # {param_name: value}
+        for name, tgt_value in target.items():
+            param = self._find_param(name)
+            if param is None:
+                continue
+            cur_value = param.value
+            if (isinstance(tgt_value, numbers.Number) and not isinstance(tgt_value, bool)
+                    and isinstance(cur_value, numbers.Number) and not isinstance(cur_value, bool)):
+                lerp_items.append((param, float(cur_value), float(tgt_value)))
+            else:
+                snap_values[name] = tgt_value
+
+        # Cancel any in-flight morph before starting a new one.
+        self.stop_morph()
+
+        if duration is None or duration <= 0:
+            for param, _start, end in lerp_items:
+                param.value = end
+            if snap_values:
+                self.load_param_vals(snap_values)
+            if self.patch_loaded_callback:
+                self.patch_loaded_callback()
+            with self._morph_lock:
+                self.index = index
+            return True
+
+        stop = threading.Event()
+        thread = threading.Thread(
+            target=self._run_morph,
+            args=(index, float(duration), float(hz), lerp_items, snap_values, stop),
+            name="patch-morph",
+            daemon=True,
+        )
+        with self._morph_lock:
+            self._morph_stop = stop
+            self._morph_thread = thread
+        thread.start()
+        return True
+
+    def _run_morph(self, index, duration, hz, lerp_items, snap_values, stop):
+        step = 1.0 / hz if hz > 0 else 1.0 / 60.0
+        start_time = time.monotonic()
+        try:
+            while not stop.is_set():
+                elapsed = time.monotonic() - start_time
+                t = elapsed / duration
+                if t >= 1.0:
+                    break
+                for param, start, end in lerp_items:
+                    param.value = start + (end - start) * t
+                time.sleep(step)
+
+            if stop.is_set():
+                return  # superseded by a newer morph; don't snap to target
+
+            # Reached the end: snap everything to the exact target values.
+            for param, _start, end in lerp_items:
+                param.value = end
+            if snap_values:
+                self.load_param_vals(snap_values)
+            with self._morph_lock:
+                self.index = index
+            if self.patch_loaded_callback:
+                self.patch_loaded_callback()
+            log.info(f"Morph to patch index {index} complete.")
+        finally:
+            with self._morph_lock:
+                if self._morph_stop is stop:
+                    self._morph_stop = None
+                    self._morph_thread = None
 
     def load_param_vals(self, parsed_param_dict):
         for param_name, value in parsed_param_dict.items():
