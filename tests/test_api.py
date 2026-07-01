@@ -77,6 +77,9 @@ def mock_save_controller():
     sc.load_prev_patch = MagicMock()
     sc.load_random_patch = MagicMock()
     sc.save_patch = MagicMock()
+    sc.morph_to = MagicMock()
+    # By default a patch index resolves to a (truthy) entry so /patch/morph works.
+    sc.get_patch_entry = MagicMock(return_value={"brightness": 200})
     return sc
 
 
@@ -313,6 +316,42 @@ def test_patch_random_returns_503_when_no_save_controller(params):
     )
     c = TestClient(api.app)
     response = c.post("/patch/random")
+    assert response.status_code == 503
+
+
+def test_patch_morph_returns_200(client, mock_save_controller):
+    response = client.post("/patch/morph", params={"target": 1, "duration": 0.5})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["target"] == 1
+    assert body["duration"] == 0.5
+    mock_save_controller.morph_to.assert_called_once_with(1, 0.5)
+
+
+def test_patch_morph_default_duration(client, mock_save_controller):
+    response = client.post("/patch/morph", params={"target": 0})
+    assert response.status_code == 200
+    assert response.json()["duration"] == 5.0
+
+
+def test_patch_morph_invalid_target_returns_404(client, mock_save_controller):
+    mock_save_controller.get_patch_entry = MagicMock(return_value=None)
+    response = client.post("/patch/morph", params={"target": 99, "duration": 1.0})
+    assert response.status_code == 404
+    mock_save_controller.morph_to.assert_not_called()
+
+
+def test_patch_morph_returns_503_when_no_save_controller(params):
+    api = APIServer(
+        params=params,
+        mixer=None,
+        save_controller=None,
+        host="127.0.0.1",
+        port=8005,
+    )
+    c = TestClient(api.app)
+    response = c.post("/patch/morph", params={"target": 0})
     assert response.status_code == 503
 
 

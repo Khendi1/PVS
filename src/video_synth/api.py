@@ -162,6 +162,7 @@ class APIServer:
                     "PUT /params/{name}": "Set parameter value",
                     "POST /params/reset/{name}": "Reset parameter to default",
                     "GET /snapshot": "Get current frame as JPEG",
+                    "POST /patch/morph": "Lerp params to a patch over N seconds",
                     "GET /source": "Corresponding source location (AGPL §13)"
                 }
             }
@@ -337,6 +338,19 @@ class APIServer:
                 raise HTTPException(status_code=503, detail="SaveController not available")
             self.save_controller.load_random_patch()
             return {"success": True}
+
+        # --- Patch morph (interpolation) endpoint ---
+
+        @self.app.post("/patch/morph")
+        async def patch_morph(target: int, duration: float = 5.0):
+            """Lerp all numeric params from their current values to patch
+            ``target`` over ``duration`` seconds in a background thread."""
+            if self.save_controller is None:
+                raise HTTPException(status_code=503, detail="SaveController not available")
+            if self.save_controller.get_patch_entry(target) is None:
+                raise HTTPException(status_code=404, detail=f"Patch index {target} not found")
+            self.save_controller.morph_to(target, duration)
+            return {"success": True, "target": target, "duration": duration}
 
         # --- MIDI learn endpoints ---
 
