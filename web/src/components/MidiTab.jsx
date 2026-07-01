@@ -17,13 +17,21 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
-import { midiLearnStart, midiLearnCancel, midiLearnStatus } from '../api.js'
+import {
+  midiLearnStart,
+  midiLearnCancel,
+  midiLearnStatus,
+  exportMidiMappings,
+  importMidiMappings,
+} from '../api.js'
 
 export default function MidiTab({ params }) {
   const [selectedParam, setSelectedParam] = useState('')
   const [learning, setLearning] = useState(false)
   const [status, setStatus] = useState('')
+  const [shareStatus, setShareStatus] = useState('')
   const pollRef = useRef(null)
+  const fileRef = useRef(null)
 
   // Group params for the select optgroups
   const groups = {}
@@ -67,6 +75,41 @@ export default function MidiTab({ params }) {
 
   useEffect(() => () => clearInterval(pollRef.current), [])
 
+  async function handleExport() {
+    try {
+      const text = await exportMidiMappings()
+      const blob = new Blob([text], { type: 'application/x-yaml' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'midi_mappings.yaml'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      setShareStatus('Exported midi_mappings.yaml')
+      setTimeout(() => setShareStatus(''), 3000)
+    } catch (e) {
+      setShareStatus(`Export error: ${e.message}`)
+    }
+  }
+
+  async function handleImport(e) {
+    const file = e.target.files && e.target.files[0]
+    if (!file) return
+    try {
+      const text = await file.text()
+      const res = await importMidiMappings(text)
+      setShareStatus(`Imported ${res.mappings} mapping(s) across ${res.ports} port(s).`)
+      setTimeout(() => setShareStatus(''), 3000)
+    } catch (e) {
+      setShareStatus(`Import error: ${e.message}`)
+    } finally {
+      // Reset so the same file can be re-selected to re-import.
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
   return (
     <div className="midi-tab">
       <div className="midi-group-box">
@@ -98,6 +141,24 @@ export default function MidiTab({ params }) {
           <button onClick={handleCancel}>Cancel</button>
         </div>
         <div className="midi-status">{status}</div>
+      </div>
+
+      <div className="midi-group-box">
+        <h3>Share Mappings</h3>
+        <div className="midi-row">
+          <button onClick={handleExport}>Export</button>
+          <button onClick={() => fileRef.current && fileRef.current.click()}>
+            Import
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".yaml,.yml,application/x-yaml,text/yaml"
+            style={{ display: 'none' }}
+            onChange={handleImport}
+          />
+        </div>
+        <div className="midi-status">{shareStatus}</div>
       </div>
     </div>
   )

@@ -360,6 +360,99 @@ class MidiMapper:
         except Exception as e:
             log.exception(f"Failed to save mappings: {e}")
 
+    def reload_mappings(self):
+        """
+        Re-read the mappings YAML from disk and apply it live to the running
+        controllers without restarting listener threads.
+
+        For every port present in the YAML that already has a controller, its
+        mappings are replaced (and the per-CC smoothing processors reset) so the
+        new mapping takes effect immediately. Ports that have no controller yet
+        (e.g. not currently connected) are simply picked up on the next
+        start()/rescan_ports().
+
+        Returns:
+            dict: {"port_name": {cc_int: qualified_key, ...}, ...} that was loaded.
+        """
+        loaded = self._load_mappings_from_yaml()
+
+        for port_name, port_mappings in loaded.items():
+            controller = self.controllers.get(port_name)
+            if controller is not None:
+                controller.mappings = dict(port_mappings)
+                controller._processors.clear()
+                log.info(f"Reloaded {len(port_mappings)} mapping(s) for '{port_name}'")
+
+        log.info(f"Reloaded mappings for {len(loaded)} port(s) from {self._yaml_path}")
+        return loaded
+
+    def import_mappings(self, yaml_text):
+        """
+        Replace the persisted mappings with the given YAML document, then apply
+        it live via reload_mappings().
+
+        Args:
+            yaml_text: str containing a mappings YAML document (same shape that
+                save_mappings() produces: a top-level "ports" mapping).
+
+        Returns:
+            dict: the loaded mappings {"port_name": {cc_int: qualified_key}, ...}.
+
+        Raises:
+            ValueError: if the payload is not valid YAML or is not a mapping with
+                the expected structure.
+        """
+        try:
+            data = yaml.safe_load(yaml_text)
+        except yaml.YAMLError as e:
+            raise ValueError(f"Malformed YAML: {e}")
+
+        if data is None:
+            data = {"ports": {}}
+        if not isinstance(data, dict):
+            raise ValueError("Mappings must be a YAML mapping with a 'ports' key")
+
+        ports = data.get("ports", {})
+        if not isinstance(ports, dict):
+            raise ValueError("'ports' must be a mapping of port_name -> mappings")
+
+        # Validate the per-port structure before touching disk.
+        for port_name, port_data in ports.items():
+            if not isinstance(port_data, dict):
+                raise ValueError(f"Port '{port_name}' entry must be a mapping")
+            raw_mappings = port_data.get("mappings", {})
+            if not isinstance(raw_mappings, dict):
+                raise ValueError(f"Port '{port_name}' 'mappings' must be a mapping")
+            for cc in raw_mappings:
+                try:
+                    int(cc)
+                except (TypeError, ValueError):
+                    raise ValueError(
+                        f"Port '{port_name}' has non-integer CC key '{cc}'"
+                    )
+
+        try:
+            with open(self._yaml_path, 'w') as f:
+                yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+            log.info(f"Imported mappings to {self._yaml_path}")
+        except Exception as e:
+            raise ValueError(f"Failed to write mappings: {e}")
+
+        return self.reload_mappings()
+
+    def export_mappings_yaml(self):
+        """
+        Return the current mappings serialized as a YAML document string
+        (same shape that save_mappings() persists).
+        """
+        data = {"ports": {}}
+        for port_name, controller in self.controllers.items():
+            if controller.mappings:
+                data["ports"][port_name] = {
+                    "mappings": {int(cc): key for cc, key in controller.mappings.items()}
+                }
+        return yaml.dump(data, default_flow_style=False, sort_keys=False)
+
     def _load_mappings_from_yaml(self):
         """
         Load mappings from YAML file.

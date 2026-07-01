@@ -73,6 +73,22 @@ export async function midiLearnStatus() {
   return r.json()
 }
 
+export async function exportMidiMappings() {
+  const r = await fetch(`${API_BASE}/midi/export`)
+  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  return r.text()
+}
+
+export async function importMidiMappings(text) {
+  const r = await fetch(`${API_BASE}/midi/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mappings: text }),
+  })
+  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  return r.json()
+}
+
 export function streamUrl() {
   // Cache-bust on each call to force reconnect
   return `${API_BASE}/stream?t=${Date.now()}`
