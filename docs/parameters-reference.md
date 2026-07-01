@@ -739,6 +739,14 @@ Each LFO modulates a target parameter over time. Parameters are prefixed with th
 
 ## Audio Reactive
 
+A single master **Amplitude** control scales the whole audio input before any
+analysis; it applies globally to every band binding, the spectrum display, and
+beat detection.
+
+| Parameter | Key | Min | Max | Default | Description |
+|-----------|-----|-----|-----|---------|-------------|
+| Amplitude | `audio_amplitude` | 0.0 | 4.0 | 1.0 | Master input gain applied to the audio signal before band analysis |
+
 Each audio-reactive binding maps a frequency band to a target parameter. Parameters are prefixed with the binding's name.
 
 | Parameter | Key Pattern | Min | Max | Default | Description |

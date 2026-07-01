@@ -16,6 +16,8 @@
 
 import enum
 import logging
+import socket
+import webbrowser
 from param import ParamTable, Param
 from common import Groups, MixerSource, Widget, Layout
 from audio_reactive import BAND_NAMES
@@ -50,6 +52,7 @@ class PyQTGUI(QMainWindow):
         self.audio_module = audio_module
         self.obs_filters = obs_filters
         self.api_server = api_server
+        self._api_running = api_server is not None
         self.midi_mapper = midi_mapper
         self.osc_controller = osc_controller
         self.src_1_effects = effects[MixerSource.SRC_1]
@@ -105,6 +108,7 @@ class PyQTGUI(QMainWindow):
 
         self._create_layout()
         self.create_ui()
+        self._add_web_api_panel()
 
         # Set up logging to GUI
         self._setup_logging()
@@ -1242,6 +1246,20 @@ class PyQTGUI(QMainWindow):
             self._toggle_api_server(param.value)
         elif param.name == "osc_enabled":
             self._toggle_osc_server(param.value)
+        elif param.name == "lan_enabled":
+            if hasattr(self, "lan_checkbox"):
+                self.lan_checkbox.blockSignals(True)
+                self.lan_checkbox.setChecked(bool(param.value))
+                self.lan_checkbox.blockSignals(False)
+            # Rebind a running server to the new host.
+            if self.api_server is not None:
+                was_running = self._api_running
+                self.api_server.stop()
+                self.api_server = None
+                self._api_running = False
+                if was_running:
+                    self._toggle_api_server(1)
+            self._sync_web_api_panel()
 
     def _toggle_osc_server(self, enabled):
         """Start or stop the OSC server based on the toggle state."""
@@ -1271,27 +1289,133 @@ class PyQTGUI(QMainWindow):
     def _toggle_api_server(self, enabled):
         """Start or stop the API server based on the toggle state."""
         if enabled:
+            host = "0.0.0.0" if self.settings.lan_enabled.value else self.settings.api_host
             if self.api_server is None:
                 from api import APIServer
+                # Prefix effect params by group so src_1/src_2/post names don't
+                # collide (matches the startup path in __main__.py).
                 all_params = ParamTable()
                 for effect_mgr in self.effects:
-                    all_params.params.update(effect_mgr.params.params)
+                    group_key = effect_mgr.group.name if hasattr(effect_mgr.group, 'name') else str(effect_mgr.group)
+                    for k, v in effect_mgr.params.params.items():
+                        all_params.params[f"{group_key}.{k}"] = v
                 all_params.params.update(self.mixer.params.params)
                 if self.audio_module:
                     all_params.params.update(self.audio_module.params.params)
                 all_params.params.update(self.settings.params.params)
                 if self.obs_filters:
                     all_params.params.update(self.obs_filters.params.params)
+                osc_banks = {
+                    (em.group.name if hasattr(em.group, 'name') else str(em.group)): em.oscs
+                    for em in self.effects
+                }
                 self.api_server = APIServer(
                     all_params, mixer=self.mixer,
-                    host=self.settings.api_host, port=self.settings.api_port
+                    save_controller=self.save_controller,
+                    midi_mapper=self.midi_mapper,
+                    osc_banks=osc_banks,
+                    audio_module=self.audio_module,
+                    host=host, port=self.settings.api_port
                 )
             self.api_server.start()
-            log.info(f"API server started on {self.settings.api_host}:{self.settings.api_port}")
+            self._api_running = True
+            log.info(f"API server started on {host}:{self.settings.api_port}")
         else:
             if self.api_server is not None:
                 self.api_server.stop()
-                log.info("API server stopped")
+            self._api_running = False
+            log.info("API server stopped")
+        self._sync_web_api_panel()
+
+    # ------------------------------------------------------------------
+    # Web / API server control panel
+    # ------------------------------------------------------------------
+    def _build_web_api_panel(self):
+        """Build the always-visible Web/API server control box."""
+        box = QGroupBox("Web / API Server")
+        v = QVBoxLayout(box)
+
+        self.web_api_url_label = QLabel("Server stopped")
+        v.addWidget(self.web_api_url_label)
+
+        row = QHBoxLayout()
+        self.web_api_toggle_btn = QPushButton("Start Web UI")
+        self.web_api_toggle_btn.clicked.connect(self._on_web_api_button)
+        row.addWidget(self.web_api_toggle_btn)
+
+        self.web_api_open_btn = QPushButton("Open in Browser")
+        self.web_api_open_btn.clicked.connect(self._open_web_ui)
+        row.addWidget(self.web_api_open_btn)
+        v.addLayout(row)
+
+        self.lan_checkbox = QCheckBox("Allow LAN access (bind 0.0.0.0)")
+        self.lan_checkbox.setChecked(bool(self.settings.lan_enabled.value))
+        self.lan_checkbox.setToolTip(
+            "Expose the server on your local network so phones, tablets or other "
+            "machines can connect. Off = localhost only."
+        )
+        self.lan_checkbox.stateChanged.connect(self._on_lan_toggle)
+        v.addWidget(self.lan_checkbox)
+
+        self._sync_web_api_panel()
+        return box
+
+    def _add_web_api_panel(self):
+        """Insert the Web/API panel at the top of the User Settings tab."""
+        if not hasattr(self, "user_settings_layout") or self.user_settings_layout is None:
+            return
+        self.user_settings_layout.insertWidget(0, self._build_web_api_panel())
+
+    def _lan_ip(self):
+        """Best-effort primary LAN IPv4 address for display."""
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except OSError:
+            return "127.0.0.1"
+
+    def _web_ui_url(self):
+        host = self._lan_ip() if self.settings.lan_enabled.value else "127.0.0.1"
+        return f"http://{host}:{self.settings.api_port}/ui/"
+
+    def _on_web_api_button(self):
+        self._toggle_api_server(0 if self._api_running else 1)
+        self.settings.api_enabled.value = 1 if self._api_running else 0
+
+    def _on_lan_toggle(self, state):
+        enabled = 1 if state == Qt.CheckState.Checked.value else 0
+        self.settings.lan_enabled.value = enabled
+        # Rebinding the host requires a fresh server instance; restart if running.
+        if self.api_server is not None:
+            was_running = self._api_running
+            self.api_server.stop()
+            self.api_server = None
+            self._api_running = False
+            if was_running:
+                self._toggle_api_server(1)
+        self._sync_web_api_panel()
+
+    def _open_web_ui(self):
+        if not self._api_running:
+            self._toggle_api_server(1)
+            self.settings.api_enabled.value = 1
+        webbrowser.open(self._web_ui_url())
+
+    def _sync_web_api_panel(self):
+        """Reflect actual server state in the panel widgets."""
+        if not hasattr(self, "web_api_toggle_btn"):
+            return
+        running = self._api_running
+        self.web_api_toggle_btn.setText("Stop Web UI" if running else "Start Web UI")
+        if running:
+            self.web_api_url_label.setText(f"Running at {self._web_ui_url()}")
+            self.web_api_url_label.setStyleSheet("color:#4CAF50;")
+        else:
+            self.web_api_url_label.setText("Server stopped")
+            self.web_api_url_label.setStyleSheet("color:#aaa;")
 
     def _on_reset_click(self, param: Param, widget: QWidget):
         param.reset()

@@ -212,14 +212,14 @@ class AudioBand:
         else:
             self.smoothed_value += decay * (energy - self.smoothed_value)
 
-        # Map smoothed 0-1 value to the linked parameter's range
+        # Map the smoothed 0-1 envelope into the [cutoff_min, cutoff_max] window.
+        # These bounds are the actual output range the audio drives the target
+        # across (silence -> cutoff_min, full signal -> cutoff_max), so their
+        # span directly limits the amplitude of the modulation.
         param = self.linked_param
-        mapped = param.min + self.smoothed_value * (param.max - param.min)
-
-        # Apply cutoff clamping
-        mapped = np.clip(mapped, self.cutoff_min.value, self.cutoff_max.value)
-
-        param.value = mapped
+        lo = self.cutoff_min.value
+        hi = self.cutoff_max.value
+        param.value = lo + self.smoothed_value * (hi - lo)
 
 
 class AudioReactiveModule:
@@ -238,6 +238,16 @@ class AudioReactiveModule:
         self.block_size = block_size
         self.band_energies = [0.0] * NUM_BANDS
         self.available = SOUNDDEVICE_AVAILABLE
+
+        # Master input gain applied to the whole audio signal before band
+        # analysis. Acts as a global amplitude control for every band binding,
+        # the spectrum display, and beat detection. Registered under the
+        # AUDIO_REACTIVE group so it surfaces in the "Audio" control menu.
+        self.amplitude = params.new(
+            "audio_amplitude", min=0.0, max=4.0, default=1.0,
+            group=Groups.AUDIO_REACTIVE,
+            info="Master input gain applied to the audio signal before band analysis"
+        )
 
         # Double-buffer for thread-safe audio transfer
         self._write_buffer = np.zeros(block_size, dtype=np.float32)
@@ -320,8 +330,9 @@ class AudioReactiveModule:
             self._read_buffer, self._write_buffer = self._write_buffer, self._read_buffer
             self._has_new_data = False
 
-        # FFT analysis (outside lock)
-        windowed = self._read_buffer * self._window
+        # FFT analysis (outside lock). Master amplitude scales the time-domain
+        # signal, which linearly scales the spectrum and every band energy.
+        windowed = self._read_buffer * self._window * self.amplitude.value
         spectrum = np.abs(np.fft.rfft(windowed))
 
         # Normalize spectrum

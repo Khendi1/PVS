@@ -146,6 +146,7 @@ class APIServer:
             log.warning("web/dist not found - run 'npm run build' in web/ to enable the web UI")
             self._web_ui = False
         self._server_thread = None
+        self._uvicorn_server = None
         self._should_stop = False
 
     def _setup_routes(self):
@@ -718,13 +719,20 @@ class APIServer:
 
     def start(self):
         """Start the API server in a background thread."""
-        if self._server_thread is not None:
+        if self._server_thread is not None and self._server_thread.is_alive():
             log.warning("API server already running")
             return
 
+        self._should_stop = False
+        # Use a controllable uvicorn.Server (rather than uvicorn.run) so the
+        # server can be shut down cleanly and later restarted / rebound to a
+        # different host — required by the GUI Start/Stop and LAN controls.
+        config = uvicorn.Config(self.app, host=self.host, port=self.port, log_level="warning")
+        self._uvicorn_server = uvicorn.Server(config)
+
         def run_server():
             log.info(f"Starting API server on {self.host}:{self.port}")
-            uvicorn.run(self.app, host=self.host, port=self.port, log_level="warning")
+            self._uvicorn_server.run()
 
         self._server_thread = threading.Thread(target=run_server, daemon=True)
         self._server_thread.start()
@@ -734,6 +742,12 @@ class APIServer:
             log.info(f"Web UI available at http://{self.host}:{self.port}/ui")
 
     def stop(self):
-        """Stop the API server."""
+        """Stop the API server and release the port (blocks until shut down)."""
         self._should_stop = True
+        if self._uvicorn_server is not None:
+            self._uvicorn_server.should_exit = True
+        if self._server_thread is not None:
+            self._server_thread.join(timeout=5)
+        self._server_thread = None
+        self._uvicorn_server = None
         log.info("API server stopped")

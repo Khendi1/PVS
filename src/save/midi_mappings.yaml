@@ -1,0 +1,6 @@
+ports:
+  MIDI Mix 0:
+    mappings:
+      19: Src 1 Effects/alpha
+      23: Src 1 Effects/hue_shift
+      31: Src 1 Effects/hue_shift

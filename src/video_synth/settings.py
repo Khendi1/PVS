@@ -101,3 +101,8 @@ class UserSettings():
                                            min=0, max=1, default=int(osc),
                                            group=group, subgroup=subgroup,
                                            type=Widget.TOGGLE)
+        self.lan_enabled = self.params.new("lan_enabled",
+                                           min=0, max=1, default=0,
+                                           group=group, subgroup=subgroup,
+                                           type=Widget.TOGGLE,
+                                           info="Bind the API/web server to 0.0.0.0 so other devices on your LAN can connect (off = localhost only)")
