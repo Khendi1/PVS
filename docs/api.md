@@ -66,6 +66,20 @@ python -m video_synth --headless --api --api-host 0.0.0.0 --no-virtualcam
 | `POST` | `/midi/learn` | Start MIDI learn for a parameter |
 | `POST` | `/midi/learn/cancel` | Cancel MIDI learn mode |
 | `GET` | `/midi/learn/status` | Current MIDI learn state |
+| `GET` | `/midi/export` | Download the current MIDI mappings as a `midi_mappings.yaml` attachment |
+| `POST` | `/midi/import` | Import MIDI mappings from YAML text and apply them live |
+
+`GET /midi/export` responds with `Content-Type: application/x-yaml` and a
+`Content-Disposition: attachment; filename="midi_mappings.yaml"` header so the
+browser saves it to a file. The body is the same YAML document persisted in
+`save/midi_mappings.yaml`.
+
+`POST /midi/import` takes a JSON body `{ "mappings": "<yaml text>" }`. The YAML
+must be a mapping with a top-level `ports` key (the shape produced by the
+exporter). On success it writes the file and reloads the mappings live (no
+restart needed), returning `{ "success": true, "ports": <n>, "mappings": <n> }`.
+Malformed or wrongly-shaped YAML returns `400`; `503` is returned when no MIDI
+mapper is available.
 
 ### Audio
 

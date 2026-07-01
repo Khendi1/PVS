@@ -26,7 +26,7 @@ import time
 from contextlib import asynccontextmanager
 from typing import Dict, List, Optional, Any
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -34,6 +34,7 @@ import threading
 import uvicorn
 import io
 import cv2
+import yaml
 from lfo import LFO, LFOShape
 
 import sys as _sys
@@ -364,6 +365,51 @@ class APIServer:
             if self.midi_mapper is None:
                 raise HTTPException(status_code=503, detail="MidiMapper not available")
             return self.midi_mapper.get_learn_state()
+
+        # --- MIDI mapping export / import (share midi_mappings.yaml) ---
+
+        class MidiImportRequest(BaseModel):
+            mappings: str  # YAML text of the mappings document
+
+        @self.app.get("/midi/export")
+        async def midi_export():
+            """Download the current MIDI mappings as a YAML file."""
+            if self.midi_mapper is None:
+                raise HTTPException(status_code=503, detail="MidiMapper not available")
+            # Prefer the on-disk file so exports match what will be reloaded;
+            # fall back to serializing the live mappings if the file is absent.
+            yaml_path = self.midi_mapper._yaml_path
+            try:
+                if yaml_path.exists():
+                    yaml_text = yaml_path.read_text()
+                else:
+                    yaml_text = self.midi_mapper.export_mappings_yaml()
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to read mappings: {e}")
+            return PlainTextResponse(
+                yaml_text,
+                media_type="application/x-yaml",
+                headers={
+                    "Content-Disposition": 'attachment; filename="midi_mappings.yaml"'
+                },
+            )
+
+        @self.app.post("/midi/import")
+        async def midi_import(req: MidiImportRequest):
+            """Import MIDI mappings from YAML text and apply them live."""
+            if self.midi_mapper is None:
+                raise HTTPException(status_code=503, detail="MidiMapper not available")
+            try:
+                loaded = self.midi_mapper.import_mappings(req.mappings)
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+            port_count = len(loaded)
+            mapping_count = sum(len(m) for m in loaded.values())
+            return {
+                "success": True,
+                "ports": port_count,
+                "mappings": mapping_count,
+            }
 
         # --- LFO endpoints ---
 
