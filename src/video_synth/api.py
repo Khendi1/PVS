@@ -35,6 +35,7 @@ import uvicorn
 import io
 import cv2
 from lfo import LFO, LFOShape
+from param_history import ParamHistory
 
 import sys as _sys
 if getattr(_sys, 'frozen', False):
@@ -109,6 +110,7 @@ class APIServer:
         self.midi_mapper = midi_mapper
         self.osc_banks = osc_banks or {}  # group_prefix → OscBank
         self.audio_module = audio_module
+        self.history = ParamHistory(params)  # undo/redo ring buffer over all params
         self.cv_controller = None  # set after construction if --cv is active
         self.bpm_clock = None      # set after construction
         self._lfo_map = {}  # param_name → LFO
@@ -248,7 +250,8 @@ class APIServer:
                         detail=f"Value {param_value.value} out of range [{param.min}, {param.max}]"
                     )
 
-            # Set the value
+            # Record the previous state so undo returns to it, then set the value
+            self.history.snapshot()
             param.value = param_value.value
 
             log.info(f"API: Set {param_name} = {param_value.value}")
@@ -266,6 +269,8 @@ class APIServer:
                 raise HTTPException(status_code=404, detail=f"Parameter '{param_name}' not found")
 
             param = self.params.params[param_name]
+            # Record the previous state so undo returns to it before resetting
+            self.history.snapshot()
             param.reset()
 
             log.info(f"API: Reset {param_name} to {param.value}")
@@ -321,6 +326,8 @@ class APIServer:
         async def patch_next():
             if self.save_controller is None:
                 raise HTTPException(status_code=503, detail="SaveController not available")
+            # Record the pre-load state so a patch load can be undone
+            self.history.snapshot()
             self.save_controller.load_next_patch()
             return {"success": True}
 
@@ -328,6 +335,8 @@ class APIServer:
         async def patch_prev():
             if self.save_controller is None:
                 raise HTTPException(status_code=503, detail="SaveController not available")
+            # Record the pre-load state so a patch load can be undone
+            self.history.snapshot()
             self.save_controller.load_prev_patch()
             return {"success": True}
 
@@ -335,8 +344,29 @@ class APIServer:
         async def patch_random():
             if self.save_controller is None:
                 raise HTTPException(status_code=503, detail="SaveController not available")
+            # Record the pre-load state so a patch load can be undone
+            self.history.snapshot()
             self.save_controller.load_random_patch()
             return {"success": True}
+
+        # --- History / undo endpoints ---
+
+        @self.app.post("/undo")
+        async def undo():
+            """Revert params to the previous recorded state."""
+            applied = self.history.undo()
+            return {"success": True, "applied": applied}
+
+        @self.app.post("/redo")
+        async def redo():
+            """Re-apply the most recently undone param state."""
+            applied = self.history.redo()
+            return {"success": True, "applied": applied}
+
+        @self.app.get("/history")
+        async def history():
+            """Return the number of available undo and redo states."""
+            return self.history.counts()
 
         # --- MIDI learn endpoints ---
 
