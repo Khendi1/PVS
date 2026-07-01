@@ -51,6 +51,24 @@ export async function patchAction(action) {
   return r.json()
 }
 
+export async function undo() {
+  const r = await fetch(`${API_BASE}/undo`, { method: 'POST' })
+  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  return r.json()
+}
+
+export async function redo() {
+  const r = await fetch(`${API_BASE}/redo`, { method: 'POST' })
+  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  return r.json()
+}
+
+export async function fetchHistory() {
+  const r = await fetch(`${API_BASE}/history`)
+  if (!r.ok) throw new Error(`HTTP ${r.status}`)
+  return r.json()
+}
+
 export async function midiLearnStart(param) {
   const r = await fetch(`${API_BASE}/midi/learn`, {
     method: 'POST',

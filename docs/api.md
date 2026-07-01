@@ -50,6 +50,20 @@ python -m video_synth --headless --api --api-host 0.0.0.0 --no-virtualcam
 | `POST` | `/patch/random` | Load a random patch |
 | `POST` | `/patch/morph?target={index}&duration={seconds}` | Lerp all numeric params to patch `target` over `duration` seconds (default 5.0) in a background thread |
 
+### History / Undo
+
+A ring buffer of the last N parameter states (default 50) is recorded before
+each parameter change, reset, or patch load. Undo restores the previous state;
+redo re-applies an undone state.
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/undo` | Revert params to the previous recorded state. Returns `{"success": bool, "applied": bool}` |
+| `POST` | `/redo` | Re-apply the most recently undone state. Returns `{"success": bool, "applied": bool}` |
+| `GET` | `/history` | Available undo/redo depth, e.g. `{"undo": 3, "redo": 1}` |
+
+`applied` is `false` when there is nothing to undo/redo.
+
 ### LFO Modulation
 
 | Method | Path | Description |
@@ -293,6 +307,23 @@ LFO shapes: `NONE`, `SINE`, `SQUARE`, `TRIANGLE`, `SAWTOOTH`, `PERLIN`
     # Smoothly morph (lerp) to patch index 2 over 8 seconds
     curl -X POST "http://127.0.0.1:8000/patch/morph?target=2&duration=8"
     ```
+
+### Undo / Redo a Change
+
+=== "curl"
+
+    ```bash
+    # Check how many states are available
+    curl http://127.0.0.1:8000/history          # {"undo": 3, "redo": 0}
+
+    # Undo the last parameter change
+    curl -X POST http://127.0.0.1:8000/undo      # {"success": true, "applied": true}
+
+    # Redo it
+    curl -X POST http://127.0.0.1:8000/redo      # {"success": true, "applied": true}
+    ```
+
+The web UI wires these to **Ctrl/Cmd+Z** (undo) and **Ctrl+Shift+Z** / **Ctrl+Y** (redo).
 
 ### Capture a Snapshot
 

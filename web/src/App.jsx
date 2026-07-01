@@ -17,7 +17,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { fetchParams } from './api.js'
+import { fetchParams, undo, redo } from './api.js'
 import TabPanel from './components/TabPanel.jsx'
 import SubgroupPanel from './components/SubgroupPanel.jsx'
 import VideoPreview from './components/VideoPreview.jsx'
@@ -71,6 +71,29 @@ export default function App() {
     loadParams()
     const id = setInterval(loadParams, 2000)
     return () => clearInterval(id)
+  }, [loadParams])
+
+  // ── Undo / redo keyboard shortcuts ─────────────────────────────────────────
+  // Ctrl/Cmd+Z → undo, Ctrl+Shift+Z or Ctrl+Y → redo. Ignore when typing.
+  useEffect(() => {
+    async function onKeyDown(e) {
+      const tag = e.target.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      const mod = e.ctrlKey || e.metaKey
+      if (!mod) return
+      const key = e.key.toLowerCase()
+      if (key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        try { await undo() } catch (err) { /* ignore */ }
+        loadParams()
+      } else if ((key === 'z' && e.shiftKey) || key === 'y') {
+        e.preventDefault()
+        try { await redo() } catch (err) { /* ignore */ }
+        loadParams()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
   }, [loadParams])
 
   // ── Classify params into buckets ───────────────────────────────────────────
